@@ -74,13 +74,13 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         webbrowser.open(url, new=new)
 
     def OnExit(self, event):
-       message = "Are you sure you want to Exit MyData?"
-       confirmationDialog = \
-           wx.MessageDialog(None, message, "Confirm Exit",
-                            wx.YES | wx.NO | wx.ICON_QUESTION)
-       okToExit = confirmationDialog.ShowModal()
-       if okToExit == wx.ID_YES:
-           cmd = "Exit MyData.exe"
-           shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
-                                lpParameters="")
-           os._exit(0)
+        message = "Are you sure you want to Exit MyData?"
+        confirmationDialog = \
+            wx.MessageDialog(None, message, "Confirm Exit",
+                             wx.YES | wx.NO | wx.ICON_QUESTION)
+        okToExit = confirmationDialog.ShowModal()
+        if okToExit == wx.ID_YES:
+            cmd = "Exit MyData.exe"
+            shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
+                                 lpParameters="")
+            os._exit(0)
