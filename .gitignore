@@ -1,0 +1,6 @@
+*.py[cod]
+*.spec
+*.pfx
+setup.exe
+build/
+dist/
