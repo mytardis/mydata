@@ -57,6 +57,11 @@ OutputDir=.
 [Files]
 Source: "dist\MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
+[Tasks]
+Name: "StartMenuEntry" ; Description: "Start MyData when Windows starts" ; GroupDescription: "Windows Startup";
+
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
+Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
+Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
