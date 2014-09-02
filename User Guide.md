@@ -18,13 +18,25 @@ Each time the application starts up (and when you tell it to), it will scan all 
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyData%20Folders.PNG" alt="MyData Folders" style="width: 200px;"/>
 
-The MyData application is intentionally difficult to shut down.  It is designed to be shut down only by facility managers, not by the average users.  Closing the main window will minimize the MyData application to an icon in the System Tray:
+The MyData application is intentionally difficult to shut down.  It is designed to be shut down only by facility managers, not by an individual researcher.  Closing the main window will minimize the MyData application to an icon in the System Tray (below).  It is possible to exit MyData using a menu item from the System Tray icon's pop-up menu (further below), but upon clicking on this menu item, the user will be asked for administrator privileges.
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/System%20Tray%20Icon.PNG" alt="System Tray Icon" style="width: 200px;"/>
 
 Clicking on MyData's System Tray icon will bring up a menu, allowing you to restore MyData's main window (the "Control Panel") or force a "MyTardis Sync" to ensure new data is uploaded promptly:
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/System%20Tray%20Menu.PNG" alt="System Tray Menu" style="width: 200px;"/>
+
+You can tell when MyData has finished uploading a dataset by looking at the number of files uploaded in the Status column of the Folders view.  Then you can select that dataset's row in the Folders view and click on the "Web Browser" icon to view that dataset in MyTardis.
+
+MyTardis uses "experiments" to organize collections of datasets.  The default name for each experiment created by MyData will be the instrument name (e.g. "Test Microscope #1"), followed by the data collection date (e.g. "2014-01-09").  The experiment will initially be owned by the facility manager user specified in MyData's Settings dialog (e.g. "mmi").  MyData will then use MyTardis's ObjectACL's (access control lists) to share ownership with the individual researcher (e.g. "wettenhj" or "skeith") who must have a MyTardis account.  Below we can see the experiments created by MyData as owned by the facility manager user ("mmi"):
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyTardis%20Default%20User.PNG" alt="MyTardis Default User" style="width: 200px;"/>
+
+And below we can see user wettenhj's data - note that "wettenhj" is now the logged-in MyTardis user in the upper-right corner, instead of "mmi":
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyTardis%20Actual%20User.PNG" alt="MyTardis Actual User" style="width: 200px;"/>
+
+
 
 
 
