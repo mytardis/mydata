@@ -20,6 +20,7 @@ shutil.copytree(r'png-normal', r'dist\MyData\png-normal')
 shutil.copytree(r'png-hot', r'dist\MyData\png-hot')
 
 os.system('copy /Y GPL.txt dist\\MyData\\')
+os.system('copy /Y "Exit MyData.exe" dist\\MyData\\')
 
 os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " + code_signing_certificate_password + " dist\MyData\*.exe")
 os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " + code_signing_certificate_password + " dist\MyData\*.dll")
