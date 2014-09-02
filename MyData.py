@@ -425,7 +425,7 @@ class MyData(wx.App):
             if myTardisUrlChanged:
                 self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
 
-            self.frame.SetTitle("MyTardis Instrument App - " +
+            self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
             self.OnRefresh(None)
 
