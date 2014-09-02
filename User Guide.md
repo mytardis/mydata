@@ -42,6 +42,13 @@ And below we can see user wettenhj's data - note that "wettenhj" is now the logg
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyTardis%20Actual%20User.PNG" alt="MyTardis Actual User" style="width: 200px;"/>
 
 
+2. MyTardis Prerequisites
+-------------------------
+* MyData uses version "v1" of MyTardis's RESTful API, with a few additions, which can be found here: https://github.com/wettenhj/mytardis/tree/mydata
+* MyData stores metadata for each experiment it creates (the instrument name, the researcher's MyTardis username and the date of collection):
+
+
+
 
 
 
