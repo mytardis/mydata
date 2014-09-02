@@ -1,6 +1,8 @@
 import sys
 import wx
 import wx.aui
+import webbrowser
+
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
 from FolderModel import FolderModel
@@ -134,8 +136,8 @@ class MyData(wx.App):
         self.uploadsModel = UploadsModel(self.sqlitedb)
 
         self.frame = MyDataFrame(None, -1, self.name,
-                                        style=wx.DEFAULT_FRAME_STYLE,
-                                        settingsModel=self.settingsModel)
+                                 style=wx.DEFAULT_FRAME_STYLE,
+                                 settingsModel=self.settingsModel)
 
         self.tbIcon = MyDataTaskBarIcon(self.frame)
 
@@ -313,6 +315,15 @@ class MyData(wx.App):
         self.toolbar.EnableTool(wx.ID_ANY, True)
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
+        self.toolbar.AddSeparator()
+
+        help_ico = wx.Image('png-hot/icons24x24/Help.png',
+                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, help_ico,
+                                                   "MyData User Guide", "")
+        self.toolbar.EnableTool(wx.ID_ANY, True)
+        self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
+
         self.toolbar.AddStretchableSpace()
         self.searchCtrl = wx.SearchCtrl(self.toolbar, size=wx.Size(200, -1),
                                         style=wx.TE_PROCESS_ENTER)
@@ -442,8 +453,11 @@ class MyData(wx.App):
         else:
             webbrowser.open(self.settingsModel.GetMyTardisUrl())
 
+    def OnHelp(self, event):
+        new = 2  # Open in a new tab, if possible
+        url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
+        webbrowser.open(url, new=new)
 
-# ----------------------------------------------------------------------------
 
 def main(argv):
 
