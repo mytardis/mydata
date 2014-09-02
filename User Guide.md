@@ -1,8 +1,8 @@
 MyData User Guide
 =================
 
-*1. Overview*  
-*2. MyTardis Prerequisites*
+**1. Overview**  
+**2. MyTardis Prerequisites**  
 
 1. Overview
 -----------
