@@ -303,7 +303,6 @@ class MyData(wx.App):
                                 wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settings_ico,
                                                        "Settings", "")
-        self.toolbar.EnableTool(wx.ID_ANY, True)
         self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
@@ -312,8 +311,15 @@ class MyData(wx.App):
                                 wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.myTardisTool = self.toolbar.AddSimpleTool(wx.ID_ANY, internet_ico,
                                                        "MyTardis", "")
-        self.toolbar.EnableTool(wx.ID_ANY, True)
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
+
+        self.toolbar.AddSeparator()
+
+        about_ico = wx.Image('png-hot/icons24x24/About.png',
+                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, about_ico,
+                                                   "About MyData", "")
+        self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
@@ -321,7 +327,6 @@ class MyData(wx.App):
                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, help_ico,
                                                    "MyData User Guide", "")
-        self.toolbar.EnableTool(wx.ID_ANY, True)
         self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
 
         self.toolbar.AddStretchableSpace()
@@ -458,6 +463,21 @@ class MyData(wx.App):
         url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
         webbrowser.open(url, new=new)
 
+    def OnAbout(self, event):
+        import CommitDef
+        import MyDataVersionNumber
+        msg = "MyData is a desktop application (initially targeting Windows)" \
+              " for uploading data to MyTardis " \
+              "(https://github.com/mytardis/mytardis).\n\n" \
+              "MyData is being developed at the Monash e-Research Centre " \
+              "(Monash University, Australia)\n\n" \
+              "MyData is open source (GPL3) software available from " \
+              "https://github.com/wettenhj/mydata\n\n" \
+               "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
+               "Commit:  " + CommitDef.LATEST_COMMIT + "\n"
+        dlg = wx.MessageDialog(None, msg, "About MyData",
+                               wx.OK | wx.ICON_INFORMATION)
+        dlg.ShowModal()
 
 def main(argv):
 
