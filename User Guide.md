@@ -44,7 +44,7 @@ And below we can see user wettenhj's data - note that "wettenhj" is now the logg
 
 2. MyTardis Prerequisites
 -------------------------
-* MyData is currently being developed against the "develop" branch of MyTardis, which uses version "v1" of MyTardis's RESTful API.  A few additions to MyTardis's RESTful API are required by MyData.  These additions can be found here: https://github.com/wettenhj/mytardis/tree/mydata and here: https://github.com/wettenhj/mytardis/compare/mytardis:develop...mydata
+* MyData is currently being developed against the "develop" branch of MyTardis, which uses version "v1" of MyTardis's RESTful API.  A few additions to MyTardis's RESTful API are required by MyData.  These additions can be found here: https://github.com/wettenhj/mytardis/compare/mytardis:develop...mydata
 * MyData stores metadata for each experiment it creates (the instrument name, the researcher's MyTardis username and the date of collection):
 
 <img src="https://github.com/wettenhj/mydata/raw/master/UserGuideImages/Experiment%20Schema%20and%20Parameter%20Names.PNG" alt="Experiment Schema and Parameter Names" style="width: 200px;"/>
