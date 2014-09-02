@@ -14,9 +14,18 @@ The MyData application (which can be downloaded from here: https://github.com/we
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/Settings.PNG" alt="Settings" style="width: 200px;"/>
 
-Each time the application starts up (and when you tell it to), it will scan all of ther user and dataset folders within your primary data directory (e.g. C:\MyTardisUsers), and present a list of all of the dataset folders in a tabular view:
+Each time the application starts up (and when you tell it to), it will scan all of ther user and dataset folders within your primary data directory (e.g. C:\MyTardisUsers), and present a list of all of the dataset folders in a tabular view (below).  MyData will count the number of files within each dataset folder (including nested subdirectories), and then query MyTardis to determine how many of these files have already been uploaded.  If MyData finds new files which haven't been uploaded, it will begin uploading them (with a default maximum of 5 simultaneous upload threads).  You can see progress of the uploads in the "Uploads" tab.
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyData%20Folders.PNG" alt="MyData Folders" style="width: 200px;"/>
+
+The MyData application is intentionally difficult to shut down.  It is designed to be shut down only by facility managers, not by the average users.  Closing the main window will minimize the MyData application to an icon in the System Tray:
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/System%20Tray%20Icon.PNG" alt="System Tray Icon" style="width: 200px;"/>
+
+Clicking on MyData's System Tray icon will bring up a menu, allowing you to restore MyData's main window (the "Control Panel") or force a "MyTardis Sync" to ensure new data is uploaded promptly:
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/System%20Tray%20Menu.PNG" alt="System Tray Menu" style="width: 200px;"/>
+
 
 
 
