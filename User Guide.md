@@ -1,6 +1,11 @@
 MyData User Guide
 =================
 
+**1. Overview**  
+**2. MyTardis Prerequisites**  
+
+1. Overview
+-----------
 MyData is a desktop application (initially targeting Windows) for uploading data to MyTardis (https://github.com/mytardis/mytardis).
 
 We begin with a root data directory (e.g. "C:\MyTardisUsers") containing one folder for each MyTardis user.  In the example below, we have two users with MyTardis usernames "skeith" and "wettenhj".
@@ -35,6 +40,14 @@ MyTardis uses "experiments" to organize collections of datasets.  The default na
 And below we can see user wettenhj's data - note that "wettenhj" is now the logged-in MyTardis user in the upper-right corner, instead of "mmi":
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyTardis%20Actual%20User.PNG" alt="MyTardis Actual User" style="width: 200px;"/>
+
+
+2. MyTardis Prerequisites
+-------------------------
+* MyData is currently being developed against the "develop" branch of MyTardis, which uses version "v1" of MyTardis's RESTful API.  A few additions to MyTardis's RESTful API are required by MyData.  These additions can be found here: https://github.com/wettenhj/mytardis/tree/mydata
+* MyData stores metadata for each experiment it creates (the instrument name, the researcher's MyTardis username and the date of collection):
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/Experiment%20Schema%20andParameter%20Names.PNG" alt="Experiment Schema and Parameter Names" style="width: 200px;"/>
 
 
 
