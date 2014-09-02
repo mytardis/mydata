@@ -14,4 +14,9 @@ The MyData application (which can be downloaded from here: https://github.com/we
 
 <img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/Settings.PNG" alt="Settings" style="width: 200px;"/>
 
+Each time the application starts up (and when you tell it to), it will scan all of ther user and dataset folders within your primary data directory (e.g. C:\MyTardisUsers), and present a list of all of the dataset folders in a tabular view:
+
+<img src="https://github.com/wettenhj/mydata/blob/master/UserGuideImages/MyData%20Folders.PNG" alt="MyData Folders" style="width: 200px;"/>
+
+
 
