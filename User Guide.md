@@ -1,6 +1,11 @@
 MyData User Guide
 =================
 
+*1. Overview*
+*2. MyTardis Prerequisites*
+
+1. Overview
+-----------
 MyData is a desktop application (initially targeting Windows) for uploading data to MyTardis (https://github.com/mytardis/mytardis).
 
 We begin with a root data directory (e.g. "C:\MyTardisUsers") containing one folder for each MyTardis user.  In the example below, we have two users with MyTardis usernames "skeith" and "wettenhj".
