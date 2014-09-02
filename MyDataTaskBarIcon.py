@@ -2,6 +2,7 @@ import wx
 import os
 import sys
 import win32com.shell.shell as shell
+import webbrowser
 
 
 class MyDataTaskBarIcon(wx.TaskBarIcon):
@@ -68,7 +69,9 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         wx.GetApp().OnRefresh(event)
 
     def OnMyDataHelp(self, event):
-        self.frame.Help()
+        new = 2  # Open in a new tab, if possible
+        url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
+        webbrowser.open(url, new=new)
 
     def OnExit(self, event):
        message = "Are you sure you want to Exit MyData?"
