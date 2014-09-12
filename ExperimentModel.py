@@ -58,8 +58,8 @@ class ExperimentModel():
                          " and created date " + createdDate)
             experimentJson = {
                 "title": experimentName,
-                "description": "Instrument: %s\n\n" +
-                               "Owner: %s\n\n" +
+                "description": "Instrument: %s\n\n"
+                               "Owner: %s\n\n"
                                "Data collected: %s" %
                                (instrumentName,
                                 ownerUsername,
