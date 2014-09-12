@@ -57,7 +57,7 @@ class Logger():
 
         # Finally, send all log messages to a log file.
         from os.path import expanduser, join
-        self.loggerFileHandler = logging.FileHandler(join(expanduser("~"), '.MyTardis_debug_log.txt'))
+        self.loggerFileHandler = logging.FileHandler(join(expanduser("~"), '.MyData_debug_log.txt'))
         self.loggerFileHandler.setLevel(logging.DEBUG)
         self.loggerFileHandler.setFormatter(logging.Formatter(log_format_string))
         self.loggerObject.addHandler(self.loggerFileHandler)
@@ -94,7 +94,7 @@ class Logger():
             return
 
         def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(None,wx.ID_ANY,'MyTardis Instrument App',self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath)
+            dlg = SubmitDebugReportDialog(None,wx.ID_ANY,'MyData',self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath)
             try:
                 if wx.IsBusy():
                     wx.EndBusyCursor()
@@ -157,6 +157,6 @@ class Logger():
             else:
                 r = requests.post(url, files=file_info)
 
-logger = Logger("MyTardis")
+logger = Logger("MyData")
 
 
