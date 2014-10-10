@@ -80,7 +80,15 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
             cmd = "Exit MyData.exe"
-            import win32com.shell.shell as shell
-            shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
-                                 lpParameters="")
+            if sys.platform.startswith("win"):
+                import win32com.shell.shell as shell
+                shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
+                                     lpParameters="")
+            elif sys.platform.startswith("darwin"):
+                returncode = os.system("osascript -e "
+                                       "'do shell script "
+                                       "\"echo Exiting MyData\" "
+                                       "with administrator privileges'")
+                if returncode != 0:
+                    raise Exception("Failed to get admin privileges.")
             os._exit(0)
