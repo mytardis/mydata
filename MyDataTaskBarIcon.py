@@ -1,7 +1,6 @@
 import wx
 import os
 import sys
-import win32com.shell.shell as shell
 import webbrowser
 
 
@@ -81,6 +80,7 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
             cmd = "Exit MyData.exe"
+            import win32com.shell.shell as shell
             shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
                                  lpParameters="")
             os._exit(0)
