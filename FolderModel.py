@@ -51,6 +51,10 @@ class FolderModel():
         self.numFilesVerified = 0
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("FolderModel.SetDataFileUploaded: Attempt to update data view model outside of MainThread!")
+
         self.dataFileUploaded[dataFileIndex] = uploaded
         self.numFilesUploaded = sum(self.dataFileUploaded)
         self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
@@ -114,6 +118,10 @@ class FolderModel():
         return self.settingsModel
 
     def SetCreatedDate(self):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("FolderModel.SetCreatedDate: Attempt to update data view model outside of MainThread!")
+
         import datetime
         absoluteFolderPath = os.path.join(self.location, self.folder)
         self.created = datetime.datetime\
@@ -121,6 +129,10 @@ class FolderModel():
             .strftime('%Y-%m-%d')
 
     def Refresh(self):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("FolderModel.Refresh: Attempt to update data view model outside of MainThread!")
+
         absoluteFolderPath = os.path.join(self.location, self.folder)
         self.numFiles = sum([len(files) for dirName, _, files in
                              os.walk(absoluteFolderPath)])
