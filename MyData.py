@@ -2,6 +2,7 @@ import sys
 import wx
 import wx.aui
 import webbrowser
+import os
 
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -361,6 +362,12 @@ class MyData(wx.App):
 
         self.searchCtrl.SetValue("")
 
+        if not os.path.exists(self.settingsModel.GetDataDirectory()):
+            message = "The data directory: \"%s\" was not found!"
+            logger.error(message)
+            dlg = wx.MessageDialog(None, message, "MyData",
+                               wx.OK | wx.ICON_ERROR)
+            return
         # Set up progress dialog...
         self.progressDialog = \
             wx.ProgressDialog(
