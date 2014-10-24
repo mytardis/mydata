@@ -1,3 +1,5 @@
+import threading
+
 class UploadStatus:
     NOT_STARTED = 0
     IN_PROGRESS = 1
@@ -31,6 +33,10 @@ class UploadModel():
         return self.progress
 
     def SetProgress(self, progress):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UploadModel.SetProgress: Attempt to update data view model outside of MainThread!")
+
         self.progress = progress
         if progress > 0 and progress < 100:
             self.status = UploadStatus.IN_PROGRESS
@@ -39,12 +45,20 @@ class UploadModel():
         return self.status
 
     def SetStatus(self, status):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UploadModel.SetStatus: Attempt to update data view model outside of MainThread!")
+
         self.status = status
 
     def GetMessage(self):
         return self.message
 
     def SetMessage(self, message):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UploadModel.SetMessage: Attempt to update data view model outside of MainThread!")
+
         self.message = message
 
     def GetValueForKey(self, key):
@@ -57,6 +71,10 @@ class UploadModel():
         return self.dataFileIndex
 
     def SetBufferedReader(self, bufferedReader):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UploadModel.SetBufferedReader: Attempt to update data view model outside of MainThread!")
+
         self.bufferedReader = bufferedReader
 
     def Cancel(self):
@@ -64,6 +82,10 @@ class UploadModel():
             self.bufferedReader.close()
 
     def SetFileSize(self, fileSize):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UploadModel.SetFileSize: Attempt to update data view model outside of MainThread!")
+
         self.fileSize = fileSize
         self.filesize = sizeof_fmt(self.fileSize)
 
