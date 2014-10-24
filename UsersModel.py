@@ -2,6 +2,7 @@ import wx.dataview
 import sqlite3
 from UserModel import UserModel
 import os
+import threading
 
 from logger.Logger import logger
 
@@ -45,9 +46,17 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         self.maxId = 0
 
     def SetFoldersModel(self, foldersModel):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.SetFoldersModel: Attempt to update data view model outside of MainThread!")
+
         self.foldersModel = foldersModel
 
     def Filter(self, searchString):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.Filter: Attempt to update data view model outside of MainThread!")
+
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -190,6 +199,9 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteRows(self, rows):
 
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.DeleteRows: Attempt to update data view model outside of MainThread!")
+
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -205,6 +217,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
             self.RowDeleted(row)
 
     def DeleteAllRows(self):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.DeleteAllRows: Attempt to update data view model outside of MainThread!")
+
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
         for row in reversed(range(0, self.GetCount())):
@@ -250,6 +266,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return self.maxId
 
     def AddRow(self, value):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.AddRow: Attempt to update data view model outside of MainThread!")
+
         self.Filter("")
         self.usersData.append(value)
         # Notify views
@@ -265,6 +285,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return len(usernames)
 
     def Refresh(self, incrementProgressDialog):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("UsersModel.Refresh: Attempt to update data view model outside of MainThread!")
+
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
