@@ -473,7 +473,7 @@ class MyData(wx.App):
     def OnAbout(self, event):
         import CommitDef
         import MyDataVersionNumber
-        msg = "MyData is a desktop application (initially targeting Windows)" \
+        msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
               "MyData is being developed at the Monash e-Research Centre " \
