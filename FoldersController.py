@@ -114,135 +114,149 @@ class FoldersController():
                               .uploadDatafileRunnable[folderModel][dfi])
 
     def StartDataUploads(self, folderModels=[]):
-        class UploadDataThread(threading.Thread):
-            def __init__(self, foldersController, foldersModel, settingsModel,
-                         folderModels=[]):
-                threading.Thread.__init__(self)
-                self.foldersController = foldersController
-                self.foldersModel = foldersModel
-                self.settingsModel = settingsModel
-                self.folderModels = folderModels
 
-            def run(self):
-                try:
-                    if len(self.folderModels) == 0:
-                        # Scan all folders
-                        for row in range(0, self.foldersModel.GetRowCount()):
-                            if self.foldersController.shuttingDown:
-                                break
-                            folderModel = self.foldersModel.foldersData[row]
-                            if self.foldersController.shuttingDown:
-                                break
-                            folderModel.SetCreatedDate()
-                            if self.foldersController.shuttingDown:
-                                break
-                            try:
-                                # Save MyTardis URL, so if it's changing in the
-                                # Settings Dialog while this thread is
-                                # attempting to connect, we ensure that any
-                                # exception thrown by this thread refers to the
-                                # old version of the URL.
-                                myTardisUrl = \
-                                    self.settingsModel.GetMyTardisUrl()
-                                experimentModel = ExperimentModel\
-                                    .GetExperimentForFolder(folderModel)
-                                folderModel.SetExperiment(experimentModel)
-                                CONNECTED = ConnectionStatus.CONNECTED
-                                wx.PostEvent(
-                                    self.foldersController.notifyWindow,
-                                    self.foldersController
-                                    .ConnectionStatusEvent(
-                                        myTardisUrl=myTardisUrl,
-                                        connectionStatus=CONNECTED))
-                            except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.shuttingDown:
-                                    DISCONNECTED = \
-                                        ConnectionStatus.DISCONNECTED
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                        .ConnectionStatusEvent(
-                                            myTardisUrl=myTardisUrl,
-                                            connectionStatus=DISCONNECTED))
-                            except ValueError, e:
-                                logger.debug("Failed to retrieve experiment "
-                                             "for folder " +
-                                             str(folderModel.GetFolder()))
-                                logger.debug(traceback.format_exc())
-                                return
-                            if experimentModel is None:
-                                logger.debug("Failed to acquire a MyTardis "
-                                             "experiment to store data in for"
-                                             "folder " +
-                                             folderModel.GetFolder())
-                                return
-                            if self.foldersController.shuttingDown:
-                                break
-                            datasetModel = DatasetModel\
-                                .CreateDatasetIfNecessary(folderModel)
-                            if self.foldersController.shuttingDown:
-                                break
-                            folderModel.SetDatasetModel(datasetModel)
-                            self.foldersController.VerifyDatafiles(folderModel)
-                    else:
-                        # Scan specific folders (e.g. dragged and dropped),
-                        # instead of all of them:
-                        for folderModel in self.folderModels:
-                            if self.foldersController.shuttingDown:
-                                break
-                            folderModel.SetCreatedDate()
-                            if self.foldersController.shuttingDown:
-                                break
-                            try:
-                                # Save MyTardis URL, so if it's changing in the
-                                # Settings Dialog while this thread is
-                                # attempting to connect, we ensure that any
-                                # exception thrown by this thread refers to the
-                                # old version of the URL.
-                                myTardisUrl = \
-                                    self.settingsModel.GetMyTardisUrl()
-                                experimentModel = ExperimentModel\
-                                    .GetExperimentForFolder(folderModel)
-                                folderModel.SetExperiment(experimentModel)
-                                CONNECTED = ConnectionStatus.CONNECTED
-                                wx.PostEvent(
-                                    self.foldersController.notifyWindow,
-                                    self.foldersController
-                                    .ConnectionStatusEvent(
-                                        myTardisUrl=myTardisUrl,
-                                        connectionStatus=CONNECTED))
-                            except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.shuttingDown:
-                                    DISCONNECTED = \
-                                        ConnectionStatus.DISCONNECTED
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                        .ConnectionStatusEvent(
-                                            myTardisUrl=myTardisUrl,
-                                            connectionStatus=DISCONNECTED))
-                            except ValueError, e:
-                                logger.debug("Failed to retrieve experiment "
-                                             "for folder " +
-                                             str(folderModel.GetFolder()))
-                                return
-                            if self.foldersController.shuttingDown:
-                                break
-                            datasetModel = DatasetModel\
-                                .CreateDatasetIfNecessary(folderModel)
-                            if self.foldersController.shuttingDown:
-                                break
-                            folderModel.SetDatasetModel(datasetModel)
-                            self.foldersController.VerifyDatafiles(folderModel)
-                except:
-                    logger.error(traceback.format_exc())
+        try:
+            if len(folderModels) == 0:
+                # Scan all folders
+                for row in range(0, self.foldersModel.GetRowCount()):
+                    if self.shuttingDown:
+                        break
+                    folderModel = self.foldersModel.foldersData[row]
+                    if self.shuttingDown:
+                        break
+                    wx.Yield()
+                    if self.shuttingDown:
+                        break
+                    try:
+                        # Save MyTardis URL, so if it's changing in the
+                        # Settings Dialog while this thread is
+                        # attempting to connect, we ensure that any
+                        # exception thrown by this thread refers to the
+                        # old version of the URL.
+                        myTardisUrl = \
+                            self.settingsModel.GetMyTardisUrl()
+                        experimentModel = ExperimentModel\
+                            .GetExperimentForFolder(folderModel)
+                        folderModel.SetExperiment(experimentModel)
+                        wx.Yield()
+                        CONNECTED = ConnectionStatus.CONNECTED
+                        wx.PostEvent(
+                            self.notifyWindow,
+                            self.ConnectionStatusEvent(
+                                myTardisUrl=myTardisUrl,
+                                connectionStatus=CONNECTED))
+                        datasetModel = DatasetModel\
+                            .CreateDatasetIfNecessary(folderModel)
+                        folderModel.SetDatasetModel(datasetModel)
+                        wx.Yield()
 
-        self.uploadDataThread = \
-            UploadDataThread(foldersController=self,
-                             foldersModel=self.foldersModel,
-                             settingsModel=self.foldersModel.settingsModel,
-                             folderModels=folderModels)
-        self.uploadDataThread.start()
+                        class VerifyDatafilesThread(threading.Thread):
+
+                            def __init__(self, foldersController, folderModel):
+                                threading.Thread.__init__(self)
+                                self.foldersController = foldersController
+                                self.folderModel = folderModel
+
+                            def run(self):
+                                self.foldersController\
+                                    .VerifyDatafiles(self.folderModel)
+
+                        self.verifyDatafilesThread = \
+                            VerifyDatafilesThread(self,
+                                                  folderModel)
+                        self.verifyDatafilesThread.start()
+                    except requests.exceptions.ConnectionError, e:
+                        if not self.shuttingDown:
+                            DISCONNECTED = \
+                                ConnectionStatus.DISCONNECTED
+                            wx.PostEvent(
+                                self.notifyWindow,
+                                self.ConnectionStatusEvent(
+                                    myTardisUrl=myTardisUrl,
+                                    connectionStatus=DISCONNECTED))
+                    except ValueError, e:
+                        logger.debug("Failed to retrieve experiment "
+                                     "for folder " +
+                                     str(folderModel.GetFolder()))
+                        logger.debug(traceback.format_exc())
+                        return
+                    if experimentModel is None:
+                        logger.debug("Failed to acquire a MyTardis "
+                                     "experiment to store data in for"
+                                     "folder " +
+                                     folderModel.GetFolder())
+                        return
+                    if self.shuttingDown:
+                        break
+            else:
+                # Scan specific folders (e.g. dragged and dropped),
+                # instead of all of them:
+                for folderModel in folderModels:
+                    if self.shuttingDown:
+                        break
+                    folderModel.SetCreatedDate()
+                    wx.Yield()
+                    if self.shuttingDown:
+                        break
+                    try:
+                        # Save MyTardis URL, so if it's changing in the
+                        # Settings Dialog while this thread is
+                        # attempting to connect, we ensure that any
+                        # exception thrown by this thread refers to the
+                        # old version of the URL.
+                        myTardisUrl = \
+                            self.settingsModel.GetMyTardisUrl()
+                        experimentModel = ExperimentModel\
+                            .GetExperimentForFolder(folderModel)
+                        folderModel.SetExperiment(experimentModel)
+                        wx.Yield()
+                        CONNECTED = ConnectionStatus.CONNECTED
+                        wx.PostEvent(
+                            self.notifyWindow,
+                            self.ConnectionStatusEvent(
+                                myTardisUrl=myTardisUrl,
+                                connectionStatus=CONNECTED))
+                        datasetModel = DatasetModel\
+                            .CreateDatasetIfNecessary(folderModel)
+                        if self.shuttingDown:
+                            break
+                        folderModel.SetDatasetModel(datasetModel)
+                        wx.Yield()
+                        self.VerifyDatafiles(folderModel)
+
+                        class VerifyDatafilesThread(threading.Thread):
+
+                            def __init__(self, foldersController, folderModel):
+                                threading.Thread.__init__(self)
+                                self.foldersController = foldersController
+                                self.folderModel = folderModel
+
+                            def run(self):
+                                self.foldersController\
+                                    .VerifyDatafiles(self.folderModel)
+
+                        self.verifyDatafilesThread = \
+                            VerifyDatafilesThread(self,
+                                                  folderModel)
+                        self.verifyDatafilesThread.start()
+                    except requests.exceptions.ConnectionError, e:
+                        if not self.shuttingDown:
+                            DISCONNECTED = \
+                                ConnectionStatus.DISCONNECTED
+                            wx.PostEvent(
+                                self.notifyWindow,
+                                self.ConnectionStatusEvent(
+                                    myTardisUrl=myTardisUrl,
+                                    connectionStatus=DISCONNECTED))
+                    except ValueError, e:
+                        logger.debug("Failed to retrieve experiment "
+                                     "for folder " +
+                                     str(folderModel.GetFolder()))
+                        return
+                    if self.shuttingDown:
+                        break
+        except:
+            logger.error(traceback.format_exc())
 
     def uploadWorker(self, foldersController):
         """
@@ -503,15 +517,21 @@ class VerifyDatafileRunnable():
             existingMatchingDataFiles['meta']['total_count']
 
         if numExistingMatchingDataFiles == 1:
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=True)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
+
+            def updateUploadStatus():
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+                self.foldersModel.FolderStatusUpdated(self.folderModel)
+            wx.CallAfter(updateUploadStatus)
+
         elif numExistingMatchingDataFiles > 1:
+
             logger.debug("WARNING: Found multiple datafile uploads for " +
                          dataFilePath)
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=True)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
+
+            def updateUploadStatus():
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+                self.foldersModel.FolderStatusUpdated(self.folderModel)
+            wx.CallAfter(updateUploadStatus)
 
         if numExistingMatchingDataFiles == 0:
             wx.PostEvent(
@@ -554,7 +574,7 @@ class UploadDatafileRunnable():
         dataFileMd5Sum = md5sum(dataFilePath)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
 
-        self.uploadModel.SetFileSize(dataFileSize)
+        wx.CallAfter(self.uploadModel.SetFileSize, dataFileSize)
 
         if dataFileSize == 0:
             def updateStatus():
@@ -579,7 +599,8 @@ class UploadDatafileRunnable():
         headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                    myTardisApiKey}
         datafileBufferedReader = io.open(dataFilePath, 'rb')
-        self.uploadModel.SetBufferedReader(datafileBufferedReader)
+        wx.CallAfter(self.uploadModel.SetBufferedReader,
+                     datafileBufferedReader)
 
         def prog_callback(param, current, total):
             percentComplete = 100 - ((total - current) * 100) / (total)
@@ -664,16 +685,18 @@ class UploadDatafileRunnable():
             def updateProgress():
                 self.uploadModel.SetProgress(100.0)
                 self.uploadsModel.UploadProgressUpdated(self.uploadModel)
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex,
+                                                     uploaded=True)
             wx.CallAfter(updateProgress)
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=True)
             wx.CallAfter(self.foldersModel.FolderStatusUpdated,
                          self.folderModel)
         else:
-            self.uploadModel.SetProgress(0.0)
-            logger.debug("Upload failed for " + dataFilePath)
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=False)
+            def updateProgress():
+                self.uploadModel.SetProgress(0.0)
+                logger.debug("Upload failed for " + dataFilePath)
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex,
+                                                     uploaded=False)
+            wx.CallAfter(updateProgress)
             wx.CallAfter(self.foldersModel.FolderStatusUpdated,
                          self.folderModel)
 
