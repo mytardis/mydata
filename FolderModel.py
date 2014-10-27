@@ -76,12 +76,20 @@ class FolderModel():
         return os.stat(self.GetDataFilePath(dataFileIndex)).st_size
 
     def SetExperiment(self, experimentModel):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("FolderModel.SetExperiment: Attempt to update data view model outside of MainThread!")
+
         self.experimentModel = experimentModel
 
     def GetExperiment(self):
         return self.experimentModel
 
     def SetDatasetModel(self, datasetModel):
+
+        if threading.current_thread().name != "MainThread":
+            raise Exception("FolderModel.SetDatasetModel: Attempt to update data view model outside of MainThread!")
+
         self.datasetModel = datasetModel
 
     def GetId(self):
