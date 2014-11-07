@@ -1,6 +1,5 @@
 import requests
 import json
-import threading
 
 from ApiKeyModel import ApiKeyModel
 from logger.Logger import logger
@@ -31,9 +30,6 @@ class UserModel():
         return self.id
 
     def SetId(self, id):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.SetId: Attempt to update data view model outside of MainThread!")
 
         self.id = id
 

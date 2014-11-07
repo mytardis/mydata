@@ -62,9 +62,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def Filter(self, searchString):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.Filter: Attempt to update data view model outside of MainThread!")
-
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -76,7 +73,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 self.filteredUploadsData.append(self.uploadsData[row])
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
-                self.RowDeleted(row)
+                if threading.current_thread().name == "MainThread":
+                    self.RowDeleted(row)
+                else:
+                    wx.CallAfter(self.RowDeleted, row)
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
@@ -95,11 +95,17 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 if row == self.GetRowCount():
                     self.uploadsData.append(fud)
                     # Notify the view that it has been added
-                    self.RowAppended()
+                    if threading.current_thread().name == "MainThread":
+                        self.RowAppended()
+                    else:
+                        wx.CallAfter(self.RowAppended)
                 else:
                     self.uploadsData.insert(row, fud)
                     # Notify the view that it has been added
-                    self.RowInserted(row)
+                    if threading.current_thread().name == "MainThread":
+                        self.RowInserted(row)
+                    else:
+                        wx.CallAfter(self.RowInserted, row)
                 del self.filteredUploadsData[filteredRow]
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
@@ -218,9 +224,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteRows(self, rows):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.DeleteRows: Attempt to update data view model outside of MainThread!")
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -232,12 +235,12 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         for row in rows:
             del self.uploadsData[row]
             # Notify the view(s) using this model that it has been removed
-            self.RowDeleted(row)
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
 
     def DeleteUpload(self, folderModel, dataFileIndex):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.DeleteUpload: Attempt to update data view model outside of MainThread!")
 
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
@@ -247,7 +250,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                     self.uploadsData[row].GetDataFileIndex() == dataFileIndex:
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
-                self.RowDeleted(row)
+                if threading.current_thread().name == "MainThread":
+                    self.RowDeleted(row)
+                else:
+                    wx.CallAfter(self.RowDeleted, row)
                 return
 
     def Contains(self, filename):
@@ -283,48 +289,52 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
     def AddRow(self, value):
         self.uploadsData.append(value)
         # Notify views
-        self.RowAppended()
+        if threading.current_thread().name == "MainThread":
+            self.RowAppended()
+        else:
+            wx.CallAfter(self.RowAppended)
 
     def UploadFileSizeUpdated(self, uploadModel):
         for row in range(0, self.GetCount()):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("File Size")
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def UploadProgressUpdated(self, uploadModel):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.UploadProgressUpdated: Attempt to update data view model outside of MainThread!")
 
         for row in range(0, self.GetCount()):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def UploadStatusUpdated(self, uploadModel):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.UploadStatusUpdated: Attempt to update data view model outside of MainThread!")
 
         for row in range(0, self.GetCount()):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def UploadMessageUpdated(self, uploadModel):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.UploadMessageUpdated: Attempt to update data view model outside of MainThread!")
 
         for row in range(0, self.GetCount()):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def CancelAll(self):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UploadsModel.CancelAll: Attempt to update data view model outside of MainThread!")
-
         for row in range(0, self.GetCount()):
             self.uploadsData[row].Cancel()
+

@@ -47,15 +47,9 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
 
     def SetFoldersModel(self, foldersModel):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.SetFoldersModel: Attempt to update data view model outside of MainThread!")
-
         self.foldersModel = foldersModel
 
     def Filter(self, searchString):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.Filter: Attempt to update data view model outside of MainThread!")
 
         self.searchString = searchString
         q = self.searchString.lower()
@@ -70,7 +64,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 self.filteredUsersData.append(self.usersData[row])
                 del self.usersData[row]
                 # notify the view(s) using this model that it has been removed
-                self.RowDeleted(row)
+                if threading.current_thread().name == "MainThread":
+                    self.RowDeleted(row)
+                else:
+                    wx.CallAfter(self.RowDeleted, row)
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
@@ -92,11 +89,17 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 if row == self.GetRowCount():
                     self.usersData.append(fud)
                     # Notify the view using this model that it has been added
-                    self.RowAppended()
+                    if threading.current_thread().name == "MainThread":
+                        self.RowAppended()
+                    else:
+                        wx.CallAfter(self.RowAppended)
                 else:
                     self.usersData.insert(row, fud)
                     # Notify the view using this model that it has been added
-                    self.RowInserted(row)
+                    if threading.current_thread().name == "MainThread":
+                        self.RowInserted(row)
+                    else:
+                        wx.CallAfter(self.RowInserted, row)
                 del self.filteredUsersData[filteredRow]
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
@@ -199,9 +202,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteRows(self, rows):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.DeleteRows: Attempt to update data view model outside of MainThread!")
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -214,19 +214,22 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
             del self.usersData[row]
             del self.unfilteredUsersData[row]
             # Notify the view(s) using this model that it has been removed
-            self.RowDeleted(row)
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
 
     def DeleteAllRows(self):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.DeleteAllRows: Attempt to update data view model outside of MainThread!")
 
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
         for row in reversed(range(0, self.GetCount())):
             del self.usersData[row]
             # notify the view(s) using this model that it has been removed
-            self.RowDeleted(row)
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
 
         self.unfilteredUsersData = list()
         self.filteredUsersData = list()
@@ -267,13 +270,13 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
 
     def AddRow(self, value):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.AddRow: Attempt to update data view model outside of MainThread!")
-
         self.Filter("")
         self.usersData.append(value)
         # Notify views
-        self.RowAppended()
+        if threading.current_thread().name == "MainThread":
+            self.RowAppended()
+        else:
+            wx.CallAfter(self.RowAppended)
 
         self.unfilteredUsersData = self.usersData
         self.filteredUsersData = list()
@@ -285,9 +288,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return len(usernames)
 
     def Refresh(self, incrementProgressDialog):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("UsersModel.Refresh: Attempt to update data view model outside of MainThread!")
 
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
