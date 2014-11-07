@@ -159,8 +159,6 @@ class MyData(wx.App):
         self.foldersUsersNotebook = \
             wx.aui.AuiNotebook(self.panel,
                                style=wx.aui.AUI_NB_TOP
-                               | wx.aui.AUI_NB_TAB_SPLIT
-                               | wx.aui.AUI_NB_TAB_MOVE
                                | wx.aui.AUI_NB_SCROLL_BUTTONS)
         self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGING,
                   self.OnNotebookPageChanging, self.foldersUsersNotebook)
@@ -239,8 +237,8 @@ class MyData(wx.App):
 
         self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.frame.Hide()
-        self.tbIcon.ShowBalloon("MyData",
-                                "Click the MyData icon to access its menu.")
+        # self.tbIcon.ShowBalloon("MyData",
+                                # "Click the MyData icon to access its menu.")
 
         # logger.debug("OnCloseFrame: Cleaning up...")
         # self.foldersController.CleanUp()
@@ -254,9 +252,9 @@ class MyData(wx.App):
         if event.Iconized():
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
             self.frame.Hide()
-            self.tbIcon.ShowBalloon("MyData",
-                                    "Click the MyData icon " +
-                                    "to access its menu.")
+            # self.tbIcon.ShowBalloon("MyData",
+                                    # "Click the MyData icon " +
+                                    # "to access its menu.")
 
     def CreateToolbar(self):
         """
@@ -363,7 +361,7 @@ class MyData(wx.App):
         self.searchCtrl.SetValue("")
 
         if not os.path.exists(self.settingsModel.GetDataDirectory()):
-            message = "The data directory: \"%s\" was not found!"
+            message = "The data directory: \"%s\" was not found!" % self.settingsModel.GetDataDirectory()
             logger.error(message)
             dlg = wx.MessageDialog(None, message, "MyData",
                                wx.OK | wx.ICON_ERROR)
