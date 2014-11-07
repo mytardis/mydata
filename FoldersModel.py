@@ -64,15 +64,15 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteAllRows(self):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.DeleteAllRows: Attempt to update data view model outside of MainThread!")
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
         for row in reversed(range(0, self.GetCount())):
             del self.foldersData[row]
-            self.RowDeleted(row)
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
 
         self.ufd = list()
         self.ffd = list()
@@ -97,8 +97,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         return self.settingsModel
 
     def Filter(self, searchString):
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.Filter: Attempt to update data view model outside of MainThread!")
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -114,7 +112,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 self.ffd.append(fd)
                 del self.foldersData[row]
                 # Notify the view(s) using this model that it has been removed
-                self.RowDeleted(row)
+                if threading.current_thread().name == "MainThread":
+                    self.RowDeleted(row)
+                else:
+                    wx.CallAfter(self.RowDeleted, row)
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
@@ -140,13 +141,19 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                         .append(self.ffd[filteredRow])
                     # Notify the view(s) using this model
                     # that it has been added
-                    self.RowAppended()
+                    if threading.current_thread().name == "MainThread":
+                        self.RowAppended()
+                    else:
+                        wx.CallAfter(self.RowAppended)
                 else:
                     self.foldersData.insert(
                         row, self.ffd[filteredRow])
                     # Notify the view(s) using this model
                     # that it has been added
-                    self.RowInserted(row)
+                    if threading.current_thread().name == "MainThread":
+                        self.RowInserted(row)
+                    else:
+                        wx.CallAfter(self.RowInserted)
                 del self.ffd[filteredRow]
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
@@ -253,9 +260,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteRows(self, rows):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.DeleteRows: Attempt to update data view model outside of MainThread!")
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -268,12 +272,12 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             del self.foldersData[row]
             del self.ufd[row]
             # Notify the view(s) using this model that it has been removed
-            self.RowDeleted(row)
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
 
     def DeleteFolderById(self, id):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.DeleteFolderById: Attempt to update data view model outside of MainThread!")
 
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
@@ -282,7 +286,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if self.foldersData[row].GetId() == id:
                 del self.foldersData[row]
                 # notify the view(s) using this model that it has been removed
-                self.RowDeleted(row)
+                if threading.current_thread().name == "MainThread":
+                    self.RowDeleted(row)
+                else:
+                    wx.CallAfter(self.RowDeleted, row)
                 return
 
     def Contains(self, path):
@@ -311,13 +318,13 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def AddRow(self, value):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.AddRow: Attempt to update data view model outside of MainThread!")
-
         self.Filter("")
         self.foldersData.append(value)
         # Notify views
-        self.RowAppended()
+        if threading.current_thread().name == "MainThread":
+            self.RowAppended()
+        else:
+            wx.CallAfter(self.RowAppended)
 
         self.ufd = self.foldersData
         self.ffd = list()
@@ -329,22 +336,22 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         for row in range(0, self.GetRowCount()):
             modified = self.foldersData[row].Refresh()
             if modified:
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def FolderStatusUpdated(self, folderModel):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.FolderStatusUpdated: Attempt to update data view model outside of MainThread!")
 
         for row in range(0, self.GetCount()):
             if self.foldersData[row] == folderModel:
                 col = self.columnNames.index("Status")
-                self.RowValueChanged(row, col)
+                if threading.current_thread().name == "MainThread":
+                    self.RowValueChanged(row, col)
+                else:
+                    wx.CallAfter(self.RowValueChanged, row, col)
 
     def ImportFolders(self, dataDirectory, owner):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FoldersModel.ImportFolders: Attempt to update data view model outside of MainThread!")
 
         logger.debug("Scanning " + dataDirectory + " for dataset folders...")
         datasetFolders = os.walk(dataDirectory).next()[1]

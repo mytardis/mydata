@@ -1,5 +1,4 @@
 import os
-import threading
 import urllib
 import requests
 import json
@@ -52,9 +51,6 @@ class FolderModel():
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FolderModel.SetDataFileUploaded: Attempt to update data view model outside of MainThread!")
-
         self.dataFileUploaded[dataFileIndex] = uploaded
         self.numFilesUploaded = sum(self.dataFileUploaded)
         self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
@@ -77,18 +73,12 @@ class FolderModel():
 
     def SetExperiment(self, experimentModel):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FolderModel.SetExperiment: Attempt to update data view model outside of MainThread!")
-
         self.experimentModel = experimentModel
 
     def GetExperiment(self):
         return self.experimentModel
 
     def SetDatasetModel(self, datasetModel):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FolderModel.SetDatasetModel: Attempt to update data view model outside of MainThread!")
 
         self.datasetModel = datasetModel
 
@@ -127,9 +117,6 @@ class FolderModel():
 
     def SetCreatedDate(self):
 
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FolderModel.SetCreatedDate: Attempt to update data view model outside of MainThread!")
-
         import datetime
         absoluteFolderPath = os.path.join(self.location, self.folder)
         self.created = datetime.datetime\
@@ -137,9 +124,6 @@ class FolderModel():
             .strftime('%Y-%m-%d')
 
     def Refresh(self):
-
-        if threading.current_thread().name != "MainThread":
-            raise Exception("FolderModel.Refresh: Attempt to update data view model outside of MainThread!")
 
         absoluteFolderPath = os.path.join(self.location, self.folder)
         self.numFiles = sum([len(files) for dirName, _, files in
