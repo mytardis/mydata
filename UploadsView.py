@@ -5,6 +5,9 @@ import wx.dataview as dv
 from UploadsModel import UploadsModel
 from UploadModel import UploadModel
 
+from logger.Logger import logger
+import traceback
+
 
 class UploadsView(wx.Panel):
     def __init__(self, parent, uploadsModel):
@@ -98,28 +101,32 @@ class UploadsView(wx.Panel):
         self.Sizer.Add(btnbox, 0, wx.TOP | wx.BOTTOM, 5)
 
     def OnCancelUploads(self, evt):
-        # Remove the selected row(s) from the model. The model will take care
-        # of notifying the view (and any other observers) that the change has
-        # happened.
-        items = self.uploadsDataViewControl.GetSelections()
-        rows = [self.uploadsModel.GetRow(item) for item in items]
-        if len(rows) > 1:
-            message = "Are you sure you want to cancel the selected uploads?"
-        elif len(rows) == 1:
-            message = "Are you sure you want to remove user \"" + \
-                self.uploadsModel.GetValueForRowColname(rows[0], "Name") + \
-                "\" ?"
-        else:
-            dlg = wx.MessageDialog(None, "Please select an upload to cancel.",
-                                   "Cancel Upload(s)", wx.OK)
-            dlg.ShowModal()
-            return
-        confirmationDialog = \
-            wx.MessageDialog(None, message, "Confirm Delete",
-                             wx.OK | wx.CANCEL | wx.ICON_QUESTION)
-        okToDelete = confirmationDialog.ShowModal()
-        if okToDelete == wx.ID_OK:
-            self.uploadsModel.DeleteRows(rows)
-
+        try:
+            # Remove the selected row(s) from the model. The model will take care
+            # of notifying the view (and any other observers) that the change has
+            # happened.
+            items = self.uploadsDataViewControl.GetSelections()
+            rows = [self.uploadsModel.GetRow(item) for item in items]
+            if len(rows) > 1:
+                message = "Are you sure you want to cancel the selected uploads?"
+            elif len(rows) == 1:
+                pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
+                        .GetRelativePathToUpload()
+                message = "Are you sure you want to cancel upload \"" + \
+                    pathToUpload + "\" ?"
+            else:
+                dlg = wx.MessageDialog(None, "Please select an upload to cancel.",
+                                       "Cancel Upload(s)", wx.OK)
+                dlg.ShowModal()
+                return
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "Confirm Delete",
+                                 wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+            okToDelete = confirmationDialog.ShowModal()
+            if okToDelete == wx.ID_OK:
+                self.uploadsModel.DeleteRows(rows)
+        except:
+            logger.debug(traceback.format_exc())
+    
     def GetUploadsModel(self):
         return self.uploadsModel

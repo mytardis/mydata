@@ -4,6 +4,9 @@ from UploadModel import UploadModel
 from UploadModel import UploadStatus
 import threading
 
+from logger.Logger import logger
+import traceback
+
 # This model class provides the data to the view when it is asked for.
 # Since it is a list-only model (no hierachical data) then it is able
 # to be referenced by row rather than by item object, so in this way
@@ -61,7 +64,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                                    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
 
     def Filter(self, searchString):
-
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -223,7 +225,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                        uploadRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -233,7 +234,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         rows.sort(reverse=True)
 
         for row in rows:
+            logger.debug("DeleteRows: Canceling upload: " + self.uploadsData[row].GetRelativePathToUpload())
+            self.uploadsData[row].Cancel()
             del self.uploadsData[row]
+            del self.unfilteredUploadsData[row]
             # Notify the view(s) using this model that it has been removed
             if threading.current_thread().name == "MainThread":
                 self.RowDeleted(row)
@@ -241,7 +245,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 wx.CallAfter(self.RowDeleted, row)
 
     def DeleteUpload(self, folderModel, dataFileIndex):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxId()
 
@@ -262,18 +265,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 return True
         return False
 
-    def GetUploadById(self, id):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredUploadsData[row].GetId() == id:
-                return self.unfilteredUploadsData[row]
-        return None
-
-    def GetUploadByFilename(self, filename):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredUploadsData[row].GetFilename() == filename:
-                return self.unfilteredUploadsData[row]
-        return None
-
     def GetMaxIdFromExistingRows(self):
         maxId = 0
         for row in range(0, self.GetCount()):
@@ -286,6 +277,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             self.maxId = self.GetMaxIdFromExistingRows()
         return self.maxId
 
+    def GetUploadModel(self, row):
+        return self.uploadsData[row]
+
     def AddRow(self, value):
         self.uploadsData.append(value)
         # Notify views
@@ -294,47 +288,91 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         else:
             wx.CallAfter(self.RowAppended)
 
+        self.unfilteredUploadsData = self.uploadsData
+        self.filteredUploadsData = list()
+        self.Filter(self.searchString)
+
+    def TryRowValueChanged(self, row, col):
+        try:
+            if row < self.GetCount():
+                self.RowValueChanged(row, col)
+            else:
+                logger.warning("TryRowValueChanged called with "
+                               "row=%d, self.GetRowCount()=%d" %
+                               (row, self.GetRowCount()))
+        except:
+            logger.debug(traceback.format_exc())
+
     def UploadFileSizeUpdated(self, uploadModel):
+        if uploadModel.Canceled():
+            return
         for row in range(0, self.GetCount()):
+            # Uploads could be in the process of being canceled:
+            if row >= self.GetCount():
+                break
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("File Size")
                 if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
+                    self.TryRowValueChanged(row, col)
                 else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
+                    wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def UploadProgressUpdated(self, uploadModel):
-
+        if uploadModel.Canceled():
+            return
         for row in range(0, self.GetCount()):
+            # Uploads could be in the process of being canceled:
+            if row >= self.GetCount():
+                break
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
                 if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
+                    self.TryRowValueChanged(row, col)
                 else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
+                    wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def UploadStatusUpdated(self, uploadModel):
-
+        if uploadModel.Canceled():
+            return
         for row in range(0, self.GetCount()):
+            # Uploads could be in the process of being canceled:
+            if row >= self.GetCount():
+                break
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
                 if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
+                    self.TryRowValueChanged(row, col)
                 else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
+                    wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def UploadMessageUpdated(self, uploadModel):
-
+        if uploadModel.Canceled():
+            return
         for row in range(0, self.GetCount()):
+            # Uploads could be in the process of being canceled:
+            if row >= self.GetCount():
+                break
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
                 if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
+                    self.TryRowValueChanged(row, col)
                 else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
+                    wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def CancelAll(self):
+        # Ensure that we save the largest ID used so far:
+        self.GetMaxId()
 
-        for row in range(0, self.GetCount()):
+        for row in reversed(range(0, self.GetCount())):
             self.uploadsData[row].Cancel()
+            del self.uploadsData[row]
+            if threading.current_thread().name == "MainThread":
+                self.RowDeleted(row)
+            else:
+                wx.CallAfter(self.RowDeleted, row)
+
+        self.unfilteredUploadsData = list()
+        self.filteredUploadsData = list()
+        self.filtered = False
+        self.searchString = ""
 

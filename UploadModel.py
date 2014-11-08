@@ -1,3 +1,5 @@
+from logger.Logger import logger
+
 
 class UploadStatus:
     NOT_STARTED = 0
@@ -21,6 +23,7 @@ class UploadModel():
         self.message = ""
         self.bufferedReader = None
         self.fileSize = 0
+        self.canceled = False
 
     def GetId(self):
         return self.id
@@ -32,7 +35,6 @@ class UploadModel():
         return self.progress
 
     def SetProgress(self, progress):
-
         self.progress = progress
         if progress > 0 and progress < 100:
             self.status = UploadStatus.IN_PROGRESS
@@ -41,14 +43,12 @@ class UploadModel():
         return self.status
 
     def SetStatus(self, status):
-
         self.status = status
 
     def GetMessage(self):
         return self.message
 
     def SetMessage(self, message):
-
         self.message = message
 
     def GetValueForKey(self, key):
@@ -61,17 +61,28 @@ class UploadModel():
         return self.dataFileIndex
 
     def SetBufferedReader(self, bufferedReader):
-
         self.bufferedReader = bufferedReader
 
+    def GetRelativePathToUpload(self):
+        if self.subdirectory != "":
+            return os.path.join(self.subdirectory, self.filename)
+        else:
+            return self.filename
+
     def Cancel(self):
+        self.canceled = True
+        logger.debug("Canceling upload \"" +
+                     self.GetRelativePathToUpload() +
+                     "\".")
         if self.bufferedReader is not None:
             self.bufferedReader.close()
 
     def SetFileSize(self, fileSize):
-
         self.fileSize = fileSize
         self.filesize = sizeof_fmt(self.fileSize)
+
+    def Canceled(self):
+        return self.canceled
 
 
 def sizeof_fmt(num):

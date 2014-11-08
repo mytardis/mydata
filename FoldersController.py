@@ -533,6 +533,11 @@ class UploadDatafileRunnable():
         return self.dataFileIndex
 
     def run(self):
+        if self.uploadModel.Canceled():
+            logger.debug("Upload for \"%s\" was canceled "
+                         "before it began uploading." %
+                         self.uploadModel.GetRelativePathToUpload())
+            return
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         dataFileDirectory = \
@@ -552,6 +557,11 @@ class UploadDatafileRunnable():
 
         self.uploadModel.SetFileSize(dataFileSize)
 
+        if self.uploadModel.Canceled():
+            logger.debug("Upload for \"%s\" was canceled "
+                         "before it began uploading." %
+                         self.uploadModel.GetRelativePathToUpload())
+            return
         if dataFileSize == 0:
             self.uploadsModel.UploadFileSizeUpdated(self.uploadModel)
             self.uploadModel.SetMessage("MyTardis will not accept a "
@@ -572,10 +582,17 @@ class UploadDatafileRunnable():
         url = myTardisUrl + "/api/v1/dataset_file/"
         headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                    myTardisApiKey}
+        if self.uploadModel.Canceled():
+            logger.debug("Upload for \"%s\" was canceled "
+                         "before it began uploading." %
+                         self.uploadModel.GetRelativePathToUpload())
+            return
         datafileBufferedReader = io.open(dataFilePath, 'rb')
         self.uploadModel.SetBufferedReader(datafileBufferedReader)
 
         def prog_callback(param, current, total):
+            if self.uploadModel.Canceled():
+                return
             percentComplete = 100 - ((total - current) * 100) / (total)
 
             self.uploadModel.SetProgress(float(percentComplete))
@@ -611,8 +628,9 @@ class UploadDatafileRunnable():
                 self.uploadsModel.UploadStatusUpdated(self.uploadModel)
                 if str(e) == "read of closed file" or \
                         str(e) == "seek of closed file":
-                    logger.debug("Aborting upload because "
-                                 "file handle was closed.")
+                    logger.debug("Aborting upload for \"%s\" because "
+                                 "file handle was closed." %
+                                 self.uploadModel.GetRelativePathToUpload())
                     return
                 logger.error(traceback.format_exc())
         except urllib2.HTTPError, e:
