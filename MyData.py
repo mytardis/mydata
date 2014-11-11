@@ -3,6 +3,9 @@ import wx
 import wx.aui
 import webbrowser
 import os
+import appdirs
+import sqlite3
+import traceback
 
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -16,6 +19,8 @@ from UserModel import UserModel
 from UploadsView import UploadsView
 from UploadsModel import UploadsModel
 from UploadModel import UploadModel
+
+from UploaderModel import UploaderModel
 
 from LogView import LogView
 
@@ -94,41 +99,60 @@ class MyData(wx.App):
 
     def OnInit(self):
 
-        import os
-        import appdirs
         appname = "MyData"
         appauthor = "Monash University"
         appdirPath = appdirs.user_data_dir(appname, appauthor)
+
+        logger.debug("appdirPath: " + appdirPath)
+
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
+
+        # Most of the SQLite stuff was designed for the case where MyData 
+        # is stateful, i.e. it remembers which folders were dragged into
+        # the application during its previous runs.  However currently
+        # development is focusing on the case where MyData scans a data
+        # directory every time it runs and doesn't "remember" any
+        # dragged and dropped folders from previous runs.
+
         self.sqlitedb = os.path.join(appdirPath, appname + '.db')
+
+        logger.debug("self.sqlitedb: " + self.sqlitedb)
 
         self.settingsModel = SettingsModel(self.sqlitedb)
 
-        import sqlite3
-        conn = sqlite3.connect(self.sqlitedb)
+        try:
+            self.uploaderModel = UploaderModel(self.settingsModel)
+            self.uploaderModel.upload_uploader_info()
+        except:
+            logger.error(traceback.format_exc())
 
-        with conn:
-            c = conn.cursor()
-            c.execute("CREATE TABLE IF NOT EXISTS users (" +
-                      "id integer primary key," +
-                      "username text," +
-                      "name text," +
-                      "email text)")
-            c.execute("CREATE TABLE IF NOT EXISTS folders (" +
-                      "id integer primary key," +
-                      "folder text," +
-                      "location text," +
-                      "folder_type text," +
-                      "owner_id integer)")
-            # Currently we are not saving uploads to disk,
-            # i.e. they are only per session, so maybe we don't need this:
-            c.execute("CREATE TABLE IF NOT EXISTS uploads (" +
-                      "id integer primary key," +
-                      "folder_id integer," +
-                      "datafile_index integer," +
-                      "progress integer)")
-            c.execute("DELETE FROM uploads")
+        try:
+            conn = sqlite3.connect(self.sqlitedb)
+
+            with conn:
+                c = conn.cursor()
+                c.execute("CREATE TABLE IF NOT EXISTS users (" +
+                          "id integer primary key," +
+                          "username text," +
+                          "name text," +
+                          "email text)")
+                c.execute("CREATE TABLE IF NOT EXISTS folders (" +
+                          "id integer primary key," +
+                          "folder text," +
+                          "location text," +
+                          "folder_type text," +
+                          "owner_id integer)")
+                # Currently we are not saving uploads to disk,
+                # i.e. they are only per session, so maybe we don't need this:
+                c.execute("CREATE TABLE IF NOT EXISTS uploads (" +
+                          "id integer primary key," +
+                          "folder_id integer," +
+                          "datafile_index integer," +
+                          "progress integer)")
+                c.execute("DELETE FROM uploads")
+        except:
+            logger.error(traceback.format_exc())
 
         self.usersModel = UsersModel(self.sqlitedb, self.settingsModel)
         self.foldersModel = FoldersModel(self.sqlitedb, self.usersModel,
@@ -195,7 +219,7 @@ class MyData(wx.App):
         sizer.Add(self.panel, 1, flag=wx.EXPAND)
         self.frame.SetSizer(sizer)
 
-        wx.CallAfter(self.foldersUsersNotebook.SendSizeEvent)
+        self.foldersUsersNotebook.SendSizeEvent()
 
         self.panel.SetFocus()
 
@@ -225,8 +249,11 @@ class MyData(wx.App):
         else:
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-            self.frame.Iconize()
-            self.OnRefresh(None)
+            if self.settingsModel.RunningInBackgroundMode():
+                self.frame.Iconize()
+                self.OnRefresh(event)
+            else:
+                self.OnSettings(event)
 
         return True
 
@@ -423,6 +450,8 @@ class MyData(wx.App):
         settingsDialog.CenterOnParent()
         settingsDialog\
             .SetInstrumentName(self.settingsModel.GetInstrumentName())
+        settingsDialog.SetContactName(self.settingsModel.GetContactName())
+        settingsDialog.SetContactEmail(self.settingsModel.GetContactEmail())
         settingsDialog.SetMyTardisUrl(self.settingsModel.GetMyTardisUrl())
         settingsDialog\
             .SetInstitutionName(self.settingsModel.GetInstitutionName())
@@ -438,6 +467,8 @@ class MyData(wx.App):
             self.settingsModel.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
             self.settingsModel\
                 .SetInstitutionName(settingsDialog.GetInstitutionName())
+            self.settingsModel.SetContactName(settingsDialog.GetContactName())
+            self.settingsModel.SetContactEmail(settingsDialog.GetContactEmail())
             self.settingsModel\
                 .SetDataDirectory(settingsDialog.GetDataDirectory())
             self.settingsModel.SetUsername(settingsDialog.GetUsername())
@@ -448,6 +479,12 @@ class MyData(wx.App):
 
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
+            try:
+                self.uploaderModel = UploaderModel(self.settingsModel)
+                self.uploaderModel.upload_uploader_info()
+            except:
+                logger.error(traceback.format_exc())
+
             self.OnRefresh(None)
 
     def OnMyTardis(self, event):
