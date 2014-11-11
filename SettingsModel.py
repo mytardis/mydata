@@ -7,8 +7,12 @@ class SettingsModel():
         self.sqlitedb = sqlitedb
         self.mytardis_url = ""
         self.institution_name = ""
+        self.contact_name = ""
+        self.contact_email = ""
         self.username = ""
         self.api_key = ""
+
+        self.background_mode = "False"
 
         conn = sqlite3.connect(self.sqlitedb)
         with conn:
@@ -33,6 +37,22 @@ class SettingsModel():
                 self.institution_name = rows[0]['value']
             else:
                 self.institution_name = ""
+
+            cursor.execute("SELECT value FROM settings " +
+                           "WHERE field='contact_name'")
+            rows = cursor.fetchall()
+            if len(rows) > 0:
+                self.contact_name = rows[0]['value']
+            else:
+                self.contact_name = ""
+
+            cursor.execute("SELECT value FROM settings " +
+                           "WHERE field='contact_email'")
+            rows = cursor.fetchall()
+            if len(rows) > 0:
+                self.contact_email = rows[0]['value']
+            else:
+                self.contact_email = ""
 
             cursor.execute("SELECT value FROM settings " +
                            "WHERE field='data_directory'")
@@ -66,6 +86,14 @@ class SettingsModel():
             else:
                 self.api_key = ""
 
+            cursor.execute("SELECT value FROM settings " +
+                           "WHERE field='background_mode'")
+            rows = cursor.fetchall()
+            if len(rows) > 0:
+                self.background_mode = rows[0]['value']
+            else:
+                self.background_mode = "False"
+
     def GetInstrumentName(self):
         return self.instrument_name
 
@@ -77,6 +105,18 @@ class SettingsModel():
 
     def SetInstitutionName(self, institutionName):
         self.institution_name = institutionName
+
+    def GetContactName(self):
+        return self.contact_name
+
+    def SetContactName(self, contactName):
+        self.contact_name = contactName
+
+    def GetContactEmail(self):
+        return self.contact_email
+
+    def SetContactEmail(self, contactEmail):
+        self.contact_email = contactEmail
 
     def GetDataDirectory(self):
         return self.data_directory
@@ -102,6 +142,16 @@ class SettingsModel():
     def SetApiKey(self, apiKey):
         self.api_key = apiKey
 
+    def RunningInBackgroundMode(self):
+        return self.background_mode == "True"
+
+    def SetBackgroundMode(self, backgroundMode):
+        if backgroundMode == True or \
+                (backgroundMode is not None and backgroundMode == "True"):
+            self.backgroundMode = "True"
+        else:
+            self.backgroundMode = "False"
+
     def GetValueForKey(self, key):
         return self.__dict__[key]
 
@@ -123,6 +173,12 @@ class SettingsModel():
             cursor.execute("INSERT INTO settings(field,value) VALUES " +
                            "('institution_name',:institutionName)",
                            {'institutionName': self.GetInstitutionName()})
+            cursor.execute("INSERT INTO settings(field,value) VALUES " +
+                           "('contact_name',:contactName)",
+                           {'contactName': self.GetContactName()})
+            cursor.execute("INSERT INTO settings(field,value) VALUES " +
+                           "('contact_email',:contactEmail)",
+                           {'contactEmail': self.GetContactEmail()})
             cursor.execute("INSERT INTO settings(field,value) VALUES " +
                            "('data_directory',:dataDirectory)",
                            {'dataDirectory': self.GetDataDirectory()})

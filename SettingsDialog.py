@@ -1,4 +1,5 @@
 import wx
+import wx.aui
 import re
 
 
@@ -10,8 +11,6 @@ class SettingsDialog(wx.Dialog):
         wx.Dialog.__init__(self, parent, ID, title=title, size=size, pos=pos,
                            style=style)
 
-        # Now continue with the normal construction of the dialog
-        # contents
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         label = wx.StaticText(self, wx.ID_ANY,
@@ -24,7 +23,7 @@ class SettingsDialog(wx.Dialog):
         sizer.Add(label, 0, wx.ALIGN_CENTRE | wx.ALL, 15)
 
         self.fieldsPanel = wx.Panel(self)
-        self.fieldsPanelSizer = wx.FlexGridSizer(rows=7, cols=3,
+        self.fieldsPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
                                                  vgap=5, hgap=5)
         self.fieldsPanel.SetSizer(self.fieldsPanelSizer)
 
@@ -48,6 +47,28 @@ class SettingsDialog(wx.Dialog):
         self.institutionNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
                                                 "")
         self.fieldsPanelSizer.Add(self.institutionNameField,
+                                  flag=wx.EXPAND | wx.ALL, border=5)
+        self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                ""))
+
+        self.contactNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                  "Contact Name:")
+        self.fieldsPanelSizer.Add(self.contactNameLabel,
+                                  flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.contactNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
+                                                "")
+        self.fieldsPanelSizer.Add(self.contactNameField,
+                                  flag=wx.EXPAND | wx.ALL, border=5)
+        self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                ""))
+
+        self.contactEmailLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                  "Contact Email:")
+        self.fieldsPanelSizer.Add(self.contactEmailLabel,
+                                  flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.contactEmailField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
+                                                "")
+        self.fieldsPanelSizer.Add(self.contactEmailField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
                                                 ""))
@@ -137,6 +158,18 @@ class SettingsDialog(wx.Dialog):
 
     def SetInstitutionName(self, institutionName):
         self.institutionNameField.SetValue(institutionName)
+
+    def GetContactName(self):
+        return self.contactNameField.GetValue()
+
+    def SetContactName(self, contactName):
+        self.contactNameField.SetValue(contactName)
+
+    def GetContactEmail(self):
+        return self.contactEmailField.GetValue()
+
+    def SetContactEmail(self, contactEmail):
+        self.contactEmailField.SetValue(contactEmail)
 
     def GetDataDirectory(self):
         return self.dataDirectoryField.GetValue()
