@@ -80,6 +80,12 @@ class Logger():
         else:
             wx.CallAfter(self.loggerObject.warning, message)
 
+    def info(self, message):
+        if threading.current_thread().name=="MainThread":
+            self.loggerObject.info(message)
+        else:
+            wx.CallAfter(self.loggerObject.info, message)
+
     def dump_log(self, instrumentAppMainFrame, submit_log=False, settingsModel = None):
         # Commenting out logging.shutdown() for now,
         # because of concerns that logging could be used
