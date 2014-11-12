@@ -19,6 +19,13 @@ os.system('copy /Y favicon.ico dist\\MyData\\')
 shutil.copytree(r'png-normal', r'dist\MyData\png-normal')
 shutil.copytree(r'png-hot', r'dist\MyData\png-hot')
 
+shutil.copytree(r'openssh-cygwin-stdin-build', r'dist\MyData\openssh-cygwin-stdin-build')
+tmpdir=r'dist\MyData\openssh-cygwin-stdin-build\tmp'
+for subdir in os.listdir(tmpdir):
+    subdirpath = os.path.join(tmpdir,subdir)
+    if os.path.isdir(subdirpath):
+        shutil.rmtree(subdirpath)
+
 os.system('copy /Y GPL.txt dist\\MyData\\')
 os.system('copy /Y "Exit MyData.exe" dist\\MyData\\')
 
