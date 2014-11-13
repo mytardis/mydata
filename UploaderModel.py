@@ -1,3 +1,50 @@
+"""
+UploaderModel.py
+
+The purpose of this module is to help with registering MyData uploaders
+(which are usually instrument PCs) with the MyTardis server.
+
+Every time MyData runs, or when its settings are updated, it POSTs to its
+preferred MyTardis server some basic information about the PC and about the
+MyData installation.  This basic information is called an "uploader" record.
+
+Initially only HTTP POST uploads are enabled in MyData, but MyData will request
+uploads via RSYNC over SSH to a staging area, and wait for a MyTardis
+administrator to approve the request.  Below is a sample of a MyTardis
+administrator's notes made (in the approval_comments field in MyTardis's
+UploadRegistrationRequest model) when approving one of these upload requests:
+
+Ran the following as root on the staging host (118.138.241.33) :
+
+$ adduser mydata
+$ mkdir /home/mydata/.ssh
+$ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDEN9ysR4+I/W0fEQTL8wUg2u/8nmrWgclLMAkIMV5i8e24pwu0FOXo8mWw+Xdax6OnZUAf3RB1eMqFKeJm79QWRDOinN0xD9WXNaSP0j10KshNkc5HnkhYtjRGx13cvXxJIZk6c8tegMHbhN6jA/GWKmU4hUKghIC99h73buU66XOXGU3slTO7UPoLb4K8uQ6Y42hqaDlahrtZITIV4Z/fvV2nBlUfnlEqf8GlJeBsxxpiBBXKa1H3QsWBa8C9hHrj9XJVFHsBP7/RIJ6wEWrvwi3Pbwf9wkeAUEh4OcD3DUmupJyQDeC0rlpZCYOKHyXVlSJkE9CfpryCVQIP2OGl MyData Key" > /home/mydata/.ssh/authorized_keys
+$ chown -R mydata:mydata /home/mydata/.ssh/
+$ chmod 700 /home/mydata/.ssh/
+$ chmod 600 /home/mydata/.ssh/authorized_keys
+$ usermod -a -G mytardis mydata
+
+N.B.: The test below is only possible because the MyData user submitting the
+request and the MyTardis administrator approving the request were the same
+person.  Normally, the MyTardis administrator wouldn't have access to the
+MyData user's private key.
+
+Then I tested SSHing into the staging host from my MyData test machine using
+the SSH private key which MyData generated in ~/.ssh/:
+
+$ ssh -i ~/.ssh/MyData mydata@118.138.241.33
+[mydata@118.138.241.33 ~]$ groups
+mydata mytardis
+[mydata@118.138.241.33 ~]$ ls -lh /mnt/sonas/market | grep MYTARDIS
+drwx------ 403 mytardis mytardis 128K Nov 12 14:33 MYTARDIS_FILE_STORE
+drwxrwx---   3 mytardis mytardis  32K Nov 13 15:36 MYTARDIS_STAGING
+[mydata@118.138.241.33 ~]$ touch /mnt/sonas/market/MYTARDIS_STAGING/testing123.txt
+[mydata@118.138.241.33 ~]$ rm /mnt/sonas/market/MYTARDIS_STAGING/testing123.txt
+
+Note the permissions above - being part of the "mytardis" group on this staging
+host allows the "mydata" user to write to the MYTARDIS_STAGING directory, but
+not to the MYTARDIS_FILE_STORE directory.
+"""
 import requests
 import json
 import os
