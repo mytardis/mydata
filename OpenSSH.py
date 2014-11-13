@@ -68,6 +68,10 @@ class KeyPair():
     def __repr__(self):
         return self.__unicode__()
 
+    def publicKey(self):
+        with open(self.publicKeyFilePath, "r") as pubKeyFile:
+            return pubKeyFile.read()
+
     def delete(self):
         try:
             os.unlink(self.privateKeyFilePath)
