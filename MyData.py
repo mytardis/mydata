@@ -123,7 +123,16 @@ class MyData(wx.App):
 
         try:
             self.uploaderModel = UploaderModel(self.settingsModel)
-            self.uploaderModel.upload_uploader_info()
+            self.uploaderModel.uploadUploaderInfo()
+            uploadToStagingRequest = self.uploaderModel.existingUploadToStagingRequest()
+            if uploadToStagingRequest is None:
+                uploadToStagingRequest = self.uploaderModel.requestUploadToStagingApproval()
+                if uploadToStagingRequest is not None:
+                    logger.info("Uploader registration request created.")
+            elif uploadToStagingRequest['approved']:
+                logger.info("Uploads to staging have been approved!")
+            else:
+                logger.info("The MyTardis administrator hasn't approved your request yet.")
         except:
             logger.error(traceback.format_exc())
 
@@ -481,7 +490,7 @@ class MyData(wx.App):
                                 self.settingsModel.GetInstrumentName())
             try:
                 self.uploaderModel = UploaderModel(self.settingsModel)
-                self.uploaderModel.upload_uploader_info()
+                self.uploaderModel.uploadUploaderInfo()
             except:
                 logger.error(traceback.format_exc())
 

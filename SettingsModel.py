@@ -14,6 +14,8 @@ class SettingsModel():
 
         self.background_mode = "False"
 
+        self.uploadToStagingApprovalRequest = None
+
         conn = sqlite3.connect(self.sqlitedb)
         with conn:
             conn.row_factory = sqlite3.Row
@@ -151,6 +153,12 @@ class SettingsModel():
             self.backgroundMode = "True"
         else:
             self.backgroundMode = "False"
+
+    def GetUploadToStagingApprovalRequest(self):
+        return uploadToStagingApprovalRequest
+
+    def SetUploadToStagingApprovalRequest(self, uploadToStagingApprovalRequest):
+        self.uploadToStagingApprovalRequest = uploadToStagingApprovalRequest
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
