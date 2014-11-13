@@ -122,10 +122,20 @@ def findKeyPair(keyName, keyPath=None):
     return None
 
 
+defaultStartupInfo = subprocess.STARTUPINFO()
+defaultCreationFlags = 0
+if sys.platform.startswith("win"):
+    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    import win32process
+    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+
+
 def newKeyPair(keyName=None,
                keyPath=None,
                keyComment=None,
-               startupinfo=None, creationflags=0):
+               startupinfo=defaultStartupInfo,
+               creationflags=defaultCreationFlags):
 
     success = False
 
