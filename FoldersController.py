@@ -604,6 +604,13 @@ class UploadDatafileRunnable():
                     myTardisUrl=myTardisUrl,
                     connectionStatus=ConnectionStatus.CONNECTED))
 
+        uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
+        if uploadToStagingRequest['approved']:
+            logger.info("Uploads via staging have been approved.")
+            return
+        else:
+            logger.info("Uploads via staging have not yet been approved.")
+
         datagen, headers = poster.encode.multipart_encode(
             {"json_data": json.dumps(dataFileJson),
              "attached_file": datafileBufferedReader},

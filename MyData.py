@@ -135,6 +135,7 @@ class MyData(wx.App):
                 logger.info("Uploads to staging have been approved!")
             else:
                 logger.info("Uploads to staging haven't been approved yet.")
+            self.settingsModel.SetUploadToStagingRequest(uploadToStagingRequest)
         except:
             logger.error(traceback.format_exc())
 
