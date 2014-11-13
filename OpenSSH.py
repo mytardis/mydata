@@ -51,6 +51,7 @@ class OpenSSH():
             self.chown = "/bin/chown"
             self.chmod = "/bin/chmod"
 
+
 class KeyPair():
     def __init__(self, privateKeyFilePath, publicKeyFilePath):
         self.privateKeyFilePath = privateKeyFilePath
@@ -82,19 +83,24 @@ class KeyPair():
 def listKeyPairs(keyPath=None):
     if keyPath is None:
         keyPath = os.path.join(expanduser('~'), ".ssh")
-    filesInKeyPath = [f for f in os.listdir(keyPath) if os.path.isfile(os.path.join(keyPath, f))]
+    filesInKeyPath = [f for f in os.listdir(keyPath)
+                      if os.path.isfile(os.path.join(keyPath, f))]
     keyPairs = []
     for potentialKeyFile in filesInKeyPath:
         with open(os.path.join(keyPath, potentialKeyFile)) as f:
             for line in f:
                 if re.search(r"BEGIN .* PRIVATE KEY", line):
-                    privateKeyFilePath = os.path.join(keyPath, potentialKeyFile)
-                    publicKeyFilePath = os.path.join(keyPath, potentialKeyFile + ".pub")
+                    privateKeyFilePath = os.path.join(keyPath,
+                                                      potentialKeyFile)
+                    publicKeyFilePath = os.path.join(keyPath,
+                                                     potentialKeyFile + ".pub")
                     if not os.path.exists(publicKeyFilePath):
                         publicKeyFilePath = None
-                    keyPairs.append(KeyPair(privateKeyFilePath, publicKeyFilePath))
+                    keyPairs.append(KeyPair(privateKeyFilePath,
+                                            publicKeyFilePath))
                     break
     return keyPairs
+
 
 def findKeyPair(keyName, keyPath=None):
     if keyPath is None:
@@ -110,6 +116,7 @@ def findKeyPair(keyName, keyPath=None):
                     return KeyPair(privateKeyFilePath, publicKeyFilePath)
                     break
     return None
+
 
 def newKeyPair(keyName=None,
                keyPath=None,
