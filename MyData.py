@@ -108,7 +108,7 @@ class MyData(wx.App):
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
-        # Most of the SQLite stuff was designed for the case where MyData 
+        # Most of the SQLite stuff was designed for the case where MyData
         # is stateful, i.e. it remembers which folders were dragged into
         # the application during its previous runs.  However currently
         # development is focusing on the case where MyData scans a data
@@ -124,15 +124,17 @@ class MyData(wx.App):
         try:
             self.uploaderModel = UploaderModel(self.settingsModel)
             self.uploaderModel.uploadUploaderInfo()
-            uploadToStagingRequest = self.uploaderModel.existingUploadToStagingRequest()
+            uploadToStagingRequest = \
+                self.uploaderModel.existingUploadToStagingRequest()
             if uploadToStagingRequest is None:
-                uploadToStagingRequest = self.uploaderModel.requestUploadToStagingApproval()
+                uploadToStagingRequest = \
+                    self.uploaderModel.requestUploadToStagingApproval()
                 if uploadToStagingRequest is not None:
                     logger.info("Uploader registration request created.")
             elif uploadToStagingRequest['approved']:
                 logger.info("Uploads to staging have been approved!")
             else:
-                logger.info("The MyTardis administrator hasn't approved your request yet.")
+                logger.info("Uploads to staging haven't been approved yet.")
         except:
             logger.error(traceback.format_exc())
 
@@ -274,7 +276,7 @@ class MyData(wx.App):
         self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.frame.Hide()
         # self.tbIcon.ShowBalloon("MyData",
-                                # "Click the MyData icon to access its menu.")
+        #                         "Click the MyData icon to access its menu.")
 
         # logger.debug("OnCloseFrame: Cleaning up...")
         # self.foldersController.CleanUp()
@@ -289,8 +291,8 @@ class MyData(wx.App):
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
             self.frame.Hide()
             # self.tbIcon.ShowBalloon("MyData",
-                                    # "Click the MyData icon " +
-                                    # "to access its menu.")
+            #                         "Click the MyData icon " +
+            #                         "to access its menu.")
 
     def CreateToolbar(self):
         """
@@ -353,7 +355,7 @@ class MyData(wx.App):
         about_ico = wx.Image('png-hot/icons24x24/About.png',
                              wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, about_ico,
-                                                   "About MyData", "")
+                                                    "About MyData", "")
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
@@ -397,10 +399,11 @@ class MyData(wx.App):
         self.searchCtrl.SetValue("")
 
         if not os.path.exists(self.settingsModel.GetDataDirectory()):
-            message = "The data directory: \"%s\" was not found!" % self.settingsModel.GetDataDirectory()
+            message = "The data directory: \"%s\" was not found!" % \
+                self.settingsModel.GetDataDirectory()
             logger.error(message)
             dlg = wx.MessageDialog(None, message, "MyData",
-                               wx.OK | wx.ICON_ERROR)
+                                   wx.OK | wx.ICON_ERROR)
             return
         # Set up progress dialog...
         self.progressDialog = \
@@ -477,7 +480,8 @@ class MyData(wx.App):
             self.settingsModel\
                 .SetInstitutionName(settingsDialog.GetInstitutionName())
             self.settingsModel.SetContactName(settingsDialog.GetContactName())
-            self.settingsModel.SetContactEmail(settingsDialog.GetContactEmail())
+            self.settingsModel.SetContactEmail(settingsDialog
+                                               .GetContactEmail())
             self.settingsModel\
                 .SetDataDirectory(settingsDialog.GetDataDirectory())
             self.settingsModel.SetUsername(settingsDialog.GetUsername())
@@ -524,11 +528,12 @@ class MyData(wx.App):
               "(Monash University, Australia)\n\n" \
               "MyData is open source (GPL3) software available from " \
               "https://github.com/wettenhj/mydata\n\n" \
-               "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
-               "Commit:  " + CommitDef.LATEST_COMMIT + "\n"
+              "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
+              "Commit:  " + CommitDef.LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
+
 
 def main(argv):
 
