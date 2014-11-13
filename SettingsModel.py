@@ -148,7 +148,7 @@ class SettingsModel():
         return self.background_mode == "True"
 
     def SetBackgroundMode(self, backgroundMode):
-        if backgroundMode == True or \
+        if backgroundMode is True or \
                 (backgroundMode is not None and backgroundMode == "True"):
             self.backgroundMode = "True"
         else:
@@ -157,7 +157,8 @@ class SettingsModel():
     def GetUploadToStagingApprovalRequest(self):
         return uploadToStagingApprovalRequest
 
-    def SetUploadToStagingApprovalRequest(self, uploadToStagingApprovalRequest):
+    def SetUploadToStagingApprovalRequest(self,
+                                          uploadToStagingApprovalRequest):
         self.uploadToStagingApprovalRequest = uploadToStagingApprovalRequest
 
     def GetValueForKey(self, key):
