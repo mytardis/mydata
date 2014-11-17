@@ -607,7 +607,6 @@ class UploadDatafileRunnable():
         uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
         if uploadToStagingRequest['approved']:
             logger.info("Uploads via staging have been approved.")
-            return
         else:
             logger.info("Uploads via staging have not yet been approved.")
 
