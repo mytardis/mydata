@@ -243,8 +243,8 @@ class MyData(wx.App):
         if self.settingsModel.GetInstrumentName() is None or \
                 self.settingsModel.GetInstrumentName() == "":
             self.OnSettings(event)
-        elif self.settingsModel.GetInstitutionName() is None or \
-                self.settingsModel.GetInstitutionName() == "":
+        elif self.settingsModel.GetFacilityName() is None or \
+                self.settingsModel.GetFacilityName() == "":
             self.OnSettings(event)
         elif self.settingsModel.GetDataDirectory() is None or \
                 self.settingsModel.GetDataDirectory() == "":
@@ -463,11 +463,10 @@ class MyData(wx.App):
         settingsDialog.CenterOnParent()
         settingsDialog\
             .SetInstrumentName(self.settingsModel.GetInstrumentName())
+        settingsDialog.SetFacilityName(self.settingsModel.GetFacilityName())
         settingsDialog.SetContactName(self.settingsModel.GetContactName())
         settingsDialog.SetContactEmail(self.settingsModel.GetContactEmail())
         settingsDialog.SetMyTardisUrl(self.settingsModel.GetMyTardisUrl())
-        settingsDialog\
-            .SetInstitutionName(self.settingsModel.GetInstitutionName())
         settingsDialog.SetDataDirectory(self.settingsModel.GetDataDirectory())
         settingsDialog.SetUsername(self.settingsModel.GetUsername())
         settingsDialog.SetApiKey(self.settingsModel.GetApiKey())
@@ -477,9 +476,8 @@ class MyData(wx.App):
                                   settingsDialog.GetMyTardisUrl())
             self.settingsModel\
                 .SetInstrumentName(settingsDialog.GetInstrumentName())
+            self.settingsModel.SetFacilityName(settingsDialog.GetFacilityName())
             self.settingsModel.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
-            self.settingsModel\
-                .SetInstitutionName(settingsDialog.GetInstitutionName())
             self.settingsModel.SetContactName(settingsDialog.GetContactName())
             self.settingsModel.SetContactEmail(settingsDialog
                                                .GetContactEmail())

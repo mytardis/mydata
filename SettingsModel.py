@@ -5,8 +5,9 @@ class SettingsModel():
 
     def __init__(self, sqlitedb):
         self.sqlitedb = sqlitedb
+        self.instrument_name = ""
+        self.facility_name = ""
         self.mytardis_url = ""
-        self.institution_name = ""
         self.contact_name = ""
         self.contact_email = ""
         self.username = ""
@@ -33,12 +34,12 @@ class SettingsModel():
                 self.instrument_name = ""
 
             cursor.execute("SELECT value FROM settings " +
-                           "WHERE field='institution_name'")
+                           "WHERE field='facility_name'")
             rows = cursor.fetchall()
             if len(rows) > 0:
-                self.institution_name = rows[0]['value']
+                self.facility_name = rows[0]['value']
             else:
-                self.institution_name = ""
+                self.facility_name = ""
 
             cursor.execute("SELECT value FROM settings " +
                            "WHERE field='contact_name'")
@@ -102,11 +103,11 @@ class SettingsModel():
     def SetInstrumentName(self, instrumentName):
         self.instrument_name = instrumentName
 
-    def GetInstitutionName(self):
-        return self.institution_name
+    def GetFacilityName(self):
+        return self.facility_name
 
-    def SetInstitutionName(self, institutionName):
-        self.institution_name = institutionName
+    def SetFacilityName(self, facilityName):
+        self.facility_name = facilityName
 
     def GetContactName(self):
         return self.contact_name
@@ -177,11 +178,11 @@ class SettingsModel():
                            "('instrument_name',:instrumentName)",
                            {'instrumentName': self.GetInstrumentName()})
             cursor.execute("INSERT INTO settings(field,value) VALUES " +
+                           "('facility_name',:facilityName)",
+                           {'facilityName': self.GetFacilityName()})
+            cursor.execute("INSERT INTO settings(field,value) VALUES " +
                            "('mytardis_url',:mytardisUrl)",
                            {'mytardisUrl': self.GetMyTardisUrl()})
-            cursor.execute("INSERT INTO settings(field,value) VALUES " +
-                           "('institution_name',:institutionName)",
-                           {'institutionName': self.GetInstitutionName()})
             cursor.execute("INSERT INTO settings(field,value) VALUES " +
                            "('contact_name',:contactName)",
                            {'contactName': self.GetContactName()})

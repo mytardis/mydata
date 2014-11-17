@@ -13,15 +13,6 @@ class SettingsDialog(wx.Dialog):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        label = wx.StaticText(self, wx.ID_ANY,
-                              "Please enter your instrument name, " +
-                              "institution name, data directory, " +
-                              "MyTardis URL " +
-                              "(beginning with http or https), MyTardis " +
-                              "default username, and MyTardis API key.")
-        label.Wrap(350)
-        sizer.Add(label, 0, wx.ALIGN_CENTRE | wx.ALL, 15)
-
         self.fieldsPanel = wx.Panel(self)
         self.fieldsPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
                                                  vgap=5, hgap=5)
@@ -40,16 +31,15 @@ class SettingsDialog(wx.Dialog):
         blankLine = wx.StaticText(self.fieldsPanel, wx.ID_ANY, "")
         self.fieldsPanelSizer.Add(blankLine)
 
-        self.institutionNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
-                                                  "Institution Name:")
-        self.fieldsPanelSizer.Add(self.institutionNameLabel,
+        self.facilityNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                 "Facility Name:")
+        self.fieldsPanelSizer.Add(self.facilityNameLabel,
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.institutionNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
-                                                "")
-        self.fieldsPanelSizer.Add(self.institutionNameField,
+        self.facilityNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "")
+        self.fieldsPanelSizer.Add(self.facilityNameField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
-        self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
-                                                ""))
+        blankLine = wx.StaticText(self.fieldsPanel, wx.ID_ANY, "")
+        self.fieldsPanelSizer.Add(blankLine)
 
         self.contactNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
                                                   "Contact Name:")
@@ -150,14 +140,14 @@ class SettingsDialog(wx.Dialog):
     def SetInstrumentName(self, instrumentName):
         self.instrumentNameField.SetValue(instrumentName)
 
+    def GetFacilityName(self):
+        return self.facilityNameField.GetValue()
+
+    def SetFacilityName(self, instrumentName):
+        self.facilityNameField.SetValue(instrumentName)
+
     def GetMyTardisUrl(self):
         return self.myTardisUrlField.GetValue()
-
-    def GetInstitutionName(self):
-        return self.institutionNameField.GetValue()
-
-    def SetInstitutionName(self, institutionName):
-        self.institutionNameField.SetValue(institutionName)
 
     def GetContactName(self):
         return self.contactNameField.GetValue()
@@ -200,12 +190,12 @@ class SettingsDialog(wx.Dialog):
                                    wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
             self.myTardisUrlField.SetFocus()
-        if self.GetInstitutionName().strip() == "":
-            message = "Please enter a valid institution name."
+        if self.GetFacilityName().strip() == "":
+            message = "Please enter a valid facility name."
             dlg = wx.MessageDialog(None, message, "Settings",
                                    wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
-            self.institutionNameField.SetFocus()
+            self.facilityNameField.SetFocus()
         elif self.GetUsername().strip() == "":
             message = "Please enter a MyTardis username."
             dlg = wx.MessageDialog(None, message, "Settings",
@@ -214,7 +204,7 @@ class SettingsDialog(wx.Dialog):
             self.usernameField.SetFocus()
             self.usernameField.SelectAll()
         elif self.GetApiKey().strip() == "":
-            message = "Please enter the MyTardis API key."
+            message = "Please enter your MyTardis API key."
             dlg = wx.MessageDialog(None, message, "Settings",
                                    wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
