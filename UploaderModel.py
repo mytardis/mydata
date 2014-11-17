@@ -33,7 +33,7 @@ $ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDEN9ysR4+I/W0fEQTL8wUg2u/8nmrWgclL
 $ chown -R mydata:mydata /home/mydata/.ssh/
 $ chmod 700 /home/mydata/.ssh/
 $ chmod 600 /home/mydata/.ssh/authorized_keys
-$ usermod -a -G mytardis mydata
+$ usermod -a -G www-data mydata
 
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
@@ -47,8 +47,8 @@ $ ssh -i ~/.ssh/MyData mydata@118.138.241.33
 [mydata@118.138.241.33 ~]$ groups
 mydata mytardis
 [mydata@118.138.241.33 ~]$ ls -lh /mnt/sonas/market | grep MYTARDIS
-drwx------ 403 mytardis mytardis 128K Nov 12 14:33 MYTARDIS_FILE_STORE
-drwxrwx---   3 mytardis mytardis  32K Nov 13 15:36 MYTARDIS_STAGING
+drwx------ 403 mytardis www-data 128K Nov 12 14:33 MYTARDIS_FILE_STORE
+drwxrwx---   3 mytardis www-data  32K Nov 13 15:36 MYTARDIS_STAGING
 [mydata@118.138.241.33 ~]$ touch /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
 [mydata@118.138.241.33 ~]$ rm /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
 
