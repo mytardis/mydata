@@ -19,7 +19,6 @@ class ExperimentModel():
         ownerUserId = folderModel.GetOwner().GetJson()['id']
 
         instrumentName = settingsModel.GetInstrumentName()
-        institutionName = settingsModel.GetInstitutionName()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
@@ -64,7 +63,6 @@ class ExperimentModel():
                                (instrumentName,
                                 ownerUsername,
                                 createdDate),
-                "institution_name": institutionName,
                 "immutable": False,
                 "parameter_sets": [{
                     "schema": "http://tardis.edu.au/schemas"
@@ -92,7 +90,7 @@ class ExperimentModel():
                              str(response.status_code))
                 return None
             if response.status_code == 201:
-                logger.debug("Succeeded in creating experiment for instrument"
+                logger.debug("Succeeded in creating experiment for instrument "
                              "\"" + instrumentName + "\" and user " +
                              ownerUsername + " for creation date " +
                              createdDate)
