@@ -1,7 +1,6 @@
 import requests
 import json
 
-from ApiKeyModel import ApiKeyModel
 from logger.Logger import logger
 
 
