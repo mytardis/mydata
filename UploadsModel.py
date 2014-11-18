@@ -27,9 +27,7 @@ class ColumnType:
 
 
 class UploadsModel(wx.dataview.PyDataViewIndexListModel):
-    def __init__(self, sqlitedb):
-
-        self.sqlitedb = sqlitedb
+    def __init__(self):
 
         self.uploadsData = []
 

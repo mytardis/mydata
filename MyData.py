@@ -6,6 +6,7 @@ import os
 import appdirs
 import sqlite3
 import traceback
+import threading
 
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -25,6 +26,7 @@ from UploaderModel import UploaderModel
 from LogView import LogView
 
 from SettingsModel import SettingsModel
+from SettingsDialog import SettingsDialog
 
 import EnhancedStatusBar as ESB
 
@@ -98,13 +100,10 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
-
         appname = "MyData"
         appauthor = "Monash University"
         appdirPath = appdirs.user_data_dir(appname, appauthor)
-
         logger.debug("appdirPath: " + appdirPath)
-
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
@@ -113,29 +112,28 @@ class MyData(wx.App):
         # the application during its previous runs.  However currently
         # development is focusing on the case where MyData scans a data
         # directory every time it runs and doesn't "remember" any
-        # dragged and dropped folders from previous runs.
+        # dragged and dropped folders from previous runs.  So the SQLite
+        # functionality is being phased out (at least for Settings), and
+        # being replaced with a ConfigParser-readable plain-text file.
 
         self.sqlitedb = os.path.join(appdirPath, appname + '.db')
-
         logger.debug("self.sqlitedb: " + self.sqlitedb)
 
-        self.settingsModel = SettingsModel(self.sqlitedb)
+        # mydata.cfg stores settings in INI format, readable by ConfigParser
+        self.mydataConfigPath = os.path.join(appdirPath, appname + '.cfg')
+        logger.debug("self.mydataConfigPath: " + self.mydataConfigPath)
+
+        self.settingsModel = SettingsModel(self.mydataConfigPath, self.sqlitedb)
 
         try:
             self.uploaderModel = UploaderModel(self.settingsModel)
-            self.uploaderModel.uploadUploaderInfo()
-            uploadToStagingRequest = \
-                self.uploaderModel.existingUploadToStagingRequest()
-            if uploadToStagingRequest is None:
-                uploadToStagingRequest = \
-                    self.uploaderModel.requestUploadToStagingApproval()
-                if uploadToStagingRequest is not None:
-                    logger.info("Uploader registration request created.")
-            elif uploadToStagingRequest['approved']:
-                logger.info("Uploads to staging have been approved!")
-            else:
-                logger.info("Uploads to staging haven't been approved yet.")
-            self.settingsModel.SetUploadToStagingRequest(uploadToStagingRequest)
+
+            def requestStagingAccess(uploaderModel):
+                uploaderModel.requestStagingAccess()
+
+            thread = threading.Thread(target=requestStagingAccess,
+                                      args=(self.uploaderModel,))
+            thread.start()
         except:
             logger.error(traceback.format_exc())
 
@@ -170,7 +168,7 @@ class MyData(wx.App):
         self.foldersModel = FoldersModel(self.sqlitedb, self.usersModel,
                                          self.settingsModel)
         self.usersModel.SetFoldersModel(self.foldersModel)
-        self.uploadsModel = UploadsModel(self.sqlitedb)
+        self.uploadsModel = UploadsModel()
 
         self.frame = MyDataFrame(None, -1, self.name,
                                  style=wx.DEFAULT_FRAME_STYLE,
@@ -240,23 +238,7 @@ class MyData(wx.App):
         self.frame.Show(True)
 
         event = None
-        if self.settingsModel.GetInstrumentName() is None or \
-                self.settingsModel.GetInstrumentName() == "":
-            self.OnSettings(event)
-        elif self.settingsModel.GetFacilityName() is None or \
-                self.settingsModel.GetFacilityName() == "":
-            self.OnSettings(event)
-        elif self.settingsModel.GetDataDirectory() is None or \
-                self.settingsModel.GetDataDirectory() == "":
-            self.OnSettings(event)
-        elif self.settingsModel.GetMyTardisUrl() is None or \
-                self.settingsModel.GetMyTardisUrl() == "":
-            self.OnSettings(event)
-        elif self.settingsModel.GetUsername() is None or \
-                self.settingsModel.GetUsername() == "":
-            self.OnSettings(event)
-        elif self.settingsModel.GetApiKey() is None or \
-                self.settingsModel.GetApiKey() == "":
+        if self.settingsModel.RequiredFieldIsBlank():
             self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " +
@@ -273,16 +255,11 @@ class MyData(wx.App):
         self.tbIcon.PopupMenu(self.tbIcon.CreatePopupMenu())
 
     def OnCloseFrame(self, event):
-
+        """
+        Don't actually close it, just iconize it.
+        """
         self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.frame.Hide()
-        # self.tbIcon.ShowBalloon("MyData",
-        #                         "Click the MyData icon to access its menu.")
-
-        # logger.debug("OnCloseFrame: Cleaning up...")
-        # self.foldersController.CleanUp()
-        # logger.debug("OnCloseFrame: Finished cleaning up...")
-        # event.Skip()
 
     def OnMinimizeFrame(self, event):
         """
@@ -399,12 +376,24 @@ class MyData(wx.App):
 
         self.searchCtrl.SetValue("")
 
+        settingsValidation = self.settingsModel.Validate()
+        if not settingsValidation.valid:
+            message = settingsValidation.message
+            logger.error(message)
+            dlg = wx.MessageDialog(None, message, "MyData",
+                                   wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            self.OnSettings(event)
+            return
+
         if not os.path.exists(self.settingsModel.GetDataDirectory()):
             message = "The data directory: \"%s\" was not found!" % \
                 self.settingsModel.GetDataDirectory()
             logger.error(message)
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            self.OnSettings(event)
             return
         # Set up progress dialog...
         self.progressDialog = \
@@ -455,37 +444,13 @@ class MyData(wx.App):
             self.searchCtrl.SetValue("")
 
     def OnSettings(self, event):
-        from SettingsDialog import SettingsDialog
-
         settingsDialog = SettingsDialog(self.frame, -1, "Settings",
+                                        self.settingsModel,
                                         size=wx.Size(400, 400),
                                         style=wx.DEFAULT_DIALOG_STYLE)
-        settingsDialog.CenterOnParent()
-        settingsDialog\
-            .SetInstrumentName(self.settingsModel.GetInstrumentName())
-        settingsDialog.SetFacilityName(self.settingsModel.GetFacilityName())
-        settingsDialog.SetContactName(self.settingsModel.GetContactName())
-        settingsDialog.SetContactEmail(self.settingsModel.GetContactEmail())
-        settingsDialog.SetMyTardisUrl(self.settingsModel.GetMyTardisUrl())
-        settingsDialog.SetDataDirectory(self.settingsModel.GetDataDirectory())
-        settingsDialog.SetUsername(self.settingsModel.GetUsername())
-        settingsDialog.SetApiKey(self.settingsModel.GetApiKey())
-
         if settingsDialog.ShowModal() == wx.ID_OK:
             myTardisUrlChanged = (self.settingsModel.GetMyTardisUrl() !=
                                   settingsDialog.GetMyTardisUrl())
-            self.settingsModel\
-                .SetInstrumentName(settingsDialog.GetInstrumentName())
-            self.settingsModel.SetFacilityName(settingsDialog.GetFacilityName())
-            self.settingsModel.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
-            self.settingsModel.SetContactName(settingsDialog.GetContactName())
-            self.settingsModel.SetContactEmail(settingsDialog
-                                               .GetContactEmail())
-            self.settingsModel\
-                .SetDataDirectory(settingsDialog.GetDataDirectory())
-            self.settingsModel.SetUsername(settingsDialog.GetUsername())
-            self.settingsModel.SetApiKey(settingsDialog.GetApiKey())
-            self.settingsModel.Save()
             if myTardisUrlChanged:
                 self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
 
@@ -501,7 +466,6 @@ class MyData(wx.App):
 
     def OnMyTardis(self, event):
         import webbrowser
-        # webbrowser.open(self.settingsModel.GetMyTardisUrl())
         items = self.foldersView.GetDataViewControl().GetSelections()
         rows = [self.foldersModel.GetRow(item) for item in items]
         if len(rows) == 1:

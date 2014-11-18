@@ -67,6 +67,7 @@ import subprocess
 import re
 import pkgutil
 import urllib
+import traceback
 
 import MyDataVersionNumber
 from logger.Logger import logger
@@ -336,3 +337,19 @@ class UploaderModel():
             logger.error("Status code = " + str(response.status_code))
             logger.error("URL = " + url)
             raise Exception(response.text)
+
+    def requestStagingAccess(self):
+        try:
+             self.uploadUploaderInfo()
+             uploadToStagingRequest = self.existingUploadToStagingRequest()
+             if uploadToStagingRequest is None:
+                 uploadToStagingRequest = self.requestUploadToStagingApproval()
+                 if uploadToStagingRequest is not None:
+                     logger.info("Uploader registration request created.")
+             elif uploadToStagingRequest['approved']:
+                 logger.info("Uploads to staging have been approved!")
+             else:
+                 logger.info("Uploads to staging haven't been approved yet.")
+             self.settingsModel.SetUploadToStagingRequest(uploadToStagingRequest)
+        except:
+            logger.error(traceback.format_exc())

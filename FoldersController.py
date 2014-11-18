@@ -11,6 +11,7 @@ import traceback
 
 from ExperimentModel import ExperimentModel
 from DatasetModel import DatasetModel
+from UserModel import UserModel
 from UploadModel import UploadModel
 from UploadModel import UploadStatus
 from FolderModel import FolderModel
@@ -77,6 +78,11 @@ class FoldersController():
         self.notifyWindow.Bind(self.EVT_CONNECTION_STATUS,
                                self.UpdateStatusBar)
 
+        self.ShowMessageDialogEvent, \
+            self.EVT_SHOW_MESSAGE_DIALOG = wx.lib.newevent.NewEvent()
+        self.notifyWindow.Bind(self.EVT_SHOW_MESSAGE_DIALOG,
+                               self.ShowMessageDialog)
+
         for i in range(self.numUploadWorkerThreads):
             t = threading.Thread(target=self.uploadWorker, args=(self,))
             self.uploadWorkerThreads.append(t)
@@ -93,6 +99,11 @@ class FoldersController():
             self.notifyWindow.SetConnected(event.myTardisUrl, True)
         else:
             self.notifyWindow.SetConnected(event.myTardisUrl, False)
+
+    def ShowMessageDialog(self, event):
+        dlg = wx.MessageDialog(None, event.message, event.title,
+                               wx.OK | event.icon)
+        dlg.ShowModal()
 
     def UploadDatafile(self, event):
         folderModel = event.folderModel
@@ -165,6 +176,7 @@ class FoldersController():
                                         self.foldersController.ConnectionStatusEvent(
                                             myTardisUrl=myTardisUrl,
                                             connectionStatus=DISCONNECTED))
+                                return
                             except ValueError, e:
                                 logger.debug("Failed to retrieve experiment "
                                              "for folder " +
@@ -220,6 +232,7 @@ class FoldersController():
                                         self.foldersController.ConnectionStatusEvent(
                                             myTardisUrl=myTardisUrl,
                                             connectionStatus=DISCONNECTED))
+                                return 
                             except ValueError, e:
                                 logger.debug("Failed to retrieve experiment "
                                              "for folder " +
