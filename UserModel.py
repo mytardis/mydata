@@ -2,6 +2,7 @@ import requests
 import json
 
 from logger.Logger import logger
+from GroupModel import GroupModel
 
 
 class UserModel():
@@ -14,6 +15,7 @@ class UserModel():
         self.username = username
         self.name = name
         self.email = email
+        self.groups = []
         self.userRecordJson = userRecordJson
 
         if userRecordJson is not None:
@@ -24,12 +26,14 @@ class UserModel():
                     userRecordJson['last_name']
             if email is None:
                 self.email = userRecordJson['email']
+            for group in userRecordJson['groups']:
+                self.groups.append(GroupModel(settingsModel=settingsModel,
+                                              groupRecordJson=group))
 
     def GetId(self):
         return self.id
 
     def SetId(self, id):
-
         self.id = id
 
     def GetUsername(self):
@@ -40,6 +44,9 @@ class UserModel():
 
     def GetEmail(self):
         return self.email
+
+    def GetGroups(self):
+        return self.groups
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
@@ -67,7 +74,7 @@ class UserModel():
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
-            logger.warn("User %s was not found in MyTardis" % username)
+            logger.warning("User %s was not found in MyTardis" % username)
         else:
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,

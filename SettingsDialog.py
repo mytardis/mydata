@@ -1,15 +1,30 @@
 import wx
 import wx.aui
 import re
+import requests
+import threading
+
+from logger.Logger import logger
+
+from SettingsModel import SettingsModel
+from FacilityModel import FacilityModel
+from UserModel import UserModel
+from FoldersController import ConnectionStatus
 
 
 class SettingsDialog(wx.Dialog):
-    def __init__(self, parent, ID, title, size=wx.DefaultSize,
+    def __init__(self, parent, ID, title,
+                 settingsModel,
+                 size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
                  style=wx.DEFAULT_DIALOG_STYLE):
-
         wx.Dialog.__init__(self, parent, ID, title=title, size=size, pos=pos,
                            style=style)
+
+        self.CenterOnParent()
+
+        self.parent = parent
+        self.settingsModel = settingsModel
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -32,7 +47,7 @@ class SettingsDialog(wx.Dialog):
         self.fieldsPanelSizer.Add(blankLine)
 
         self.facilityNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
-                                                 "Facility Name:")
+                                               "Facility Name:")
         self.fieldsPanelSizer.Add(self.facilityNameLabel,
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.facilityNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "")
@@ -42,22 +57,22 @@ class SettingsDialog(wx.Dialog):
         self.fieldsPanelSizer.Add(blankLine)
 
         self.contactNameLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
-                                                  "Contact Name:")
+                                              "Contact Name:")
         self.fieldsPanelSizer.Add(self.contactNameLabel,
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.contactNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
-                                                "")
+                                            "")
         self.fieldsPanelSizer.Add(self.contactNameField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
                                                 ""))
 
         self.contactEmailLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
-                                                  "Contact Email:")
+                                               "Contact Email:")
         self.fieldsPanelSizer.Add(self.contactEmailLabel,
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.contactEmailField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY,
-                                                "")
+                                             "")
         self.fieldsPanelSizer.Add(self.contactEmailField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
@@ -106,7 +121,6 @@ class SettingsDialog(wx.Dialog):
                                   border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
                                                 ""))
-
         self.fieldsPanel.Fit()
 
         sizer.Add(self.fieldsPanel, 0,
@@ -133,6 +147,8 @@ class SettingsDialog(wx.Dialog):
 
         self.SetSizer(sizer)
         sizer.Fit(self)
+
+        self.UpdateFieldsFromModel(self.settingsModel)
 
     def GetInstrumentName(self):
         return self.instrumentNameField.GetValue()
@@ -183,37 +199,92 @@ class SettingsDialog(wx.Dialog):
         self.apiKeyField.SetValue(apiKey)
 
     def OnOK(self, event):
+        tempSettingsModel = SettingsModel()
+        tempSettingsModel.SaveFieldsFromDialog(self)
 
-        if self.GetMyTardisUrl().strip() == "":
-            message = "Please enter a valid MyTardis URL."
-            dlg = wx.MessageDialog(None, message, "Settings",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.myTardisUrlField.SetFocus()
-        if self.GetFacilityName().strip() == "":
-            message = "Please enter a valid facility name."
-            dlg = wx.MessageDialog(None, message, "Settings",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.facilityNameField.SetFocus()
-        elif self.GetUsername().strip() == "":
-            message = "Please enter a MyTardis username."
-            dlg = wx.MessageDialog(None, message, "Settings",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.usernameField.SetFocus()
-            self.usernameField.SelectAll()
-        elif self.GetApiKey().strip() == "":
-            message = "Please enter your MyTardis API key."
-            dlg = wx.MessageDialog(None, message, "Settings",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.apiKeyField.SetFocus()
-            self.apiKeyField.SelectAll()
-        else:
-            event.Skip()
+        def validate(tempSettingsModel):
+            tempSettingsModel.Validate()
+
+        thread = threading.Thread(target=validate,
+                                  args=(tempSettingsModel,))
+        wx.BeginBusyCursor()
+        thread.start()
+        thread.join()
+        wx.EndBusyCursor()
+
+        settingsValidation = tempSettingsModel.GetValidation()
+        if settingsValidation is not None and \
+                not settingsValidation.GetValid():
+            message = settingsValidation.GetMessage()
+            logger.error(message)
+
+            if settingsValidation.GetSuggestion():
+                currentValue = ""
+                if settingsValidation.GetField() == "facility_name":
+                    currentValue = self.GetFacilityName()
+                elif settingsValidation.GetField() == "mytardis_url":
+                    currentValue = self.GetMyTardisUrl()
+                message = message.strip()
+                if currentValue != "":
+                    message += "\n\nMyData suggests that you replace \"%s\" " \
+                        % currentValue
+                    message += "with \"%s\"." \
+                        % settingsValidation.GetSuggestion()
+                else:
+                    message += "\n\nMyData suggests that you use \"%s\"." \
+                        % settingsValidation.GetSuggestion()
+                dlg = wx.MessageDialog(None, message, "MyData",
+                                       wx.OK | wx.CANCEL | wx.ICON_ERROR)
+                okToUseSuggestion = dlg.ShowModal()
+                if okToUseSuggestion == wx.ID_OK:
+                    if settingsValidation.GetField() == "facility_name":
+                        self.SetFacilityName(settingsValidation.GetSuggestion())
+                    if settingsValidation.GetField() == "mytardis_url":
+                        self.SetMyTardisUrl(settingsValidation.GetSuggestion())
+            else:
+                dlg = wx.MessageDialog(None, message, "MyData",
+                                       wx.OK | wx.ICON_ERROR)
+                dlg.ShowModal()
+            if settingsValidation.GetField() == "instrument_name":
+                self.instrumentNameField.SetFocus()
+                self.instrumentNameField.SelectAll()
+            elif settingsValidation.GetField() == "facility_name":
+                self.facilityNameField.SetFocus()
+                self.facilityNameField.SelectAll()
+            elif settingsValidation.GetField() == "data_directory":
+                self.dataDirectoryField.SetFocus()
+                self.dataDirectoryField.SelectAll()
+            elif settingsValidation.GetField() == "mytardis_url":
+                self.myTardisUrlField.SetFocus()
+                self.myTardisUrlField.SelectAll()
+            elif settingsValidation.GetField() == "contact_name":
+                self.contactNameField.SetFocus()
+                self.contactNameField.SelectAll()
+            elif settingsValidation.GetField() == "contact_email":
+                self.contactEmailField.SetFocus()
+                self.contactEmailField.SelectAll()
+            elif settingsValidation.GetField() == "username":
+                self.usernameField.SetFocus()
+                self.usernameField.SelectAll()
+            elif settingsValidation.GetField() == "api_key":
+                self.apiKeyField.SetFocus()
+                self.apiKeyField.SelectAll()
+            return
+
+        self.settingsModel.SaveFieldsFromDialog(self)
+        event.Skip()
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:")
         if dlg.ShowModal() == wx.ID_OK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
+
+    def UpdateFieldsFromModel(self, settingsModel):
+        self.SetInstrumentName(settingsModel.GetInstrumentName())
+        self.SetFacilityName(settingsModel.GetFacilityName())
+        self.SetContactName(settingsModel.GetContactName())
+        self.SetContactEmail(settingsModel.GetContactEmail())
+        self.SetMyTardisUrl(settingsModel.GetMyTardisUrl())
+        self.SetDataDirectory(settingsModel.GetDataDirectory())
+        self.SetUsername(settingsModel.GetUsername())
+        self.SetApiKey(settingsModel.GetApiKey())
