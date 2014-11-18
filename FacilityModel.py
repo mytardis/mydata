@@ -100,4 +100,5 @@ class FacilityModel():
                 facilities.append(FacilityModel(
                     settingsModel=settingsModel,
                     facilityRecordJson=facilityRecordJson))
-            return facilities
+
+        return facilities
