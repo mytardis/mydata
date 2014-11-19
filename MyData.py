@@ -466,16 +466,19 @@ class MyData(wx.App):
             self.OnRefresh(None)
 
     def OnMyTardis(self, event):
-        import webbrowser
-        items = self.foldersView.GetDataViewControl().GetSelections()
-        rows = [self.foldersModel.GetRow(item) for item in items]
-        if len(rows) == 1:
-            folderRecord = self.foldersModel.GetFolderRecord(rows[0])
-            if folderRecord.GetDatasetModel() is not None:
-                webbrowser.open(self.settingsModel.GetMyTardisUrl() + "/" +
-                                folderRecord.GetDatasetModel().GetViewUri())
-        else:
-            webbrowser.open(self.settingsModel.GetMyTardisUrl())
+        try:
+            import webbrowser
+            items = self.foldersView.GetDataViewControl().GetSelections()
+            rows = [self.foldersModel.GetRow(item) for item in items]
+            if len(rows) == 1:
+                folderRecord = self.foldersModel.GetFolderRecord(rows[0])
+                if folderRecord.GetDatasetModel() is not None:
+                    webbrowser.open(self.settingsModel.GetMyTardisUrl() + "/" +
+                                    folderRecord.GetDatasetModel().GetViewUri())
+            else:
+                webbrowser.open(self.settingsModel.GetMyTardisUrl())
+        except:
+            logger.error(traceback.format_exc())
 
     def OnHelp(self, event):
         new = 2  # Open in a new tab, if possible
