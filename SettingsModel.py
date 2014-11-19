@@ -8,6 +8,8 @@ from validate_email import validate_email
 from logger.Logger import logger
 from UserModel import UserModel
 from FacilityModel import FacilityModel
+from InstrumentModel import InstrumentModel
+from Exceptions import DuplicateKeyException
 
 
 class SettingsModel():
@@ -35,7 +37,9 @@ class SettingsModel():
         self.sqlitedb = sqlitedb
 
         self.instrument_name = ""
+        self.instrument = None
         self.facility_name = ""
+        self.facility = None
         self.contact_name = ""
         self.contact_email = ""
         self.data_directory = ""
@@ -45,6 +49,7 @@ class SettingsModel():
 
         self.background_mode = "False"
 
+        self.uploaderModel = None
         self.uploadToStagingRequest = None
 
         self.validation = self.SettingsValidation(True)
@@ -159,11 +164,17 @@ class SettingsModel():
     def GetInstrumentName(self):
         return self.instrument_name
 
+    def GetInstrument(self):
+        return self.instrument
+
     def SetInstrumentName(self, instrumentName):
         self.instrument_name = instrumentName
 
     def GetFacilityName(self):
         return self.facility_name
+
+    def GetFacility(self):
+        return self.facility
 
     def SetFacilityName(self, facilityName):
         self.facility_name = facilityName
@@ -219,6 +230,12 @@ class SettingsModel():
 
     def SetUploadToStagingRequest(self, uploadToStagingRequest):
         self.uploadToStagingRequest = uploadToStagingRequest
+
+    def GetUploaderModel(self):
+        return self.uploaderModel
+
+    def SetUploaderModel(self, uploaderModel):
+        self.uploaderModel = uploaderModel
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
@@ -297,7 +314,21 @@ class SettingsModel():
                                                           "username")
                 return self.validation
             if self.GetApiKey().strip() == "":
-                message = "Please enter your MyTardis API key."
+                message = "Please enter your MyTardis API key.\n\n" \
+                    "To find your API key, log into MyTardis using the " \
+                    "account you wish to use with MyData (\"%s\"), " \
+                    "click on your username (in the upper-right corner), " \
+                    "and select \"Download Api Key\" from the drop-down " \
+                    "menu.  If \"Download Api Key\" is missing from the " \
+                    "drop-down menu, please contact your MyTardis " \
+                    "administrator.\n\n" \
+                    "Open the downloaded file (\"<username>.key\") in " \
+                    "Notepad (or a suitable text editor).  Its content "\
+                    "will appear as follows:\n\n" \
+                    "    ApiKey <username>:<API key>\n\n" \
+                    "Copy the <API key> (after the colon) to your clipboard, " \
+                    "and paste it into MyData's \"MyTardis API Key\" field." \
+                    % self.GetUsername().strip()
                 self.validation = self.SettingsValidation(False, message,
                                                           "api_key")
                 return self.validation
@@ -355,7 +386,8 @@ class SettingsModel():
                        "Accept": "application/json"}
             response = requests.get(headers=headers, url=url)
             if response.status_code < 200 or response.status_code >= 300:
-                message = "Your MyTardis credentials are invalid."
+                message = "Your MyTardis credentials are invalid.\n\n" \
+                    "Please check your Username and API Key."
                 self.validation = self.SettingsValidation(False, message,
                                                           "username")
                 return self.validation
@@ -364,10 +396,10 @@ class SettingsModel():
                 message = "Please enter a valid facility name."
                 suggestion = None
                 try:
-                    defaultUserModel = UserModel.GetUserRecord(self,
-                                                               self.GetUsername())
-                    facilities = FacilityModel.GetMyFacilities(self,
-                                                               defaultUserModel)
+                    defaultUserModel = UserModel\
+                        .GetUserRecord(self, self.GetUsername())
+                    facilities = FacilityModel\
+                        .GetMyFacilities(self, defaultUserModel)
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
                     self.validation = self.SettingsValidation(False, message,
@@ -383,12 +415,11 @@ class SettingsModel():
                                                        self.GetUsername())
             facilities = FacilityModel.GetMyFacilities(self,
                                                        defaultUserModel)
-            facilityMatch = None
             for f in facilities:
                 if self.GetFacilityName() == f.GetName():
-                    facilityMatch = f
+                    self.facility = f
                     break
-            if facilityMatch is None:
+            if self.facility is None:
                 message = "Facility \"%s\" was not " \
                     "found on MyTardis (or user \"%s\" " \
                     "doesn't have access to it)." % \
@@ -405,6 +436,34 @@ class SettingsModel():
                                                           "facility_name",
                                                           suggestion)
                 return self.validation
+
+            logger.warning("For now, we are assuming that if we find an "
+                           "instrument record with the correct name and "
+                           "facility, then it must be the correct instrument "
+                           "record to use with this MyData instance. "
+                           "However, if the instrument record we find is "
+                           "associated with a different uploader instance "
+                           "(suggesting a different MyData instance), then "
+                           "we really shouldn't reuse the same instrument "
+                           "record, unless it is just a case of having "
+                           "multiple uploader instances for multiple "
+                           "MAC addresses (Ethernet and WiFi) "
+                           "on the same instrument PC.")
+            self.instrument = \
+                InstrumentModel.GetInstrumentRecord(self,
+                                                    self.GetFacility(),
+                                                    self.GetInstrumentName())
+            if self.instrument is None:
+                logger.info("No instrument record with name \"%s\" was found "
+                            "in facility \"%s\", so we will create one."
+                            % (self.GetInstrumentName(),
+                               self.GetFacilityName()))
+                self.instrument = InstrumentModel\
+                    .CreateInstrumentRecord(self, self.GetFacility(),
+                                            self.GetInstrumentName())
+                logger.info("self.instrument = " + str(self.instrument))
+            if self.instrument is not None and self.uploaderModel is not None:
+                self.uploaderModel.SetInstrument(self.instrument)
 
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
@@ -430,3 +489,30 @@ class SettingsModel():
 
     def GetValidation(self):
         return self.validation
+
+    def RenameInstrument(self, facilityName,
+                         oldInstrumentName, newInstrumentName):
+        defaultUserModel = UserModel.GetUserRecord(self, self.GetUsername())
+        facilities = FacilityModel.GetMyFacilities(self, defaultUserModel)
+        facility = None
+        for f in facilities:
+            if facilityName == f.GetName():
+                facility = f
+                break
+        if facility is None:
+            raise Exception("Facility is None in "
+                            "SettingsModel's RenameInstrument.")
+        oldInstrument = \
+            InstrumentModel.GetInstrumentRecord(self, facility,
+                                                oldInstrumentName)
+        if oldInstrument is None:
+            raise Exception("Instrument record for old instrument "
+                            "name not found in SettingsModel's "
+                            "RenameInstrument.")
+        newInstrument = \
+            InstrumentModel.GetInstrumentRecord(self, facility,
+                                                newInstrumentName)
+        if newInstrument is not None:
+            raise DuplicateKeyException("Instrument with name \"%s\" "
+                                        "already exists" % newInstrumentName)
+        oldInstrument.Rename(newInstrumentName)
