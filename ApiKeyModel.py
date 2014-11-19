@@ -4,23 +4,20 @@ from logger.Logger import logger
 
 
 class ApiKeyModel():
-
-    def __init__(self, id=None, username=None, key=None,
+    def __init__(self, username=None, key=None,
                  apiKeyRecordJson=None):
-        self.id = id
+        self.id = None
         self.username = username
         self.key = key
 
         self.apiKeyRecordJson = apiKeyRecordJson
 
         if apiKeyRecordJson is not None:
+            self.id = apiKeyRecordJson['id']
             self.key = apiKeyRecordJson['key']
 
     def GetId(self):
         return self.id
-
-    def SetId(self, id):
-        self.id = id
 
     def GetUsername(self):
         return self.username

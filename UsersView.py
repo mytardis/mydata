@@ -108,10 +108,12 @@ class UsersView(wx.Panel):
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
                 return
-            id = self.usersModel.GetMaxId() + 1
+            dataViewId = self.usersModel.GetMaxDataViewId() + 1
             userRecord = \
-                UserModel(id, addUserDialog.GetUsername(),
-                          addUserDialog.GetName(), addUserDialog.GetEmail())
+                UserModel(dataViewId=dataViewId,
+                          username=addUserDialog.GetUsername(),
+                          name=addUserDialog.GetName(),
+                          email=addUserDialog.GetEmail())
             self.usersModel.AddRow(userRecord)
 
     def OnEditingDone(self, evt):

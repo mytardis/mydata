@@ -7,11 +7,13 @@ from GroupModel import GroupModel
 
 class UserModel():
 
-    def __init__(self, settingsModel=None, id=None, username=None, name=None,
+    def __init__(self, settingsModel=None, dataViewId=None,
+                 username=None, name=None,
                  email=None, userRecordJson=None):
 
         self.settingsModel = settingsModel
-        self.id = id
+        self.id = None
+        self.dataViewId = dataViewId
         self.username = username
         self.name = name
         self.email = email
@@ -19,6 +21,7 @@ class UserModel():
         self.userRecordJson = userRecordJson
 
         if userRecordJson is not None:
+            self.id = userRecordJson['id']
             if username is None:
                 self.username = userRecordJson['username']
             if name is None:
@@ -33,8 +36,11 @@ class UserModel():
     def GetId(self):
         return self.id
 
-    def SetId(self, id):
-        self.id = id
+    def GetDataViewId(self):
+        return self.dataViewId
+
+    def SetDataViewId(self, dataViewId):
+        self.dataViewId = dataViewId
 
     def GetUsername(self):
         return self.username
@@ -53,6 +59,15 @@ class UserModel():
 
     def GetJson(self):
         return self.userRecordJson
+
+    def __str__(self):
+        return "UserModel: " + self.GetUsername()
+
+    def __unicode__(self):
+        return "UserModel: " + self.GetUsername()
+
+    def __repr__(self):
+        return "UserModel: " + self.GetUsername()
 
     @staticmethod
     def GetUserRecord(settingsModel, username):

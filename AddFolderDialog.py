@@ -108,11 +108,11 @@ class AddFolderDialog(wx.Dialog):
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
                 return
-            id = self.usersModel.GetMaxId() + 1
-            userRecord = UserModel(id,
-                                   addUserDialog.GetUsername(),
-                                   addUserDialog.GetName(),
-                                   addUserDialog.GetEmail())
+            dataViewId = self.usersModel.GetMaxDataViewId() + 1
+            userRecord = UserModel(dataViewId=dataViewId,
+                                   username=addUserDialog.GetUsername(),
+                                   name=addUserDialog.GetName(),
+                                   email=addUserDialog.GetEmail())
             self.usersModel.AddRow(userRecord)
             userList = self.usersModel.GetValuesForColname("Name")
             self.ownerChoice.Clear()

@@ -52,7 +52,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
-        self.maxId = 0
+        self.maxDataViewId = 0
 
         self.inProgressIcon = wx.Image('png-normal/icons16x16/Refresh.png',
                                        wx.BITMAP_TYPE_PNG).ConvertToBitmap()
@@ -224,7 +224,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteRows(self, rows):
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         # make a copy since we'll be sorting(mutating) the list
         rows = list(rows)
@@ -232,7 +232,8 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         rows.sort(reverse=True)
 
         for row in rows:
-            logger.debug("DeleteRows: Canceling upload: " + self.uploadsData[row].GetRelativePathToUpload())
+            logger.debug("DeleteRows: Canceling upload: " +
+                         self.uploadsData[row].GetRelativePathToUpload())
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
             del self.unfilteredUploadsData[row]
@@ -244,7 +245,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def DeleteUpload(self, folderModel, dataFileIndex):
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         for row in range(0, self.GetRowCount()):
             if self.uploadsData[row].GetFolderModel() == folderModel and \
@@ -263,17 +264,17 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 return True
         return False
 
-    def GetMaxIdFromExistingRows(self):
-        maxId = 0
+    def GetMaxDataViewIdFromExistingRows(self):
+        maxDataViewId = 0
         for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetId() > maxId:
-                maxId = self.uploadsData[row].GetId()
-        return maxId
+            if self.uploadsData[row].GetId() > maxDataViewId:
+                maxDataViewId = self.uploadsData[row].GetId()
+        return maxDataViewId
 
-    def GetMaxId(self):
-        if self.GetMaxIdFromExistingRows() > self.maxId:
-            self.maxId = self.GetMaxIdFromExistingRows()
-        return self.maxId
+    def GetMaxDataViewId(self):
+        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
+            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
+        return self.maxDataViewId
 
     def GetUploadModel(self, row):
         return self.uploadsData[row]
@@ -359,7 +360,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def CancelAll(self):
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         for row in reversed(range(0, self.GetCount())):
             self.uploadsData[row].Cancel()
@@ -373,4 +374,3 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         self.filteredUploadsData = list()
         self.filtered = False
         self.searchString = ""
-

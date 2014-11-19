@@ -10,8 +10,8 @@ class UploadStatus:
 
 
 class UploadModel():
-    def __init__(self, id, folderModel, dataFileIndex):
-        self.id = id
+    def __init__(self, dataViewId, folderModel, dataFileIndex):
+        self.dataViewId = dataViewId
         self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.folder = folderModel.GetFolder()
@@ -25,8 +25,8 @@ class UploadModel():
         self.fileSize = 0
         self.canceled = False
 
-    def GetId(self):
-        return self.id
+    def GetDataViewId(self):
+        return self.dataViewId
 
     def GetFilename(self):
         return self.filename

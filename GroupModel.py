@@ -7,17 +7,16 @@ from logger.Logger import logger
 
 class GroupModel():
 
-    def __init__(self, settingsModel=None, id=None, name=None,
+    def __init__(self, settingsModel=None, name=None,
                  groupRecordJson=None):
 
         self.settingsModel = settingsModel
-        self.id = id
+        self.id = None
         self.name = name
         self.groupRecordJson = groupRecordJson
 
         if groupRecordJson is not None:
-            if id is None:
-                self.id = groupRecordJson['id']
+            self.id = groupRecordJson['id']
             if name is None:
                 self.name = groupRecordJson['name']
 
@@ -32,9 +31,6 @@ class GroupModel():
 
     def GetId(self):
         return self.id
-
-    def SetId(self, id):
-        self.id = id
 
     def GetName(self):
         return self.name
@@ -66,4 +62,4 @@ class GroupModel():
         else:
             logger.debug("Found group record for name '" + name + "'.")
             return GroupModel(settingsModel=settingsModel, name=name,
-                             groupRecordJson=groupRecordsJson['objects'][0])
+                              groupRecordJson=groupRecordsJson['objects'][0])

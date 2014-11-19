@@ -102,20 +102,22 @@ class UploadsView(wx.Panel):
 
     def OnCancelUploads(self, evt):
         try:
-            # Remove the selected row(s) from the model. The model will take care
-            # of notifying the view (and any other observers) that the change has
-            # happened.
+            # Remove the selected row(s) from the model. The model will take
+            # care of notifying the view (and any other observers) that the
+            # change has happened.
             items = self.uploadsDataViewControl.GetSelections()
             rows = [self.uploadsModel.GetRow(item) for item in items]
             if len(rows) > 1:
-                message = "Are you sure you want to cancel the selected uploads?"
+                message = \
+                    "Are you sure you want to cancel the selected uploads?"
             elif len(rows) == 1:
                 pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
-                        .GetRelativePathToUpload()
+                    .GetRelativePathToUpload()
                 message = "Are you sure you want to cancel upload \"" + \
                     pathToUpload + "\" ?"
             else:
-                dlg = wx.MessageDialog(None, "Please select an upload to cancel.",
+                dlg = wx.MessageDialog(None,
+                                       "Please select an upload to cancel.",
                                        "Cancel Upload(s)", wx.OK)
                 dlg.ShowModal()
                 return
@@ -127,6 +129,6 @@ class UploadsView(wx.Panel):
                 self.uploadsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
-    
+
     def GetUploadsModel(self):
         return self.uploadsModel

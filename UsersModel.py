@@ -37,13 +37,13 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         self.searchString = ""
 
         self.columnNames = ("Id", "Username", "Name", "Email")
-        self.columnKeys = ("id", "username", "name", "email")
+        self.columnKeys = ("dataViewId", "username", "name", "email")
         self.defaultColumnWidths = (40, 100, 200, 260)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
-        self.maxId = 0
+        self.maxDataViewId = 0
 
     def SetFoldersModel(self, foldersModel):
 
@@ -203,7 +203,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
     def DeleteRows(self, rows):
 
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         # make a copy since we'll be sorting(mutating) the list
         rows = list(rows)
@@ -220,9 +220,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 wx.CallAfter(self.RowDeleted, row)
 
     def DeleteAllRows(self):
-
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
         for row in reversed(range(0, self.GetCount())):
             del self.usersData[row]
             # notify the view(s) using this model that it has been removed
@@ -230,11 +227,11 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 self.RowDeleted(row)
             else:
                 wx.CallAfter(self.RowDeleted, row)
-
         self.unfilteredUsersData = list()
         self.filteredUsersData = list()
         self.filtered = False
         self.searchString = ""
+        self.maxDataViewId = 0
 
     def Contains(self, name, email):
         for row in range(0, self.GetCount()):
@@ -256,17 +253,17 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 return self.unfilteredUsersData[row]
         return None
 
-    def GetMaxIdFromExistingRows(self):
-        maxId = 0
+    def GetMaxDataViewIdFromExistingRows(self):
+        maxDataViewId = 0
         for row in range(0, self.GetCount()):
-            if self.usersData[row].GetId() > maxId:
-                maxId = self.usersData[row].GetId()
-        return maxId
+            if self.usersData[row].GetId() > maxDataViewId:
+                maxDataViewId = self.usersData[row].GetDataViewId()
+        return maxDataViewId
 
-    def GetMaxId(self):
-        if self.GetMaxIdFromExistingRows() > self.maxId:
-            self.maxId = self.GetMaxIdFromExistingRows()
-        return self.maxId
+    def GetMaxDataViewId(self):
+        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
+            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
+        return self.maxDataViewId
 
     def AddRow(self, value):
 
@@ -288,17 +285,16 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return len(usernames)
 
     def Refresh(self, incrementProgressDialog):
-
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
         for username in usernames:
             logger.debug("\nFound subdirectory assumed to be username: " +
                          username)
-            id = self.GetMaxId() + 1
+            dataViewId = self.GetMaxDataViewId() + 1
             userRecord = UserModel.GetUserRecord(self.settingsModel, username)
             if userRecord is not None:
-                userRecord.SetId(id)
+                userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
@@ -309,10 +305,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
                 userRecord = UserModel(settingsModel=self.settingsModel,
-                                       id=id, username=username,
+                                       username=username,
                                        name="USER NOT FOUND IN MYTARDIS",
                                        email="USER NOT FOUND IN MYTARDIS")
-                userRecord.SetId(id)
+                userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
