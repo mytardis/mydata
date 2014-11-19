@@ -2,6 +2,7 @@ import threading
 import wx
 import logging
 from StringIO import StringIO
+from ConfigParser import ConfigParser
 import HTMLParser
 import os
 import time
@@ -9,6 +10,7 @@ import subprocess
 import sys
 import requests
 from SubmitDebugReportDialog import SubmitDebugReportDialog
+
 
 class Logger():
 
@@ -18,23 +20,19 @@ class Logger():
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.configureLogger()
-        self.globalLauncherConfig=None
-        self.globalLauncherPreferencesFilePath=None
+        self.myDataConfigPath = None
 
-    def setGlobalLauncherConfig(self, globalLauncherConfig):
-        self.globalLauncherConfig = globalLauncherConfig
-
-    def setGlobalLauncherPreferencesFilePath(self, globalLauncherPreferencesFilePath):
-        self.globalLauncherPreferencesFilePath = globalLauncherPreferencesFilePath
+    def setMyDataConfigPath(self, myDataConfigPath):
+        self.myDataConfigPath = myDataConfigPath
 
     def sendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
-        # Send all log messages to the debug window, which may or may not be visible.
         try:
             log_window_handler = logging.StreamHandler(stream=logTextCtrl)
         except:
             log_window_handler = logging.StreamHandler(strm=logTextCtrl)
         log_window_handler.setLevel(logging.DEBUG)
-        log_format_string = '%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s'
+        log_format_string = "%(asctime)s - %(name)s - %(module)s - " \
+            "%(funcName)s - %(lineno)d - %(levelname)s - %(message)s"
         log_window_handler.setFormatter(logging.Formatter(log_format_string))
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(log_window_handler)
@@ -43,7 +41,8 @@ class Logger():
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(logging.DEBUG)
 
-        log_format_string = '%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s'
+        log_format_string = "%(asctime)s - %(name)s - %(module)s - " \
+            "%(funcName)s - %(lineno)d - %(levelname)s - %(message)s"
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
@@ -57,50 +56,57 @@ class Logger():
 
         # Finally, send all log messages to a log file.
         from os.path import expanduser, join
-        self.loggerFileHandler = logging.FileHandler(join(expanduser("~"), '.MyData_debug_log.txt'))
+        self.loggerFileHandler = \
+            logging.FileHandler(join(expanduser("~"), ".MyData_debug_log.txt"))
         self.loggerFileHandler.setLevel(logging.DEBUG)
-        self.loggerFileHandler.setFormatter(logging.Formatter(log_format_string))
+        self.loggerFileHandler\
+            .setFormatter(logging.Formatter(log_format_string))
         self.loggerObject.addHandler(self.loggerFileHandler)
 
     def debug(self, message):
-        if threading.current_thread().name=="MainThread":
+        if threading.current_thread().name == "MainThread":
             self.loggerObject.debug(message)
         else:
             wx.CallAfter(self.loggerObject.debug, message)
 
     def error(self, message):
-        if threading.current_thread().name=="MainThread":
+        if threading.current_thread().name == "MainThread":
             self.loggerObject.error(message)
         else:
             wx.CallAfter(self.loggerObject.error, message)
 
     def warning(self, message):
-        if threading.current_thread().name=="MainThread":
+        if threading.current_thread().name == "MainThread":
             self.loggerObject.warning(message)
         else:
             wx.CallAfter(self.loggerObject.warning, message)
 
     def info(self, message):
-        if threading.current_thread().name=="MainThread":
+        if threading.current_thread().name == "MainThread":
             self.loggerObject.info(message)
         else:
             wx.CallAfter(self.loggerObject.info, message)
 
-    def dump_log(self, instrumentAppMainFrame, submit_log=False, settingsModel = None):
+    def dump_log(self, myDataMainFrame, submit_log=False, settingsModel=None):
         # Commenting out logging.shutdown() for now,
         # because of concerns that logging could be used
         # after the call to logging.shutdown() which is
         # not allowed.
         # logging.shutdown()
-        logger.debug("Logger.dump_log: Flushing self.loggerObject.handlers[0], which is of class: " + self.loggerObject.handlers[0].__class__.__name__)
+        logger.debug("Logger.dump_log: Flushing "
+                     "self.loggerObject.handlers[0], which is of class: "
+                     + self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
 
-        if instrumentAppMainFrame==None:
-            logger.debug("Logger.dump_log: Bailing out early, because instrumentAppMainFrame is None.")
+        if myDataMainFrame is None:
+            logger.debug("Logger.dump_log: Bailing out early, "
+                         "because myDataMainFrame is None.")
             return
 
         def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(None,wx.ID_ANY,'MyData',self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath)
+            dlg = SubmitDebugReportDialog(None, wx.ID_ANY, 'MyData',
+                                          self.loggerOutput.getvalue(),
+                                          self.myDataConfigPath)
             try:
                 if wx.IsBusy():
                     wx.EndBusyCursor()
@@ -110,34 +116,35 @@ class Logger():
                 result = dlg.ShowModal()
                 if stoppedBusyCursor:
                     wx.BeginBusyCursor()
-                instrumentAppMainFrame.submit_log = result == wx.ID_OK
-                if instrumentAppMainFrame.submit_log:
+                myDataMainFrame.submit_log = result == wx.ID_OK
+                if myDataMainFrame.submit_log:
                     self.name = dlg.getName()
                     self.email = dlg.getEmail()
                     self.comments = dlg.getComments()
                     self.pleaseContactMe = dlg.getPleaseContactMe()
             finally:
                 dlg.Destroy()
-                instrumentAppMainFrame.submitDebugLogDialogCompleted = True
+                myDataMainFrame.submitDebugLogDialogCompleted = True
 
-        instrumentAppMainFrame.submitDebugLogDialogCompleted = False
+        myDataMainFrame.submitDebugLogDialogCompleted = False
 
         if submit_log:
-            if threading.current_thread().name=="MainThread":
+            if threading.current_thread().name == "MainThread":
                 showSubmitDebugLogDialog()
             else:
                 wx.CallAfter(showSubmitDebugLogDialog)
-                while not instrumentAppMainFrame.submitDebugLogDialogCompleted:
+                while not myDataMainFrame.submitDebugLogDialogCompleted:
                     time.sleep(0.1)
 
-        if submit_log and instrumentAppMainFrame.submit_log:
+        if submit_log and myDataMainFrame.submit_log:
             self.debug('about to send debug log')
 
-            url       = 'https://cvl.massive.org.au/cgi-bin/log_drop.py'
+            url = 'https://cvl.massive.org.au/cgi-bin/log_drop.py'
 
             debugLog = "\n"
             if settingsModel is not None:
-                debugLog = debugLog + "Username: " + settingsModel.GetMyTardisUsername() + "\n"
+                debugLog = debugLog + "Username: " + \
+                    settingsModel.GetMyTardisUsername() + "\n"
             debugLog = debugLog + "Name: " + self.name + "\n"
             debugLog = debugLog + "Email: " + self.email + "\n"
             debugLog = debugLog + "Contact me? "
@@ -153,7 +160,7 @@ class Logger():
                     debugLog = debugLog + line
             if atLeastOneError:
                 debugLog = debugLog + "\n"
-            debugLog =  debugLog + self.loggerOutput.getvalue()
+            debugLog = debugLog + self.loggerOutput.getvalue()
             file_info = {'logfile': debugLog}
 
             # If we are running in an installation then we have to use
@@ -164,5 +171,3 @@ class Logger():
                 r = requests.post(url, files=file_info)
 
 logger = Logger("MyData")
-
-
