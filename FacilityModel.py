@@ -5,23 +5,24 @@ import urllib
 from logger.Logger import logger
 from GroupModel import GroupModel
 
+
 class FacilityModel():
 
-    def __init__(self, settingsModel=None, id=None, name=None,
+    def __init__(self, settingsModel=None, name=None,
                  facilityRecordJson=None):
 
         self.settingsModel = settingsModel
-        self.id = id
+        self.id = None
         self.name = name
         self.json = facilityRecordJson
         self.manager_group = None
 
         if facilityRecordJson is not None:
-            if id is None:
-                self.id = facilityRecordJson['id']
+            self.id = facilityRecordJson['id']
             if name is None:
                 self.name = facilityRecordJson['name']
-            self.manager_group = GroupModel(groupRecordJson=facilityRecordJson['manager_group'])
+            self.manager_group = \
+                GroupModel(groupRecordJson=facilityRecordJson['manager_group'])
 
     def __str__(self):
         return "FacilityModel " + self.name
@@ -34,9 +35,6 @@ class FacilityModel():
 
     def GetId(self):
         return self.id
-
-    def SetId(self, id):
-        self.id = id
 
     def GetName(self):
         return self.name
@@ -77,8 +75,9 @@ class FacilityModel():
             return None
         else:
             logger.debug("Found facility record for name '" + name + "'.")
-            return FacilityModel(settingsModel=settingsModel, name=name,
-                             facilityRecordJson=facilityRecordsJson['objects'][0])
+            return FacilityModel(
+                settingsModel=settingsModel, name=name,
+                facilityRecordJson=facilityRecordsJson['objects'][0])
 
     @staticmethod
     def GetMyFacilities(settingsModel, userModel):
@@ -92,7 +91,7 @@ class FacilityModel():
 
         for group in groups:
             url = myTardisUrl + "/api/v1/facility/?format=json" + \
-                    "&manager_group__id=" + str(group.GetId())
+                "&manager_group__id=" + str(group.GetId())
             headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                        myTardisApiKey}
             response = requests.get(url=url, headers=headers)

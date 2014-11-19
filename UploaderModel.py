@@ -29,7 +29,7 @@ Ran the following as root on the staging host (118.138.241.33) :
 
 $ adduser mydata
 $ mkdir /home/mydata/.ssh
-$ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDEN9ysR4+I/W0fEQTL8wUg2u/8nmrWgclLMAkIMV5i8e24pwu0FOXo8mWw+Xdax6OnZUAf3RB1eMqFKeJm79QWRDOinN0xD9WXNaSP0j10KshNkc5HnkhYtjRGx13cvXxJIZk6c8tegMHbhN6jA/GWKmU4hUKghIC99h73buU66XOXGU3slTO7UPoLb4K8uQ6Y42hqaDlahrtZITIV4Z/fvV2nBlUfnlEqf8GlJeBsxxpiBBXKa1H3QsWBa8C9hHrj9XJVFHsBP7/RIJ6wEWrvwi3Pbwf9wkeAUEh4OcD3DUmupJyQDeC0rlpZCYOKHyXVlSJkE9CfpryCVQIP2OGl MyData Key" > /home/mydata/.ssh/authorized_keys
+$ echo "ssh-rsa AAAAB3NzaC... MyData Key" > /home/mydata/.ssh/authorized_keys
 $ chown -R mydata:mydata /home/mydata/.ssh/
 $ chmod 700 /home/mydata/.ssh/
 $ chmod 600 /home/mydata/.ssh/authorized_keys
@@ -254,7 +254,7 @@ class UploaderModel():
                         "architecture": str(platform.architecture()),
                         "processor": platform.processor(),
                         "memory": self._bytes2human(psutil.virtual_memory()
-                                                   .total),
+                                                    .total),
                         "cpus": psutil.cpu_count(),
 
                         "disk_usage": self.disk_usage,
@@ -336,17 +336,18 @@ class UploaderModel():
 
     def RequestStagingAccess(self):
         try:
-             self.UploadUploaderInfo()
-             uploadToStagingRequest = self.ExistingUploadToStagingRequest()
-             if uploadToStagingRequest is None:
-                 uploadToStagingRequest = self.RequestUploadToStagingApproval()
-                 if uploadToStagingRequest is not None:
-                     logger.info("Uploader registration request created.")
-             elif uploadToStagingRequest['approved']:
-                 logger.info("Uploads to staging have been approved!")
-             else:
-                 logger.info("Uploads to staging haven't been approved yet.")
-             self.settingsModel.SetUploadToStagingRequest(uploadToStagingRequest)
+            self.UploadUploaderInfo()
+            uploadToStagingRequest = self.ExistingUploadToStagingRequest()
+            if uploadToStagingRequest is None:
+                uploadToStagingRequest = self.RequestUploadToStagingApproval()
+                if uploadToStagingRequest is not None:
+                    logger.info("Uploader registration request created.")
+            elif uploadToStagingRequest['approved']:
+                logger.info("Uploads to staging have been approved!")
+            else:
+                logger.info("Uploads to staging haven't been approved yet.")
+            self.settingsModel\
+                .SetUploadToStagingRequest(uploadToStagingRequest)
         except:
             logger.error(traceback.format_exc())
 
@@ -368,7 +369,8 @@ class UploaderModel():
             uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
         else:
             raise Exception("SetInstrument: Uploader record not found!")
-        logger.info("Setting instrument in uploader record via MyTardis API...")
+        logger.info("Setting instrument in uploader record via "
+                    "MyTardis API...")
         url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
         uploaderJson = {"instruments": [instrument.GetResourceUri()],
                         "mac_address": self.mac_address}

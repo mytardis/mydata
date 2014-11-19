@@ -5,38 +5,39 @@ import urllib
 from logger.Logger import logger
 from FacilityModel import FacilityModel
 
+
 class InstrumentModel():
 
-    def __init__(self, settingsModel=None, id=None, name=None,
+    def __init__(self, settingsModel=None, name=None,
                  instrumentRecordJson=None):
 
         self.settingsModel = settingsModel
-        self.id = id
+        self.id = None
         self.name = name
         self.json = instrumentRecordJson
         self.facility = None
 
         if instrumentRecordJson is not None:
-            if id is None:
-                self.id = instrumentRecordJson['id']
+            self.id = instrumentRecordJson['id']
             if name is None:
                 self.name = instrumentRecordJson['name']
-            self.facility = FacilityModel(facilityRecordJson=instrumentRecordJson['facility'])
+            self.facility = FacilityModel(
+                facilityRecordJson=instrumentRecordJson['facility'])
 
     def __str__(self):
-        return "InstrumentModel " + self.name + " - " + self.GetFacility().GetName()
+        return "InstrumentModel " + self.name + \
+            " - " + self.GetFacility().GetName()
 
     def __unicode__(self):
-        return "InstrumentModel " + self.name + " - " + self.GetFacility().GetName()
+        return "InstrumentModel " + self.name + \
+            " - " + self.GetFacility().GetName()
 
     def __repr__(self):
-        return "InstrumentModel " + self.name + " - " + self.GetFacility().GetName()
+        return "InstrumentModel " + self.name + \
+            " - " + self.GetFacility().GetName()
 
     def GetId(self):
         return self.id
-
-    def SetId(self, id):
-        self.id = id
 
     def GetName(self):
         return self.name
@@ -71,7 +72,7 @@ class InstrumentModel():
         if response.status_code >= 200 and response.status_code < 300:
             instrumentRecordJson = response.json()
             return InstrumentModel(settingsModel=settingsModel, name=name,
-                             instrumentRecordJson=instrumentRecordJson)
+                                   instrumentRecordJson=instrumentRecordJson)
         else:
             if response.status_code == 404:
                 raise Exception("HTTP 404 (Not Found) received for: " + url)
@@ -85,21 +86,23 @@ class InstrumentModel():
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/instrument/?format=json" + \
-                "&facility__id=" + str(facility.GetId()) + \
-                "&name=" + urllib.quote(name)
+            "&facility__id=" + str(facility.GetId()) + \
+            "&name=" + urllib.quote(name)
         headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                    myTardisApiKey}
         response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
             logger.debug("Failed to look up instrument \"%s\" "
-                         "in facility \"%s\"." 
+                         "in facility \"%s\"."
                          % (name, facility.GetName()))
             logger.debug(response.text)
             return None
         instrumentRecordsJson = response.json()
-        numInstrumentRecordsFound = instrumentRecordsJson['meta']['total_count']
+        numInstrumentRecordsFound = \
+            instrumentRecordsJson['meta']['total_count']
         if numInstrumentRecordsFound == 0:
-            logger.warning("Instrument \"%s\" was not found in MyTardis" % name)
+            logger.warning("Instrument \"%s\" was not found in MyTardis"
+                           % name)
             logger.debug(url)
             logger.debug(response.text)
             return None
@@ -107,8 +110,9 @@ class InstrumentModel():
             logger.debug("Found instrument record for name \"%s\" "
                          "in facility \"%s\"" %
                          (name, facility.GetName()))
-            return InstrumentModel(settingsModel=settingsModel, name=name,
-                             instrumentRecordJson=instrumentRecordsJson['objects'][0])
+            return InstrumentModel(
+                settingsModel=settingsModel, name=name,
+                instrumentRecordJson=instrumentRecordsJson['objects'][0])
 
     @staticmethod
     def GetMyInstruments(settingsModel, userModel):
@@ -119,16 +123,16 @@ class InstrumentModel():
         instruments = []
 
         myFacilities = FacilityModel.GetMyFacilities(settingsModel, userModel)
-      
+
         for facility in myFacilities:
             url = myTardisUrl + "/api/v1/instrument/?format=json" + \
-                    "&facility__id=" + str(facility.GetId())
+                "&facility__id=" + str(facility.GetId())
             headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                        myTardisApiKey}
             response = requests.get(url=url, headers=headers)
             if response.status_code != 200:
-                logger.debug("Failed to look up instrument record for facility "
-                             "\"" + facility.GetName() + "\".")
+                logger.debug("Failed to look up instrument record for "
+                             "facility \"" + facility.GetName() + "\".")
                 logger.debug(response.text)
                 return None
             instrumentRecordsJson = response.json()
@@ -148,7 +152,7 @@ class InstrumentModel():
                    "Content-Type": "application/json",
                    "Accept": "application/json"}
         logger.info("Renaming instrument \"%s\" to \"%s\"."
-            % (str(self),name))
+                    % (str(self), name))
         url = myTardisUrl + "/api/v1/instrument/%d/" % self.GetId()
         uploaderJson = {"name": name}
         data = json.dumps(uploaderJson)

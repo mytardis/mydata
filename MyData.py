@@ -123,7 +123,8 @@ class MyData(wx.App):
         self.mydataConfigPath = os.path.join(appdirPath, appname + '.cfg')
         logger.debug("self.mydataConfigPath: " + self.mydataConfigPath)
 
-        self.settingsModel = SettingsModel(self.mydataConfigPath, self.sqlitedb)
+        self.settingsModel = SettingsModel(self.mydataConfigPath,
+                                           self.sqlitedb)
 
         try:
             self.uploaderModel = UploaderModel(self.settingsModel)

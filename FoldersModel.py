@@ -52,32 +52,28 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
         self.columnNames = ("Id", "Folder", "Location", "Created", "Status",
                             "Owner", "Email")
-        self.columnKeys = ("id", "folder", "location", "created", "status",
-                           "owner.username", "owner.email")
+        self.columnKeys = ("dataViewId", "folder", "location", "created",
+                           "status", "owner.username", "owner.email")
 
         self.defaultColumnWidths = (40, 185, 200, 70, 160, 120, 180)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
-        self.maxId = 0
+        self.maxDataViewId = 0
 
     def DeleteAllRows(self):
-
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
-
         for row in reversed(range(0, self.GetCount())):
             del self.foldersData[row]
             if threading.current_thread().name == "MainThread":
                 self.RowDeleted(row)
             else:
                 wx.CallAfter(self.RowDeleted, row)
-
         self.ufd = list()
         self.ffd = list()
         self.filtered = False
         self.searchString = ""
+        self.maxDataViewId = 0
 
     def GetFolderRecord(self, row):
         return self.foldersData[row]
@@ -261,7 +257,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
     def DeleteRows(self, rows):
 
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         # make a copy since we'll be sorting(mutating) the list
         rows = list(rows)
@@ -280,7 +276,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
     def DeleteFolderById(self, id):
 
         # Ensure that we save the largest ID used so far:
-        self.GetMaxId()
+        self.GetMaxDataViewId()
 
         for row in range(0, self.GetRowCount()):
             if self.foldersData[row].GetId() == id:
@@ -304,17 +300,17 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 return True
         return False
 
-    def GetMaxIdFromExistingRows(self):
-        maxId = 0
+    def GetMaxDataViewIdFromExistingRows(self):
+        maxDataViewId = 0
         for row in range(0, self.GetCount()):
-            if self.foldersData[row].GetId() > maxId:
-                maxId = self.foldersData[row].GetId()
-        return maxId
+            if self.foldersData[row].GetDataViewId() > maxDataViewId:
+                maxDataViewId = self.foldersData[row].GetDataViewId()
+        return maxDataViewId
 
-    def GetMaxId(self):
-        if self.GetMaxIdFromExistingRows() > self.maxId:
-            self.maxId = self.GetMaxIdFromExistingRows()
-        return self.maxId
+    def GetMaxDataViewId(self):
+        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
+            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
+        return self.maxDataViewId
 
     def AddRow(self, value):
 
@@ -358,8 +354,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         for datasetFolder in datasetFolders:
             logger.debug("  Found subdirectory, assumed to be data set: " +
                          datasetFolder)
-            id = self.GetMaxId() + 1
-            folderModel = FolderModel(id=id, folder=datasetFolder,
+            dataViewId = self.GetMaxDataViewId() + 1
+            folderModel = FolderModel(dataViewId=dataViewId,
+                                      folder=datasetFolder,
                                       location=dataDirectory,
                                       folder_type='Dataset',
                                       owner_id=owner.GetId(),

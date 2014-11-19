@@ -8,9 +8,9 @@ from DatasetModel import DatasetModel
 
 class FolderModel():
 
-    def __init__(self, id, folder, location, folder_type, owner_id,
+    def __init__(self, dataViewId, folder, location, folder_type, owner_id,
                  foldersModel, usersModel, settingsModel):
-        self.id = id
+        self.dataViewId = dataViewId
         self.folder = folder
         self.location = location
         absoluteFolderPath = os.path.join(location, folder)
@@ -82,8 +82,8 @@ class FolderModel():
 
         self.datasetModel = datasetModel
 
-    def GetId(self):
-        return self.id
+    def GetDataViewId(self):
+        return self.dataViewId
 
     def GetFolder(self):
         return self.folder

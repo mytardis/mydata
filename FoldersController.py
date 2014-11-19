@@ -114,8 +114,10 @@ class FoldersController():
         if folderModel not in foldersController.uploadDatafileRunnable:
             foldersController.uploadDatafileRunnable[folderModel] = {}
 
-        uploadId = uploadsModel.GetMaxId() + 1
-        uploadModel = UploadModel(uploadId, folderModel, dfi)
+        uploadDataViewId = uploadsModel.GetMaxDataViewId() + 1
+        uploadModel = UploadModel(dataViewId=uploadDataViewId,
+                                  folderModel=folderModel,
+                                  dataFileIndex=dfi)
         uploadsModel.AddRow(uploadModel)
         foldersController.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,
@@ -232,7 +234,7 @@ class FoldersController():
                                         self.foldersController.ConnectionStatusEvent(
                                             myTardisUrl=myTardisUrl,
                                             connectionStatus=DISCONNECTED))
-                                return 
+                                return
                             except ValueError, e:
                                 logger.debug("Failed to retrieve experiment "
                                              "for folder " +
@@ -249,7 +251,6 @@ class FoldersController():
                              settingsModel=self.foldersModel.settingsModel,
                              folderModels=folderModels)
         self.uploadDataThread.start()
-
 
     def uploadWorker(self, foldersController):
         """
@@ -328,7 +329,7 @@ class FoldersController():
             elif not self.foldersModel.Contains(filepath):
                 (location, folder) = os.path.split(filepath)
 
-                id = self.foldersModel.GetMaxId() + 1
+                dataViewId = self.foldersModel.GetMaxDataViewId() + 1
                 if folderType is None:
 
                     usersModel = self.usersModel
@@ -354,7 +355,7 @@ class FoldersController():
                 owner = \
                     usersModel.GetUserByName(addFolderDialog.GetOwnerName())
                 settingsModel = self.foldersModel.GetSettingsModel()
-                folderModel = FolderModel(id=id, folder=folder,
+                folderModel = FolderModel(dataViewId=dataViewId, folder=folder,
                                           location=location,
                                           folder_type=self.lastUsedFolderType,
                                           owner_id=owner.GetId(),
