@@ -78,7 +78,7 @@ class UploaderModel():
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.interface = None
-        self.uploaderJson = None
+        self.json = None
 
         logger.info("Determining the active network interface...")
         proc = subprocess.Popen(["netsh", "interface", "show", "interface"],
@@ -187,9 +187,9 @@ class UploaderModel():
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage = disk_usage + (fmt % (
                 part.device,
-                self.bytes2human(usage.total),
-                self.bytes2human(usage.used),
-                self.bytes2human(usage.free),
+                self._bytes2human(usage.total),
+                self._bytes2human(usage.used),
+                self._bytes2human(usage.free),
                 int(usage.percent),
                 part.fstype,
                 part.mountpoint))
@@ -198,7 +198,9 @@ class UploaderModel():
         self.data_path = self.settingsModel.GetDataDirectory()
         self.default_user = self.settingsModel.GetUsername()
 
-    def bytes2human(self, n):
+        self.settingsModel.SetUploaderModel(self)
+
+    def _bytes2human(self, n):
         symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
         prefix = {}
         for i, s in enumerate(symbols):
@@ -209,7 +211,7 @@ class UploaderModel():
                 return '%.1f%s' % (value, s)
         return "%sB" % n
 
-    def uploadUploaderInfo(self):
+    def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
 
@@ -251,7 +253,7 @@ class UploaderModel():
                         "machine": platform.machine(),
                         "architecture": str(platform.architecture()),
                         "processor": platform.processor(),
-                        "memory": self.bytes2human(psutil.virtual_memory()
+                        "memory": self._bytes2human(psutil.virtual_memory()
                                                    .total),
                         "cpus": psutil.cpu_count(),
 
@@ -274,13 +276,13 @@ class UploaderModel():
             response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
             logger.info("Upload succeeded for uploader info.")
-            self.uploaderJson = response.json()
+            self.json = response.json()
         else:
             logger.info("Upload failed for uploader info.")
             logger.info("Status code = " + str(response.status_code))
             logger.info(response.text)
 
-    def existingUploadToStagingRequest(self):
+    def ExistingUploadToStagingRequest(self):
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         url = myTardisUrl + "/api/v1/uploaderregistrationrequest/?format=json" + \
             "&uploader__mac_address=" + self.mac_address
@@ -303,30 +305,24 @@ class UploaderModel():
                         "via staging yet.")
             return None
 
-    def requestUploadToStagingApproval(self):
+    def RequestUploadToStagingApproval(self):
         """
         Used to request the ability to upload via RSYNC over SSH
         to a staging area, and then register in MyTardis.
         """
-
         keyPair = OpenSSH.findKeyPair("MyData")
         if keyPair is None:
             keyPair = OpenSSH.newKeyPair("MyData")
-
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-
         url = myTardisUrl + "/api/v1/uploaderregistrationrequest/"
-
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
-
         uploaderRegistrationRequestJson = \
-            {"uploader": self.uploaderJson['resource_uri'],
+            {"uploader": self.json['resource_uri'],
              "name": self.name,
              "requester_name": self.contact_name,
              "requester_email": self.contact_email,
              "requester_public_key": keyPair.publicKey()}
-
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
@@ -338,12 +334,12 @@ class UploaderModel():
             logger.error("URL = " + url)
             raise Exception(response.text)
 
-    def requestStagingAccess(self):
+    def RequestStagingAccess(self):
         try:
-             self.uploadUploaderInfo()
-             uploadToStagingRequest = self.existingUploadToStagingRequest()
+             self.UploadUploaderInfo()
+             uploadToStagingRequest = self.ExistingUploadToStagingRequest()
              if uploadToStagingRequest is None:
-                 uploadToStagingRequest = self.requestUploadToStagingApproval()
+                 uploadToStagingRequest = self.RequestUploadToStagingApproval()
                  if uploadToStagingRequest is not None:
                      logger.info("Uploader registration request created.")
              elif uploadToStagingRequest['approved']:
@@ -353,3 +349,34 @@ class UploaderModel():
              self.settingsModel.SetUploadToStagingRequest(uploadToStagingRequest)
         except:
             logger.error(traceback.format_exc())
+
+    def SetInstrument(self, instrument):
+        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisDefaultUsername = self.settingsModel.GetUsername()
+        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        url = myTardisUrl + "/api/v1/uploader/?format=json" + \
+            "&mac_address=" + urllib.quote(self.mac_address)
+        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
+                   myTardisDefaultUserApiKey,
+                   "Content-Type": "application/json",
+                   "Accept": "application/json"}
+        response = requests.get(headers=headers, url=url)
+        existingMatchingUploaderRecords = response.json()
+        numExistingMatchingUploaderRecords = \
+            existingMatchingUploaderRecords['meta']['total_count']
+        if numExistingMatchingUploaderRecords > 0:
+            uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
+        else:
+            raise Exception("SetInstrument: Uploader record not found!")
+        logger.info("Setting instrument in uploader record via MyTardis API...")
+        url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
+        uploaderJson = {"instruments": [instrument.GetResourceUri()],
+                        "mac_address": self.mac_address}
+        data = json.dumps(uploaderJson)
+        response = requests.put(headers=headers, url=url, data=data)
+        if response.status_code >= 200 and response.status_code < 300:
+            logger.info("Setting uploader's instrument succeeded.")
+        else:
+            logger.info("Setting uploader's instrument failed.")
+            logger.info("Status code = " + str(response.status_code))
+            logger.info(response.text)

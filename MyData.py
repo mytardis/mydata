@@ -129,7 +129,7 @@ class MyData(wx.App):
             self.uploaderModel = UploaderModel(self.settingsModel)
 
             def requestStagingAccess(uploaderModel):
-                uploaderModel.requestStagingAccess()
+                uploaderModel.RequestStagingAccess()
 
             thread = threading.Thread(target=requestStagingAccess,
                                       args=(self.uploaderModel,))
@@ -458,7 +458,7 @@ class MyData(wx.App):
                                 self.settingsModel.GetInstrumentName())
             try:
                 self.uploaderModel = UploaderModel(self.settingsModel)
-                self.uploaderModel.uploadUploaderInfo()
+                self.uploaderModel.UploadUploaderInfo()
             except:
                 logger.error(traceback.format_exc())
 
