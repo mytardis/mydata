@@ -7,9 +7,7 @@ import threading
 from logger.Logger import logger
 
 from SettingsModel import SettingsModel
-from FacilityModel import FacilityModel
-from UserModel import UserModel
-from FoldersController import ConnectionStatus
+from Exceptions import DuplicateKeyException
 
 
 class SettingsDialog(wx.Dialog):
@@ -199,6 +197,57 @@ class SettingsDialog(wx.Dialog):
         self.apiKeyField.SetValue(apiKey)
 
     def OnOK(self, event):
+        if self.GetInstrumentName() != \
+                self.settingsModel.GetInstrumentName():
+            message = "A previous instrument name of \"%s\" " \
+                "has been associated with this MyData instance.\n" \
+                "Please choose how you would like the new \"%s\" " \
+                "instrument name to be applied." \
+                % (self.settingsModel.GetInstrumentName(),
+                   self.GetInstrumentName())
+            renameChoice = "Rename the existing instrument record to " \
+                "\"%s\"." % self.GetInstrumentName()
+            discardChoice = "Discard the new instrument name and revert " \
+                "to \"%s\"." % self.settingsModel.GetInstrumentName()
+            createChoice = "Use a separate instrument record for \"%s\", " \
+                "creating it if necessary." \
+                % self.GetInstrumentName()
+            dlg = wx.SingleChoiceDialog(self, message,
+                                        "MyData - Instrument Name Changed",
+                                        [renameChoice, discardChoice,
+                                         createChoice], wx.CHOICEDLG_STYLE)
+            if dlg.ShowModal() == wx.ID_OK:
+                if dlg.GetStringSelection() == renameChoice:
+                    logger.info("OK, we will rename the "
+                                "existing instrument record.")
+                    try:
+                        # This should be in its own thread.
+                        self.settingsModel.RenameInstrument(
+                            self.GetFacilityName(),
+                            self.settingsModel.GetInstrumentName(),
+                            self.GetInstrumentName())
+                    except DuplicateKeyException:
+                        message = "Instrument name \"%s\" already exists in " \
+                            "facility \"%s\"." \
+                            % (self.GetInstrumentName(),
+                               self.GetFacilityName())
+                        dlg = wx.MessageDialog(None, message, "MyData",
+                                               wx.OK | wx.ICON_ERROR)
+                        dlg.ShowModal()
+                        self.instrumentNameField.SetFocus()
+                        self.instrumentNameField.SelectAll()
+                        return
+
+                elif dlg.GetStringSelection() == discardChoice:
+                    logger.info("OK, we will discard the new instrument name.")
+                    self.SetInstrumentName(
+                        self.settingsModel.GetInstrumentName())
+                    self.instrumentNameField.SetFocus()
+                    self.instrumentNameField.SelectAll()
+                elif dlg.GetStringSelection() == createChoice:
+                    logger.info("OK, we will create a new instrument record.")
+            else:
+                return
         tempSettingsModel = SettingsModel()
         tempSettingsModel.SaveFieldsFromDialog(self)
 
@@ -220,7 +269,9 @@ class SettingsDialog(wx.Dialog):
 
             if settingsValidation.GetSuggestion():
                 currentValue = ""
-                if settingsValidation.GetField() == "facility_name":
+                if settingsValidation.GetField() == "instrument_name":
+                    currentValue = self.GetInstrumentName()
+                elif settingsValidation.GetField() == "facility_name":
                     currentValue = self.GetFacilityName()
                 elif settingsValidation.GetField() == "mytardis_url":
                     currentValue = self.GetMyTardisUrl()
@@ -237,10 +288,15 @@ class SettingsDialog(wx.Dialog):
                                        wx.OK | wx.CANCEL | wx.ICON_ERROR)
                 okToUseSuggestion = dlg.ShowModal()
                 if okToUseSuggestion == wx.ID_OK:
-                    if settingsValidation.GetField() == "facility_name":
-                        self.SetFacilityName(settingsValidation.GetSuggestion())
-                    if settingsValidation.GetField() == "mytardis_url":
-                        self.SetMyTardisUrl(settingsValidation.GetSuggestion())
+                    if settingsValidation.GetField() == "instrument_name":
+                        self.SetInstrumentName(settingsValidation
+                                               .GetSuggestion())
+                    elif settingsValidation.GetField() == "facility_name":
+                        self.SetFacilityName(settingsValidation
+                                             .GetSuggestion())
+                    elif settingsValidation.GetField() == "mytardis_url":
+                        self.SetMyTardisUrl(settingsValidation
+                                            .GetSuggestion())
             else:
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
