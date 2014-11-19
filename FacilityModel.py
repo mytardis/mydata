@@ -13,10 +13,12 @@ class FacilityModel():
         self.settingsModel = settingsModel
         self.id = id
         self.name = name
-        self.facilityRecordJson = facilityRecordJson
+        self.json = facilityRecordJson
         self.manager_group = None
 
         if facilityRecordJson is not None:
+            if id is None:
+                self.id = facilityRecordJson['id']
             if name is None:
                 self.name = facilityRecordJson['name']
             self.manager_group = GroupModel(groupRecordJson=facilityRecordJson['manager_group'])
@@ -42,11 +44,14 @@ class FacilityModel():
     def GetManagerGroup(self):
         return self.manager_group
 
+    def GetResourceUri(self):
+        return self.json['resource_uri']
+
     def GetValueForKey(self, key):
         return self.__dict__[key]
 
     def GetJson(self):
-        return self.facilityRecordJson
+        return self.json
 
     @staticmethod
     def GetFacilityRecord(settingsModel, name):
@@ -69,6 +74,7 @@ class FacilityModel():
 
         if numFacilityRecordsFound == 0:
             logger.warning("Facility \"%s\" was not found in MyTardis" % name)
+            return None
         else:
             logger.debug("Found facility record for name '" + name + "'.")
             return FacilityModel(settingsModel=settingsModel, name=name,
