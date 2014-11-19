@@ -41,7 +41,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
         self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
                             "File Size", "Status", "Progress", "Message")
-        self.columnKeys = ("id", "folder", "subdirectory", "filename",
+        self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
                            "filesize", "status", "progress", "message")
         self.defaultColumnWidths = (40, 170, 170, 200, 75, 55, 100, 300)
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
@@ -216,8 +216,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                              ascending):
         if not ascending:
             uploadRecord2, uploadRecord1 = uploadRecord1, uploadRecord2
-        if col == 0 or col == 3:
-            return cmp(int(uploadRecord1.GetId()), int(uploadRecord2.GetId()))
+        if col == 0:
+            return cmp(int(uploadRecord1.GetDataViewId()),
+                       int(uploadRecord2.GetDataViewId()))
         else:
             return cmp(uploadRecord1.GetValueForKey(self.columnKeys[col]),
                        uploadRecord2.GetValueForKey(self.columnKeys[col]))
@@ -267,8 +268,8 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
     def GetMaxDataViewIdFromExistingRows(self):
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetId() > maxDataViewId:
-                maxDataViewId = self.uploadsData[row].GetId()
+            if self.uploadsData[row].GetDataViewId() > maxDataViewId:
+                maxDataViewId = self.uploadsData[row].GetDataViewId()
         return maxDataViewId
 
     def GetMaxDataViewId(self):
