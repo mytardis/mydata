@@ -57,7 +57,7 @@ class MyDataFrame(wx.Frame):
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
-    def SetStatusMsg(self, msg):
+    def SetStatusMessage(self, msg):
         self.statusbarText = wx.StaticText(self.statusbar, -1, msg)
         self.statusbar.AddWidget(self.statusbarText, pos=0)
 
@@ -78,14 +78,14 @@ class MyDataFrame(wx.Frame):
 
         if connected:
             # img = wx.ART_TICK_MARK
-            bmp = wx.Image('png-normal/icons24x24/Connect.png',
+            bmp = wx.Image("png-normal/icons24x24/Connect.png",
                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-            self.SetStatusMsg('Connected to ' + myTardisUrl)
+            self.SetStatusMessage("Connected to " + myTardisUrl)
         else:
             # img = wx.ART_ERROR
-            bmp = wx.Image('png-normal/icons24x24/Disconnect.png',
+            bmp = wx.Image("png-normal/icons24x24/Disconnect.png",
                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-            self.SetStatusMsg('Not connected to ' + myTardisUrl)
+            self.SetStatusMessage("Not connected to " + myTardisUrl)
 
         # bmp = wx.ArtProvider_GetBitmap(img, wx.ART_TOOLBAR, (16,16))
 
@@ -473,8 +473,11 @@ class MyData(wx.App):
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.GetDatasetModel() is not None:
-                    webbrowser.open(self.settingsModel.GetMyTardisUrl() + "/" +
-                                    folderRecord.GetDatasetModel().GetViewUri())
+                    webbrowser\
+                        .open(self.settingsModel.GetMyTardisUrl() + "/" +
+                              folderRecord.GetDatasetModel().GetViewUri())
+                else:
+                    webbrowser.open(self.settingsModel.GetMyTardisUrl())
             else:
                 webbrowser.open(self.settingsModel.GetMyTardisUrl())
         except:
