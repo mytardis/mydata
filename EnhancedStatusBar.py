@@ -1,3 +1,5 @@
+import threading
+
 # ENHANCEDSTATUSBAR wxPython IMPLEMENTATION
 # Python Code By:
 #
@@ -60,7 +62,10 @@ class EnhancedStatusBar(wx.StatusBar):
         self._parent = parent
 
         wx.EVT_SIZE(self, self.OnSize)
-        wx.CallAfter(self.OnSize, None)
+        if threading.current_thread().name == "MainThread":
+            self.OnSize(None)
+        else:
+            wx.CallAfter(self.OnSize, None)
 
     def OnSize(self, event):
         """Handles The wx.EVT_SIZE Events For The StatusBar.
@@ -217,4 +222,7 @@ class EnhancedStatusBar(wx.StatusBar):
             EnhancedStatusBarItem(widget, pos,
                                   horizontalalignment, verticalalignment)
 
-        wx.CallAfter(self.OnSize, None)
+        if threading.current_thread().name == "MainThread":
+            self.OnSize(None)
+        else:
+            wx.CallAfter(self.OnSize, None)
