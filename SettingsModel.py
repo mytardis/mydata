@@ -217,14 +217,10 @@ class SettingsModel():
         self.api_key = apiKey
 
     def RunningInBackgroundMode(self):
-        return self.background_mode == "True"
+        return self.background_mode
 
     def SetBackgroundMode(self, backgroundMode):
-        if backgroundMode or \
-                (backgroundMode is not None and backgroundMode == "True"):
-            self.backgroundMode = "True"
-        else:
-            self.backgroundMode = "False"
+        self.background_mode = backgroundMode
 
     def GetUploadToStagingRequest(self):
         return self.uploadToStagingRequest

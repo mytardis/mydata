@@ -7,7 +7,7 @@ import appdirs
 import sqlite3
 import traceback
 import threading
-import time
+import argparse
 
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -132,6 +132,12 @@ class MyData(wx.App):
 
         self.settingsModel = SettingsModel(self.mydataConfigPath,
                                            self.sqlitedb)
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-b", "--background", action="store_true",
+                            help="run non-interactively")
+        # parser.add_argument("--loglevel", help="set logging verbosity")
+        args = parser.parse_args()
+        self.settingsModel.SetBackgroundMode(args.background)
 
         try:
             self.uploaderModel = UploaderModel(self.settingsModel)
