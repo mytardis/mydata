@@ -220,13 +220,36 @@ class SettingsDialog(wx.Dialog):
                 if dlg.GetStringSelection() == renameChoice:
                     logger.info("OK, we will rename the "
                                 "existing instrument record.")
-                    try:
-                        # This should be in its own thread.
-                        self.settingsModel.RenameInstrument(
-                            self.GetFacilityName(),
-                            self.settingsModel.GetInstrumentName(),
-                            self.GetInstrumentName())
-                    except DuplicateKeyException:
+                    self.duplicateKeyException = False
+
+                    def renameInstrument(settingsDialog, settingsModel,
+                                         facilityName,
+                                         oldInstrumentName, newInstrumentName):
+                        try:
+                            settingsModel.RenameInstrument(
+                                facilityName,
+                                oldInstrumentName, newInstrumentName)
+                        except DuplicateKeyException:
+                            settingsDialog.duplicateKeyException = True
+
+                    thread = threading.Thread(
+                        target=renameInstrument,
+                        args=(self,
+                              self.settingsModel,
+                              self.GetFacilityName(),
+                              self.settingsModel.GetInstrumentName(),
+                              self.GetInstrumentName()))
+                    wx.BeginBusyCursor()
+                    thread.start()
+                    # FIXME - join() could make the GUI appear frozen.
+                    # Instead of including the code to run after the
+                    # renameInstrument thread immediately below, the
+                    # renameInstrument thread could (when complete),
+                    # use wx.PostEvent to trigger the code below to
+                    # run.
+                    thread.join()
+                    wx.EndBusyCursor()
+                    if self.duplicateKeyException:
                         message = "Instrument name \"%s\" already exists in " \
                             "facility \"%s\"." \
                             % (self.GetInstrumentName(),
@@ -237,7 +260,6 @@ class SettingsDialog(wx.Dialog):
                         self.instrumentNameField.SetFocus()
                         self.instrumentNameField.SelectAll()
                         return
-
                 elif dlg.GetStringSelection() == discardChoice:
                     logger.info("OK, we will discard the new instrument name.")
                     self.SetInstrumentName(
