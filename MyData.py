@@ -423,6 +423,7 @@ class MyData(wx.App):
                         "to start another one.\n\n" \
                         "See the Log tab for details of the error."
                     logger.error(message)
+
                     def showDialog():
                         dlg = wx.MessageDialog(None, message, "MyData",
                                                wx.OK | wx.ICON_ERROR)
@@ -491,6 +492,7 @@ class MyData(wx.App):
             self.keepGoing = \
                 self.progressDialog.Update(self.numUserFoldersScanned,
                                            message)
+
         def scanDataDirs():
             wx.CallAfter(wx.BeginBusyCursor)
             self.usersModel.DeleteAllRows()
@@ -540,11 +542,11 @@ class MyData(wx.App):
                     uploaderModel = UploaderModel(settingsModel)
                     uploaderModel.UploadUploaderInfo()
                     wx.CallAfter(self.frame.SetConnected,
-                        self.settingsModel.GetMyTardisUrl(), True)
+                                 self.settingsModel.GetMyTardisUrl(), True)
                 except:
                     logger.error(traceback.format_exc())
                     wx.CallAfter(self.frame.SetConnected,
-                        self.settingsModel.GetMyTardisUrl(), False)
+                                 self.settingsModel.GetMyTardisUrl(), False)
                 finally:
                     wx.CallAfter(wx.EndBusyCursor)
 
