@@ -301,9 +301,15 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
             else:
                 message = "Didn't find a MyTardis user record for \"" + \
                     username + "\""
-                dlg = wx.MessageDialog(None, message, "User not found",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
+
+                def showDialog():
+                    dlg = wx.MessageDialog(None, message, "User not found",
+                                           wx.OK | wx.ICON_ERROR)
+                    dlg.ShowModal()
+                if threading.current_thread().name == "MainThread":
+                    showDialog()
+                else:
+                    wx.CallAfter(showDialog)
                 userRecord = UserModel(settingsModel=self.settingsModel,
                                        username=username,
                                        name="USER NOT FOUND IN MYTARDIS",
@@ -312,4 +318,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                 self.AddRow(userRecord)
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
-            incrementProgressDialog()
+            if threading.current_thread().name == "MainThread":
+                incrementProgressDialog()
+            else:
+                wx.CallAfter(incrementProgressDialog)
