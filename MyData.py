@@ -7,6 +7,7 @@ import appdirs
 import sqlite3
 import traceback
 import threading
+import time
 
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -48,7 +49,6 @@ class MyDataFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id, title, style=style)
         self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
-
         self.statusbar = ESB.EnhancedStatusBar(self, -1)
         self.statusbar.SetSize((-1, 28))
         self.statusbar.SetFieldsCount(2)
@@ -56,6 +56,13 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetStatusWidths([-1, 60])
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
+
+        # FIXME: Arbitrary separation between MyDataApp and MyDataFrame
+        # classes.  Make MyDataApp class tiny and move most of its
+        # methods to MyDataFrame?
+
+    def SetOnRefreshRunning(self, onRefreshRunning):
+        wx.GetApp().SetOnRefreshRunning(onRefreshRunning)
 
     def SetStatusMessage(self, msg):
         self.statusbarText = wx.StaticText(self.statusbar, -1, msg)
@@ -175,6 +182,16 @@ class MyData(wx.App):
                                  style=wx.DEFAULT_FRAME_STYLE,
                                  settingsModel=self.settingsModel)
 
+        self.onRefreshRunning = False
+        self.ShutdownForRefreshCompleteEvent, \
+            self.EVT_SHUTDOWN_COMPLETE = wx.lib.newevent.NewEvent()
+        self.frame.Bind(self.EVT_SHUTDOWN_COMPLETE,
+                        self.OnRefresh)
+        self.SettingsValidationForRefreshCompleteEvent, \
+            self.EVT_SETTINGS_VALIDATION_COMPLETE = wx.lib.newevent.NewEvent()
+        self.frame.Bind(self.EVT_SETTINGS_VALIDATION_COMPLETE,
+                        self.OnRefresh)
+
         self.tbIcon = MyDataTaskBarIcon(self.frame)
 
         wx.EVT_TASKBAR_LEFT_UP(self.tbIcon, self.OnTaskBarLeftClick)
@@ -213,8 +230,9 @@ class MyData(wx.App):
         self.usersView = UsersView(self.frame, usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
 
-        self.uploadsView = UploadsView(self.frame,
-                                       uploadsModel=self.uploadsModel)
+        self.uploadsView = \
+            UploadsView(self.frame, uploadsModel=self.uploadsModel,
+                        foldersController=self.foldersController)
         self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
 
         self.logView = LogView(self.frame)
@@ -373,13 +391,80 @@ class MyData(wx.App):
         else:
             self.usersModel.Filter(event.GetString())
 
+    def SetOnRefreshRunning(self, onRefreshRunning):
+        self.onRefreshRunning = onRefreshRunning
+
     def OnRefresh(self, event):
+        settingsValidationAlreadyDone = False
+        shutdownForRefreshAlreadyComplete = False
+        if hasattr(event, "settingsValidationAlreadyDone") and \
+                event.settingsValidationAlreadyDone:
+            settingsValidationAlreadyDone = True
+            shutdownForRefreshAlreadyComplete = True
+        elif hasattr(event, "shutdownSuccessful") and event.shutdownSuccessful:
+            shutdownForRefreshAlreadyComplete = True
+        if self.onRefreshRunning and not shutdownForRefreshAlreadyComplete:
+            self.frame.SetStatusMessage(
+                "Shutting down existing data scan and upload processes...")
+
+            def shutDownDataScansAndUploads():
+                try:
+                    wx.CallAfter(wx.BeginBusyCursor)
+                    self.foldersController.ShutDownUploadThreads()
+                    wx.PostEvent(
+                        self.frame,
+                        self.ShutdownForRefreshCompleteEvent(
+                            shutdownSuccessful=True))
+                    wx.CallAfter(wx.EndBusyCursor)
+                except:
+                    logger.debug(traceback.format_exc())
+                    message = "An error occurred while trying to shut down " \
+                        "the existing data-scan-and-upload process in order " \
+                        "to start another one.\n\n" \
+                        "See the Log tab for details of the error."
+                    logger.error(message)
+                    def showDialog():
+                        dlg = wx.MessageDialog(None, message, "MyData",
+                                               wx.OK | wx.ICON_ERROR)
+                        dlg.ShowModal()
+                    wx.CallAfter(showDialog)
+                    return
+
+            thread = threading.Thread(target=shutDownDataScansAndUploads)
+            thread.start()
+            return
+
+        # Reset the status message to the connection status:
+        self.frame.SetConnected(self.settingsModel.GetMyTardisUrl(),
+                                False)
+        self.foldersController.SetShuttingDown(False)
+        self.onRefreshRunning = True
 
         self.searchCtrl.SetValue("")
 
-        settingsValidation = self.settingsModel.Validate()
-        if not settingsValidation.valid:
-            message = settingsValidation.message
+        if not settingsValidationAlreadyDone:
+            self.frame.SetStatusMessage("Validating settings...")
+            self.settingsValidation = None
+
+            def validateSettings():
+                try:
+                    wx.CallAfter(wx.BeginBusyCursor)
+                    self.settingsValidation = self.settingsModel.Validate()
+                    wx.PostEvent(
+                        self.frame,
+                        self.SettingsValidationForRefreshCompleteEvent(
+                            settingsValidationAlreadyDone=True))
+                    wx.CallAfter(wx.EndBusyCursor)
+                except:
+                    logger.debug(traceback.format_exc())
+                    return
+
+            thread = threading.Thread(target=validateSettings)
+            thread.start()
+            return
+
+        if not self.settingsValidation.valid:
+            message = self.settingsValidation.message
             logger.error(message)
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
@@ -387,15 +472,6 @@ class MyData(wx.App):
             self.OnSettings(event)
             return
 
-        if not os.path.exists(self.settingsModel.GetDataDirectory()):
-            message = "The data directory: \"%s\" was not found!" % \
-                self.settingsModel.GetDataDirectory()
-            logger.error(message)
-            dlg = wx.MessageDialog(None, message, "MyData",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.OnSettings(event)
-            return
         # Set up progress dialog...
         self.progressDialog = \
             wx.ProgressDialog(
@@ -415,20 +491,20 @@ class MyData(wx.App):
             self.keepGoing = \
                 self.progressDialog.Update(self.numUserFoldersScanned,
                                            message)
-        self.progressDialog.Destroy()
-
-        # Clear both the users view and the folders view,
-        # because when we scan the C:\MyTardisUsers directory,
-        # we will repopulate both users and their data sets.
-        self.usersModel.DeleteAllRows()
-        self.foldersModel.DeleteAllRows()
-        self.usersModel.Refresh(incrementProgressDialog)
-
-        # self.foldersModel.Refresh()
-
-        self.foldersController.Refresh()
-
-        self.foldersController.StartDataUploads()
+        def scanDataDirs():
+            wx.CallAfter(wx.BeginBusyCursor)
+            self.usersModel.DeleteAllRows()
+            self.foldersModel.DeleteAllRows()
+            wx.CallAfter(self.frame.SetStatusMessage,
+                         "Scanning data folders...")
+            self.usersModel.Refresh(incrementProgressDialog)
+            wx.CallAfter(self.progressDialog.Destroy)
+            wx.CallAfter(self.frame.SetStatusMessage,
+                         "Starting data uploads...")
+            self.foldersController.StartDataUploads()
+            wx.CallAfter(wx.EndBusyCursor)
+        thread = threading.Thread(target=scanDataDirs)
+        thread.start()
 
     def OnOpen(self, event):
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
@@ -457,11 +533,27 @@ class MyData(wx.App):
 
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-            try:
-                self.uploaderModel = UploaderModel(self.settingsModel)
-                self.uploaderModel.UploadUploaderInfo()
-            except:
-                logger.error(traceback.format_exc())
+
+            def uploadUploaderInfo(uploaderModel, settingsModel):
+                try:
+                    wx.CallAfter(wx.BeginBusyCursor)
+                    uploaderModel = UploaderModel(settingsModel)
+                    uploaderModel.UploadUploaderInfo()
+                    wx.CallAfter(self.frame.SetConnected,
+                        self.settingsModel.GetMyTardisUrl(), True)
+                except:
+                    logger.error(traceback.format_exc())
+                    wx.CallAfter(self.frame.SetConnected,
+                        self.settingsModel.GetMyTardisUrl(), False)
+                finally:
+                    wx.CallAfter(wx.EndBusyCursor)
+
+            thread = threading.Thread(target=uploadUploaderInfo,
+                                      args=(self.uploaderModel,
+                                            self.settingsModel))
+            self.frame.SetStatusMessage(
+                "Uploading basic info about your PC to MyTardis.")
+            thread.start()
 
             self.OnRefresh(None)
 
@@ -506,7 +598,6 @@ class MyData(wx.App):
 
 
 def main(argv):
-
     app = MyData("MyData")
     app.MainLoop()
 
