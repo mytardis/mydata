@@ -1,11 +1,11 @@
 import wx.dataview
 import sqlite3
+import threading
+import traceback
+
 from UploadModel import UploadModel
 from UploadModel import UploadStatus
-import threading
-
 from logger.Logger import logger
-import traceback
 
 # This model class provides the data to the view when it is asked for.
 # Since it is a list-only model (no hierachical data) then it is able
@@ -74,9 +74,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
+                    self.TryRowDeleted(row)
                 else:
-                    wx.CallAfter(self.RowDeleted, row)
+                    wx.CallAfter(self.TryRowDeleted, row)
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
@@ -122,21 +122,33 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
     # This method is called to provide the uploadsData object for a
     # particular row,col
     def GetValueByRow(self, row, col):
-        if col == self.columnNames.index("Status"):
-            icon = wx.NullBitmap
-            if self.uploadsData[row].GetStatus() == UploadStatus.IN_PROGRESS:
-                icon = self.inProgressIcon
-            elif self.uploadsData[row].GetStatus() == UploadStatus.COMPLETED:
-                icon = self.completedIcon
-            elif self.uploadsData[row].GetStatus() == UploadStatus.FAILED:
-                icon = self.failedIcon
-            return icon
-        columnKey = self.GetColumnKeyName(col)
-        return self.uploadsData[row].GetValueForKey(columnKey)
+        try:
+            if col == self.columnNames.index("Status"):
+                icon = wx.NullBitmap
+                if self.uploadsData[row].GetStatus() == \
+                        UploadStatus.IN_PROGRESS:
+                    icon = self.inProgressIcon
+                elif self.uploadsData[row].GetStatus() == \
+                        UploadStatus.COMPLETED:
+                    icon = self.completedIcon
+                elif self.uploadsData[row].GetStatus() == \
+                        UploadStatus.FAILED:
+                    icon = self.failedIcon
+                return icon
+            columnKey = self.GetColumnKeyName(col)
+            return self.uploadsData[row].GetValueForKey(columnKey)
+        except IndexError:
+            # A "list index out of range" exception can be
+            # thrown if the row is currently being deleted
+            # logger.debug("UploadsModel's GetValueByRow "
+            #              "called on missing row.")
+            return None
 
-    # This method is called to provide the uploadsData object for a
-    # particular row,colname
     def GetValueForRowColname(self, row, colname):
+        """
+        This method is called to provide the uploadsData
+        object for a particular row,colname
+        """
         for col in range(0, self.GetColumnCount()):
             if self.GetColumnName(col) == colname:
                 return self.GetValueByRow(row, col)
@@ -240,9 +252,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             del self.unfilteredUploadsData[row]
             # Notify the view(s) using this model that it has been removed
             if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
+                self.TryRowDeleted(row)
             else:
-                wx.CallAfter(self.RowDeleted, row)
+                wx.CallAfter(self.TryRowDeleted, row)
 
     def DeleteUpload(self, folderModel, dataFileIndex):
         # Ensure that we save the largest ID used so far:
@@ -254,9 +266,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
+                    self.TryRowDeleted(row)
                 else:
-                    wx.CallAfter(self.RowDeleted, row)
+                    wx.CallAfter(self.TryRowDeleted, row)
                 return
 
     def Contains(self, filename):
@@ -298,6 +310,18 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 self.RowValueChanged(row, col)
             else:
                 logger.warning("TryRowValueChanged called with "
+                               "row=%d, self.GetRowCount()=%d" %
+                               (row, self.GetRowCount()))
+                self.RowValueChanged(row, col)
+        except:
+            logger.debug(traceback.format_exc())
+
+    def TryRowDeleted(self, row):
+        try:
+            if row < self.GetCount():
+                self.RowDeleted(row)
+            else:
+                logger.warning("TryRowDeleted called with "
                                "row=%d, self.GetRowCount()=%d" %
                                (row, self.GetRowCount()))
         except:
@@ -359,19 +383,21 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
 
-    def CancelAll(self):
+    def CancelRemaining(self):
+        rowsToDelete = []
+        for row in range(0, self.GetRowCount()):
+            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED:
+                rowsToDelete.append(row)
+
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
-
-        for row in reversed(range(0, self.GetCount())):
+        for row in reversed(rowsToDelete):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+        wx.CallAfter(self.RowsDeleted, rowsToDelete)
 
         self.unfilteredUploadsData = list()
         self.filteredUploadsData = list()
         self.filtered = False
         self.searchString = ""
+        self.maxDataViewId = 0

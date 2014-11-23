@@ -1,4 +1,4 @@
-
+import sys
 import wx
 import wx.dataview as dv
 
@@ -7,10 +7,11 @@ from UploadModel import UploadModel
 
 from logger.Logger import logger
 import traceback
+import threading
 
 
 class UploadsView(wx.Panel):
-    def __init__(self, parent, uploadsModel):
+    def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, -1)
 
         # Create a dataview control
@@ -21,27 +22,9 @@ class UploadsView(wx.Panel):
                                                       | dv.DV_MULTIPLE)
 
         self.uploadsModel = uploadsModel
+        self.foldersController = foldersController
 
-        # ...and associate it with the dataview control.  Models can
-        # be shared between multiple DataViewCtrls, so this does not
-        # assign ownership like many things in wx do.  There is some
-        # internal reference counting happening so you don't really
-        # need to hold a reference to it either, but we do for this
-        # example so we can fiddle with the model from the widget
-        # inspector or whatever.
         self.uploadsDataViewControl.AssociateModel(self.uploadsModel)
-
-        # Now we create some columns.  The second parameter is the
-        # column number within the model that the DataViewColumn will
-        # fetch the data from.  This means that you can have views
-        # using the same model that show different columns of data, or
-        # that they can be in a different order than in the model.
-
-        # Technically the column names and widths should be properties
-        # of the view, not the model.
-        # but it is convenient to keep them in the model, because
-        # that's we keep the keys for
-        # looking up values in dictionary-like objects.
 
         from UploadsModel import ColumnType
         for col in range(0, self.uploadsModel.GetColumnCount()):
@@ -70,41 +53,43 @@ class UploadsView(wx.Panel):
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
-        # The DataViewColumn object is returned from the Append and
-        # Prepend methods, and we can modify some of it's properties
-        # like this.
         c0 = self.uploadsDataViewControl.Columns[0]
         c0.Alignment = wx.ALIGN_RIGHT
         c0.Renderer.Alignment = wx.ALIGN_RIGHT
         c0.MinWidth = 40
-
-        # Through the magic of Python we can also access the columns
-        # as a list via the Columns property.  Here we'll mark them
-        # all as sortable and reorderable.
-        for c in self.uploadsDataViewControl.Columns:
-            c.Sortable = True
-            c.Reorderable = True
-
-        # Let's change our minds and not let the first col be moved.
-        c0.Reorderable = False
 
         # set the Sizer property (same as SetSizer)
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
         # Add some buttons
-        b3 = wx.Button(self, label="Cancel Upload(s)")
-        self.Bind(wx.EVT_BUTTON, self.OnCancelUploads, b3)
+        cancelSelectedUploadsButton = \
+            wx.Button(self, label="Cancel Selected Upload(s)")
+        self.Bind(wx.EVT_BUTTON, self.OnCancelSelectedUploads,
+                  cancelSelectedUploadsButton)
+
+        cancelRemainingUploadsButton = \
+            wx.Button(self, label="Cancel Remaining Upload(s)")
+        self.Bind(wx.EVT_BUTTON, self.OnCancelRemainingUploads,
+                  cancelRemainingUploadsButton)
 
         btnbox = wx.BoxSizer(wx.HORIZONTAL)
-        btnbox.Add(b3, 0, wx.LEFT | wx.RIGHT, 5)
+        btnbox.Add(cancelSelectedUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
+        btnbox.Add(cancelRemainingUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
         self.Sizer.Add(btnbox, 0, wx.TOP | wx.BOTTOM, 5)
 
-    def OnCancelUploads(self, evt):
+    def OnCancelSelectedUploads(self, evt):
+        """
+        Remove the selected row(s) from the model. The model will take
+        care of notifying the view (and any other observers) that the
+        change has happened.
+        """
+        # FIXME: Should warn the user if already-completed uploads
+        # exist within the selection (in which case their datafiles
+        # won't be deleted from the MyTardis server).
+        # The OnCancelRemainingUploads method is a bit smarter in
+        # terms of only deleting incomplete upload rows from the view.
         try:
-            # Remove the selected row(s) from the model. The model will take
-            # care of notifying the view (and any other observers) that the
-            # change has happened.
             items = self.uploadsDataViewControl.GetSelections()
             rows = [self.uploadsModel.GetRow(item) for item in items]
             if len(rows) > 1:
@@ -113,8 +98,8 @@ class UploadsView(wx.Panel):
             elif len(rows) == 1:
                 pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
                     .GetRelativePathToUpload()
-                message = "Are you sure you want to cancel upload \"" + \
-                    pathToUpload + "\" ?"
+                message = "Are you sure you want to cancel upload " + \
+                    "\"" + pathToUpload + "\" ?"
             else:
                 dlg = wx.MessageDialog(None,
                                        "Please select an upload to cancel.",
@@ -129,6 +114,24 @@ class UploadsView(wx.Panel):
                 self.uploadsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
+
+    def OnCancelRemainingUploads(self, evt):
+        def shutDownUploadThreads():
+            try:
+                wx.CallAfter(wx.BeginBusyCursor)
+                self.foldersController.ShutDownUploadThreads()
+                wx.CallAfter(wx.EndBusyCursor)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.UploadsCompleteEvent(
+                        success=False,
+                        failed=False,
+                        canceled=True))
+            except:
+                logger.debug(traceback.format_exc())
+                wx.CallAfter(EndBusyCursor)
+        thread = threading.Thread(target=shutDownUploadThreads)
+        thread.start()
 
     def GetUploadsModel(self):
         return self.uploadsModel
