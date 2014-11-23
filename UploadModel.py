@@ -1,4 +1,5 @@
 from logger.Logger import logger
+import os
 
 
 class UploadStatus:
@@ -70,12 +71,18 @@ class UploadModel():
             return self.filename
 
     def Cancel(self):
-        self.canceled = True
-        logger.debug("Canceling upload \"" +
-                     self.GetRelativePathToUpload() +
-                     "\".")
-        if self.bufferedReader is not None:
-            self.bufferedReader.close()
+        try:
+            self.canceled = True
+            logger.debug("Canceling upload \"" +
+                         self.GetRelativePathToUpload() +
+                         "\".")
+            if self.bufferedReader is not None:
+                self.bufferedReader.close()
+                logger.debug("Closed buffered reader for \"" +
+                             self.GetRelativePathToUpload() +
+                             "\".")
+        except:
+            logger.error(traceback.format_exc())
 
     def SetFileSize(self, fileSize):
         self.fileSize = fileSize
