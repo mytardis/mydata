@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import urllib
 import urllib2
@@ -8,6 +9,8 @@ import Queue
 import io
 import poster
 import traceback
+from datetime import datetime
+import mimetypes
 
 from ExperimentModel import ExperimentModel
 from DatasetModel import DatasetModel
@@ -33,6 +36,11 @@ class ConnectionStatus():
     DISCONNECTED = 1
 
 
+class UploadMethod():
+    HTTP_POST = 0
+    RSYNC = 1
+
+
 class FoldersController():
 
     def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
@@ -44,16 +52,6 @@ class FoldersController():
         self.usersModel = usersModel
         self.uploadsModel = uploadsModel
         self.settingsModel = settingsModel
-
-        self.verifyDatafileRunnable = {}
-        self.verificationsQueue = Queue.Queue()
-        self.verificationWorkerThreads = []
-        self.numVerificationWorkerThreads = 25
-
-        self.uploadDatafileRunnable = {}
-        self.uploadsQueue = Queue.Queue()
-        self.uploadWorkerThreads = []
-        self.numUploadWorkerThreads = 5
 
         self.shuttingDown = False
 
@@ -83,16 +81,22 @@ class FoldersController():
         self.notifyWindow.Bind(self.EVT_SHOW_MESSAGE_DIALOG,
                                self.ShowMessageDialog)
 
-        for i in range(self.numUploadWorkerThreads):
-            t = threading.Thread(target=self.uploadWorker, args=(self,))
-            self.uploadWorkerThreads.append(t)
-            t.start()
+        self.UploadsCompleteEvent, \
+            self.EVT_UPLOADS_COMPLETE = wx.lib.newevent.NewEvent()
+        self.notifyWindow.Bind(self.EVT_UPLOADS_COMPLETE,
+                               self.UploadsComplete)
 
-        for i in range(self.numVerificationWorkerThreads):
-            t = threading.Thread(target=self.verificationWorker,
-                                 args=(self, i+1))
-            self.verificationWorkerThreads.append(t)
-            t.start()
+    def Canceled(self):
+        return self.canceled
+
+    def SetCanceled(self, canceled=True):
+        self.canceled = canceled
+
+    def IsShuttingDown(self):
+        return self.shuttingDown
+
+    def SetShuttingDown(self, shuttingDown=True):
+        self.shuttingDown = shuttingDown
 
     def UpdateStatusBar(self, event):
         if event.connectionStatus == ConnectionStatus.CONNECTED:
@@ -100,12 +104,32 @@ class FoldersController():
         else:
             self.notifyWindow.SetConnected(event.myTardisUrl, False)
 
+    def UploadsComplete(self, event):
+        if event.success:
+            logger.info("Data scan and upload completed successfully.")
+        elif event.failed:
+            logger.info("Data scan and upload failed.")
+        elif event.canceled:
+            logger.info("Data scan and upload was canceled.")
+        self.notifyWindow.SetOnRefreshRunning(False)
+
     def ShowMessageDialog(self, event):
         dlg = wx.MessageDialog(None, event.message, event.title,
                                wx.OK | event.icon)
         dlg.ShowModal()
 
     def UploadDatafile(self, event):
+        """
+        This method runs in the main thread, so it shouldn't do anything
+        time-consuming or blocking, unless it launches another thread.
+        Because this method adds upload tasks to a queue, it is important
+        to note that if the queue has a maxsize set, then an attempt to
+        add something to the queue could block the GUI thread, making the
+        application appear unresponsive.
+        """
+        if self.IsShuttingDown():
+            return
+        before = datetime.now()
         folderModel = event.folderModel
         foldersController = event.foldersController
         dfi = event.dataFileIndex
@@ -118,36 +142,100 @@ class FoldersController():
         uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                   folderModel=folderModel,
                                   dataFileIndex=dfi)
+        if self.IsShuttingDown():
+            return
         uploadsModel.AddRow(uploadModel)
         foldersController.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,
                                    dfi, self.uploadsModel, uploadModel,
                                    self.settingsModel)
+        if self.IsShuttingDown():
+            return
         self.uploadsQueue.put(foldersController
                               .uploadDatafileRunnable[folderModel][dfi])
+        after = datetime.now()
+        duration = after - before
+        if duration.total_seconds() >= 1:
+            logger.warning("UploadDatafile for " +
+                           folderModel.GetDataFileName(dfi) +
+                           " blocked the main GUI thread for %d seconds." +
+                           duration.total_seconds())
 
     def StartDataUploads(self, folderModels=[]):
         class UploadDataThread(threading.Thread):
             def __init__(self, foldersController, foldersModel, settingsModel,
                          folderModels=[]):
-                threading.Thread.__init__(self)
+                threading.Thread.__init__(self, name="UploadDataThread")
                 self.foldersController = foldersController
                 self.foldersModel = foldersModel
                 self.settingsModel = settingsModel
                 self.folderModels = folderModels
+
+                fc = self.foldersController
+
+                fc.canceled = False
+
+                fc.verifyDatafileRunnable = {}
+                fc.verificationsQueue = Queue.Queue()
+                # FIXME: Number of verify threads should be configurable
+                fc.numVerificationWorkerThreads = 25
+
+                fc.verificationWorkerThreads = []
+                for i in range(fc.numVerificationWorkerThreads):
+                    t = threading.Thread(name="VerificationWorkerThread-%d" % (i+1),
+                                         target=fc.verificationWorker,
+                                         args=(i+1,))
+                    fc.verificationWorkerThreads.append(t)
+                    t.start()
+
+                fc.uploadDatafileRunnable = {}
+                fc.uploadsQueue = Queue.Queue()
+                # FIXME: Number of upload threads should be configurable
+                fc.numUploadWorkerThreads = 5
+
+                uploadToStagingRequest = self.settingsModel\
+                    .GetUploadToStagingRequest()
+                if uploadToStagingRequest is not None and \
+                        uploadToStagingRequest['approved']:
+                    logger.info("Uploads to staging have been approved.")
+                    self.uploadMethod = UploadMethod.RSYNC
+                    print "FIXME: Uploads to staging have been approved, " \
+                          "but RSYNC uploads haven't been implemented " \
+                          "in MyData yet, so falling back to HTTP POST " \
+                          "uploads for now."
+                    self.uploadMethod = UploadMethod.HTTP_POST
+                else:
+                    logger.info("Uploads to staging have not been approved.")
+                    self.uploadMethod = UploadMethod.HTTP_POST
+                if self.uploadMethod == UploadMethod.HTTP_POST and \
+                        fc.numUploadWorkerThreads > 1:
+                    logger.warning(
+                        "Using HTTP POST, so setting "
+                        "numUploadWorkerThreads to 1, "
+                        "because urllib2 is not thread-safe.")
+                    fc.numUploadWorkerThreads = 1
+
+                fc.uploadWorkerThreads = []
+                for i in range(fc.numUploadWorkerThreads):
+                    t = threading.Thread(name="UploadWorkerThread-%d" % (i+1),
+                                         target=fc.uploadWorker, args=())
+                    fc.uploadWorkerThreads.append(t)
+                    t.start()
 
             def run(self):
                 try:
                     if len(folderModels) == 0:
                         # Scan all folders
                         for row in range(0, self.foldersModel.GetRowCount()):
-                            if self.foldersController.shuttingDown:
-                                break
+                            if self.foldersController.IsShuttingDown():
+                                return
                             folderModel = self.foldersModel.foldersData[row]
-                            if self.foldersController.shuttingDown:
-                                break
-                            if self.foldersController.shuttingDown:
-                                break
+                            logger.debug(
+                                "UploadDataThread: Starting verifications "
+                                "and uploads for folder: " +
+                                folderModel.GetFolder())
+                            if self.foldersController.IsShuttingDown():
+                                return
                             try:
                                 # Save MyTardis URL, so if it's changing in the
                                 # Settings Dialog while this thread is
@@ -170,7 +258,7 @@ class FoldersController():
                                 folderModel.SetDatasetModel(datasetModel)
                                 self.foldersController.VerifyDatafiles(folderModel)
                             except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.shuttingDown:
+                                if not self.foldersController.IsShuttingDown():
                                     DISCONNECTED = \
                                         ConnectionStatus.DISCONNECTED
                                     wx.PostEvent(
@@ -191,17 +279,17 @@ class FoldersController():
                                              "folder " +
                                              folderModel.GetFolder())
                                 return
-                            if self.foldersController.shuttingDown:
-                                break
+                            if self.foldersController.IsShuttingDown():
+                                return
                     else:
                         # Scan specific folders (e.g. dragged and dropped),
                         # instead of all of them:
                         for folderModel in folderModels:
-                            if self.foldersController.shuttingDown:
-                                break
+                            if self.foldersController.IsShuttingDown():
+                                return
                             folderModel.SetCreatedDate()
-                            if self.foldersController.shuttingDown:
-                                break
+                            if self.foldersController.IsShuttingDown():
+                                return
                             try:
                                 # Save MyTardis URL, so if it's changing in the
                                 # Settings Dialog while this thread is
@@ -221,12 +309,12 @@ class FoldersController():
                                         connectionStatus=CONNECTED))
                                 datasetModel = DatasetModel\
                                     .CreateDatasetIfNecessary(folderModel)
-                                if self.foldersController.shuttingDown:
-                                    break
+                                if self.foldersController.IsShuttingDown():
+                                    return
                                 folderModel.SetDatasetModel(datasetModel)
                                 self.foldersController.VerifyDatafiles(folderModel)
                             except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.shuttingDown:
+                                if not self.foldersController.IsShuttingDown():
                                     DISCONNECTED = \
                                         ConnectionStatus.DISCONNECTED
                                     wx.PostEvent(
@@ -240,8 +328,8 @@ class FoldersController():
                                              "for folder " +
                                              str(folderModel.GetFolder()))
                                 return
-                            if self.foldersController.shuttingDown:
-                                break
+                            if self.foldersController.IsShuttingDown():
+                                return
                 except:
                     logger.error(traceback.format_exc())
 
@@ -252,7 +340,7 @@ class FoldersController():
                              folderModels=folderModels)
         self.uploadDataThread.start()
 
-    def uploadWorker(self, foldersController):
+    def uploadWorker(self):
         """
         One worker per thread
         By default, up to 5 threads can run simultaneously
@@ -260,15 +348,37 @@ class FoldersController():
         the MyTardis server.
         """
         while True:
-            if foldersController.shuttingDown:
-                break
+            if self.IsShuttingDown():
+                return
             task = self.uploadsQueue.get()
             if task is None:
+                wx.PostEvent(
+                    self.notifyWindow,
+                    self.UploadsCompleteEvent(
+                        success=True,
+                        failed=False,
+                        canceled=self.Canceled()))
                 break
-            task.run()
-            self.uploadsQueue.task_done()
+            try:
+                task.run()
+            except ValueError, e:
+                if str(e) == "I/O operation on closed file":
+                    logger.info(
+                        "Ignoring closed file exception - it is normal "
+                        "to encounter these exceptions while canceling "
+                        "uploads.")
+                    self.uploadsQueue.task_done()
+                    return
+                else:
+                    logger.error(traceback.format_exc())
+                    self.uploadsQueue.task_done()
+                    return
+            except:
+                logger.error(traceback.format_exc())
+                self.uploadsQueue.task_done()
+                return
 
-    def verificationWorker(self, foldersController, verificationWorkerId):
+    def verificationWorker(self, verificationWorkerId):
         """
         One worker per thread.
         By default, up to 5 threads can run simultaneously
@@ -276,37 +386,54 @@ class FoldersController():
         the MyTardis server.
         """
         while True:
-            if foldersController.shuttingDown:
-                break
+            if self.IsShuttingDown():
+                return
             task = self.verificationsQueue.get()
             if task is None:
                 break
-            task.run()
-            self.verificationsQueue.task_done()
+            try:
+                task.run()
+            except ValueError, e:
+                if str(e) == "I/O operation on closed file":
+                    logger.info(
+                        "Ignoring closed file exception - it is normal "
+                        "to encounter these exceptions while canceling "
+                        "uploads.")
+                    self.verificationsQueue.task_done()
+                    return
+                else:
+                    logger.error(traceback.format_exc())
+                    self.verificationsQueue.task_done()
+                    return
+            except:
+                logger.error(traceback.format_exc())
+                self.verificationsQueue.task_done()
+                return
 
-    def CleanUp(self):
-
-        self.shuttingDown = True
-
-        self.uploadsModel.CancelAll()
-
+    def ShutDownUploadThreads(self):
+        self.SetShuttingDown(True)
+        self.SetCanceled()
+        self.uploadsModel.CancelRemaining()
         if hasattr(self, 'uploadDataThread'):
             logger.debug("Joining FoldersController's UploadDataThread...")
             self.uploadDataThread.join()
             logger.debug("Joined FoldersController's UploadDataThread.")
-
         logger.debug("Shutting down FoldersController upload worker threads.")
         for i in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
         for t in self.uploadWorkerThreads:
             t.join()
-
         logger.debug("Shutting down FoldersController verification "
                      "worker threads.")
         for i in range(self.numVerificationWorkerThreads):
             self.verificationsQueue.put(None)
         for t in self.verificationWorkerThreads:
             t.join()
+
+        self.verifyDatafileRunnable = {}
+        self.uploadDatafileRunnable = {}
+
+        self.SetShuttingDown(False)
 
     def OnDropFiles(self, filepaths):
         if len(filepaths) == 1 and self.foldersModel.Contains(filepaths[0]):
@@ -368,24 +495,20 @@ class FoldersController():
         self.StartDataUploads(folderModels=folderModelsAdded)
 
     def VerifyDatafiles(self, folderModel):
-
         if folderModel not in self.verifyDatafileRunnable:
             self.verifyDatafileRunnable[folderModel] = []
         for dfi in range(0, folderModel.numFiles):
-
-            if self.shuttingDown:
-                break
+            if self.IsShuttingDown():
+                return
             thisFileIsAlreadyBeingVerified = False
             for existingVerifyDatafileRunnable in \
                     self.verifyDatafileRunnable[folderModel]:
                 if dfi == existingVerifyDatafileRunnable.GetDatafileIndex():
                     thisFileIsAlreadyBeingVerified = True
-
             thisFileIsAlreadyBeingUploaded = False
             if folderModel in self.uploadDatafileRunnable:
                 if dfi in self.uploadDatafileRunnable[folderModel]:
                     thisFileIsAlreadyBeingUploaded = True
-
             if not thisFileIsAlreadyBeingVerified \
                     and not thisFileIsAlreadyBeingUploaded:
                 self.verifyDatafileRunnable[folderModel]\
@@ -394,13 +517,6 @@ class FoldersController():
                                                    self.settingsModel))
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
-
-    def Refresh(self):
-
-        self.uploadsModel.CancelAll()
-
-        self.verifyDatafileRunnable = {}
-        self.uploadDatafileRunnable = {}
 
     def OnAddFolder(self, evt):
         dlg = wx.DirDialog(self.notifyWindow, "Choose a directory:")
@@ -458,7 +574,6 @@ class FoldersController():
             dlg.ShowModal()
             return
         import subprocess
-        import sys
         if sys.platform == 'darwin':
             def openFolder(path):
                 subprocess.check_call(['open', '--', path])
@@ -472,6 +587,21 @@ class FoldersController():
             logger.debug("sys.platform = " + sys.platform)
 
         openFolder(path)
+
+    def md5sum(self, filename, uploadModel, chunk_size=8192):
+        import hashlib
+        md5 = hashlib.md5()
+        with open(filename, 'rb') as f:
+            # Note that the iter() func needs an empty byte string
+            # for the returned iterator to halt at EOF, since read()
+            # returns b'' (not just '').
+            for chunk in iter(lambda: f.read(chunk_size), b''):
+                if self.IsShuttingDown() or uploadModel.Canceled():
+                    logger.debug("Aborting MD5 calculation for "
+                                 "%s" % filename)
+                    return None
+                md5.update(chunk)
+        return md5.hexdigest()
 
 
 class VerifyDatafileRunnable():
@@ -504,7 +634,6 @@ class VerifyDatafileRunnable():
 
         headers = {"Authorization": "ApiKey " +
                    myTardisUsername + ":" + myTardisApiKey}
-
         response = requests.get(headers=headers, url=url)
         existingMatchingDataFiles = response.json()
         numExistingMatchingDataFiles = \
@@ -548,6 +677,7 @@ class UploadDatafileRunnable():
 
     def run(self):
         if self.uploadModel.Canceled():
+            self.foldersController.SetCanceled()
             logger.debug("Upload for \"%s\" was canceled "
                          "before it began uploading." %
                          self.uploadModel.GetRelativePathToUpload())
@@ -566,16 +696,30 @@ class UploadDatafileRunnable():
                      self.folderModel.GetDataFileName(self.dataFileIndex) +
                      "...")
 
-        dataFileMd5Sum = md5sum(dataFilePath)
-        dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
+        url = myTardisUrl + "/api/v1/dataset_file/"
+        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
+                   myTardisApiKey}
 
+        if self.foldersController.IsShuttingDown():
+            return
+        self.uploadModel.SetMessage("Getting data file size...")
+        # ValueError: I/O operation on closed file
+        dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         self.uploadModel.SetFileSize(dataFileSize)
 
+        if self.foldersController.IsShuttingDown():
+            return
+        self.uploadModel.SetMessage("Calculating MD5 checksum...")
+        dataFileMd5Sum = \
+            self.foldersController.md5sum(dataFilePath, self.uploadModel)
+
         if self.uploadModel.Canceled():
+            self.foldersController.SetCanceled()
             logger.debug("Upload for \"%s\" was canceled "
                          "before it began uploading." %
                          self.uploadModel.GetRelativePathToUpload())
             return
+
         if dataFileSize == 0:
             self.uploadsModel.UploadFileSizeUpdated(self.uploadModel)
             self.uploadModel.SetMessage("MyTardis will not accept a "
@@ -585,44 +729,51 @@ class UploadDatafileRunnable():
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             return
 
-        import mimetypes
-        dataFileMimeType = mimetypes.guess_type(dataFilePath)[0]
+        if self.foldersController.IsShuttingDown():
+            return
+        self.uploadModel.SetMessage("Checking MIME type...")
+        # mimetypes.guess_type(...) is not thread-safe!
+        mimeTypes = mimetypes.MimeTypes()
+        dataFileMimeType = mimeTypes.guess_type(dataFilePath)[0]
+
+        if self.foldersController.IsShuttingDown():
+            return
+        self.uploadModel.SetMessage("Defining JSON data for POST...")
         datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
-        dataFileJson = {"dataset": datasetUri, "filename": dataFileName,
+        dataFileJson = {"dataset": datasetUri,
+                        "filename": dataFileName,
                         "directory": dataFileDirectory,
-                        "md5sum": dataFileMd5Sum, "size": dataFileSize,
+                        "md5sum": dataFileMd5Sum,
+                        "size": dataFileSize,
                         "mimetype": dataFileMimeType}
 
-        url = myTardisUrl + "/api/v1/dataset_file/"
-        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
-                   myTardisApiKey}
         if self.uploadModel.Canceled():
+            self.foldersController.SetCanceled()
             logger.debug("Upload for \"%s\" was canceled "
                          "before it began uploading." %
                          self.uploadModel.GetRelativePathToUpload())
             return
+        self.uploadModel.SetMessage("Initializing buffered reader...")
         datafileBufferedReader = io.open(dataFilePath, 'rb')
         self.uploadModel.SetBufferedReader(datafileBufferedReader)
 
         def prog_callback(param, current, total):
             if self.uploadModel.Canceled():
+                self.foldersController.SetCanceled()
                 return
             percentComplete = 100 - ((total - current) * 100) / (total)
 
             self.uploadModel.SetProgress(float(percentComplete))
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
+            self.uploadModel.SetMessage("%3d %% complete"
+                                        % int(percentComplete))
+            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             myTardisUrl = self.settingsModel.GetMyTardisUrl()
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.ConnectionStatusEvent(
                     myTardisUrl=myTardisUrl,
                     connectionStatus=ConnectionStatus.CONNECTED))
-
-        uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
-        if uploadToStagingRequest['approved']:
-            logger.info("Uploads via staging have been approved.")
-        else:
-            logger.info("Uploads via staging have not yet been approved.")
 
         datagen, headers = poster.encode.multipart_encode(
             {"json_data": json.dumps(dataFileJson),
@@ -631,30 +782,31 @@ class UploadDatafileRunnable():
 
         opener = poster.streaminghttp.register_openers()
 
-        opener.addheaders = [('Authorization', 'ApiKey ' + myTardisUsername +
-                              ':' + myTardisApiKey)]
+        opener.addheaders = [("Authorization", "ApiKey " + myTardisUsername +
+                              ":" + myTardisApiKey),
+                             ("Content-Type", "application/json"),
+                             ("Accept", "application/json")]
 
+        self.uploadModel.SetMessage("Uploading...")
         success = False
+        request = None
+        response = None
         try:
-            req = urllib2.Request(url, datagen, headers)
+            request = urllib2.Request(url, datagen, headers)
             try:
-                response = urllib2.urlopen(req)
-                # print str(req.header_items())
+                response = urllib2.urlopen(request)
                 success = True
             except ValueError, e:
-                self.uploadModel.SetMessage(str(e))
-                self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-                self.uploadModel.SetStatus(UploadStatus.FAILED)
-                self.uploadsModel.UploadStatusUpdated(self.uploadModel)
                 if str(e) == "read of closed file" or \
                         str(e) == "seek of closed file":
                     logger.debug("Aborting upload for \"%s\" because "
                                  "file handle was closed." %
                                  self.uploadModel.GetRelativePathToUpload())
                     return
-                logger.error(traceback.format_exc())
-        except urllib2.HTTPError, e:
-            if not self.foldersController.shuttingDown:
+                else:
+                    raise
+        except Exception, e:
+            if not self.foldersController.IsShuttingDown():
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.ConnectionStatusEvent(
@@ -672,19 +824,27 @@ class UploadDatafileRunnable():
             else:
                 logger.debug("Upload failed for datafile " + dataFileName +
                              " of folder " + self.folderModel.GetFolder())
-            logger.debug(e.code)
-            logger.debug(str(e))
+            logger.debug(url)
+            logger.error(e.code)
+            logger.error(str(e))
+            if request is not None:
+                logger.error(str(request.header_items()))
+            else:
+                logger.error("request is None.")
+            if response is not None:
+                logger.error(response.read())
+            else:
+                logger.error("response is None.")
             self.uploadModel.SetMessage(str(e))
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             logger.debug(e.headers)
-            logger.debug(e.fp.read())
             logger.debug(traceback.format_exc())
 
         if success:
             self.uploadModel.SetStatus(UploadStatus.COMPLETED)
+            self.uploadModel.SetMessage("Upload complete!")
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             logger.debug("Upload succeeded for " + dataFilePath)
-
             self.uploadModel.SetProgress(100.0)
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
@@ -696,15 +856,3 @@ class UploadDatafileRunnable():
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                  uploaded=False)
             self.foldersModel.FolderStatusUpdated(self.folderModel)
-
-
-def md5sum(filename, chunk_size=8192):
-    import hashlib
-    md5 = hashlib.md5()
-    with open(filename, 'rb') as f:
-        # Note that the iter() func needs an empty byte string
-        # for the returned iterator to halt at EOF, since read()
-        # returns b'' (not just '').
-        for chunk in iter(lambda: f.read(chunk_size), b''):
-            md5.update(chunk)
-    return md5.hexdigest()
