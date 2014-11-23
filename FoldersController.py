@@ -55,6 +55,14 @@ class FoldersController():
 
         self.shuttingDown = False
 
+        # These will get overwritten in UploadDataThread, but we need
+        # to initialize them here, so that ShutDownUploadThreads()
+        # can be called.
+        self.numVerificationWorkerThreads = 0
+        self.verificationWorkerThreads = []
+        self.numUploadWorkerThreads = 0
+        self.uploadWorkerThreads = []
+
         self.lastUsedFolderType = None
         self.folderDropTarget = MyFolderDropTarget(self)
         self.foldersView.SetDropTarget(self.folderDropTarget)
