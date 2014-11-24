@@ -164,7 +164,7 @@ def newKeyPair(keyName=None,
         stdout, stderr = proc.communicate()
 
         if stdout is None or str(stdout).strip() == "":
-            logger.error("KeyModel.generateNewKey: "
+            logger.error("OpenSSH.newKeyPair: "
                          "(1) Got EOF from ssh-keygen binary")
         elif "Your identification has been saved" in stdout:
             success = True
@@ -172,9 +172,9 @@ def newKeyPair(keyName=None,
             raise Exception("Private key file \"%s\" already exists."
                             % privateKeyFilePath)
         else:
-            logger.error("KeyModel.generateNewKey: "
+            logger.error("OpenSSH.newKeyPair: "
                          "Got unknown error from ssh-keygen binary")
-            logger.error("KeyModel.generateNewKey: " + stdout)
+            logger.error("OpenSSH.newKeyPair: " + stdout)
     else:
         import pexpect
 
