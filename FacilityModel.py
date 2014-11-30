@@ -9,20 +9,20 @@ from GroupModel import GroupModel
 class FacilityModel():
 
     def __init__(self, settingsModel=None, name=None,
-                 facilityRecordJson=None):
+                 facilityJson=None):
 
         self.settingsModel = settingsModel
         self.id = None
         self.name = name
-        self.json = facilityRecordJson
+        self.json = facilityJson
         self.manager_group = None
 
-        if facilityRecordJson is not None:
-            self.id = facilityRecordJson['id']
+        if facilityJson is not None:
+            self.id = facilityJson['id']
             if name is None:
-                self.name = facilityRecordJson['name']
+                self.name = facilityJson['name']
             self.manager_group = \
-                GroupModel(groupRecordJson=facilityRecordJson['manager_group'])
+                GroupModel(groupJson=facilityJson['manager_group'])
 
     def __str__(self):
         return "FacilityModel " + self.name
@@ -52,7 +52,7 @@ class FacilityModel():
         return self.json
 
     @staticmethod
-    def GetFacilityRecord(settingsModel, name):
+    def GetFacility(settingsModel, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -67,17 +67,17 @@ class FacilityModel():
                          name + "\".")
             logger.debug(response.text)
             return None
-        facilityRecordsJson = response.json()
-        numFacilityRecordsFound = facilityRecordsJson['meta']['total_count']
+        facilitiesJson = response.json()
+        numFacilitysFound = facilitiesJson['meta']['total_count']
 
-        if numFacilityRecordsFound == 0:
+        if numFacilitysFound == 0:
             logger.warning("Facility \"%s\" was not found in MyTardis" % name)
             return None
         else:
             logger.debug("Found facility record for name '" + name + "'.")
             return FacilityModel(
                 settingsModel=settingsModel, name=name,
-                facilityRecordJson=facilityRecordsJson['objects'][0])
+                facilityJson=facilitiesJson['objects'][0])
 
     @staticmethod
     def GetMyFacilities(settingsModel, userModel):
@@ -100,10 +100,10 @@ class FacilityModel():
                              group.GetName() + "\".")
                 logger.debug(response.text)
                 return None
-            facilityRecordsJson = response.json()
-            for facilityRecordJson in facilityRecordsJson['objects']:
+            facilitiesJson = response.json()
+            for facilityJson in facilitiesJson['objects']:
                 facilities.append(FacilityModel(
                     settingsModel=settingsModel,
-                    facilityRecordJson=facilityRecordJson))
+                    facilityJson=facilityJson))
 
         return facilities
