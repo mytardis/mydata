@@ -252,7 +252,8 @@ class FoldersController():
                     logger.info("Uploads to staging have been approved.")
                     fc.uploadMethod = UploadMethod.CAT_SSH
                 else:
-                    logger.warning("Uploads to staging have not been approved.")
+                    logger.warning("Uploads to staging have not been "
+                                   "approved.")
                     message = "Uploads to MyTardis's staging area require " \
                         "approval from your MyTardis administrator.\n\n" \
                         "A request has been sent, and you will be contacted " \
@@ -262,6 +263,7 @@ class FoldersController():
                         "HTTP POST is generally only suitable for small " \
                         "files (up to 100 MB each)."
                     fc.uploadMethodWarningAcknowledged = False
+
                     def acknowledgedUploadMethodWarning():
                         fc.uploadMethodWarningAcknowledged = True
                     wx.PostEvent(
@@ -749,14 +751,12 @@ class VerifyDatafileRunnable():
             logger.error(traceback.format_exc())
 
         if existingDatafile:
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
             replicas = existingDatafile.GetReplicas()
             if len(replicas) == 0 or not replicas[0].IsVerified():
                 logger.info("Found datafile record for %s "
                             "but it has no verified replicas."
                             % dataFilePath)
-                logger.debug(str(existingDatafile.GetJson()))
+                # logger.debug(str(existingDatafile.GetJson()))
                 uploadToStagingRequest = self.settingsModel\
                     .GetUploadToStagingRequest()
                 bytesUploadedToStaging = 0
@@ -779,13 +779,16 @@ class VerifyDatafileRunnable():
                     logger.debug("No need to re-upload \"%s\" to staging. "
                                  "The file size is correct in staging."
                                  % dataFilePath)
+                    self.folderModel.SetDataFileUploaded(self.dataFileIndex,
+                                                         True)
+                    self.foldersModel.FolderStatusUpdated(self.folderModel)
                     return
                 else:
                     logger.debug("Re-uploading \"%s\" to staging, because "
                                  "the file size is %d bytes in staging, but "
                                  "it should be %d bytes."
                                  % (dataFilePath,
-                                    bytesUploadedToStaging, 
+                                    bytesUploadedToStaging,
                                     int(existingDatafile.GetSize())))
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
@@ -794,6 +797,10 @@ class VerifyDatafileRunnable():
                         folderModel=self.folderModel,
                         dataFileIndex=self.dataFileIndex,
                         existingUnverifiedDatafile=existingDatafile))
+            else:
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex,
+                                                     True)
+                self.foldersModel.FolderStatusUpdated(self.folderModel)
 
 
 class UploadDatafileRunnable():
@@ -847,6 +854,7 @@ class UploadDatafileRunnable():
         if self.foldersController.IsShuttingDown():
             return
         self.uploadModel.SetMessage("Calculating MD5 checksum...")
+
         def md5ProgressCallback(bytesProcessed):
             if self.uploadModel.Canceled():
                 # self.foldersController.SetCanceled()
