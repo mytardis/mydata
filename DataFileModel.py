@@ -76,6 +76,9 @@ class DataFileModel():
     def GetResourceUri(self):
         return self.json['resource_uri']
 
+    def GetSize(self):
+        return self.size
+
     def GetValueForKey(self, key):
         return self.__dict__[key]
 
