@@ -114,6 +114,21 @@ class MyData(wx.App):
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
+        if sys.platform.startswith("win"):
+            os.environ['CYGWIN'] = "nodosfilewarning"
+            if 'HOME' in os.environ and '/' in os.environ['HOME']:
+                # Running chown, chgrp and chmod on an SSH private
+                # key file becomes confusing when there are multiple
+                # Cygwin-like environments, each with their own
+                # definition of users and groups.
+                message = "\n" \
+                    "ERROR: It looks like you are trying to run " \
+                    "MyData from a Cygwin or MSYS environment,\n" \
+                    "which is not supported, because MyData bundles " \
+                    "its own minimal Cygwin environment.\n\n"
+                sys.stderr.write(message)
+                return False
+
         # Most of the SQLite stuff was designed for the case where MyData
         # is stateful, i.e. it remembers which folders were dragged into
         # the application during its previous runs.  However currently
