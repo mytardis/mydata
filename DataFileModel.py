@@ -10,12 +10,10 @@ from Exceptions import MultipleObjectsReturned
 
 
 class DataFileModel():
-    def __init__(self, settingsModel=None,
-                 dataFileJson=None):
+    def __init__(self, settingsModel, dataset, dataFileJson):
         self.settingsModel = settingsModel
         self.json = dataFileJson
         self.id = None
-        self.dataset = None
         self.filename = None
         self.directory = None
         self.size = None
@@ -33,12 +31,12 @@ class DataFileModel():
             for key in dataFileJson:
                 if hasattr(self, key):
                     self.__dict__[key] = dataFileJson[key]
-            self.dataset = DatasetModel(
-                settingsModel=self.settingsModel,
-                datasetJson=dataFileJson['dataset'])
             self.replicas = []
             for replicaJson in dataFileJson['replicas']:
                 self.replicas.append(ReplicaModel(replicaJson=replicaJson))
+        # This needs to go after self.__dict__[key] = dataFileJson[key]
+        # so we get the full dataset model, not just the API resource string:
+        self.dataset = dataset
 
     def __str__(self):
         return "DataFileModel " + self.filename + \
@@ -108,21 +106,13 @@ class DataFileModel():
             raise DoesNotExist(
                 message="Datafile \"%s\" was not found in MyTardis" % filename,
                 url=url, response=response)
-            # logger.debug(url)
-            # logger.debug(response.text)
-            # return None
         elif numDataFilesFound > 1:
             raise MultipleObjectsReturned(
                 message="Multiple datafiles matching %s were found in MyTardis"
                 % filename,
                 url=url, response=response)
-            # logger.debug(url)
-            # logger.debug(response.text)
-            # return None
         else:
-            logger.debug("Found datafile record for filename \"%s\" "
-                         "in dataset \"%s\"" %
-                         (filename, dataset.GetDescription()))
             return DataFileModel(
                 settingsModel=settingsModel,
+                dataset=dataset,
                 dataFileJson=dataFilesJson['objects'][0])
