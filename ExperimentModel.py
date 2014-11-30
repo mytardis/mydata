@@ -3,6 +3,9 @@ import json
 import urllib2
 
 from logger.Logger import logger
+from Exceptions import Unauthorized
+from Exceptions import DoesNotExist
+from Exceptions import MultipleObjectsReturned
 
 
 class ExperimentModel():
@@ -44,7 +47,19 @@ class ExperimentModel():
             logger.debug(url)
             logger.debug(response.text)
             logger.debug("response.status_code = " + str(response.status_code))
-            return None
+            if response.status_code == 404:
+                message = "Couldn't retrieve experiment \"%s\" " \
+                          "for folder \"%s\"." \
+                          % (experimentName, folderModel.GetFolder())
+                message += "\n\n"
+                message += "A 404 (Not Found) error occurred while " \
+                           "attempting to retrieve the experiment.\n\n" \
+                           "Please ask your MyTardis administrator to " \
+                           "check that a User Profile record exists " \
+                           "for the \"%s\" user account." \
+                           % myTardisDefaultUsername
+                raise DoesNotExist(message)
+            raise
 
         # If no matching experiment is found, create one.
         # If one matching experiment is found, return it.
@@ -88,7 +103,28 @@ class ExperimentModel():
                 logger.debug(response.text)
                 logger.debug("response.status_code = " +
                              str(response.status_code))
-                return None
+                if response.status_code == 401:
+                    message = "Couldn't create experiment \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (experimentName, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "Please ask your MyTardis administrator to " \
+                               "check the permissions of the \"%s\" user " \
+                               "account." % myTardisDefaultUsername
+                    raise Unauthorized(message)
+                elif response.status_code == 404:
+                    message = "Couldn't create experiment \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (experimentName, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "A 404 (Not Found) error occurred while " \
+                               "attempting to create the experiment.\n\n" \
+                               "Please ask your MyTardis administrator to " \
+                               "check that a User Profile record exists " \
+                               "for the \"%s\" user account." \
+                               % myTardisDefaultUsername
+                    raise DoesNotExist(message)
+                raise
             if response.status_code == 201:
                 logger.debug("Succeeded in creating experiment for instrument "
                              "\"" + instrumentName + "\" and user " +
@@ -127,7 +163,26 @@ class ExperimentModel():
                     logger.debug(response.text)
                     logger.debug("response.status_code = " +
                                  str(response.status_code))
-                    return None
+                    if response.status_code == 401:
+                        message = "Couldn't create ObjectACL for " \
+                                  "experiment \"%s\"." % experimentName
+                        message += "\n\n"
+                        message += "Please ask your MyTardis administrator " \
+                                   "to check the permissions of the \"%s\" " \
+                                   "user account." % myTardisDefaultUsername
+                        raise Unauthorized(message)
+                    elif response.status_code == 404:
+                        message = "Couldn't create ObjectACL for " \
+                                  "experiment \"%s\"." % experimentName
+                        message += "\n\n"
+                        message += "A 404 (Not Found) error occurred while " \
+                                   "attempting to create the ObjectACL.\n\n" \
+                                   "Please ask your MyTardis administrator " \
+                                   "to check that a User Profile record " \
+                                   "exists for the \"%s\" user account." \
+                                   % myTardisDefaultUsername
+                        raise DoesNotExist(message)
+                    raise
             else:
                 logger.debug("Failed to create experiment for instrument " +
                              instrumentName + " and user " + ownerUsername +
@@ -137,14 +192,43 @@ class ExperimentModel():
                 logger.debug(response.text)
                 logger.debug("response.status_code = " +
                              str(response.status_code))
-                return None
+                if response.status_code == 401:
+                    message = "Couldn't create experiment \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (experimentName, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "Please ask your MyTardis administrator to " \
+                               "check the permissions of the \"%s\" user " \
+                               "account." % myTardisDefaultUsername
+                    raise Unauthorized(message)
+                elif response.status_code == 404:
+                    message = "Couldn't create experiment \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (experimentName, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "A 404 (Not Found) error occurred while " \
+                               "attempting to create the experiment.\n\n" \
+                               "Please ask your MyTardis administrator to " \
+                               "check that a User Profile record exists " \
+                               "for the \"%s\" user account." \
+                               % myTardisDefaultUsername
+                    raise DoesNotExist(message)
+                raise
             return ExperimentModel(settingsModel, experimentJson)
         elif numExperimentsFound > 1:
-            logger.debug("ERROR: Found multiple experiments matching " +
+            logger.error("ERROR: Found multiple experiments matching " +
                          "instrument name and creation date for user 'mmi':\n")
             for expJson in experimentsJson['objects']:
-                logger.debug(expJson['title'])
-            return None
+                logger.error("\t" + expJson['title'])
+            message = "Multiple experiments were found matching " \
+                      "instrument \"%s\", owner \"%s\" and date " \
+                      "\"%s\" for folder \"%s\"." \
+                      % (instrumentName, ownerUsername, createdDate,
+                         folderModel.GetFolder())
+            message += "\n\n"
+            message += "This shouldn't happen.  Please ask your " \
+                       "MyTardis administrator to investigate."
+            raise MultipleObjectsReturned(message)
         else:
             # If one matching experiment is found, return it.
             logger.debug("Found existing experiment for instrument \"" +
