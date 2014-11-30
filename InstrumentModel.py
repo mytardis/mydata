@@ -4,25 +4,26 @@ import urllib
 
 from logger.Logger import logger
 from FacilityModel import FacilityModel
+from Exceptions import Unauthorized
 
 
 class InstrumentModel():
 
     def __init__(self, settingsModel=None, name=None,
-                 instrumentRecordJson=None):
+                 instrumentJson=None):
 
         self.settingsModel = settingsModel
         self.id = None
         self.name = name
-        self.json = instrumentRecordJson
+        self.json = instrumentJson
         self.facility = None
 
-        if instrumentRecordJson is not None:
-            self.id = instrumentRecordJson['id']
+        if instrumentJson is not None:
+            self.id = instrumentJson['id']
             if name is None:
-                self.name = instrumentRecordJson['name']
+                self.name = instrumentJson['name']
             self.facility = FacilityModel(
-                facilityRecordJson=instrumentRecordJson['facility'])
+                facilityJson=instrumentJson['facility'])
 
     def __str__(self):
         return "InstrumentModel " + self.name + \
@@ -55,7 +56,7 @@ class InstrumentModel():
         return self.json
 
     @staticmethod
-    def CreateInstrumentRecord(settingsModel, facility, name):
+    def CreateInstrument(settingsModel, facility, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
@@ -70,10 +71,19 @@ class InstrumentModel():
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
-            instrumentRecordJson = response.json()
+            instrumentJson = response.json()
             return InstrumentModel(settingsModel=settingsModel, name=name,
-                                   instrumentRecordJson=instrumentRecordJson)
+                                   instrumentJson=instrumentJson)
         else:
+            if response.status_code == 401:
+                message = "Couldn't create instrument \"%s\" " \
+                          "in facility \"%s\"." \
+                          % (name, facility.GetName())
+                message += "\n\n"
+                message += "Please ask your MyTardis administrator to " \
+                           "check the permissions of the \"%s\" " \
+                           "user account." % myTardisDefaultUsername
+                raise Unauthorized(message)
             if response.status_code == 404:
                 raise Exception("HTTP 404 (Not Found) received for: " + url)
             logger.error("Status code = " + str(response.status_code))
@@ -81,7 +91,7 @@ class InstrumentModel():
             raise Exception(response.text)
 
     @staticmethod
-    def GetInstrumentRecord(settingsModel, facility, name):
+    def GetInstrument(settingsModel, facility, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -97,10 +107,10 @@ class InstrumentModel():
                          % (name, facility.GetName()))
             logger.debug(response.text)
             return None
-        instrumentRecordsJson = response.json()
-        numInstrumentRecordsFound = \
-            instrumentRecordsJson['meta']['total_count']
-        if numInstrumentRecordsFound == 0:
+        instrumentsJson = response.json()
+        numInstrumentsFound = \
+            instrumentsJson['meta']['total_count']
+        if numInstrumentsFound == 0:
             logger.warning("Instrument \"%s\" was not found in MyTardis"
                            % name)
             logger.debug(url)
@@ -112,7 +122,7 @@ class InstrumentModel():
                          (name, facility.GetName()))
             return InstrumentModel(
                 settingsModel=settingsModel, name=name,
-                instrumentRecordJson=instrumentRecordsJson['objects'][0])
+                instrumentJson=instrumentsJson['objects'][0])
 
     @staticmethod
     def GetMyInstruments(settingsModel, userModel):
@@ -135,11 +145,11 @@ class InstrumentModel():
                              "facility \"" + facility.GetName() + "\".")
                 logger.debug(response.text)
                 return None
-            instrumentRecordsJson = response.json()
-            for instrumentRecordJson in instrumentRecordsJson['objects']:
+            instrumentsJson = response.json()
+            for instrumentJson in instrumentsJson['objects']:
                 instruments.append(InstrumentModel(
                     settingsModel=settingsModel,
-                    instrumentRecordJson=instrumentRecordJson))
+                    instrumentJson=instrumentJson))
 
         return instruments
 
