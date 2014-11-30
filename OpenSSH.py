@@ -369,7 +369,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     # task which does the final check.
     bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
                                               username, privateKeyFilePath,
-                                              hostname):
+                                              hostname)
     if bytesUploaded == fileSize:
         logger.debug("UploadFile returning because file \"%s\" has already "
                      "been uploaded." % filePath)
@@ -391,6 +391,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                   "-l", username,
                   "-c", openSSH.cipher,
                   "-oStrictHostKeyChecking=no",
+                  "-oServerAliveInterval=30",
                   hostname,
                   "/bin/rm -f %s && cat >> %s"
                   % (remoteFilePath, remoteFilePath)]
