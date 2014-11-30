@@ -8,17 +8,17 @@ from logger.Logger import logger
 class GroupModel():
 
     def __init__(self, settingsModel=None, name=None,
-                 groupRecordJson=None):
+                 groupJson=None):
 
         self.settingsModel = settingsModel
         self.id = None
         self.name = name
-        self.groupRecordJson = groupRecordJson
+        self.groupJson = groupJson
 
-        if groupRecordJson is not None:
-            self.id = groupRecordJson['id']
+        if groupJson is not None:
+            self.id = groupJson['id']
             if name is None:
-                self.name = groupRecordJson['name']
+                self.name = groupJson['name']
 
     def __str__(self):
         return "GroupModel " + self.name
@@ -36,10 +36,10 @@ class GroupModel():
         return self.name
 
     def GetJson(self):
-        return self.groupRecordJson
+        return self.groupJson
 
     @staticmethod
-    def GetGroupRecord(settingsModel, name):
+    def GetGroup(settingsModel, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -54,12 +54,12 @@ class GroupModel():
                          name + "\".")
             logger.debug(response.text)
             return None
-        groupRecordsJson = response.json()
-        numGroupRecordsFound = groupRecordsJson['meta']['total_count']
+        groupsJson = response.json()
+        numGroupsFound = groupsJson['meta']['total_count']
 
-        if numGroupRecordsFound == 0:
+        if numGroupsFound == 0:
             logger.warning("Group \"%s\" was not found in MyTardis" % name)
         else:
             logger.debug("Found group record for name '" + name + "'.")
             return GroupModel(settingsModel=settingsModel, name=name,
-                              groupRecordJson=groupRecordsJson['objects'][0])
+                              groupJson=groupsJson['objects'][0])
