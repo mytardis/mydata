@@ -69,7 +69,7 @@ class UploadsView(wx.Panel):
                   cancelSelectedUploadsButton)
 
         cancelRemainingUploadsButton = \
-            wx.Button(self, label="Cancel Remaining Upload(s)")
+            wx.Button(self, label="Cancel All Remaining Upload(s)")
         self.Bind(wx.EVT_BUTTON, self.OnCancelRemainingUploads,
                   cancelRemainingUploadsButton)
 
@@ -98,8 +98,8 @@ class UploadsView(wx.Panel):
             elif len(rows) == 1:
                 pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
                     .GetRelativePathToUpload()
-                message = "Are you sure you want to cancel upload " + \
-                    "\"" + pathToUpload + "\" ?"
+                message = "Are you sure you want to cancel uploading " + \
+                    "\"" + pathToUpload + "\"?"
             else:
                 dlg = wx.MessageDialog(None,
                                        "Please select an upload to cancel.",
