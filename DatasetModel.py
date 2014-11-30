@@ -9,13 +9,6 @@ from Exceptions import Unauthorized
 from Exceptions import InternalServerError
 
 
-def countTruesInDictionary(node):
-    if isinstance(node, dict):
-        return sum([countTruesInDictionary(node[n]) for n in node])
-    else:
-        return node
-
-
 class DatasetModel():
     def __init__(self, settingsModel, datasetJson):
         self.settingsModel = settingsModel
