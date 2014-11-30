@@ -31,7 +31,7 @@ class UserModel():
                 self.email = userRecordJson['email']
             for group in userRecordJson['groups']:
                 self.groups.append(GroupModel(settingsModel=settingsModel,
-                                              groupRecordJson=group))
+                                              groupJson=group))
 
     def GetId(self):
         return self.id
