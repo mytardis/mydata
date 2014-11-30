@@ -7,7 +7,7 @@ import threading
 from logger.Logger import logger
 
 from SettingsModel import SettingsModel
-from Exceptions import DuplicateKeyException
+from Exceptions import DuplicateKey
 
 
 class SettingsDialog(wx.Dialog):
@@ -220,7 +220,7 @@ class SettingsDialog(wx.Dialog):
                 if dlg.GetStringSelection() == renameChoice:
                     logger.info("OK, we will rename the "
                                 "existing instrument record.")
-                    self.duplicateKeyException = False
+                    self.duplicateKey = False
 
                     def renameInstrument(settingsDialog, settingsModel,
                                          facilityName,
@@ -229,8 +229,8 @@ class SettingsDialog(wx.Dialog):
                             settingsModel.RenameInstrument(
                                 facilityName,
                                 oldInstrumentName, newInstrumentName)
-                        except DuplicateKeyException:
-                            settingsDialog.duplicateKeyException = True
+                        except DuplicateKey:
+                            settingsDialog.duplicateKey = True
 
                     thread = threading.Thread(
                         target=renameInstrument,
@@ -249,7 +249,7 @@ class SettingsDialog(wx.Dialog):
                     # run.
                     thread.join()
                     wx.EndBusyCursor()
-                    if self.duplicateKeyException:
+                    if self.duplicateKey:
                         message = "Instrument name \"%s\" already exists in " \
                             "facility \"%s\"." \
                             % (self.GetInstrumentName(),
