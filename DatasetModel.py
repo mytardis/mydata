@@ -5,6 +5,8 @@ import json
 import traceback
 
 from logger.Logger import logger
+from Exceptions import Unauthorized
+from Exceptions import InternalServerError
 
 
 def countTruesInDictionary(node):
@@ -26,7 +28,11 @@ class DatasetModel():
         return self.json['id']
 
     def GetDescription(self):
-        return self.json['description']
+        try:
+            return self.json['description']
+        except:
+            logger.error("self.json = " + str(self.json))
+            logger.error(traceback.format_exc())
 
     def GetResourceUri(self):
         return self.json['resource_uri']
@@ -34,10 +40,11 @@ class DatasetModel():
     @staticmethod
     def CreateDatasetIfNecessary(folderModel):
         description = folderModel.GetFolder()
+        settingsModel = folderModel.settingsModel
 
-        myTardisUrl = folderModel.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = folderModel.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = folderModel.settingsModel.GetApiKey()
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisDefaultUsername = settingsModel.GetUsername()
+        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/dataset/?format=json" + \
             "&experiments__id=" + str(folderModel.GetExperiment().GetId())
@@ -63,6 +70,7 @@ class DatasetModel():
             experimentUri = folderModel.GetExperiment().GetResourceUri()
             immutable = False
             datasetJson = {
+                "instrument": settingsModel.GetInstrument().GetResourceUri(),
                 "description": description,
                 "experiments": [experimentUri],
                 "immutable": immutable}
@@ -75,14 +83,43 @@ class DatasetModel():
             response = requests.post(headers=headers, url=url, data=data)
             if response.status_code >= 200 and response.status_code < 300:
                 newDatasetJson = response.json()
-                return DatasetModel(folderModel.settingsModel, newDatasetJson)
+                return DatasetModel(settingsModel, newDatasetJson)
             else:
-                logger.debug(url)
-                logger.debug("response.status_code = " +
+                logger.error(url)
+                logger.error("response.status_code = " +
                              str(response.status_code))
-                return None
+                logger.error(response.text)
+                if response.status_code == 401:
+                    message = "Couldn't create dataset \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (description, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "Please ask your MyTardis administrator to " \
+                               "check the permissions of the \"%s\" user " \
+                               "account." % myTardisDefaultUsername
+                    raise Unauthorized(message)
+                elif response.status_code == 500:
+                    message = "Couldn't create dataset \"%s\" " \
+                              "for folder \"%s\"." \
+                              % (description, folderModel.GetFolder())
+                    message += "\n\n"
+                    message += "An Internal Server Error occurred."
+                    message += "\n\n"
+                    message += "If running MyTardis in DEBUG mode, " \
+                               "more information may be available below. " \
+                               "Otherwise, please ask your MyTardis " \
+                               "administrator to check in their logs " \
+                               "for more information."
+                    message += "\n\n"
+                    try:
+                        message += "ERROR: \"%s\"" \
+                            % response.json()['error_message']
+                    except:
+                        message += response.text
+                    raise InternalServerError(message)
+                raise Exception(response.text)
         else:
-            return DatasetModel(folderModel.settingsModel,
+            return DatasetModel(settingsModel,
                                 existingMatchingDatasets['objects'][0])
 
     def GetViewUri(self):
