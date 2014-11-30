@@ -19,7 +19,8 @@ class UploadModel():
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = self.folderModel.GetDataFileName(dataFileIndex)
         self.filesize = ""
-        self.progress = 0.0
+        self.bytesUploaded = 0
+        self.progress = 0.0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
         self.bufferedReader = None
@@ -31,6 +32,12 @@ class UploadModel():
 
     def GetFilename(self):
         return self.filename
+
+    def GetBytesUploaded(self):
+        return self.bytesUploaded
+
+    def SetBytesUploaded(self, bytesUploaded):
+        self.bytesUploaded = bytesUploaded
 
     def GetProgress(self):
         return self.progress
@@ -86,13 +93,13 @@ class UploadModel():
 
     def SetFileSize(self, fileSize):
         self.fileSize = fileSize
-        self.filesize = sizeof_fmt(self.fileSize)
+        self.filesize = humanReadableSizeString(self.fileSize)
 
     def Canceled(self):
         return self.canceled
 
 
-def sizeof_fmt(num):
+def humanReadableSizeString(num):
     for x in ['bytes', 'KB', 'MB', 'GB']:
         if num < 1024.0 and num > -1024.0:
             return "%3.0f %s" % (num, x)
