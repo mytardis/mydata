@@ -10,7 +10,8 @@ from logger.Logger import logger
 from UserModel import UserModel
 from FacilityModel import FacilityModel
 from InstrumentModel import InstrumentModel
-from Exceptions import DuplicateKeyException
+from Exceptions import DuplicateKey
+from Exceptions import Unauthorized
 
 
 class SettingsModel():
@@ -52,6 +53,7 @@ class SettingsModel():
 
         self.uploaderModel = None
         self.uploadToStagingRequest = None
+        self.sshKeyPair = None
 
         self.validation = self.SettingsValidation(True)
 
@@ -162,6 +164,14 @@ class SettingsModel():
                 else:
                     self.background_mode = "False"
 
+    def GetInstrument(self):
+        if self.instrument is None:
+            self.instrument = \
+                InstrumentModel.GetInstrument(self,
+                                              self.GetFacility(),
+                                              self.GetInstrumentName())
+        return self.instrument
+
     def GetInstrumentName(self):
         return self.instrument_name
 
@@ -233,6 +243,12 @@ class SettingsModel():
 
     def SetUploaderModel(self, uploaderModel):
         self.uploaderModel = uploaderModel
+
+    def GetSshKeyPair(self):
+        return self.sshKeyPair
+
+    def SetSshKeyPair(self, sshKeyPair):
+        self.sshKeyPair = sshKeyPair
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
@@ -425,15 +441,22 @@ class SettingsModel():
                     self.facility = f
                     break
             if self.facility is None:
-                message = "Facility \"%s\" was not " \
-                    "found on MyTardis (or user \"%s\" " \
-                    "doesn't have access to it)." % \
-                    (self.GetFacilityName(), self.GetUsername())
+                message = "Facility \"%s\" was not found in MyTardis." \
+                    % self.GetFacilityName()
                 if len(facilities) > 0:
-                    message = message + "\n\nThe facilities which user \"%s\" " \
+                    message += "\n\n" + \
+                        "The facilities which user \"%s\" " \
                         "has access to are:\n\n" % self.GetUsername()
                     for f in facilities:
                         message = message + "    " + f.GetName() + "\n"
+                else:
+                    message += "\n\n" + \
+                        "Please ask your MyTardis administrator to " \
+                        "ensure that the \"%s\" facility exists and that " \
+                        "user \"%s\" is a member of the managers group for " \
+                        "that facility." \
+                        % (self.GetFacilityName(),
+                           self.GetUsername())
                 suggestion = None
                 if len(facilities) == 1:
                     suggestion = facilities[0].GetName()
@@ -455,20 +478,30 @@ class SettingsModel():
                            "MAC addresses (Ethernet and WiFi) "
                            "on the same instrument PC.")
             self.instrument = \
-                InstrumentModel.GetInstrumentRecord(self,
-                                                    self.GetFacility(),
-                                                    self.GetInstrumentName())
+                InstrumentModel.GetInstrument(self,
+                                              self.GetFacility(),
+                                              self.GetInstrumentName())
             if self.instrument is None:
                 logger.info("No instrument record with name \"%s\" was found "
                             "in facility \"%s\", so we will create one."
                             % (self.GetInstrumentName(),
                                self.GetFacilityName()))
-                self.instrument = InstrumentModel\
-                    .CreateInstrumentRecord(self, self.GetFacility(),
-                                            self.GetInstrumentName())
+                try:
+                    self.instrument = InstrumentModel.CreateInstrument(
+                        self, self.GetFacility(), self.GetInstrumentName())
+                except Unauthorized, e:
+                    message = str(e)
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "instrument_name")
+                    return self.validation
                 logger.info("self.instrument = " + str(self.instrument))
             if self.instrument is not None and self.uploaderModel is not None:
-                self.uploaderModel.SetInstrument(self.instrument)
+                try:
+                    self.uploaderModel.SetInstrument(self.instrument)
+                except DoesNotExist:
+                    logger.error("Tried to SetInstrument in uploader record"
+                                 "but uploader record doesn't exist yet.")
 
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
@@ -508,16 +541,15 @@ class SettingsModel():
             raise Exception("Facility is None in "
                             "SettingsModel's RenameInstrument.")
         oldInstrument = \
-            InstrumentModel.GetInstrumentRecord(self, facility,
-                                                oldInstrumentName)
+            InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
         if oldInstrument is None:
             raise Exception("Instrument record for old instrument "
                             "name not found in SettingsModel's "
                             "RenameInstrument.")
         newInstrument = \
-            InstrumentModel.GetInstrumentRecord(self, facility,
-                                                newInstrumentName)
+            InstrumentModel.GetInstrument(self, facility, newInstrumentName)
         if newInstrument is not None:
-            raise DuplicateKeyException("Instrument with name \"%s\" "
-                                        "already exists" % newInstrumentName)
+            raise DuplicateKey(
+                message="Instrument with name \"%s\" "
+                        "already exists" % newInstrumentName)
         oldInstrument.Rename(newInstrumentName)
