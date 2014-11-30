@@ -386,7 +386,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
     def CancelRemaining(self):
         rowsToDelete = []
         for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED:
+            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \
+                    and \
+                    self.uploadsData[row].GetStatus() != UploadStatus.FAILED:
                 rowsToDelete.append(row)
 
         # Ensure that we save the largest ID used so far:
