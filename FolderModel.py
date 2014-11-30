@@ -2,6 +2,9 @@ import os
 import urllib
 import requests
 import json
+from datetime import datetime
+from logger.Logger import logger
+import traceback
 
 from DatasetModel import DatasetModel
 
@@ -19,7 +22,7 @@ class FolderModel():
         self.dataFilePaths = []
         self.dataFileDirectories = []
         for dirName, _, files in os.walk(absoluteFolderPath):
-            for fileName in files:
+            for fileName in sorted(files):
                 self.dataFilePaths.append(os.path.join(dirName, fileName))
                 self.dataFileDirectories\
                     .append(os.path.relpath(dirName, absoluteFolderPath))
@@ -50,7 +53,6 @@ class FolderModel():
         self.numFilesVerified = 0
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
-
         self.dataFileUploaded[dataFileIndex] = uploaded
         self.numFilesUploaded = sum(self.dataFileUploaded)
         self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
@@ -70,6 +72,16 @@ class FolderModel():
 
     def GetDataFileSize(self, dataFileIndex):
         return os.stat(self.GetDataFilePath(dataFileIndex)).st_size
+
+    def GetDataFileCreatedTime(self, dataFileIndex):
+        absoluteFilePath = self.GetDataFilePath(dataFileIndex)
+        try:
+            createdTimeIsoString = datetime.fromtimestamp(
+                os.stat(absoluteFilePath).st_ctime).isoformat()
+            return createdTimeIsoString
+        except:
+            logger.error(traceback.format_exc())
+            return None
 
     def SetExperiment(self, experimentModel):
 
@@ -116,22 +128,19 @@ class FolderModel():
         return self.settingsModel
 
     def SetCreatedDate(self):
-
-        import datetime
         absoluteFolderPath = os.path.join(self.location, self.folder)
-        self.created = datetime.datetime\
-            .fromtimestamp(os.stat(absoluteFolderPath).st_ctime)\
+        self.created = datetime.fromtimestamp(
+            os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
 
     def Refresh(self):
-
         absoluteFolderPath = os.path.join(self.location, self.folder)
         self.numFiles = sum([len(files) for dirName, _, files in
                              os.walk(absoluteFolderPath)])
         self.dataFilePaths = []
         self.dataFileDirectories = []
         for dirName, _, files in os.walk(absoluteFolderPath):
-            for fileName in files:
+            for fileName in sorted(files):
                 self.dataFilePaths.append(os.path.join(dirName, fileName))
                 self.dataFileDirectories.append(os.path.relpath(dirName,
                                                 absoluteFolderPath))
