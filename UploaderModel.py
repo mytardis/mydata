@@ -20,7 +20,7 @@ MyData, even if those users can't figure out how to configure
 authentication in MyData.
 
 Initially only HTTP POST uploads are enabled in MyData, but MyData will request
-uploads via RSYNC over SSH to a staging area, and wait for a MyTardis
+uploads via "cat >>" over SSH to a staging area, and wait for a MyTardis
 administrator to approve the request.  Below is a sample of a MyTardis
 administrator's notes made (in the approval_comments field in MyTardis's
 UploadRegistrationRequest model) when approving one of these upload requests:
@@ -72,6 +72,7 @@ import traceback
 import MyDataVersionNumber
 from logger.Logger import logger
 import OpenSSH
+from Exceptions import DoesNotExist
 
 
 class UploaderModel():
@@ -283,6 +284,17 @@ class UploaderModel():
             logger.info(response.text)
 
     def ExistingUploadToStagingRequest(self):
+        # FIXME: For now, the private key file path has to be ~/.ssh/MyData
+        if not os.path.exists(os.path.join(os.path.expanduser("~"), ".ssh",
+                                           "MyData")):
+            message = "~/.ssh/MyData was not found, so we will " \
+                      "generate a new key-pair and a new request " \
+                      "for staging access."
+            logger.info(message)
+            raise DoesNotExist(message)
+        keyPair = OpenSSH.FindKeyPair("MyData")
+        self.settingsModel.SetSshKeyPair(keyPair)
+        keyPair.CheckPermissions()
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         url = myTardisUrl + "/api/v1/uploaderregistrationrequest/?format=json" + \
             "&uploader__mac_address=" + self.mac_address
@@ -291,7 +303,7 @@ class UploaderModel():
         response = requests.get(headers=headers, url=url)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
-                raise Exception("HTTP 404 (Not Found) received for: " + url)
+                raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
             raise Exception(response.text)
         existingMatchingUploaderRecords = response.json()
         numExistingMatchingUploaderRecords = \
@@ -301,18 +313,20 @@ class UploaderModel():
             logger.info("A request already exists for this uploader.")
             return approval_json
         else:
-            logger.info("This uploader hasn't requested uploading "
-                        "via staging yet.")
-            return None
+            message = "This uploader hasn't requested uploading " \
+                      "via staging yet."
+            logger.info(message)
+            raise DoesNotExist(message)
 
     def RequestUploadToStagingApproval(self):
         """
-        Used to request the ability to upload via RSYNC over SSH
+        Used to request the ability to upload via "cat >>" over SSH
         to a staging area, and then register in MyTardis.
         """
-        keyPair = OpenSSH.findKeyPair("MyData")
+        keyPair = OpenSSH.FindKeyPair("MyData")
         if keyPair is None:
-            keyPair = OpenSSH.newKeyPair("MyData")
+            keyPair = OpenSSH.NewKeyPair("MyData")
+        self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         url = myTardisUrl + "/api/v1/uploaderregistrationrequest/"
         headers = {"Content-Type": "application/json",
@@ -322,14 +336,14 @@ class UploaderModel():
              "name": self.name,
              "requester_name": self.contact_name,
              "requester_email": self.contact_email,
-             "requester_public_key": keyPair.publicKey()}
+             "requester_public_key": keyPair.ReadPublicKey()}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
             return response.json()
         else:
             if response.status_code == 404:
-                raise Exception("HTTP 404 (Not Found) received for: " + url)
+                raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
             logger.error("Status code = " + str(response.status_code))
             logger.error("URL = " + url)
             raise Exception(response.text)
@@ -337,12 +351,13 @@ class UploaderModel():
     def RequestStagingAccess(self):
         try:
             self.UploadUploaderInfo()
-            uploadToStagingRequest = self.ExistingUploadToStagingRequest()
-            if uploadToStagingRequest is None:
+            uploadToStagingRequest = None
+            try:
+                uploadToStagingRequest = self.ExistingUploadToStagingRequest()
+            except DoesNotExist:
                 uploadToStagingRequest = self.RequestUploadToStagingApproval()
-                if uploadToStagingRequest is not None:
-                    logger.info("Uploader registration request created.")
-            elif uploadToStagingRequest['approved']:
+                logger.info("Uploader registration request created.")
+            if uploadToStagingRequest['approved']:
                 logger.info("Uploads to staging have been approved!")
             else:
                 logger.info("Uploads to staging haven't been approved yet.")
@@ -368,7 +383,7 @@ class UploaderModel():
         if numExistingMatchingUploaderRecords > 0:
             uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
         else:
-            raise Exception("SetInstrument: Uploader record not found!")
+            raise DoesNotExist("SetInstrument: Uploader record not found!")
         logger.info("Setting instrument in uploader record via "
                     "MyTardis API...")
         url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
