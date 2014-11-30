@@ -250,11 +250,12 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
             del self.unfilteredUploadsData[row]
-            # Notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.TryRowDeleted(row)
-            else:
-                wx.CallAfter(self.TryRowDeleted, row)
+
+        # Notify the view(s) that these rows have been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rows)
+        else:
+            wx.CallAfter(self.RowsDeleted, rows)
 
     def DeleteUpload(self, folderModel, dataFileIndex):
         # Ensure that we save the largest ID used so far:
