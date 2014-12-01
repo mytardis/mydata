@@ -347,17 +347,16 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                             creationflags=defaultCreationFlags)
     stdout, stderr = proc.communicate()
     lines = stdout.splitlines()
-    if proc.returncode == 0:
-        bytesUploaded = 0
-        for line in lines:
-            match = re.search(r"^(\d+)\s+\S+", line)
-            if match:
-                bytesUploaded = long(match.groups()[0])
-            break
-        return bytesUploaded
-
+    bytesUploaded = 0
     for line in lines:
-        if line == "ssh_exchange_identification: read: " \
+        match = re.search(r"^(\d+)\s+\S+", line)
+        if match:
+            bytesUploaded = long(match.groups()[0])
+            return bytesUploaded
+        elif "No such file or directory" in line:
+            bytesUploaded = 0
+            return bytesUploaded
+        elif line == "ssh_exchange_identification: read: " \
                    "Connection reset by peer" or \
                 line == "ssh_exchange_identification: " \
                         "Connection closed by remote host":
@@ -410,9 +409,15 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
 
             logger.error(message)
             raise StagingHostSshPermissionDenied(message)
+        elif "Broken pipe" in line:
+            message = "An error occurred while trying to upload data to " \
+                "MyTardis's staging host.\n\n"
+            message += line
+            logger.error(message)
+            raise BrokenPipe(message)
         else:
-            raise SshException(line)
-
+            logger.debug(line)
+    return bytesUploaded
 
 def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                hostname, remoteFilePath, progressCallback,
