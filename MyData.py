@@ -29,6 +29,8 @@ from LogView import LogView
 from SettingsModel import SettingsModel
 from SettingsDialog import SettingsDialog
 
+from Exceptions import NoActiveNetworkInterface
+
 import EnhancedStatusBar as ESB
 
 from logger.Logger import logger
@@ -163,6 +165,11 @@ class MyData(wx.App):
             thread = threading.Thread(target=requestStagingAccess,
                                       args=(self.uploaderModel,))
             thread.start()
+        except NoActiveNetworkInterface, e:
+            message = str(e)
+            dlg = wx.MessageDialog(None, message, "MyData",
+                                   wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
         except:
             logger.error(traceback.format_exc())
 
@@ -560,7 +567,8 @@ class MyData(wx.App):
             def uploadUploaderInfo(uploaderModel, settingsModel):
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
-                    uploaderModel = UploaderModel(settingsModel)
+                    if uploaderModel is None:
+                        uploaderModel = UploaderModel(settingsModel)
                     uploaderModel.UploadUploaderInfo()
                     wx.CallAfter(self.frame.SetConnected,
                                  self.settingsModel.GetMyTardisUrl(), True)
@@ -571,6 +579,8 @@ class MyData(wx.App):
                 finally:
                     wx.CallAfter(wx.EndBusyCursor)
 
+            if not hasattr(self, "uploaderModel"):
+                self.uploaderModel = None
             thread = threading.Thread(target=uploadUploaderInfo,
                                       args=(self.uploaderModel,
                                             self.settingsModel))

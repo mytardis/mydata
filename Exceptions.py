@@ -36,6 +36,7 @@ class DoesNotExist(Exception):
     def GetResponse(self):
         return self.response
 
+
 class Unauthorized(Exception):
     def __init__(self, message, url=None, response=None):
 
@@ -50,6 +51,7 @@ class Unauthorized(Exception):
 
     def GetResponse(self):
         return self.response
+
 
 class InternalServerError(Exception):
     def __init__(self, message, url=None, response=None):
@@ -66,8 +68,37 @@ class InternalServerError(Exception):
     def GetResponse(self):
         return self.response
 
+
 class SshException(Exception):
     def __init__(self, message):
 
         # Call the base class constructor with the parameters it needs
         super(SshException, self).__init__(message)
+
+
+class StagingHostRefusedSshConnection(SshException):
+    def __init__(self, message):
+
+        # Call the base class constructor with the parameters it needs
+        super(StagingHostRefusedSshConnection, self).__init__(message)
+
+
+class StagingHostSshPermissionDenied(SshException):
+    def __init__(self, message):
+
+        # Call the base class constructor with the parameters it needs
+        super(StagingHostSshPermissionDenied, self).__init__(message)
+
+
+class NoActiveNetworkInterface(Exception):
+    def __init__(self, message):
+
+        # Call the base class constructor with the parameters it needs
+        super(NoActiveNetworkInterface, self).__init__(message)
+
+
+class BrokenPipe(Exception):
+    def __init__(self, message):
+
+        # Call the base class constructor with the parameters it needs
+        super(BrokenPipe, self).__init__(message)

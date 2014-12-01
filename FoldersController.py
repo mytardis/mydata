@@ -29,6 +29,9 @@ from Exceptions import DoesNotExist
 from Exceptions import MultipleObjectsReturned
 from Exceptions import Unauthorized
 from Exceptions import InternalServerError
+from Exceptions import StagingHostRefusedSshConnection
+from Exceptions import StagingHostSshPermissionDenied
+from Exceptions import BrokenPipe
 
 from logger.Logger import logger
 
@@ -62,6 +65,8 @@ class FoldersController():
 
         self.shuttingDown = False
         self.showingMessageDialog = False
+        self.canceled = False
+        self.failed = False
 
         # These will get overwritten in UploadDataThread, but we need
         # to initialize them here, so that ShutDownUploadThreads()
@@ -104,11 +109,6 @@ class FoldersController():
         self.notifyWindow.Bind(self.EVT_SHOW_MESSAGE_DIALOG,
                                self.ShowMessageDialog)
 
-        self.UploadsCompleteEvent, \
-            self.EVT_UPLOADS_COMPLETE = wx.lib.newevent.NewEvent()
-        self.notifyWindow.Bind(self.EVT_UPLOADS_COMPLETE,
-                               self.UploadsComplete)
-
         self.AbortUploadsEvent, \
             self.EVT_ABORT_UPLOADS = wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(self.EVT_ABORT_UPLOADS,
@@ -119,6 +119,12 @@ class FoldersController():
 
     def SetCanceled(self, canceled=True):
         self.canceled = canceled
+
+    def Failed(self):
+        return self.failed
+
+    def SetFailed(self, failed=True):
+        self.failed = failed
 
     def IsShuttingDown(self):
         return self.shuttingDown
@@ -137,15 +143,6 @@ class FoldersController():
             self.notifyWindow.SetConnected(event.myTardisUrl, True)
         else:
             self.notifyWindow.SetConnected(event.myTardisUrl, False)
-
-    def UploadsComplete(self, event):
-        if event.success:
-            logger.info("Data scan and upload completed successfully.")
-        elif event.failed:
-            logger.info("Data scan and upload failed.")
-        elif event.canceled:
-            logger.info("Data scan and upload was canceled.")
-        self.notifyWindow.SetOnRefreshRunning(False)
 
     def ShowMessageDialog(self, event):
         if self.IsShowingMessageDialog():
@@ -245,15 +242,26 @@ class FoldersController():
                 # FIXME: Number of upload threads should be configurable
                 fc.numUploadWorkerThreads = 5
 
+                countMax = 20
+                count = 0
+                while not self.settingsModel.GetUploadToStagingRequest():
+                    # Wait for up to 2 seconds for Uploader thread to complete.
+                    count = count + 1
+                    if count > countMax:
+                        break
+                    time.sleep(0.1)
                 uploadToStagingRequest = self.settingsModel\
                     .GetUploadToStagingRequest()
+                message = None
                 if uploadToStagingRequest is not None and \
                         uploadToStagingRequest['approved']:
                     logger.info("Uploads to staging have been approved.")
                     fc.uploadMethod = UploadMethod.CAT_SSH
+                elif uploadToStagingRequest is None:
+                    message = "Couldn't determine whether uploads to " \
+                              "staging have been approved.  " \
+                              "Falling back to HTTP POST."
                 else:
-                    logger.warning("Uploads to staging have not been "
-                                   "approved.")
                     message = "Uploads to MyTardis's staging area require " \
                         "approval from your MyTardis administrator.\n\n" \
                         "A request has been sent, and you will be contacted " \
@@ -262,8 +270,9 @@ class FoldersController():
                         "only upload one file at a time.\n\n" \
                         "HTTP POST is generally only suitable for small " \
                         "files (up to 100 MB each)."
+                if message:
                     fc.uploadMethodWarningAcknowledged = False
-
+                    logger.warning(message)
                     def acknowledgedUploadMethodWarning():
                         fc.uploadMethodWarningAcknowledged = True
                     wx.PostEvent(
@@ -450,13 +459,13 @@ class FoldersController():
                 return
             task = self.uploadsQueue.get()
             if task is None:
-                wx.PostEvent(
-                    self.notifyWindow,
-                    self.UploadsCompleteEvent(
-                        success=True,
-                        failed=False,
-                        canceled=self.Canceled()))
-                break
+                if self.Failed():
+                    success, failed, canceled = False, True, False
+                elif self.Canceled():
+                    success, failed, canceled = False, False, True
+                else:
+                    success, failed, canceled = True, False, False
+                return
             try:
                 task.run()
             except ValueError, e:
@@ -514,6 +523,8 @@ class FoldersController():
         self.SetShuttingDown(True)
         logger.debug("Shutting down uploads threads...")
         self.SetCanceled()
+        if hasattr(event, "failed") and event.failed:
+            self.SetFailed()
         self.uploadsModel.CancelRemaining()
         if hasattr(self, 'uploadDataThread'):
             logger.debug("Joining FoldersController's UploadDataThread...")
@@ -534,6 +545,14 @@ class FoldersController():
         self.verifyDatafileRunnable = {}
         self.uploadDatafileRunnable = {}
 
+        if self.Failed():
+            logger.info("Data scan and uploads failed.")
+        elif self.Canceled():
+            logger.info("Data scan and uploads were canceled.")
+        else:
+            logger.info("Data scan and uploads completed successfully.")
+
+        self.notifyWindow.SetOnRefreshRunning(False)
         self.SetShuttingDown(False)
 
     def OnDropFiles(self, filepaths):
@@ -771,10 +790,54 @@ class VerifyDatafileRunnable():
                     hostJson = \
                         uploadToStagingRequest['approved_staging_host']
                     host = hostJson['host']
-                    bytesUploadedToStaging = \
-                        OpenSSH.GetBytesUploadedToStaging(
-                            replicas[0].GetUri(),
-                            username, privateKeyFilePath, host)
+                    bytesUploadedToStaging = 0
+                    try:
+                        bytesUploadedToStaging = \
+                            OpenSSH.GetBytesUploadedToStaging(
+                                replicas[0].GetUri(),
+                                username, privateKeyFilePath, host)
+                    except StagingHostRefusedSshConnection, e:
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController.AbortUploadsEvent(
+                                failed=True))
+                        message = str(e)
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController
+                                .ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=message,
+                                    icon=wx.ICON_ERROR))
+                        return
+                    except StagingHostSshPermissionDenied, e:
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController.AbortUploadsEvent(
+                                failed=True))
+                        message = str(e)
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController
+                                .ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=message,
+                                    icon=wx.ICON_ERROR))
+                        return
+                    except BrokenPipe, e:
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController.AbortUploadsEvent(
+                                failed=True))
+                        message = str(e)
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController
+                                .ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=message,
+                                    icon=wx.ICON_ERROR))
+                        return
                 if bytesUploadedToStaging == int(existingDatafile.GetSize()):
                     logger.debug("No need to re-upload \"%s\" to staging. "
                                  "The file size is correct in staging."
@@ -1009,14 +1072,14 @@ class UploadDatafileRunnable():
                                            progressCallback,
                                            self.foldersController,
                                            self.uploadModel)
-                        if self.uploadModel.GetBytesUploaded() == dataFileSize:
+                        bytesUploaded = 0
+                        bytesUploaded = self.uploadModel.GetBytesUploaded()
+                        if bytesUploaded == dataFileSize:
                             uploadSuccess = True
                         else:
                             raise Exception(
                                 "Only %d of %d bytes were uploaded for %s"
-                                % (self.uploadModel.GetBytesUploaded(),
-                                   dataFileSize,
-                                   dataFilePath))
+                                % (bytesUploaded, dataFileSize, dataFilePath))
                     if not postSuccess and not self.existingUnverifiedDatafile:
                         if response.status_code == 401:
                             message = "Couldn't create datafile \"%s\" " \
@@ -1082,7 +1145,50 @@ class UploadDatafileRunnable():
                 # (key="location", value="/mnt/.../MYTARDIS_STAGING")
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.AbortUploadsEvent())
+                    self.foldersController.AbortUploadsEvent(
+                        failed=True))
+                message = str(e)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                        .ShowMessageDialogEvent(
+                            title="MyData",
+                            message=message,
+                            icon=wx.ICON_ERROR))
+                return
+            except StagingHostRefusedSshConnection, e:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.AbortUploadsEvent(
+                        failed=True))
+                message = str(e)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                        .ShowMessageDialogEvent(
+                            title="MyData",
+                            message=message,
+                            icon=wx.ICON_ERROR))
+                return
+            except StagingHostSshPermissionDenied, e:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.AbortUploadsEvent(
+                        failed=True))
+                message = str(e)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                        .ShowMessageDialogEvent(
+                            title="MyData",
+                            message=message,
+                            icon=wx.ICON_ERROR))
+                return
+            except BrokenPipe, e:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.AbortUploadsEvent(
+                        failed=True))
                 message = str(e)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
@@ -1101,6 +1207,38 @@ class UploadDatafileRunnable():
                     return
                 else:
                     raise
+        except urllib2.HTTPError, e:
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController.AbortUploadsEvent(
+                    failed=True))
+            message = "An error occured while trying to POST data to " \
+                "the MyTardis server.\n\n"
+            message += str(e)
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController
+                    .ShowMessageDialogEvent(
+                        title="MyData",
+                        message=message,
+                        icon=wx.ICON_ERROR))
+            return
+        except urllib2.URLError, e:
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController.AbortUploadsEvent(
+                    failed=True))
+            message = "An error occured while trying to POST data to " \
+                "the MyTardis server.\n\n"
+            message += str(e)
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController
+                    .ShowMessageDialogEvent(
+                        title="MyData",
+                        message=message,
+                        icon=wx.ICON_ERROR))
+            return
         except Exception, e:
             if not self.foldersController.IsShuttingDown():
                 wx.PostEvent(

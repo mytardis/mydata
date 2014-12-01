@@ -121,15 +121,8 @@ class UploadsView(wx.Panel):
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
                 wx.CallAfter(wx.EndBusyCursor)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.UploadsCompleteEvent(
-                        success=False,
-                        failed=False,
-                        canceled=True))
             except:
-                logger.debug(traceback.format_exc())
-                wx.CallAfter(EndBusyCursor)
+                logger.error(traceback.format_exc())
         thread = threading.Thread(target=shutDownUploadThreads)
         thread.start()
 

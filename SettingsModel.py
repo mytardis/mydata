@@ -355,6 +355,10 @@ class SettingsModel():
             try:
                 r = requests.get(self.GetMyTardisUrl() + "/about/", timeout=5)
                 if r.status_code < 200 or r.status_code >= 300:
+                    logger.debug("Received HTTP %d while trying to access "
+                                 "MyTardis server (%s)."
+                                 % (r.status_code, self.GetMyTardisUrl()))
+                    logger.debug(r.text)
                     if not self.GetMyTardisUrl().startswith("http"):
                         message = "Please enter a valid MyTardis URL, " \
                             "beginning with \"http://\" or \"https://\"."
@@ -368,12 +372,51 @@ class SettingsModel():
                                                               "mytardis_url",
                                                               suggestion)
                     return self.validation
-                if "MyTardis" not in r.text:
+                elif r.history:
+                    message = "MyData attempted to access MyTardis at " \
+                            "\"%s\", but was redirected to:" \
+                        "\n\n" % self.GetMyTardisUrl()
+                    message += "\t%s" % r.url
+                    message += "\n\n"
+                    message += "A redirection could be caused by any of " \
+                        "the following reasons:" \
+                        "\n\n" \
+                        "1. You may be required to log into a web portal " \
+                        "before you can access external sites." \
+                        "\n\n" \
+                        "2. You may be required to access external sites " \
+                        "via a proxy server.  This is not supported by " \
+                        "MyData at present." \
+                        "\n\n" \
+                        "3. You might not be using the preferred notation " \
+                        "for your MyTardis URL.  If attempting to navigate " \
+                        "to this URL in your web browser results in a " \
+                        "modified URL appearing in your browser's address " \
+                        "bar, but you are sure that the modified URL still " \
+                        "represents the MyTardis site you are trying to " \
+                        "access, then you should update the MyTardis URL " \
+                        "in your MyData settings, so that the MyTardis " \
+                        "server doesn't need to modify it." \
+                        "\n\n" \
+                        "4. Someone could have hijacked your MyTardis site " \
+                        "and could be redirecting you to a malicious site. " \
+                        "If you suspect this, please contact your MyTardis " \
+                        "administrator immediately."
+                    suggestion = None
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "mytardis_url",
+                                                              suggestion)
+                    return self.validation
+                elif "MyTardis" not in r.text:
                     if not self.GetMyTardisUrl().startswith("http"):
                         message = "Please enter a valid MyTardis URL, " \
                             "beginning with \"http://\" or \"https://\"."
                         suggestion = "http://" + self.GetMyTardisUrl()
                     else:
+                        logger.debug("Received HTTP %d while trying to "
+                                     "access MyTardis server (%s)."
+                                     % (r.status_code, self.GetMyTardisUrl()))
+                        logger.debug("Here 2")
                         message = "Please enter a valid MyTardis URL."
                         suggestion = None
                     self.validation = self.SettingsValidation(False, message,
@@ -386,6 +429,7 @@ class SettingsModel():
                         "beginning with \"http://\" or \"https://\"."
                     suggestion = "http://" + self.GetMyTardisUrl()
                 else:
+                    logger.debug(traceback.format_exc())
                     message = "Please enter a valid MyTardis URL.\n\n"
                     etype, evalue = sys.exc_info()[:2]
                     excOnlyList = \
