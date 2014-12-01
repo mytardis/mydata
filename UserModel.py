@@ -1,8 +1,10 @@
 import requests
 import json
+import traceback
 
 from logger.Logger import logger
 from GroupModel import GroupModel
+from Exceptions import IncompatibleMyTardisVersion
 
 
 class UserModel():
@@ -29,9 +31,25 @@ class UserModel():
                     userRecordJson['last_name']
             if email is None:
                 self.email = userRecordJson['email']
-            for group in userRecordJson['groups']:
-                self.groups.append(GroupModel(settingsModel=settingsModel,
-                                              groupJson=group))
+            try:
+                for group in userRecordJson['groups']:
+                    self.groups.append(GroupModel(settingsModel=settingsModel,
+                                                  groupJson=group))
+            except KeyError:
+                # 'groups' should be available in the user record's JSON
+                # if using https://github.com/wettenhj/mytardis/tree/mydata
+                message = "Incompatible MyTardis version" \
+                    "\n\n" \
+                    "You appear to be connecting to a MyTardis server whose " \
+                    "MyTardis version doesn't provide some of the " \
+                    "functionality required by MyData." \
+                    "\n\n" \
+                    "Please check that you are using the correct MyTardis " \
+                    "URL and ask your MyTardis administrator to check " \
+                    "that an appropriate version of MyTardis is installed."
+                logger.error(traceback.format_exc())
+                logger.error(message)
+                raise IncompatibleMyTardisVersion(message)
 
     def GetId(self):
         return self.id

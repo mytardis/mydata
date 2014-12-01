@@ -8,6 +8,7 @@ from logger.Logger import logger
 
 from SettingsModel import SettingsModel
 from Exceptions import DuplicateKey
+from Exceptions import IncompatibleMyTardisVersion
 
 
 class SettingsDialog(wx.Dialog):
@@ -241,12 +242,13 @@ class SettingsDialog(wx.Dialog):
                               self.GetInstrumentName()))
                     wx.BeginBusyCursor()
                     thread.start()
-                    # FIXME - join() could make the GUI appear frozen.
-                    # Instead of including the code to run after the
-                    # renameInstrument thread immediately below, the
-                    # renameInstrument thread could (when complete),
-                    # use wx.PostEvent to trigger the code below to
-                    # run.
+                    # FIXME - Running join() on the thread immediately
+                    # after running start() could make the GUI appear
+                    # frozen.  Instead of including the code to run
+                    # after the renameInstrument thread immediately
+                    # below, the renameInstrument thread could (when
+                    # complete), use wx.PostEvent to trigger the code
+                    # below to  run.
                     thread.join()
                     wx.EndBusyCursor()
                     if self.duplicateKey:
@@ -274,13 +276,32 @@ class SettingsDialog(wx.Dialog):
         tempSettingsModel.SaveFieldsFromDialog(self)
 
         def validate(tempSettingsModel):
-            tempSettingsModel.Validate()
+            try:
+                tempSettingsModel.Validate()
+            except IncompatibleMyTardisVersion, e:
+
+                def showDialog():
+                    message = str(e)
+                    logger.error(message)
+                    wx.EndBusyCursor()
+                    dlg = wx.MessageDialog(None, message, "MyData",
+                                           wx.OK | wx.ICON_ERROR)
+                    dlg.ShowModal()
+                wx.CallAfter(showDialog)
 
         thread = threading.Thread(target=validate,
                                   args=(tempSettingsModel,))
         wx.BeginBusyCursor()
         thread.start()
+        # FIXME - Running join() on the thread immediately
+        # after running start() could make the GUI appear
+        # frozen.  Instead of including the code to run
+        # after the validate thread immediately below, the
+        # validate thread could (when complete), use
+        # wx.PostEvent to trigger the code below to run.
         thread.join()
+        if tempSettingsModel.IsIncompatibleMyTardisVersion():
+            return
         wx.EndBusyCursor()
 
         settingsValidation = tempSettingsModel.GetValidation()
