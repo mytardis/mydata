@@ -82,46 +82,13 @@ class UploaderModel():
         self.interface = None
         self.json = None
 
-        # FIXME: The "netsh" stuff for determining the active network
-        # interface below only work on Windows.
-        # For Mac OS X, we can use "route get default | grep interface"
-        # On Linux, the interface is displayed in the last column of:
-        #   route | grep "^default"
-        logger.info("Determining the active network interface...")
-        proc = subprocess.Popen(["netsh", "interface", "show", "interface"],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (stdout, stderr) = proc.communicate()
-        if stderr is not None and stderr != "":
-            logger.error(stderr)
-        activeInterfaces = []
-        for row in stdout.split("\n"):
-            m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)\s*"
-                         "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
-            if m:
-                adminState = m.groups()[0]
-                state = m.groups()[1]
-                interfaceType = m.groups()[2]
-                interface = m.groups()[3].strip()
-                if adminState == "Enabled" and state == "Connected" \
-                        and interfaceType == "Dedicated":
-                    activeInterfaces.append(interface)
-            # On Windows XP, the state may be blank:
-            m = re.match(r"^(Enabled|Disabled)\s*"
-                         "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
-            if m:
-                adminState = m.groups()[0]
-                interfaceType = m.groups()[1]
-                interface = m.groups()[2].strip()
-                if adminState == "Enabled" and interfaceType == "Dedicated":
-                    activeInterfaces.append(interface)
-
+        activeInterfaces = self.GetActiveNetworkInterfaces()
         if len(activeInterfaces) == 0:
             message = "No active network interfaces." \
                 "\n\n" \
                 "Please ensure that you have an active network interface " \
                 "(e.g. Ethernet or WiFi)."
             raise NoActiveNetworkInterface(message)
-
         # Sometimes on Windows XP, you can end up with multiple results from
         # "netsh interface show interface"
         # If there is one called "Local Area Connection",
@@ -410,3 +377,65 @@ class UploaderModel():
             logger.info("Setting uploader's instrument failed.")
             logger.info("Status code = " + str(response.status_code))
             logger.info(response.text)
+
+    def GetActiveNetworkInterfaces(self):
+        """
+        FIXME: The "netsh" stuff for determining the active network
+        interface below only work on Windows.
+        For Mac OS X, we can use "route get default | grep interface"
+        On Linux, the interface is displayed in the last column of:
+          route | grep "^default"
+        """
+
+        logger.info("Determining the active network interface...")
+        activeInterfaces = []
+        if sys.platform.startswith("win"):
+            proc = subprocess.Popen(["netsh", "interface", "show", "interface"],
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = proc.communicate()
+            if stderr is not None and stderr != "":
+                logger.error(stderr)
+            for row in stdout.split("\n"):
+                m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)\s*"
+                             "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
+                if m:
+                    adminState = m.groups()[0]
+                    state = m.groups()[1]
+                    interfaceType = m.groups()[2]
+                    interface = m.groups()[3].strip()
+                    if adminState == "Enabled" and state == "Connected" \
+                            and interfaceType == "Dedicated":
+                        activeInterfaces.append(interface)
+                # On Windows XP, the state may be blank:
+                m = re.match(r"^(Enabled|Disabled)\s*"
+                             "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
+                if m:
+                    adminState = m.groups()[0]
+                    interfaceType = m.groups()[1]
+                    interface = m.groups()[2].strip()
+                    if adminState == "Enabled" and interfaceType == "Dedicated":
+                        activeInterfaces.append(interface)
+        elif sys.platform.startswith("darwin"):
+            proc = subprocess.Popen(["route", "get", "default"],
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = proc.communicate()
+            if stderr is not None and stderr != "":
+                logger.error(stderr)
+            for line in stdout.split("\n"):
+                m = re.match(r"^\s*interface:\s+(\S+)\s*$", line)
+                if m:
+                    interface = m.groups()[0].strip()
+                    activeInterfaces.append(interface)
+        elif sys.platform.startswith("linux"):
+            proc = subprocess.Popen(["route"],
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = proc.communicate()
+            if stderr is not None and stderr != "":
+                logger.error(stderr)
+            for line in stdout.split("\n"):
+                m = re.match(r"^default.*\s+(\S+)\s*$", line)
+                if m:
+                    interface = m.groups()[0].strip()
+                    activeInterfaces.append(interface)
+
+        return activeInterfaces
