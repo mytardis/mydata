@@ -126,7 +126,7 @@ class MyData(wx.App):
                 message = "\n" \
                     "ERROR: It looks like you are trying to run " \
                     "MyData from a Cygwin or MSYS environment,\n" \
-                    "which is not supported, because MyData bundles " \
+                    "which is not supported because MyData bundles " \
                     "its own minimal Cygwin environment.\n\n"
                 sys.stderr.write(message)
                 return False
