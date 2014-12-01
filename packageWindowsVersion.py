@@ -3,7 +3,7 @@ import sys
 import shutil
 
 if len(sys.argv) < 3:
-    print "Usage: package_windows_version.py <certificate.pfx> <password>"
+    print "Usage: packageWindowsVersion.py <certificate.pfx> <password>"
     sys.exit(1)
 
 code_signing_certificate = sys.argv[1]
