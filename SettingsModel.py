@@ -12,6 +12,7 @@ from FacilityModel import FacilityModel
 from InstrumentModel import InstrumentModel
 from Exceptions import DuplicateKey
 from Exceptions import Unauthorized
+from Exceptions import IncompatibleMyTardisVersion
 
 
 class SettingsModel():
@@ -56,6 +57,7 @@ class SettingsModel():
         self.sshKeyPair = None
 
         self.validation = self.SettingsValidation(True)
+        self.incompatibleMyTardisVersion = False
 
         if self.mydataConfigPath is not None and \
                 os.path.exists(self.mydataConfigPath):
@@ -249,6 +251,12 @@ class SettingsModel():
 
     def SetSshKeyPair(self, sshKeyPair):
         self.sshKeyPair = sshKeyPair
+
+    def IsIncompatibleMyTardisVersion(self):
+        return self.incompatibleMyTardisVersion
+
+    def SetIncompatibleMyTardisVersion(self, incompatibleMyTardisVersion):
+        self.incompatibleMyTardisVersion = incompatibleMyTardisVersion
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
@@ -552,6 +560,9 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "contact_email")
                 return self.validation
+        except IncompatibleMyTardisVersion:
+            self.SetIncompatibleMyTardisVersion(True)
+            raise
         except:
             message = traceback.format_exc()
             self.validation = self.SettingsValidation(False, message, "")

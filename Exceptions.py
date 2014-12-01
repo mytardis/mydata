@@ -102,3 +102,10 @@ class BrokenPipe(Exception):
 
         # Call the base class constructor with the parameters it needs
         super(BrokenPipe, self).__init__(message)
+
+
+class IncompatibleMyTardisVersion(Exception):
+    def __init__(self, message):
+
+        # Call the base class constructor with the parameters it needs
+        super(IncompatibleMyTardisVersion, self).__init__(message)
