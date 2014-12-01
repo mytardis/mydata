@@ -242,7 +242,7 @@ class FoldersController():
                 # FIXME: Number of upload threads should be configurable
                 fc.numUploadWorkerThreads = 5
 
-                countMax = 20
+                countMax = 50
                 count = 0
                 while not self.settingsModel.GetUploadToStagingRequest():
                     # Wait for up to 2 seconds for Uploader thread to complete.
