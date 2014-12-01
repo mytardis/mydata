@@ -73,6 +73,7 @@ import MyDataVersionNumber
 from logger.Logger import logger
 import OpenSSH
 from Exceptions import DoesNotExist
+from Exceptions import NoActiveNetworkInterface
 
 
 class UploaderModel():
@@ -81,6 +82,11 @@ class UploaderModel():
         self.interface = None
         self.json = None
 
+        # FIXME: The "netsh" stuff for determining the active network
+        # interface below only work on Windows.
+        # For Mac OS X, we can use "route get default | grep interface"
+        # On Linux, the interface is displayed in the last column of:
+        #   route | grep "^default"
         logger.info("Determining the active network interface...")
         proc = subprocess.Popen(["netsh", "interface", "show", "interface"],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -108,6 +114,13 @@ class UploaderModel():
                 interface = m.groups()[2].strip()
                 if adminState == "Enabled" and interfaceType == "Dedicated":
                     activeInterfaces.append(interface)
+
+        if len(activeInterfaces) == 0:
+            message = "No active network interfaces." \
+                "\n\n" \
+                "Please ensure that you have an active network interface " \
+                "(e.g. Ethernet or WiFi)."
+            raise NoActiveNetworkInterface(message)
 
         # Sometimes on Windows XP, you can end up with multiple results from
         # "netsh interface show interface"
