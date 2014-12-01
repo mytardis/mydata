@@ -478,6 +478,27 @@ class MyData(wx.App):
             def validateSettings():
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
+                    if hasattr(self, "uploaderModel") and \
+                            self.uploaderModel is not None:
+                        activeNetworkInterfaces = \
+                            self.uploaderModel.GetActiveNetworkInterfaces()
+                        if len(activeNetworkInterfaces) == 0:
+                            message = "No active network interfaces." \
+                                "\n\n" \
+                                "Please ensure that you have an active " \
+                                "network interface (e.g. Ethernet or WiFi)."
+
+                            def showDialog():
+                                dlg = wx.MessageDialog(None, message, "MyData",
+                                                       wx.OK | wx.ICON_ERROR)
+                                dlg.ShowModal()
+                                wx.EndBusyCursor()
+                                self.frame.SetStatusMessage("")
+                                self.frame.SetConnected(
+                                    self.settingsModel.GetMyTardisUrl(), False)
+                            wx.CallAfter(showDialog)
+                            return
+
                     self.settingsValidation = self.settingsModel.Validate()
                     wx.PostEvent(
                         self.frame,
