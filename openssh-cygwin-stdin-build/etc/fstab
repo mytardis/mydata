@@ -1,0 +1,9 @@
+# For a description of the file format, see the Users Guide
+
+# http://cygwin.com/cygwin-ug-net/using.html#mount-table
+
+
+# This is the default:
+
+# none /cygdrive cygdrive user,posix=0 0 0
+none /cygdrive cygdrive user,noacl,posix=0 0 0
