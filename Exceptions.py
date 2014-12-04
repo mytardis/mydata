@@ -1,14 +1,10 @@
 class DuplicateKey(Exception):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(DuplicateKey, self).__init__(message)
 
 
 class MultipleObjectsReturned(Exception):
     def __init__(self, message, url, response):
-
-        # Call the base class constructor with the parameters it needs
         super(MultipleObjectsReturned, self).__init__(message)
 
         self.url = url
@@ -23,8 +19,6 @@ class MultipleObjectsReturned(Exception):
 
 class DoesNotExist(Exception):
     def __init__(self, message, url=None, response=None):
-
-        # Call the base class constructor with the parameters it needs
         super(DoesNotExist, self).__init__(message)
 
         self.url = url
@@ -39,8 +33,6 @@ class DoesNotExist(Exception):
 
 class Unauthorized(Exception):
     def __init__(self, message, url=None, response=None):
-
-        # Call the base class constructor with the parameters it needs
         super(Unauthorized, self).__init__(message)
 
         self.url = url
@@ -55,8 +47,6 @@ class Unauthorized(Exception):
 
 class InternalServerError(Exception):
     def __init__(self, message, url=None, response=None):
-
-        # Call the base class constructor with the parameters it needs
         super(InternalServerError, self).__init__(message)
 
         self.url = url
@@ -70,42 +60,38 @@ class InternalServerError(Exception):
 
 
 class SshException(Exception):
-    def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
+    def __init__(self, message, returncode=None):
         super(SshException, self).__init__(message)
+        self.returncode = returncode
 
 
 class StagingHostRefusedSshConnection(SshException):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(StagingHostRefusedSshConnection, self).__init__(message)
 
 
 class StagingHostSshPermissionDenied(SshException):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(StagingHostSshPermissionDenied, self).__init__(message)
+
+
+class ScpException(SshException):
+    def __init__(self, message, command=None, returncode=None):
+        super(ScpException, self).__init__(message)
+        self.command = command
+        self.returncode = returncode
 
 
 class NoActiveNetworkInterface(Exception):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(NoActiveNetworkInterface, self).__init__(message)
 
 
 class BrokenPipe(Exception):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(BrokenPipe, self).__init__(message)
 
 
 class IncompatibleMyTardisVersion(Exception):
     def __init__(self, message):
-
-        # Call the base class constructor with the parameters it needs
         super(IncompatibleMyTardisVersion, self).__init__(message)
