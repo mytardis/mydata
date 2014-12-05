@@ -1,0 +1,124 @@
+msys openssh
+========================================================================
+This package provides a port of the portable version of the OpenSSH
+connectivity tools, modified and compiled for use in the MSYS
+environment. It should be unpacked in the / == /usr directory, which
+is usually but not always C:\msys\1.0. Only client programs are provided;
+the sshd server is not supported under MSYS.
+
+OpenSSH is a FREE version of the SSH connectivity tools that technical
+users of the Internet rely on. Users of telnet, rlogin, and ftp may not
+realize that their password is transmitted across the Internet
+unencrypted, but it is. OpenSSH encrypts all traffic (including
+passwords) to effectively eliminate eavesdropping, connection hijacking,
+and other attacks. Additionally, OpenSSH provides secure tunneling
+capabilities and several authentication methods, and supports all SSH
+protocol versions.
+
+The OpenSSH suite replaces rlogin and telnet with the ssh program, rcp
+with scp, and ftp with sftp. Other utilities like ssh-add, ssh-agent,
+ssh-keysign, ssh-keyscan, and ssh-keygen are also included.
+
+OpenSSH is developed by two teams. One team does strictly OpenBSD-based
+development, aiming to produce code that is as clean, simple, and secure
+as possible. We believe that simplicity without the portability "goop"
+allows for better code quality control and easier review. The other team
+then takes the clean version and makes it portable (adding the "goop") to
+make it run on many operating systems -- the so-called -p releases, ie
+"OpenSSH 5.4p1". 
+
+
+Runtime requirements:
+  msysCORE-1.0.13-2-msys-1.0.13-bin
+  zlib-1.2.3-2-msys-1.0.13-dll
+  libminires-1.02_1-2-msys-1.0.13-dll
+  libopenssl-1.0.0-1-msys-1.0.13-dll-100
+
+Build requirements (these, or newer)
+  MSYSDvlpr compiler
+    binutils-2.19.51-3-msys-1.0.13-bin
+    gcc-3.4.4-3-msys-1.0.13-bin
+    w32api-3.14-3-msys-1.0.12-dev
+    msysCORE-1.0.13-2-msys-1.0.13-dev
+ 
+  Devel Tools and Dependent Libraries 
+    autoconf-2.65-1-msys-1.0.13-bin
+    libopenssl-1.0.0-1-msys-1.0.13-dev
+    libminires-1.02_1-2-msys-1.0.13-dev
+    zlib-1.2.3-2-msys-1.0.13-dev
+ 
+  MSYS Environment
+    msysCORE-1.0.13-2-msys-1.0.13-bin
+    perl-5.6.1_2-2-msys-1.0.13-bin
+    libcrypt-1.1_1-3-msys-1.0.13-dll-0
+    libgdbm-1.8.3-3-msys-1.0.13-dll-3
+    zlib-1.2.3-2-msys-1.0.13-dll
+    coreutils-5.97-2-msys-1.0.11-bin
+    make-3.81-2-msys-1.0.11-bin
+    bash-3.1.17-2-msys-1.0.11-bin
+    tar-1.22-1-msys-1.0.11-bin
+    xz-4.999.9beta_20100401-1-msys-1.0.13-bin
+    gzip-1.3.12-1-msys-1.0.11-bin
+    liblzma-4.999.9beta_20100401-1-msys-1.0.13-dll-1
+    grep-2.5.4-1-msys-1.0.11-bin
+    sed-4.2.1-1-msys-1.0.11-bin
+    gawk-3.1.7-1-msys-1.0.11-bin
+    patch-2.5.9-1-msys-1.0.11-bin
+ 
+Canonical homepage:
+  http://www.openssh.com/
+  http://www.openssh.com/portable.html
+
+Canonical download:
+  ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/  
+
+License:
+  BSD (2-clause)
+  BSD (3-clause)
+  various other licenses, more permissive than BSD
+
+Language:
+  C
+
+========================================================================
+
+Build instructions:
+  unpack openssh-5.4p1-1-msys-1.0.13-src.tar.lzma
+  ./msys-build-openssh openssh-5.4p1.tar.gz
+
+This will create:
+  openssh-5.4p1-1-msys-1.0.13-src.tar.lzma
+  openssh-5.4p1-1-msys-1.0.13-bin.tar.lzma
+  openssh-5.4p1-1-msys-1.0.13-doc.tar.lzma
+  openssh-5.4p1-1-msys-1.0.13-lic.tar.lzma
+
+========================================================================
+
+Test suite results
+
+This section of this document is updated with each new release.
+No history is maintained here.
+
+N/A. Basic manual checks work.
+
+========================================================================
+
+Port Notes:
+
+----------  openssh-5.4p1-1 -- 2010 Apr 08 -----------
+* Update to latest upstream release
+
+----------  openssh-4.7p1-1 -- 2009 Aug 07 -----------
+* First release of openssh for msys using new packaging standard. 
+* Fixed longstanding annoyance where, if the CYGWIN environment variable
+  was set and contained 'ntea' or 'ntsec', then openssh itself attempts
+  to verify that the permission settings of ~/.ssh/<private keys> are
+  protective. However:
+    1) MSYS *ignores* the CYGWIN environment variable, so MSYS ssh
+       should also ignore it
+    2) MSYS doesn't support real permission bits, so this test -- when
+       erroneously activated by the CYGWIN variable -- always failed,
+       making RSA-based authentication impossible, unless the CYGWIN
+       variable was manually unset.
+* Moved ssh-keysign.exe from /usr/libexec/ to /usr/sbin.
+* Repackaged to meet new standards.
