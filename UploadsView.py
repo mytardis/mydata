@@ -94,12 +94,18 @@ class UploadsView(wx.Panel):
             rows = [self.uploadsModel.GetRow(item) for item in items]
             if len(rows) > 1:
                 message = \
-                    "Are you sure you want to cancel the selected uploads?"
+                    "Are you sure you want to cancel the selected uploads?" \
+                    "\n\n" \
+                    "MyData will attempt to resume the uploads next time " \
+                    "it runs."
             elif len(rows) == 1:
                 pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
                     .GetRelativePathToUpload()
                 message = "Are you sure you want to cancel uploading " + \
-                    "\"" + pathToUpload + "\"?"
+                    "\"" + pathToUpload + "\"?" \
+                    "\n\n" \
+                    "MyData will attempt to resume the uploads next time " \
+                    "it runs."
             else:
                 dlg = wx.MessageDialog(None,
                                        "Please select an upload to cancel.",
@@ -107,7 +113,7 @@ class UploadsView(wx.Panel):
                 dlg.ShowModal()
                 return
             confirmationDialog = \
-                wx.MessageDialog(None, message, "Confirm Delete",
+                wx.MessageDialog(None, message, "MyData",
                                  wx.OK | wx.CANCEL | wx.ICON_QUESTION)
             okToDelete = confirmationDialog.ShowModal()
             if okToDelete == wx.ID_OK:
