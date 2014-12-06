@@ -65,9 +65,3 @@ Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
 ;Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
 Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
-
-[Dirs]
-Name: "{pf}\{#MyDataAppName}\openssh-cygwin-stdin-build\etc"; Permissions: "users-modify"
-Name: "{pf}\{#MyDataAppName}\openssh-cygwin-stdin-build\tmp"; Permissions: "users-modify"
-Name: "{pf}\{#MyDataAppName}\openssh-cygwin-stdin-build\.ssh"; Permissions: "users-modify"
-
