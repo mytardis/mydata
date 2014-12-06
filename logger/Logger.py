@@ -9,50 +9,55 @@ import time
 import subprocess
 import sys
 import requests
+import inspect
+
 from SubmitDebugReportDialog import SubmitDebugReportDialog
 
 
 class Logger():
-
+    """
+    Allows logger.debug(...), logger.info(...) etc. to write to MyData's
+    Log window and to ~/.MyData_debug_log.txt
+    """
     def __init__(self, name):
         self.name = name
         self.loggerObject = None
         self.loggerOutput = None
         self.loggerFileHandler = None
-        self.configureLogger()
         self.myDataConfigPath = None
+        self.ConfigureLogger()
 
-    def setMyDataConfigPath(self, myDataConfigPath):
+    def SetMyDataConfigPath(self, myDataConfigPath):
         self.myDataConfigPath = myDataConfigPath
 
-    def sendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
+    def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
         try:
-            log_window_handler = logging.StreamHandler(stream=logTextCtrl)
+            logWindowHandler = logging.StreamHandler(stream=logTextCtrl)
         except:
-            log_window_handler = logging.StreamHandler(strm=logTextCtrl)
-        log_window_handler.setLevel(logging.DEBUG)
-        log_format_string = "%(asctime)s - %(name)s - %(module)s - " \
-            "%(funcName)s - %(lineno)d - %(levelname)s - %(message)s"
-        log_window_handler.setFormatter(logging.Formatter(log_format_string))
+            logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
+        logWindowHandler.setLevel(logging.DEBUG)
+        logFormatString = "%(asctime)s - %(moduleName)s - %(functionName)s - " \
+            "%(lineNumber)d - %(levelname)s - %(message)s"
+        logWindowHandler.setFormatter(logging.Formatter(logFormatString))
         self.loggerObject = logging.getLogger(self.name)
-        self.loggerObject.addHandler(log_window_handler)
+        self.loggerObject.addHandler(logWindowHandler)
 
-    def configureLogger(self):
+    def ConfigureLogger(self):
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(logging.DEBUG)
 
-        log_format_string = "%(asctime)s - %(name)s - %(module)s - " \
-            "%(funcName)s - %(lineno)d - %(levelname)s - %(message)s"
+        logFormatString = "%(asctime)s - %(moduleName)s - %(functionName)s - " \
+            "%(lineNumber)d - %(levelname)s - %(message)s"
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
         try:
-            string_handler = logging.StreamHandler(stream=self.loggerOutput)
+            stringHandler = logging.StreamHandler(stream=self.loggerOutput)
         except:
-            string_handler = logging.StreamHandler(strm=self.loggerOutput)
-        string_handler.setLevel(logging.DEBUG)
-        string_handler.setFormatter(logging.Formatter(log_format_string))
-        self.loggerObject.addHandler(string_handler)
+            stringHandler = logging.StreamHandler(strm=self.loggerOutput)
+        stringHandler.setLevel(logging.DEBUG)
+        stringHandler.setFormatter(logging.Formatter(logFormatString))
+        self.loggerObject.addHandler(stringHandler)
 
         # Finally, send all log messages to a log file.
         from os.path import expanduser, join
@@ -60,40 +65,56 @@ class Logger():
             logging.FileHandler(join(expanduser("~"), ".MyData_debug_log.txt"))
         self.loggerFileHandler.setLevel(logging.DEBUG)
         self.loggerFileHandler\
-            .setFormatter(logging.Formatter(log_format_string))
+            .setFormatter(logging.Formatter(logFormatString))
         self.loggerObject.addHandler(self.loggerFileHandler)
 
     def debug(self, message):
+        frame = inspect.currentframe()
+        outerFrames = inspect.getouterframes(frame)[1]
+        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+                 'lineNumber': outerFrames[2],
+                 'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.debug(message)
+            self.loggerObject.debug(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.debug, message)
+            wx.CallAfter(self.loggerObject.debug, message, extra=extra)
 
     def error(self, message):
+        frame = inspect.currentframe()
+        outerFrames = inspect.getouterframes(frame)[1]
+        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+                 'lineNumber': outerFrames[2],
+                 'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.error(message)
+            self.loggerObject.error(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.error, message)
+            wx.CallAfter(self.loggerObject.error, message, extra=extra)
 
     def warning(self, message):
+        frame = inspect.currentframe()
+        outerFrames = inspect.getouterframes(frame)[1]
+        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+                 'lineNumber': outerFrames[2],
+                 'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.warning(message)
+            self.loggerObject.warning(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.warning, message)
+            wx.CallAfter(self.loggerObject.warning, message, extra=extra)
 
     def info(self, message):
+        frame = inspect.currentframe()
+        outerFrames = inspect.getouterframes(frame)[1]
+        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+                 'lineNumber': outerFrames[2],
+                 'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.info(message)
+            self.loggerObject.info(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.info, message)
+            wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
-    def dump_log(self, myDataMainFrame, submit_log=False, settingsModel=None):
-        # Commenting out logging.shutdown() for now,
-        # because of concerns that logging could be used
-        # after the call to logging.shutdown() which is
-        # not allowed.
-        # logging.shutdown()
-        logger.debug("Logger.dump_log: Flushing "
+    def DumpLog(self, myDataMainFrame, submitDebugLog=False,
+                settingsModel=None):
+        logger.debug("Logger.DumpLog: Flushing "
                      "self.loggerObject.handlers[0], which is of class: "
                      + self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
@@ -116,8 +137,8 @@ class Logger():
                 result = dlg.ShowModal()
                 if stoppedBusyCursor:
                     wx.BeginBusyCursor()
-                myDataMainFrame.submit_log = result == wx.ID_OK
-                if myDataMainFrame.submit_log:
+                myDataMainFrame.submitDebugLog = (result == wx.ID_OK)
+                if myDataMainFrame.submitDebugLog:
                     self.name = dlg.getName()
                     self.email = dlg.getEmail()
                     self.comments = dlg.getComments()
@@ -128,7 +149,7 @@ class Logger():
 
         myDataMainFrame.submitDebugLogDialogCompleted = False
 
-        if submit_log:
+        if submitDebugLog:
             if threading.current_thread().name == "MainThread":
                 showSubmitDebugLogDialog()
             else:
@@ -136,10 +157,10 @@ class Logger():
                 while not myDataMainFrame.submitDebugLogDialogCompleted:
                     time.sleep(0.1)
 
-        if submit_log and myDataMainFrame.submit_log:
-            self.debug('about to send debug log')
+        if submitDebugLog and myDataMainFrame.submitDebugLog:
+            self.debug("About to send debug log")
 
-            url = 'https://cvl.massive.org.au/cgi-bin/log_drop.py'
+            url = "https://cvl.massive.org.au/cgi-bin/log_drop.py"
 
             debugLog = "\n"
             if settingsModel is not None:
@@ -161,13 +182,13 @@ class Logger():
             if atLeastOneError:
                 debugLog = debugLog + "\n"
             debugLog = debugLog + self.loggerOutput.getvalue()
-            file_info = {'logfile': debugLog}
+            fileInfo = {"logfile": debugLog}
 
             # If we are running in an installation then we have to use
             # our packaged cacert.pem file:
             if os.path.exists('cacert.pem'):
-                r = requests.post(url, files=file_info, verify='cacert.pem')
+                r = requests.post(url, files=fileInfo, verify="cacert.pem")
             else:
-                r = requests.post(url, files=file_info)
+                r = requests.post(url, files=fileInfo)
 
 logger = Logger("MyData")
