@@ -1,5 +1,9 @@
 from logger.Logger import logger
 import os
+import sys
+import signal
+import traceback
+import psutil
 
 
 class UploadStatus:
@@ -24,6 +28,7 @@ class UploadModel():
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
         self.bufferedReader = None
+        self.scpUploadProcess = None
         self.fileSize = 0
         self.canceled = False
 
@@ -71,6 +76,9 @@ class UploadModel():
     def SetBufferedReader(self, bufferedReader):
         self.bufferedReader = bufferedReader
 
+    def SetScpUploadProcess(self, scpUploadProcess):
+        self.scpUploadProcess = scpUploadProcess
+
     def GetRelativePathToUpload(self):
         if self.subdirectory != "":
             return os.path.join(self.subdirectory, self.filename)
@@ -88,18 +96,38 @@ class UploadModel():
                 logger.debug("Closed buffered reader for \"" +
                              self.GetRelativePathToUpload() +
                              "\".")
+            if self.scpUploadProcess is not None:
+                pid = self.scpUploadProcess.pid
+
+                self.scpUploadProcess.terminate()
+
+                # Check if the process has really
+                # terminated and force kill if not.
+                try:
+                    # See if this throws psutil.NoSuchProcess:
+                    p = psutil.Process(int(pid))
+                    if sys.platform.startswith("win"):
+                        os.kill(pid, signal.CTRL_C_EVENT)
+                    else:
+                        os.kill(pid, signal.SIGKILL)
+                    logger.debug("Force killed ssh upload process for %s"
+                                 % self.GetRelativePathToUpload())
+                except psutil.NoSuchProcess:
+                    logger.debug("ssh upload process for %s was terminated "
+                                 "gracefully."
+                                 % self.GetRelativePathToUpload())
         except:
             logger.error(traceback.format_exc())
 
     def SetFileSize(self, fileSize):
         self.fileSize = fileSize
-        self.filesize = humanReadableSizeString(self.fileSize)
+        self.filesize = HumanReadableSizeString(self.fileSize)
 
     def Canceled(self):
         return self.canceled
 
 
-def humanReadableSizeString(num):
+def HumanReadableSizeString(num):
     for x in ['bytes', 'KB', 'MB', 'GB']:
         if num < 1024.0 and num > -1024.0:
             return "%3.0f %s" % (num, x)
