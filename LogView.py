@@ -18,7 +18,7 @@ class LogView(wx.Panel):
         logPanelSizer.Add(self.logTextCtrl, flag=wx.EXPAND)
         self.submitDebugLogButton = wx.Button(self, wx.ID_ANY,
                                               "Submit debug log")
-        self.Bind(wx.EVT_BUTTON, self.onSubmitDebugLog,
+        self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog,
                   id=self.submitDebugLogButton.GetId())
         logPanelSizer.Add(self.submitDebugLogButton,
                           flag=wx.ALIGN_RIGHT | wx.TOP | wx.BOTTOM | wx.RIGHT,
@@ -32,7 +32,7 @@ class LogView(wx.Panel):
                            u'Courier New')
         self.logTextCtrl.SetFont(font)
 
-        logger.sendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
+        logger.SendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
 
-    def onSubmitDebugLog(self, event):
-        logger.debug("onSubmitDebugLog - Not implemented yet.")
+    def OnSubmitDebugLog(self, event):
+        logger.debug("OnSubmitDebugLog - Not implemented yet.")
