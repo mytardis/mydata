@@ -31,7 +31,7 @@ from Exceptions import Unauthorized
 from Exceptions import InternalServerError
 from Exceptions import StagingHostRefusedSshConnection
 from Exceptions import StagingHostSshPermissionDenied
-from Exceptions import BrokenPipe
+from Exceptions import ScpException
 
 from logger.Logger import logger
 
@@ -50,7 +50,7 @@ class ConnectionStatus():
 
 class UploadMethod():
     HTTP_POST = 0
-    CAT_SSH = 1
+    SCP = 1
 
 
 class FoldersController():
@@ -226,7 +226,7 @@ class FoldersController():
                 fc.verifyDatafileRunnable = {}
                 fc.verificationsQueue = Queue.Queue()
                 # FIXME: Number of verify threads should be configurable
-                fc.numVerificationWorkerThreads = 25
+                fc.numVerificationWorkerThreads = 10  # FIXME: Magic number
 
                 fc.verificationWorkerThreads = []
                 for i in range(fc.numVerificationWorkerThreads):
@@ -242,7 +242,9 @@ class FoldersController():
                 # FIXME: Number of upload threads should be configurable
                 fc.numUploadWorkerThreads = 5
 
-                countMax = 50
+                fc.uploadMethod = UploadMethod.HTTP_POST
+
+                countMax = 50  # FIXME: Magic number
                 count = 0
                 while not self.settingsModel.GetUploadToStagingRequest():
                     # Wait for up to 2 seconds for Uploader thread to complete.
@@ -256,11 +258,18 @@ class FoldersController():
                 if uploadToStagingRequest is not None and \
                         uploadToStagingRequest['approved']:
                     logger.info("Uploads to staging have been approved.")
-                    fc.uploadMethod = UploadMethod.CAT_SSH
+                    fc.uploadMethod = UploadMethod.SCP
                 elif uploadToStagingRequest is None:
-                    message = "Couldn't determine whether uploads to " \
-                              "staging have been approved.  " \
-                              "Falling back to HTTP POST."
+                    self.settingsModel.GetUploaderModel().RequestStagingAccess()
+                    uploadToStagingRequest = self.settingsModel\
+                        .GetUploadToStagingRequest()
+                    if uploadToStagingRequest is None:
+                        message = "Couldn't determine whether uploads to " \
+                                  "staging have been approved.  " \
+                                  "Falling back to HTTP POST."
+                    elif uploadToStagingRequest['approved']:
+                        logger.info("Uploads to staging have been approved.")
+                        fc.uploadMethod = UploadMethod.SCP
                 else:
                     message = "Uploads to MyTardis's staging area require " \
                         "approval from your MyTardis administrator.\n\n" \
@@ -706,11 +715,14 @@ class FoldersController():
         openFolder(path)
 
     def CalculateMd5Sum(self, filePath, fileSize, uploadModel,
-                        progressCallback=None):
+                        ProgressCallback=None):
         md5 = hashlib.md5()
-        chunkSize = 102400
-        oneMegabyte = 1048576
-        while (fileSize / chunkSize) > 100 and chunkSize < oneMegabyte:
+
+        defaultChunkSize = 128*1024  # FIXME: magic number
+        maxChunkSize = 16*1024*1024  # FIXME: magic number
+        chunkSize = defaultChunkSize
+        # FIXME: magic number (approximately 50 progress bar increments)
+        while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
             chunkSize = chunkSize * 2
         bytesProcessed = 0
         with open(filePath, 'rb') as f:
@@ -724,8 +736,8 @@ class FoldersController():
                     return None
                 md5.update(chunk)
                 bytesProcessed += len(chunk)
-                if progressCallback:
-                    progressCallback(bytesProcessed)
+                if ProgressCallback:
+                    ProgressCallback(bytesProcessed)
         return md5.hexdigest()
 
 
@@ -780,7 +792,7 @@ class VerifyDatafileRunnable():
                     .GetUploadToStagingRequest()
                 bytesUploadedToStaging = 0
                 if self.foldersController.uploadMethod == \
-                        UploadMethod.CAT_SSH and \
+                        UploadMethod.SCP and \
                         uploadToStagingRequest is not None and \
                         uploadToStagingRequest['approved'] and \
                         len(replicas) > 0:
@@ -824,24 +836,12 @@ class VerifyDatafileRunnable():
                                     message=message,
                                     icon=wx.ICON_ERROR))
                         return
-                    except BrokenPipe, e:
-                        wx.PostEvent(
-                            self.foldersController.notifyWindow,
-                            self.foldersController.AbortUploadsEvent(
-                                failed=True))
-                        message = str(e)
-                        wx.PostEvent(
-                            self.foldersController.notifyWindow,
-                            self.foldersController
-                                .ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=message,
-                                    icon=wx.ICON_ERROR))
-                        return
                 if bytesUploadedToStaging == int(existingDatafile.GetSize()):
                     logger.debug("No need to re-upload \"%s\" to staging. "
-                                 "The file size is correct in staging."
-                                 % dataFilePath)
+                                 "The file size (%s bytes) is correct in "
+                                 "staging."
+                                 % (dataFilePath,
+                                    "{:,}".format(bytesUploadedToStaging)))
                     self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                          True)
                     self.foldersModel.FolderStatusUpdated(self.folderModel)
@@ -895,58 +895,68 @@ class UploadDatafileRunnable():
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         datasetId = self.folderModel.GetDatasetModel().GetId()
 
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
-
         logger.debug("Uploading " +
                      self.folderModel.GetDataFileName(self.dataFileIndex) +
                      "...")
 
-        url = myTardisUrl + "/api/v1/dataset_file/"
-        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
-                   myTardisApiKey}
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
+                not self.existingUnverifiedDatafile:
+            myTardisUrl = self.settingsModel.GetMyTardisUrl()
+            myTardisUsername = self.settingsModel.GetUsername()
+            myTardisApiKey = self.settingsModel.GetApiKey()
+            url = myTardisUrl + "/api/v1/dataset_file/"
+            headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
+                       myTardisApiKey}
 
         if self.foldersController.IsShuttingDown():
             return
+
         self.uploadModel.SetMessage("Getting data file size...")
-        # ValueError: I/O operation on closed file
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         self.uploadModel.SetFileSize(dataFileSize)
 
         if self.foldersController.IsShuttingDown():
             return
-        self.uploadModel.SetMessage("Calculating MD5 checksum...")
 
-        def md5ProgressCallback(bytesProcessed):
+        if not self.existingUnverifiedDatafile:
+            self.uploadModel.SetMessage("Calculating MD5 checksum...")
+            def Md5ProgressCallback(bytesProcessed):
+                if self.uploadModel.Canceled():
+                    # self.foldersController.SetCanceled()
+                    return
+                percentComplete = \
+                    100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
+                    / dataFileSize
+
+                self.uploadModel.SetProgress(float(percentComplete))
+                self.uploadsModel.UploadProgressUpdated(self.uploadModel)
+                if dataFileSize >= (1024 * 1024 * 1024):
+                    self.uploadModel.SetMessage("%3.1f %%  MD5 summed"
+                                                % percentComplete)
+                else:
+                    self.uploadModel.SetMessage("%3d %%  MD5 summed"
+                                                % int(percentComplete))
+                self.uploadsModel.UploadMessageUpdated(self.uploadModel)
+                myTardisUrl = self.settingsModel.GetMyTardisUrl()
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.ConnectionStatusEvent(
+                        myTardisUrl=myTardisUrl,
+                        connectionStatus=ConnectionStatus.CONNECTED))
+            dataFileMd5Sum = \
+                self.foldersController\
+                    .CalculateMd5Sum(dataFilePath, dataFileSize,
+                                     self.uploadModel,
+                                     ProgressCallback=Md5ProgressCallback)
+
             if self.uploadModel.Canceled():
                 # self.foldersController.SetCanceled()
+                logger.debug("Upload for \"%s\" was canceled "
+                             "before it began uploading." %
+                             self.uploadModel.GetRelativePathToUpload())
                 return
-            percentComplete = 100 - ((dataFileSize - bytesProcessed) * 100) \
-                / (dataFileSize)
-
-            self.uploadModel.SetProgress(float(percentComplete))
-            self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-            self.uploadModel.SetMessage("%3d %%  MD5 summed"
-                                        % int(percentComplete))
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            myTardisUrl = self.settingsModel.GetMyTardisUrl()
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.ConnectionStatusEvent(
-                    myTardisUrl=myTardisUrl,
-                    connectionStatus=ConnectionStatus.CONNECTED))
-        dataFileMd5Sum = \
-            self.foldersController\
-                .CalculateMd5Sum(dataFilePath, dataFileSize, self.uploadModel,
-                                 progressCallback=md5ProgressCallback)
-
-        if self.uploadModel.Canceled():
-            # self.foldersController.SetCanceled()
-            logger.debug("Upload for \"%s\" was canceled "
-                         "before it began uploading." %
-                         self.uploadModel.GetRelativePathToUpload())
-            return
+        else:
+            dataFileSize = int(self.existingUnverifiedDatafile.GetSize())
 
         self.uploadModel.SetProgress(0.0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
@@ -961,47 +971,56 @@ class UploadDatafileRunnable():
 
         if self.foldersController.IsShuttingDown():
             return
-        self.uploadModel.SetMessage("Checking MIME type...")
-        # mimetypes.guess_type(...) is not thread-safe!
-        mimeTypes = mimetypes.MimeTypes()
-        dataFileMimeType = mimeTypes.guess_type(dataFilePath)[0]
+        if not self.existingUnverifiedDatafile:
+            self.uploadModel.SetMessage("Checking MIME type...")
+            # mimetypes.guess_type(...) is not thread-safe!
+            mimeTypes = mimetypes.MimeTypes()
+            dataFileMimeType = mimeTypes.guess_type(dataFilePath)[0]
 
-        if self.foldersController.IsShuttingDown():
-            return
-        self.uploadModel.SetMessage("Defining JSON data for POST...")
-        datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
-        dataFileCreatedTime = \
-            self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
-        dataFileJson = {"dataset": datasetUri,
-                        "filename": dataFileName,
-                        "directory": dataFileDirectory,
-                        "md5sum": dataFileMd5Sum,
-                        "size": dataFileSize,
-                        "mimetype": dataFileMimeType,
-                        "created_time": dataFileCreatedTime}
+            if self.foldersController.IsShuttingDown():
+                return
+            self.uploadModel.SetMessage("Defining JSON data for POST...")
+            datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
+            dataFileCreatedTime = \
+                self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
+            dataFileJson = {"dataset": datasetUri,
+                            "filename": dataFileName,
+                            "directory": dataFileDirectory,
+                            "md5sum": dataFileMd5Sum,
+                            "size": dataFileSize,
+                            "mimetype": dataFileMimeType,
+                            "created_time": dataFileCreatedTime}
 
-        if self.uploadModel.Canceled():
-            # self.foldersController.SetCanceled()
-            logger.debug("Upload for \"%s\" was canceled "
-                         "before it began uploading." %
-                         self.uploadModel.GetRelativePathToUpload())
-            return
+            if self.uploadModel.Canceled():
+                # self.foldersController.SetCanceled()
+                logger.debug("Upload for \"%s\" was canceled "
+                             "before it began uploading." %
+                             self.uploadModel.GetRelativePathToUpload())
+                return
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             self.uploadModel.SetMessage("Initializing buffered reader...")
             datafileBufferedReader = io.open(dataFilePath, 'rb')
             self.uploadModel.SetBufferedReader(datafileBufferedReader)
 
-        def progressCallback(param, current, total):
+        def ProgressCallback(param, current, total, message=None):
             if self.uploadModel.Canceled():
                 # self.foldersController.SetCanceled()
                 return
-            percentComplete = 100 - ((total - current) * 100) / (total)
+            percentComplete = \
+                100.0 - ((total - current) * 100.0) / total
 
             self.uploadModel.SetBytesUploaded(current)
             self.uploadModel.SetProgress(float(percentComplete))
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-            self.uploadModel.SetMessage("%3d %%  uploaded"
-                                        % int(percentComplete))
+            if message:
+                self.uploadModel.SetMessage(message)
+            else:
+                if total >= (1024 * 1024 * 1024):
+                    self.uploadModel.SetMessage("%3.1f %%  uploaded"
+                                                % percentComplete)
+                else:
+                    self.uploadModel.SetMessage("%3d %%  uploaded"
+                                                % int(percentComplete))
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             myTardisUrl = self.settingsModel.GetMyTardisUrl()
             wx.PostEvent(
@@ -1012,23 +1031,23 @@ class UploadDatafileRunnable():
 
         # FIXME: The database interactions below should go in a model class.
 
-        if self.foldersController.uploadMethod == UploadMethod.CAT_SSH:
-            headers = {"Authorization": "ApiKey " +
-                       myTardisUsername + ":" + myTardisApiKey,
-                       "Content-Type": "application/json",
-                       "Accept": "application/json"}
-            data = json.dumps(dataFileJson)
-        else:
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             datagen, headers = poster.encode.multipart_encode(
                 {"json_data": json.dumps(dataFileJson),
                  "attached_file": datafileBufferedReader},
-                cb=progressCallback)
+                cb=ProgressCallback)
             opener = poster.streaminghttp.register_openers()
             opener.addheaders = [("Authorization", "ApiKey " +
                                   myTardisUsername +
                                   ":" + myTardisApiKey),
                                  ("Content-Type", "application/json"),
                                  ("Accept", "application/json")]
+        elif not self.existingUnverifiedDatafile:
+            headers = {"Authorization": "ApiKey " +
+                       myTardisUsername + ":" + myTardisApiKey,
+                       "Content-Type": "application/json",
+                       "Accept": "application/json"}
+            data = json.dumps(dataFileJson)
 
         self.uploadModel.SetMessage("Uploading...")
         postSuccess = False
@@ -1066,12 +1085,24 @@ class UploadDatafileRunnable():
                         else:
                             uri = response.json()['replicas'][0]['uri']
                             # logger.debug(response.text)
+                        # before = datetime.now()
                         OpenSSH.UploadFile(dataFilePath, dataFileSize,
                                            username, privateKeyFilePath,
                                            host, uri,
-                                           progressCallback,
+                                           ProgressCallback,
                                            self.foldersController,
                                            self.uploadModel)
+                        # after = datetime.now()
+                        # duration = after - before
+                        # print "Upload duration for %s was %d seconds." \
+                            # % (dataFilePath, duration.total_seconds())
+                        if self.uploadModel.Canceled():
+                            # self.foldersController.SetCanceled()
+                            logger.debug("FoldersController: "
+                                         "Aborting upload for \"%s\"."
+                                         % self.uploadModel
+                                             .GetRelativePathToUpload())
+                            return
                         bytesUploaded = 0
                         bytesUploaded = self.uploadModel.GetBytesUploaded()
                         if bytesUploaded == dataFileSize:
@@ -1184,20 +1215,24 @@ class UploadDatafileRunnable():
                             message=message,
                             icon=wx.ICON_ERROR))
                 return
-            except BrokenPipe, e:
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.AbortUploadsEvent(
-                        failed=True))
+            except ScpException, e:
                 message = str(e)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
-                return
+                message += "\n\n" + e.command
+                logger.error(message)
+                # if self.foldersController.IsShuttingDown():
+                    # return
+                # wx.PostEvent(
+                    # self.foldersController.notifyWindow,
+                    # self.foldersController.AbortUploadsEvent(
+                        # failed=True))
+                # wx.PostEvent(
+                    # self.foldersController.notifyWindow,
+                    # self.foldersController
+                        # .ShowMessageDialogEvent(
+                            # title="MyData",
+                            # message=message,
+                            # icon=wx.ICON_ERROR))
+                # return
             except ValueError, e:
                 if str(e) == "read of closed file" or \
                         str(e) == "seek of closed file":
@@ -1257,33 +1292,34 @@ class UploadDatafileRunnable():
                              " of folder " + self.folderModel.GetFolder())
             else:
                 logger.debug("Upload failed for datafile " + dataFileName +
-                             " of folder " + self.folderModel.GetFolder())
-            logger.debug(url)
-            if hasattr(e, "code"):
-                logger.error(e.code)
-            logger.error(str(e))
-            if self.foldersController.uploadMethod == \
-                    UploadMethod.HTTP_POST:
-                if request is not None:
-                    logger.error(str(request.header_items()))
-                else:
-                    logger.error("request is None.")
-            if response is not None:
+                             " in folder " + self.folderModel.GetFolder())
+            if not self.existingUnverifiedDatafile:
+                logger.debug(url)
+                if hasattr(e, "code"):
+                    logger.error(e.code)
+                logger.error(str(e))
                 if self.foldersController.uploadMethod == \
                         UploadMethod.HTTP_POST:
-                    logger.debug(response.read())
+                    if request is not None:
+                        logger.error(str(request.header_items()))
+                    else:
+                        logger.error("request is None.")
+                if response is not None:
+                    if self.foldersController.uploadMethod == \
+                            UploadMethod.HTTP_POST:
+                        logger.debug(response.read())
+                    else:
+                        # logger.debug(response.text)
+                        pass
                 else:
-                    # logger.debug(response.text)
+                    logger.error("response is None.")
+                if hasattr(e, "headers"):
+                    logger.debug(str(e.headers))
+                if hasattr(response, "headers"):
+                    # logger.debug(str(response.headers))
                     pass
-            else:
-                logger.error("response is None.")
             self.uploadModel.SetMessage(str(e))
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            if hasattr(e, "headers"):
-                logger.debug(str(e.headers))
-            if hasattr(response, "headers"):
-                # logger.debug(str(response.headers))
-                pass
             logger.debug(traceback.format_exc())
             return
 
