@@ -98,6 +98,8 @@ class UploaderModel():
         elif "Local Area Connection 2" in activeInterfaces:
             activeInterfaces = ["Local Area Connection 2"]
 
+        # FIXME: ipconfig only works on Windows.
+        # Need to add equivalent ifconfig command on Mac, Linux.
         proc = subprocess.Popen(["ipconfig", "/all"],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout, stderr) = proc.communicate()
@@ -274,7 +276,6 @@ class UploaderModel():
             raise DoesNotExist(message)
         keyPair = OpenSSH.FindKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
-        keyPair.CheckPermissions()
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         url = myTardisUrl + "/api/v1/uploaderregistrationrequest/?format=json" + \
             "&uploader__mac_address=" + self.mac_address
@@ -379,14 +380,6 @@ class UploaderModel():
             logger.info(response.text)
 
     def GetActiveNetworkInterfaces(self):
-        """
-        FIXME: The "netsh" stuff for determining the active network
-        interface below only work on Windows.
-        For Mac OS X, we can use "route get default | grep interface"
-        On Linux, the interface is displayed in the last column of:
-          route | grep "^default"
-        """
-
         logger.info("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
