@@ -56,6 +56,12 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetFieldsCount(2)
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetStatusWidths([-1, 60])
+        self.connectedBitmap = \
+            wx.Image("png-normal/icons24x24/Connect.png",
+                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.disconnectedBitmap = \
+            wx.Image("png-normal/icons24x24/Disconnect.png",
+                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
@@ -85,21 +91,13 @@ class MyDataFrame(wx.Frame):
             # dialog.
             return
 
+        self.statusbarConnIcon = wx.StaticBitmap(self.statusbar, wx.ID_ANY)
         if connected:
-            # img = wx.ART_TICK_MARK
-            bmp = wx.Image("png-normal/icons24x24/Connect.png",
-                           wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+            self.statusbarConnIcon.SetBitmap(self.connectedBitmap)
             self.SetStatusMessage("Connected to " + myTardisUrl)
         else:
-            # img = wx.ART_ERROR
-            bmp = wx.Image("png-normal/icons24x24/Disconnect.png",
-                           wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+            self.statusbarConnIcon.SetBitmap(self.disconnectedBitmap)
             self.SetStatusMessage("Not connected to " + myTardisUrl)
-
-        # bmp = wx.ArtProvider_GetBitmap(img, wx.ART_TOOLBAR, (16,16))
-
-        self.statusbarConnIcon = wx.StaticBitmap(self.statusbar, -1, bmp)
-        # self.statusbarConnIcon.Bind(wx.EVT_LEFT_UP, self.ChangeStatusBarIcon)
         self.statusbar.AddWidget(self.statusbarConnIcon, pos=1)
 
 
@@ -115,21 +113,6 @@ class MyData(wx.App):
         logger.debug("appdirPath: " + appdirPath)
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
-
-        if sys.platform.startswith("win"):
-            os.environ['CYGWIN'] = "nodosfilewarning"
-            if 'HOME' in os.environ and '/' in os.environ['HOME']:
-                # Running chown, chgrp and chmod on an SSH private
-                # key file becomes confusing when there are multiple
-                # Cygwin-like environments, each with their own
-                # definition of users and groups.
-                message = "\n" \
-                    "ERROR: It looks like you are trying to run " \
-                    "MyData from a Cygwin or MSYS environment,\n" \
-                    "which is not supported because MyData bundles " \
-                    "its own minimal Cygwin environment.\n\n"
-                sys.stderr.write(message)
-                return False
 
         # Most of the SQLite stuff was designed for the case where MyData
         # is stateful, i.e. it remembers which folders were dragged into
