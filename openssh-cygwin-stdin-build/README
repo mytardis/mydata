@@ -1,3 +1,0 @@
-This OpenSSH cygwin build has a patched readpass.c.
-
-See https://github.com/monash-merc/openssh-cygwin-stdin
