@@ -919,7 +919,12 @@ class UploadDatafileRunnable():
         if self.foldersController.IsShuttingDown():
             return
 
-        if not self.existingUnverifiedDatafile:
+        # The HTTP POST upload method doesn't support resuming uploads,
+        # so we always (re-)create the JSON to be POSTed when we find
+        # a file whose datafile record is unverified.
+
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
+                not self.existingUnverifiedDatafile:
             self.uploadModel.SetMessage("Calculating MD5 checksum...")
             def Md5ProgressCallback(bytesProcessed):
                 if self.uploadModel.Canceled():
@@ -972,7 +977,8 @@ class UploadDatafileRunnable():
 
         if self.foldersController.IsShuttingDown():
             return
-        if not self.existingUnverifiedDatafile:
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
+                not self.existingUnverifiedDatafile:
             self.uploadModel.SetMessage("Checking MIME type...")
             # mimetypes.guess_type(...) is not thread-safe!
             mimeTypes = mimetypes.MimeTypes()
@@ -998,7 +1004,8 @@ class UploadDatafileRunnable():
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
                 return
-        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
+                not self.existingUnverifiedDatafile:
             self.uploadModel.SetMessage("Initializing buffered reader...")
             datafileBufferedReader = io.open(dataFilePath, 'rb')
             self.uploadModel.SetBufferedReader(datafileBufferedReader)
