@@ -56,11 +56,18 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetFieldsCount(2)
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetStatusWidths([-1, 60])
+        if hasattr(sys, "frozen"):
+            sysExecutableDir = os.path.dirname(sys.executable)
+            pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
+        else:
+            myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
+            pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
         self.connectedBitmap = \
-            wx.Image("png-normal/icons24x24/Connect.png",
+            wx.Image(os.path.join(pngNormalPath, "icons24x24", "Connect.png"),
                      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.disconnectedBitmap = \
-            wx.Image("png-normal/icons24x24/Disconnect.png",
+            wx.Image(os.path.join(pngNormalPath,
+                                  "icons24x24", "Disconnect.png"),
                      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
@@ -210,7 +217,6 @@ class MyData(wx.App):
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
-        # img = wx.Image("icon_048.png", wx.BITMAP_TYPE_ANY)
         img = wx.Image("favicon.ico", wx.BITMAP_TYPE_ANY)
         bmp = wx.BitmapFromImage(img)
         icon = wx.EmptyIcon()
@@ -307,70 +313,88 @@ class MyData(wx.App):
         Create a toolbar.
         """
 
+        if hasattr(sys, "frozen"):
+            sysExecutableDir = os.path.dirname(sys.executable)
+            pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
+            pngHotPath = os.path.join(sysExecutableDir, "png-hot")
+        else:
+            myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
+            pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
+            pngHotPath = os.path.join(myDataModuleDir, "png-hot")
+
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
 
-        open_ico = wx.Image('png-normal/icons24x24/Open folder.png',
+        openIcon = wx.Image(os.path.join(pngNormalPath,
+                                         "icons24x24", "Open folder.png"),
                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        openTool = self.toolbar.AddSimpleTool(wx.ID_ANY, open_ico, "Open",
+        openTool = self.toolbar.AddSimpleTool(wx.ID_ANY, openIcon, "Open",
                                               "Open folder")
         self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
 
         self.toolbar.AddSeparator()
 
-        undo_ico = wx.Image('png-normal/icons24x24/Undo.png',
+        undoIcon = wx.Image(os.path.join(pngNormalPath,
+                                         "icons24x24", "Undo.png"),
                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.undoTool = self.toolbar.AddSimpleTool(wx.ID_UNDO, undo_ico,
+        self.undoTool = self.toolbar.AddSimpleTool(wx.ID_UNDO, undoIcon,
                                                    "Undo", "")
         self.toolbar.EnableTool(wx.ID_UNDO, False)
         # self.Bind(wx.EVT_TOOL, self.onUndo, self.undoTool)
 
-        redo_ico = wx.Image('png-normal/icons24x24/Redo.png',
+        redoIcon = wx.Image(os.path.join(pngNormalPath,
+                                         "icons24x24", "Redo.png"),
                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.redoTool = self.toolbar.AddSimpleTool(wx.ID_REDO, redo_ico,
+        self.redoTool = self.toolbar.AddSimpleTool(wx.ID_REDO, redoIcon,
                                                    "Redo", "")
         self.toolbar.EnableTool(wx.ID_REDO, False)
         # self.Bind(wx.EVT_TOOL, self.onRedo, self.redoTool)
 
         self.toolbar.AddSeparator()
 
-        refresh_ico = wx.Image('png-normal/icons24x24/Refresh.png',
+        refreshIcon = wx.Image(os.path.join(pngNormalPath,
+                                            "icons24x24", "Refresh.png"),
                                wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.refreshTool = self.toolbar.AddSimpleTool(wx.ID_REFRESH,
-                                                      refresh_ico,
+                                                      refreshIcon,
                                                       "Refresh", "")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
         self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool)
 
         self.toolbar.AddSeparator()
 
-        settings_ico = wx.Image('png-hot/icons24x24/Settings.png',
+        settingsIcon = wx.Image(os.path.join(pngHotPath,
+                                             "icons24x24", "Settings.png"),
                                 wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settings_ico,
+        self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settingsIcon,
                                                        "Settings", "")
         self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
-        internet_ico = wx.Image('png-normal/icons24x24/Internet explorer.png',
-                                wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.myTardisTool = self.toolbar.AddSimpleTool(wx.ID_ANY, internet_ico,
+        internetIcon = \
+            wx.Image(os.path.join(pngNormalPath,
+                                  "icons24x24", "Internet explorer.png"),
+                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.myTardisTool = self.toolbar.AddSimpleTool(wx.ID_ANY, internetIcon,
                                                        "MyTardis", "")
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
-        about_ico = wx.Image('png-hot/icons24x24/About.png',
+        aboutIcon = wx.Image(os.path.join(pngHotPath,
+                                          "icons24x24", "About.png"),
                              wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, about_ico,
+        self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, aboutIcon,
                                                     "About MyData", "")
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
-        help_ico = wx.Image('png-hot/icons24x24/Help.png',
+        helpIcon = wx.Image(os.path.join(pngHotPath,
+                                         "icons24x24", "Help.png"),
                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, help_ico,
+        self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, helpIcon,
                                                    "MyData User Guide", "")
         self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
 
