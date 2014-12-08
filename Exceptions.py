@@ -95,3 +95,8 @@ class BrokenPipe(Exception):
 class IncompatibleMyTardisVersion(Exception):
     def __init__(self, message):
         super(IncompatibleMyTardisVersion, self).__init__(message)
+
+
+class PrivateKeyDoesNotExist(Exception):
+    def __init__(self, message):
+        super(PrivateKeyDoesNotExist, self).__init__(message)

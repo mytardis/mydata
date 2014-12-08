@@ -73,6 +73,7 @@ import MyDataVersionNumber
 from logger.Logger import logger
 import OpenSSH
 from Exceptions import DoesNotExist
+from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
 
 
@@ -273,12 +274,16 @@ class UploaderModel():
                       "generate a new key-pair and a new request " \
                       "for staging access."
             logger.info(message)
-            raise DoesNotExist(message)
+            raise PrivateKeyDoesNotExist(message)
         keyPair = OpenSSH.FindKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        url = myTardisUrl + "/api/v1/uploaderregistrationrequest/?format=json" + \
-            "&uploader__mac_address=" + self.mac_address
+        url = myTardisUrl + \
+            "/api/v1/uploaderregistrationrequest/?format=json" + \
+            "&uploader__mac_address=" + self.mac_address + \
+            "&requester_key_fingerprint=" + \
+            urllib.quote(keyPair.GetFingerprint())
+        logger.debug(url)
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
         response = requests.get(headers=headers, url=url)
@@ -304,8 +309,9 @@ class UploaderModel():
         Used to request the ability to upload via "cat >>" over SSH
         to a staging area, and then register in MyTardis.
         """
-        keyPair = OpenSSH.FindKeyPair("MyData")
-        if keyPair is None:
+        try:
+            keyPair = OpenSSH.FindKeyPair("MyData")
+        except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
@@ -317,7 +323,8 @@ class UploaderModel():
              "name": self.name,
              "requester_name": self.contact_name,
              "requester_email": self.contact_email,
-             "requester_public_key": keyPair.ReadPublicKey()}
+             "requester_public_key": keyPair.GetPublicKey(),
+             "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
@@ -338,6 +345,12 @@ class UploaderModel():
             except DoesNotExist:
                 uploadToStagingRequest = self.RequestUploadToStagingApproval()
                 logger.info("Uploader registration request created.")
+            except PrivateKeyDoesNotExist:
+                logger.info("Generating new uploader registration request, "
+                            "because private key was moved or deleted.")
+                uploadToStagingRequest = self.RequestUploadToStagingApproval()
+                logger.info("Generated new uploader registration request, "
+                            "because private key was moved or deleted.")
             if uploadToStagingRequest['approved']:
                 logger.info("Uploads to staging have been approved!")
             else:
@@ -353,6 +366,7 @@ class UploaderModel():
         myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/uploader/?format=json" + \
             "&mac_address=" + urllib.quote(self.mac_address)
+        logger.debug(url)
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey,
                    "Content-Type": "application/json",
@@ -368,6 +382,7 @@ class UploaderModel():
         logger.info("Setting instrument in uploader record via "
                     "MyTardis API...")
         url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
+        logger.debug(url)
         uploaderJson = {"instruments": [instrument.GetResourceUri()],
                         "mac_address": self.mac_address}
         data = json.dumps(uploaderJson)
