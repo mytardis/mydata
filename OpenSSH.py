@@ -599,8 +599,7 @@ def UploadLargeFile(filePath, fileSize, username, privateKeyFilePath,
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
         chunkSize = chunkSize * 2
     with open(filePath, 'rb') as fp:
-        if bytesUploaded > 0:
-            print "FIXME: Check that bytesUploaded is a whole number of chunks"
+        if bytesUploaded > 0 and (bytesUploaded % chunkSize == 0):
             ProgressCallback(None, bytesUploaded, fileSize,
                              message="Performing seek on file, so we can "
                              "resume the upload.")
