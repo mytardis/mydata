@@ -16,6 +16,15 @@ from Exceptions import PrivateKeyDoesNotExist
 from UploadModel import HumanReadableSizeString
 
 
+defaultStartupInfo = subprocess.STARTUPINFO()
+defaultCreationFlags = 0
+if sys.platform.startswith("win"):
+    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    import win32process
+    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+
+
 class SmallFileUploadMethod():
     SCP = 0
     CAT = 1
@@ -231,15 +240,6 @@ def FindKeyPair(keyName="MyData", keyPath=None):
                                  % os.path.join(keyPath, keyName))
 
 
-defaultStartupInfo = subprocess.STARTUPINFO()
-defaultCreationFlags = 0
-if sys.platform.startswith("win"):
-    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
-    import win32process
-    defaultCreationFlags = win32process.CREATE_NO_WINDOW
-
-
 def NewKeyPair(keyName=None,
                keyPath=None,
                keyComment=None,
@@ -299,7 +299,6 @@ def NewKeyPair(keyName=None,
             raise SshException("Private key file \"%s\" already exists.")
         lp.close()
         return KeyPair(privateKeyFilePath, publicKeyFilePath)
-
 
 
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
