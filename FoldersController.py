@@ -259,7 +259,7 @@ class FoldersController():
                         uploadToStagingRequest['approved']:
                     logger.info("Uploads to staging have been approved.")
                     fc.uploadMethod = UploadMethod.SCP
-                elif uploadToStagingRequest is None:
+                else:
                     self.settingsModel.GetUploaderModel().RequestStagingAccess()
                     uploadToStagingRequest = self.settingsModel\
                         .GetUploadToStagingRequest()
@@ -270,8 +270,9 @@ class FoldersController():
                     elif uploadToStagingRequest['approved']:
                         logger.info("Uploads to staging have been approved.")
                         fc.uploadMethod = UploadMethod.SCP
-                else:
-                    message = "Uploads to MyTardis's staging area require " \
+                    else:
+                        message = \
+                        "Uploads to MyTardis's staging area require " \
                         "approval from your MyTardis administrator.\n\n" \
                         "A request has been sent, and you will be contacted " \
                         "once the request has been approved. Until then, " \

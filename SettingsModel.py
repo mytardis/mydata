@@ -1,5 +1,4 @@
 import sys
-import sqlite3
 import requests
 import traceback
 import os
@@ -10,6 +9,7 @@ from logger.Logger import logger
 from UserModel import UserModel
 from FacilityModel import FacilityModel
 from InstrumentModel import InstrumentModel
+from UploaderModel import UploaderModel
 from Exceptions import DuplicateKey
 from Exceptions import Unauthorized
 from Exceptions import IncompatibleMyTardisVersion
@@ -35,9 +35,8 @@ class SettingsModel():
         def GetSuggestion(self):
             return self.suggestion
 
-    def __init__(self, mydataConfigPath=None, sqlitedb=None):
+    def __init__(self, mydataConfigPath=None):
         self.mydataConfigPath = mydataConfigPath
-        self.sqlitedb = sqlitedb
 
         self.instrument_name = ""
         self.instrument = None
@@ -84,87 +83,6 @@ class SettingsModel():
                                                 "api_key", "")
             except:
                 logger.error(traceback.format_exc())
-        elif self.sqlitedb is not None:
-            logger.info("Reading settings from: " + self.sqlitedb)
-            conn = sqlite3.connect(self.sqlitedb)
-            with conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute("CREATE TABLE IF NOT EXISTS " +
-                               "settings(id integer primary key," +
-                               "field text,value text)")
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='instrument_name'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.instrument_name = rows[0]['value']
-                else:
-                    self.instrument_name = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='facility_name'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.facility_name = rows[0]['value']
-                else:
-                    self.facility_name = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='contact_name'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.contact_name = rows[0]['value']
-                else:
-                    self.contact_name = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='contact_email'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.contact_email = rows[0]['value']
-                else:
-                    self.contact_email = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='data_directory'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.data_directory = rows[0]['value']
-                else:
-                    self.data_directory = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='mytardis_url'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.mytardis_url = rows[0]['value']
-                else:
-                    self.mytardis_url = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='username'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.username = rows[0]['value']
-                else:
-                    self.username = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='api_key'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.api_key = rows[0]['value']
-                else:
-                    self.api_key = ""
-
-                cursor.execute("SELECT value FROM settings " +
-                               "WHERE field='background_mode'")
-                rows = cursor.fetchall()
-                if len(rows) > 0:
-                    self.background_mode = rows[0]['value']
-                else:
-                    self.background_mode = "False"
 
     def GetInstrument(self):
         if self.instrument is None:
@@ -241,6 +159,8 @@ class SettingsModel():
         self.uploadToStagingRequest = uploadToStagingRequest
 
     def GetUploaderModel(self):
+        if self.uploaderModel is None:
+            self.uploaderModel = UploaderModel(self)
         return self.uploaderModel
 
     def SetUploaderModel(self, uploaderModel):
@@ -298,8 +218,6 @@ class SettingsModel():
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
-        if self.sqlitedb is not None:
-            self.SaveToDisk()
 
     def Validate(self):
         try:

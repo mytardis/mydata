@@ -77,6 +77,15 @@ from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
 
 
+defaultStartupInfo = subprocess.STARTUPINFO()
+defaultCreationFlags = 0
+if sys.platform.startswith("win"):
+    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    import win32process
+    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+
+
 class UploaderModel():
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
@@ -102,10 +111,13 @@ class UploaderModel():
         # FIXME: ipconfig only works on Windows.
         # Need to add equivalent ifconfig command on Mac, Linux.
         proc = subprocess.Popen(["ipconfig", "/all"],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (stdout, stderr) = proc.communicate()
-        if stderr is not None and stderr != "":
-            logger.error(stderr)
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                startupinfo=defaultStartupInfo,
+                                creationflags=defaultCreationFlags)
+        stdout, _ = proc.communicate()
+        if proc.returncode != 0:
+            raise Exception(stdout)
 
         mac_address = {}
         ipv4_address = {}
@@ -398,14 +410,20 @@ class UploaderModel():
         logger.info("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
-            proc = subprocess.Popen(["netsh", "interface", "show", "interface"],
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = proc.communicate()
-            if stderr is not None and stderr != "":
-                logger.error(stderr)
+            proc = subprocess.Popen(["netsh", "interface",
+                                     "show", "interface"],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    startupinfo=defaultStartupInfo,
+                                    creationflags=defaultCreationFlags)
+            stdout, _ = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(stdout)
+
             for row in stdout.split("\n"):
-                m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)\s*"
-                             "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
+                m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)"
+                             "\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
+                             row)
                 if m:
                     adminState = m.groups()[0]
                     state = m.groups()[1]
@@ -421,14 +439,19 @@ class UploaderModel():
                     adminState = m.groups()[0]
                     interfaceType = m.groups()[1]
                     interface = m.groups()[2].strip()
-                    if adminState == "Enabled" and interfaceType == "Dedicated":
+                    if adminState == "Enabled" and \
+                            interfaceType == "Dedicated":
                         activeInterfaces.append(interface)
         elif sys.platform.startswith("darwin"):
             proc = subprocess.Popen(["route", "get", "default"],
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = proc.communicate()
-            if stderr is not None and stderr != "":
-                logger.error(stderr)
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    startupinfo=defaultStartupInfo,
+                                    creationflags=defaultCreationFlags)
+            stdout, _ = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(stdout)
+
             for line in stdout.split("\n"):
                 m = re.match(r"^\s*interface:\s+(\S+)\s*$", line)
                 if m:
@@ -436,10 +459,14 @@ class UploaderModel():
                     activeInterfaces.append(interface)
         elif sys.platform.startswith("linux"):
             proc = subprocess.Popen(["route"],
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = proc.communicate()
-            if stderr is not None and stderr != "":
-                logger.error(stderr)
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    startupinfo=defaultStartupInfo,
+                                    creationflags=defaultCreationFlags)
+            stdout, _ = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(stdout)
+
             for line in stdout.split("\n"):
                 m = re.match(r"^default.*\s+(\S+)\s*$", line)
                 if m:

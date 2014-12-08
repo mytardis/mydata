@@ -121,6 +121,19 @@ class MyData(wx.App):
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
+        # mydata.cfg stores settings in INI format, readable by ConfigParser
+        self.mydataConfigPath = os.path.join(appdirPath, appname + '.cfg')
+        logger.debug("self.mydataConfigPath: " + self.mydataConfigPath)
+
+        self.settingsModel = SettingsModel(self.mydataConfigPath)
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-b", "--background", action="store_true",
+                            help="run non-interactively")
+        # parser.add_argument("--loglevel", help="set logging verbosity")
+        args = parser.parse_args()
+        self.settingsModel.SetBackgroundMode(args.background)
+
         # Most of the SQLite stuff was designed for the case where MyData
         # is stateful, i.e. it remembers which folders were dragged into
         # the application during its previous runs.  However currently
@@ -132,36 +145,6 @@ class MyData(wx.App):
 
         self.sqlitedb = os.path.join(appdirPath, appname + '.db')
         logger.debug("self.sqlitedb: " + self.sqlitedb)
-
-        # mydata.cfg stores settings in INI format, readable by ConfigParser
-        self.mydataConfigPath = os.path.join(appdirPath, appname + '.cfg')
-        logger.debug("self.mydataConfigPath: " + self.mydataConfigPath)
-
-        self.settingsModel = SettingsModel(self.mydataConfigPath,
-                                           self.sqlitedb)
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-b", "--background", action="store_true",
-                            help="run non-interactively")
-        # parser.add_argument("--loglevel", help="set logging verbosity")
-        args = parser.parse_args()
-        self.settingsModel.SetBackgroundMode(args.background)
-
-        try:
-            self.uploaderModel = UploaderModel(self.settingsModel)
-
-            def requestStagingAccess(uploaderModel):
-                uploaderModel.RequestStagingAccess()
-
-            thread = threading.Thread(target=requestStagingAccess,
-                                      args=(self.uploaderModel,))
-            thread.start()
-        except NoActiveNetworkInterface, e:
-            message = str(e)
-            dlg = wx.MessageDialog(None, message, "MyData",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-        except:
-            logger.error(traceback.format_exc())
 
         try:
             conn = sqlite3.connect(self.sqlitedb)
@@ -591,31 +574,6 @@ class MyData(wx.App):
 
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-
-            def uploadUploaderInfo(uploaderModel, settingsModel):
-                try:
-                    wx.CallAfter(wx.BeginBusyCursor)
-                    if uploaderModel is None:
-                        uploaderModel = UploaderModel(settingsModel)
-                    uploaderModel.UploadUploaderInfo()
-                    wx.CallAfter(self.frame.SetConnected,
-                                 self.settingsModel.GetMyTardisUrl(), True)
-                except:
-                    logger.error(traceback.format_exc())
-                    wx.CallAfter(self.frame.SetConnected,
-                                 self.settingsModel.GetMyTardisUrl(), False)
-                finally:
-                    wx.CallAfter(wx.EndBusyCursor)
-
-            if not hasattr(self, "uploaderModel"):
-                self.uploaderModel = None
-            thread = threading.Thread(target=uploadUploaderInfo,
-                                      args=(self.uploaderModel,
-                                            self.settingsModel))
-            self.frame.SetStatusMessage(
-                "Uploading basic info about your PC to MyTardis.")
-            thread.start()
-
             self.OnRefresh(None)
 
     def OnMyTardis(self, event):
