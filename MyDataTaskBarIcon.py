@@ -5,11 +5,11 @@ import webbrowser
 
 
 class MyDataTaskBarIcon(wx.TaskBarIcon):
-
-    def __init__(self, frame):
+    def __init__(self, frame, settingsModel):
         """Constructor"""
         wx.TaskBarIcon.__init__(self)
         self.frame = frame
+        self.settingsModel = settingsModel
 
         # img = wx.Image("icon_048.png", wx.BITMAP_TYPE_ANY)
         img = wx.Image("favicon.ico", wx.BITMAP_TYPE_ANY)
@@ -33,7 +33,6 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         self.frame.Close()
 
     def CreatePopupMenu(self):
-
         self.menu = wx.Menu()
 
         ms = wx.MenuItem(self.menu, wx.NewId(), "MyTardis Sync")
@@ -73,12 +72,15 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         webbrowser.open(url, new=new)
 
     def OnExit(self, event):
-        message = "Are you sure you want to Exit MyData?"
+        message = "Are you sure you want to close MyData?\n\n" \
+            "Any uploads currently in progress will be terminated immediately." 
         confirmationDialog = \
-            wx.MessageDialog(None, message, "Confirm Exit",
+            wx.MessageDialog(None, message, "MyData",
                              wx.YES | wx.NO | wx.ICON_QUESTION)
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
+            if not self.settingsModel.RunningInBackgroundMode():
+                os._exit(0)
             cmd = "Exit MyData.exe"
             if sys.platform.startswith("win"):
                 import win32com.shell.shell as shell
