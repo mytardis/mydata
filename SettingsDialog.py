@@ -199,7 +199,8 @@ class SettingsDialog(wx.Dialog):
 
     def OnOK(self, event):
         if self.GetInstrumentName() != \
-                self.settingsModel.GetInstrumentName():
+                self.settingsModel.GetInstrumentName() and \
+                self.settingsModel.GetInstrumentName() != "":
             message = "A previous instrument name of \"%s\" " \
                 "has been associated with this MyData instance.\n" \
                 "Please choose how you would like the new \"%s\" " \
