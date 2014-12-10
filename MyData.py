@@ -439,12 +439,11 @@ class MyData(wx.App):
     def SetOnRefreshRunning(self, onRefreshRunning):
         self.onRefreshRunning = onRefreshRunning
 
-    def OnRefresh(self, event):
-        settingsValidationAlreadyDone = False
+    def OnRefresh(self, event, needToValidateSettings=True):
         shutdownForRefreshAlreadyComplete = False
-        if hasattr(event, "settingsValidationAlreadyDone") and \
-                event.settingsValidationAlreadyDone:
-            settingsValidationAlreadyDone = True
+        if hasattr(event, "needToValidateSettings") and \
+                event.needToValidateSettings is False:
+            needToValidateSettings = False
             shutdownForRefreshAlreadyComplete = True
         elif hasattr(event, "shutdownSuccessful") and event.shutdownSuccessful:
             shutdownForRefreshAlreadyComplete = True
@@ -488,7 +487,7 @@ class MyData(wx.App):
 
         self.searchCtrl.SetValue("")
 
-        if not settingsValidationAlreadyDone:
+        if needToValidateSettings:
             self.frame.SetStatusMessage("Validating settings...")
             self.settingsValidation = None
 
@@ -520,7 +519,7 @@ class MyData(wx.App):
                     wx.PostEvent(
                         self.frame,
                         self.SettingsValidationForRefreshCompleteEvent(
-                            settingsValidationAlreadyDone=True))
+                            needToValidateSettings=False))
                     wx.CallAfter(wx.EndBusyCursor)
                 except:
                     logger.debug(traceback.format_exc())
@@ -530,7 +529,7 @@ class MyData(wx.App):
             thread.start()
             return
 
-        if not self.settingsValidation.valid:
+        if needToValidateSettings and not self.settingsValidation.valid:
             message = self.settingsValidation.message
             logger.error(message)
             dlg = wx.MessageDialog(None, message, "MyData",
@@ -601,7 +600,7 @@ class MyData(wx.App):
 
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-            self.OnRefresh(None)
+            self.OnRefresh(event, needToValidateSettings=False)
 
     def OnMyTardis(self, event):
         try:
