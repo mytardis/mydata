@@ -193,7 +193,7 @@ class MyData(wx.App):
         self.frame.Bind(self.EVT_SETTINGS_VALIDATION_COMPLETE,
                         self.OnRefresh)
 
-        self.tbIcon = MyDataTaskBarIcon(self.frame)
+        self.tbIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
 
         wx.EVT_TASKBAR_LEFT_UP(self.tbIcon, self.OnTaskBarLeftClick)
 
@@ -235,7 +235,7 @@ class MyData(wx.App):
                         foldersController=self.foldersController)
         self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
 
-        self.logView = LogView(self.frame)
+        self.logView = LogView(self.frame, self.settingsModel)
         self.foldersUsersNotebook.AddPage(self.logView, "Log")
 
         self.CreateToolbar()
@@ -275,10 +275,37 @@ class MyData(wx.App):
 
     def OnCloseFrame(self, event):
         """
-        Don't actually close it, just iconize it.
+        If running in background mode, don't actually close it,
+        just iconize it.
         """
-        self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
-        self.frame.Hide()
+        if self.settingsModel.RunningInBackgroundMode():
+            self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
+            self.frame.Hide()
+        else:
+            message = "Are you sure you want to close MyData?\n\n" \
+                "MyData will attempt to shut down any uploads currently in " \
+                "progress before exiting."
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+            okToExit = confirmationDialog.ShowModal()
+            if okToExit == wx.ID_YES:
+                def shutDownDataScansAndUploads():
+                    try:
+                        wx.CallAfter(wx.BeginBusyCursor)
+                        self.foldersController.ShutDownUploadThreads()
+                        wx.PostEvent(
+                            self.frame,
+                            self.ShutdownForRefreshCompleteEvent(
+                                shutdownSuccessful=True))
+                        wx.CallAfter(wx.EndBusyCursor)
+                        os._exit(0)
+                    except:
+                        logger.debug(traceback.format_exc())
+                        os._exit(1)
+
+                thread = threading.Thread(target=shutDownDataScansAndUploads)
+                thread.start()
 
     def OnMinimizeFrame(self, event):
         """
