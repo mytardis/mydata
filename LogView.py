@@ -6,10 +6,12 @@ from logger.Logger import logger
 
 
 class LogView(wx.Panel):
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent, -1)
+    def __init__(self, parent, settingsModel):
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
-        self.logTextCtrl = wx.TextCtrl(self, 1,
+        self.parent = parent
+        self.settingsModel = settingsModel
+        self.logTextCtrl = wx.TextCtrl(self, wx.ID_ANY,
                                        style=wx.TE_MULTILINE | wx.TE_READONLY)
 
         logPanelSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=0, hgap=0)
@@ -35,4 +37,4 @@ class LogView(wx.Panel):
         logger.SendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
 
     def OnSubmitDebugLog(self, event):
-        logger.debug("OnSubmitDebugLog - Not implemented yet.")
+        logger.DumpLog(self.parent, self.settingsModel, submitDebugLog=True)
