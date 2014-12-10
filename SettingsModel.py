@@ -218,6 +218,10 @@ class SettingsModel():
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
+        # self.mydataConfigPath could be None for the temporary
+        # settingsModel created during SettingsDialog's validation.
+        if self.mydataConfigPath is not None:
+            self.SaveToDisk()
 
     def Validate(self):
         try:
