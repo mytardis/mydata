@@ -1,6 +1,6 @@
 import os
 import sys
-import shutil
+import distutils.dir_util
 
 if len(sys.argv) < 3:
     print "Usage: packageWindowsVersion.py <certificate.pfx> <password>"
@@ -15,14 +15,18 @@ os.system("C:\\Python27\\python.exe .\\pyinstaller\\pyinstaller.py "
           "--icon=favicon.ico --windowed MyData.py")
 
 os.system("copy /Y favicon.ico dist\\MyData\\")
-shutil.copytree(r"png-normal", r"dist\MyData\png-normal")
-shutil.copytree(r"png-hot", r"dist\MyData\png-hot")
+distutils.dir_util.copy_tree(r"png-normal", r"dist\MyData\png-normal")
+distutils.dir_util.copy_tree(r"png-hot", r"dist\MyData\png-hot")
 
-shutil.copytree(r"openssh-5.4p1-1-msys-1.0.13",
+distutils.dir_util.copy_tree(r"openssh-5.4p1-1-msys-1.0.13",
                 r"dist\MyData\openssh-5.4p1-1-msys-1.0.13")
 
 os.system('copy /Y GPL.txt dist\\MyData\\')
 os.system('copy /Y "Exit MyData.exe" dist\\MyData\\')
+
+import requests
+cacert = requests.certs.where()
+os.system('copy /Y ' + cacert + ' dist\\MyData\\')
 
 os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " +
           code_signing_certificate_password + " dist\MyData\*.exe")

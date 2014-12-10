@@ -10,6 +10,7 @@ import subprocess
 import sys
 import requests
 import inspect
+import pkgutil
 
 from SubmitDebugReportDialog import SubmitDebugReportDialog
 
@@ -26,6 +27,9 @@ class Logger():
         self.loggerFileHandler = None
         self.myDataConfigPath = None
         self.ConfigureLogger()
+        if not hasattr(sys, "frozen"):
+            self.appRootDir = \
+                os.path.dirname(pkgutil.get_loader("MyData").filename)
 
     def SetMyDataConfigPath(self, myDataConfigPath):
         self.myDataConfigPath = myDataConfigPath
@@ -71,7 +75,14 @@ class Logger():
     def debug(self, message):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
-        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+        if hasattr(sys, "frozen"):
+            try:
+                moduleName = os.path.basename(outerFrames[1])
+            except:
+                moduleName = outerFrames[1]
+        else:
+            moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
+        extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
@@ -82,7 +93,14 @@ class Logger():
     def error(self, message):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
-        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+        if hasattr(sys, "frozen"):
+            try:
+                moduleName = os.path.basename(outerFrames[1])
+            except:
+                moduleName = outerFrames[1]
+        else:
+            moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
+        extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
@@ -93,7 +111,14 @@ class Logger():
     def warning(self, message):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
-        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+        if hasattr(sys, "frozen"):
+            try:
+                moduleName = os.path.basename(outerFrames[1])
+            except:
+                moduleName = outerFrames[1]
+        else:
+            moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
+        extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
@@ -104,7 +129,14 @@ class Logger():
     def info(self, message):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
-        extra = {'moduleName':  os.path.basename(outerFrames[1]),
+        if hasattr(sys, "frozen"):
+            try:
+                moduleName = os.path.basename(outerFrames[1])
+            except:
+                moduleName = outerFrames[1]
+        else:
+            moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
+        extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3]}
         if threading.current_thread().name == "MainThread":
@@ -112,8 +144,7 @@ class Logger():
         else:
             wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
-    def DumpLog(self, myDataMainFrame, submitDebugLog=False,
-                settingsModel=None):
+    def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         logger.debug("Logger.DumpLog: Flushing "
                      "self.loggerObject.handlers[0], which is of class: "
                      + self.loggerObject.handlers[0].__class__.__name__)
@@ -125,9 +156,10 @@ class Logger():
             return
 
         def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(None, wx.ID_ANY, 'MyData',
+            dlg = SubmitDebugReportDialog(myDataMainFrame, wx.ID_ANY,
+                                          "MyData - Submit Debug Log",
                                           self.loggerOutput.getvalue(),
-                                          self.myDataConfigPath)
+                                          settingsModel)
             try:
                 if wx.IsBusy():
                     wx.EndBusyCursor()
@@ -139,10 +171,10 @@ class Logger():
                     wx.BeginBusyCursor()
                 myDataMainFrame.submitDebugLog = (result == wx.ID_OK)
                 if myDataMainFrame.submitDebugLog:
-                    self.name = dlg.getName()
-                    self.email = dlg.getEmail()
-                    self.comments = dlg.getComments()
-                    self.pleaseContactMe = dlg.getPleaseContactMe()
+                    self.name = dlg.GetName()
+                    self.email = dlg.GetEmail()
+                    self.comments = dlg.GetComments()
+                    self.pleaseContactMe = dlg.GetPleaseContactMe()
             finally:
                 dlg.Destroy()
                 myDataMainFrame.submitDebugLogDialogCompleted = True
@@ -160,14 +192,15 @@ class Logger():
         if submitDebugLog and myDataMainFrame.submitDebugLog:
             self.debug("About to send debug log")
 
-            url = "https://cvl.massive.org.au/cgi-bin/log_drop.py"
+            url = "https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"
 
             debugLog = "\n"
             if settingsModel is not None:
                 debugLog = debugLog + "Username: " + \
-                    settingsModel.GetMyTardisUsername() + "\n"
-            debugLog = debugLog + "Name: " + self.name + "\n"
-            debugLog = debugLog + "Email: " + self.email + "\n"
+                    settingsModel.GetUsername() + "\n"
+            debugLog = debugLog + "Name: %s\n" % settingsModel.GetContactName()
+            debugLog = debugLog + "Email: %s\n" \
+                % settingsModel.GetContactEmail()
             debugLog = debugLog + "Contact me? "
             if self.pleaseContactMe:
                 debugLog = debugLog + "Yes" + "\n"
@@ -187,8 +220,15 @@ class Logger():
             # If we are running in an installation then we have to use
             # our packaged cacert.pem file:
             if os.path.exists('cacert.pem'):
-                r = requests.post(url, files=fileInfo, verify="cacert.pem")
+                response = requests.post(url, files=fileInfo,
+                                         verify="cacert.pem")
             else:
-                r = requests.post(url, files=fileInfo)
+                response = requests.post(url, files=fileInfo)
+            if response.status_code >= 200 and response.status_code < 300:
+                logger.debug("Debug log was submitted successfully!")
+            else:
+                logger.error("An error occurred while attempting to submit "
+                             "the debug log.")
+                logger.error(response.text)
 
 logger = Logger("MyData")

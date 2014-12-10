@@ -9,10 +9,10 @@ if os.path.abspath("..") not in sys.path:
 
 
 class SubmitDebugReportDialog(wx.Dialog):
-    def __init__(self, parent, id, title, debugLog, myDataConfigPath):
+    def __init__(self, parent, id, title, debugLog, settingsModel):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
-        self.myDataConfigPath = myDataConfigPath
+        self.settingsModel = settingsModel
 
         self.submitDebugReportDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
         self.SetSizer(self.submitDebugReportDialogSizer)
@@ -28,12 +28,12 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         # Instructions label
 
-        instructionsText = instructionsText + \
+        instructionsText = \
             "You can submit a debug report to the MyData developers."
         self.instructionsLabel = \
             wx.StaticText(self.submitDebugReportDialogPanel, wx.ID_ANY,
                           instructionsText)
-        self.instructionsLabel.SetMinSize(wx.Size(600, -1))
+        self.instructionsLabel.SetMinSize(wx.Size(600, wx.ID_ANY))
         self.submitDebugReportDialogPanelSizer\
             .Add(self.instructionsLabel, flag=wx.EXPAND | wx.BOTTOM, border=15)
 
@@ -63,23 +63,11 @@ class SubmitDebugReportDialog(wx.Dialog):
                                        wx.ID_ANY, "Name:")
         self.innerContactDetailsPanelSizer.Add(self.nameLabel)
 
-        self.configParser = ConfigParser.SafeConfigParser(allow_no_value=True)
-        if (os.path.exists(self.myDataConfigPath)):
-            with open(self.myDataConfigPath, 'r') as o:
-                self.configParser.readfp(o)
-
-        contact_name = ""
-        if self.configParser.has_section("MyData"):
-            if self.configParser.has_option("MyData", "contact_name"):
-                contact_name = self.configParser.get("MyData", "contact_name")
-        contact_name = contact_name.strip()
+        contact_name = self.settingsModel.GetContactName()
 
         self.nameField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.nameField.SetValue(contact_name)
         self.innerContactDetailsPanelSizer.Add(self.nameField, flag=wx.EXPAND)
-
-        self.Bind(wx.EVT_TEXT, self.onNameOrEmailOrCommentsModified,
-                  id=self.nameField.GetId())
 
         # Blank space
 
@@ -94,19 +82,11 @@ class SubmitDebugReportDialog(wx.Dialog):
                                         wx.ID_ANY, "Email address:")
         self.innerContactDetailsPanelSizer.Add(self.emailLabel)
 
-        contact_email = ""
-        if self.configParser.has_section("MyData"):
-            if self.configParser.has_option("MyData", "contact_email"):
-                contact_email = self.configParser.get("MyData",
-                                                      "contact_email")
-        contact_email = contact_email.strip()
+        contact_email = self.settingsModel.GetContactEmail()
 
         self.emailField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.emailField.SetValue(contact_email)
         self.innerContactDetailsPanelSizer.Add(self.emailField, flag=wx.EXPAND)
-
-        self.Bind(wx.EVT_TEXT, self.onNameOrEmailOrCommentsModified,
-                  id=self.emailField.GetId())
 
         # Blank space
 
@@ -160,11 +140,8 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.commentsField = wx.TextCtrl(self.innerCommentsPanel, wx.ID_ANY,
                                          style=wx.TE_MULTILINE)
-        self.commentsField.SetMinSize(wx.Size(-1, 100))
+        self.commentsField.SetMinSize(wx.Size(wx.ID_ANY, 100))
         self.innerCommentsPanelSizer.Add(self.commentsField, flag=wx.EXPAND)
-
-        self.Bind(wx.EVT_TEXT, self.onNameOrEmailOrCommentsModified,
-                  id=self.commentsField.GetId())
 
         if self.nameField.GetValue().strip() == "":
             self.nameField.SetFocus()
@@ -208,10 +185,10 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.debugLogField = \
             wx.TextCtrl(self.innerDebugLogPanel, wx.ID_ANY,
-                        style=wx.TE_MULTILINE | wx.TE_READONLY)
+                        style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
         self.debugLogField.SetValue(debugLog)
         self.debugLogField.SetFont(smallFont)
-        self.debugLogField.SetMinSize(wx.Size(-1, 100))
+        self.debugLogField.SetMinSize(wx.Size(wx.ID_ANY, 100))
         self.innerDebugLogPanelSizer.Add(self.debugLogField, flag=wx.EXPAND)
 
         self.innerDebugLogPanel.Fit()
@@ -239,11 +216,11 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.cancelButton = wx.Button(self.buttonsPanel, wx.NewId(), "Cancel")
         self.buttonsPanelSizer.Add(self.cancelButton, flag=wx.BOTTOM, border=5)
-        self.Bind(wx.EVT_BUTTON, self.onCancel, id=self.cancelButton.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=self.cancelButton.GetId())
 
         self.submitButton = wx.Button(self.buttonsPanel, wx.NewId(), "Submit")
         self.submitButton.SetDefault()
-        self.Bind(wx.EVT_BUTTON, self.onSubmit, id=self.submitButton.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnSubmit, id=self.submitButton.GetId())
         self.buttonsPanelSizer.Add(self.submitButton, flag=wx.BOTTOM, border=5)
 
         self.buttonsPanel.Fit()
@@ -258,38 +235,20 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.CenterOnParent()
 
-    def onCancel(self, event):
+    def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
 
-    def onSubmit(self, event):
-        if not self.configParser.has_section("MyData"):
-            self.configParser.add_section("MyData")
-        self.configParser.set("MyData", "contact_name",
-                              self.nameField.GetValue().strip())
-        with open(self.myDataConfigPath, 'wb') as fileObject:
-            self.configParser.write(fileObject)
-
-        self.configParser.set("MyData", "contact_email",
-                              self.emailField.GetValue().strip())
-        with open(self.myDataConfigPath, 'wb') as fileObject:
-            self.configParser.write(fileObject)
-
+    def OnSubmit(self, event):
         self.EndModal(wx.ID_OK)
 
-    def getName(self):
+    def GetName(self):
         return self.nameField.GetValue().strip()
 
-    def getEmail(self):
+    def GetEmail(self):
         return self.emailField.GetValue().strip()
 
-    def getComments(self):
+    def GetComments(self):
         return self.commentsField.GetValue().strip()
 
-    def getPleaseContactMe(self):
+    def GetPleaseContactMe(self):
         return self.pleaseContactMeCheckBox.GetValue()
-
-    def onNameOrEmailOrCommentsModified(self, event):
-        if self.commentsField.GetValue().strip() != "":
-            self.pleaseContactMeCheckBox.SetValue(True)
-        else:
-            self.pleaseContactMeCheckBox.SetValue(False)
