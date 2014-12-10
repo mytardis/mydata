@@ -400,6 +400,7 @@ class SettingsModel():
                     self.validation = self.SettingsValidation(False, message,
                                                               "facility_name",
                                                               suggestion)
+                    return self.validation
                 except:
                     logger.error(traceback.format_exc())
                     self.validation = self.SettingsValidation(False, message,
@@ -474,8 +475,10 @@ class SettingsModel():
                 try:
                     self.uploaderModel.SetInstrument(self.instrument)
                 except DoesNotExist:
-                    logger.error("Tried to SetInstrument in uploader record"
-                                 "but uploader record doesn't exist yet.")
+                    message = "Tried to SetInstrument in uploader record" \
+                                 "but uploader record doesn't exist yet."
+                    logger.error(message)
+                    raise Exception(message)
 
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
@@ -487,6 +490,7 @@ class SettingsModel():
             raise
         except:
             message = traceback.format_exc()
+            logger.error(message)
             self.validation = self.SettingsValidation(False, message, "")
             return self.validation
 
