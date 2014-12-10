@@ -77,9 +77,10 @@ from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
 
 
-defaultStartupInfo = subprocess.STARTUPINFO()
+defaultStartupInfo = None
 defaultCreationFlags = 0
 if sys.platform.startswith("win"):
+    defaultStartupInfo = subprocess.STARTUPINFO()
     defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
     import win32process
