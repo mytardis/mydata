@@ -11,6 +11,7 @@ import sys
 import requests
 import inspect
 import pkgutil
+import traceback
 
 from SubmitDebugReportDialog import SubmitDebugReportDialog
 
@@ -40,8 +41,8 @@ class Logger():
         except:
             logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
         logWindowHandler.setLevel(logging.DEBUG)
-        logFormatString = "%(asctime)s - %(moduleName)s - %(functionName)s - " \
-            "%(lineNumber)d - %(levelname)s - %(message)s"
+        logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
+            "%(functionName)s - %(currentThreadName)s - %(levelname)s - %(message)s"
         logWindowHandler.setFormatter(logging.Formatter(logFormatString))
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(logWindowHandler)
@@ -50,8 +51,8 @@ class Logger():
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(logging.DEBUG)
 
-        logFormatString = "%(asctime)s - %(moduleName)s - %(functionName)s - " \
-            "%(lineNumber)d - %(levelname)s - %(message)s"
+        logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
+            "%(functionName)s - %(currentThreadName)s - %(levelname)s - %(message)s"
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
@@ -84,7 +85,8 @@ class Logger():
             moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
         extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
-                 'functionName': outerFrames[3]}
+                 'functionName': outerFrames[3],
+                 'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
             self.loggerObject.debug(message, extra=extra)
         else:
@@ -102,7 +104,8 @@ class Logger():
             moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
         extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
-                 'functionName': outerFrames[3]}
+                 'functionName': outerFrames[3],
+                 'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
             self.loggerObject.error(message, extra=extra)
         else:
@@ -120,7 +123,8 @@ class Logger():
             moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
         extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
-                 'functionName': outerFrames[3]}
+                 'functionName': outerFrames[3],
+                 'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
             self.loggerObject.warning(message, extra=extra)
         else:
@@ -138,7 +142,8 @@ class Logger():
             moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
         extra = {'moduleName':  moduleName,
                  'lineNumber': outerFrames[2],
-                 'functionName': outerFrames[3]}
+                 'functionName': outerFrames[3],
+                 'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
             self.loggerObject.info(message, extra=extra)
         else:
@@ -187,6 +192,7 @@ class Logger():
             else:
                 wx.CallAfter(showSubmitDebugLogDialog)
                 while not myDataMainFrame.submitDebugLogDialogCompleted:
+                    # FIXME: Remove sleeps and use events instead.
                     time.sleep(0.1)
 
         if submitDebugLog and myDataMainFrame.submitDebugLog:
