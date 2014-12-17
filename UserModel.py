@@ -89,7 +89,6 @@ class UserModel():
 
     @staticmethod
     def GetUserRecord(settingsModel, username):
-
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -97,13 +96,30 @@ class UserModel():
         url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
-        response = requests.get(url=url, headers=headers)
+        try:
+            # response = requests.get(url=url, headers=headers, timeout=(0.1,0.1))
+            # response = settingsModel.requestsSession.get(url=url, headers=headers, timeout=(0.1,0.1))
+            session = requests.Session()
+            # response = session.get(url=url, headers=headers, timeout=(5,10))
+            response = session.get(url=url, headers=headers)
+        except:
+            response.close()
+            session.close()
+            raise Exception(traceback.format_exc())
         if response.status_code != 200:
-            logger.debug("Failed to look up user record for username \"" +
-                         username + "\".")
-            logger.debug(response.text)
-            return None
-        userRecordsJson = response.json()
+            message = response.text
+            response.close()
+            session.close()
+            raise Exception(message)
+        try:
+            userRecordsJson = response.json()
+        except:
+            logger.error(traceback.format_exc())
+            response.close()
+            session.close()
+            raise
+        response.close()
+        session.close()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
