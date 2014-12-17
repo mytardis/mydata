@@ -68,6 +68,8 @@ import re
 import pkgutil
 import urllib
 import traceback
+from datetime import datetime
+import wx
 
 import MyDataVersionNumber
 from logger.Logger import logger
@@ -75,6 +77,7 @@ import OpenSSH
 from Exceptions import DoesNotExist
 from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
+from Exceptions import StringTooLongForField
 
 
 defaultStartupInfo = None
@@ -91,60 +94,99 @@ class UploaderModel():
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.interface = None
-        self.json = None
+        self.responseJson = None
 
-        activeInterfaces = self.GetActiveNetworkInterfaces()
-        if len(activeInterfaces) == 0:
-            message = "No active network interfaces." \
-                "\n\n" \
-                "Please ensure that you have an active network interface " \
-                "(e.g. Ethernet or WiFi)."
-            raise NoActiveNetworkInterface(message)
-        # Sometimes on Windows XP, you can end up with multiple results from
-        # "netsh interface show interface"
-        # If there is one called "Local Area Connection",
-        # then that's the one we'll go with.
-        if "Local Area Connection" in activeInterfaces:
-            activeInterfaces = ["Local Area Connection"]
-        elif "Local Area Connection 2" in activeInterfaces:
-            activeInterfaces = ["Local Area Connection 2"]
+        intervalSinceLastConnectivityCheck = \
+            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
+        # FIXME: Magic number of 30 seconds since last connectivity check.
+        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
+                not wx.GetApp().GetLastNetworkConnectivityCheckSuccess():
+            activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
+            if len(activeInterfaces) == 0:
+                message = "No active network interfaces." \
+                    "\n\n" \
+                    "Please ensure that you have an active network interface " \
+                    "(e.g. Ethernet or WiFi)."
+                raise NoActiveNetworkInterface(message)
+            # Sometimes on Windows XP, you can end up with multiple results from
+            # "netsh interface show interface"
+            # If there is one called "Local Area Connection",
+            # then that's the one we'll go with.
+            if "Local Area Connection" in activeInterfaces:
+                activeInterfaces = ["Local Area Connection"]
+            elif "Local Area Connection 2" in activeInterfaces:
+                activeInterfaces = ["Local Area Connection 2"]
 
-        # FIXME: ipconfig only works on Windows.
-        # Need to add equivalent ifconfig command on Mac, Linux.
-        proc = subprocess.Popen(["ipconfig", "/all"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                startupinfo=defaultStartupInfo,
-                                creationflags=defaultCreationFlags)
-        stdout, _ = proc.communicate()
-        if proc.returncode != 0:
-            raise Exception(stdout)
+            # For now, we're only dealing with one active network interface.
+            # It is possible to have more than one active network interface,
+            # but we hope that the code above has picked the best one.
+            # If there are no active interfaces, then we shouldn't have
+            # reached this point - we should have already raised an
+            # exception.
+            self.interface = activeInterfaces[0]
+        else:
+            self.interface = wx.GetApp().GetActiveNetworkInterface()
 
-        mac_address = {}
-        ipv4_address = {}
-        ipv6_address = {}
-        subnet_mask = {}
-        interface = ""
+        if sys.platform.startswith("win"):
+            proc = subprocess.Popen(["ipconfig", "/all"],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    startupinfo=defaultStartupInfo,
+                                    creationflags=defaultCreationFlags)
+            stdout, _ = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(stdout)
 
-        for row in stdout.split("\n"):
-            m = re.match(r"^\S.*adapter (.*):\s*$", row)
-            if m:
-                interface = m.groups()[0]
-            if interface in activeInterfaces:
-                if ': ' in row:
-                    key, value = row.split(': ')
-                    if key.strip(' .') == "Physical Address":
-                        mac_address[interface] = value.strip()
-                    if "IPv4 Address" in key.strip(' .'):
-                        ipv4_address[interface] = \
-                            value.strip().replace("(Preferred)", "")
-                    if "IPv6 Address" in key.strip(' .'):
-                        ipv6_address[interface] = \
-                            value.strip().replace("(Preferred)", "")
-                    if "Subnet Mask" in key.strip(' .'):
-                        subnet_mask[interface] = value.strip()
+            mac_address = {}
+            ipv4_address = {}
+            ipv6_address = {}
+            subnet_mask = {}
+            interface = ""
 
-        self.interface = activeInterfaces[0]
+            for row in stdout.split("\n"):
+                m = re.match(r"^\S.*adapter (.*):\s*$", row)
+                if m:
+                    interface = m.groups()[0]
+                if interface in activeInterfaces:
+                    if ': ' in row:
+                        key, value = row.split(': ')
+                        if key.strip(' .') == "Physical Address":
+                            mac_address[interface] = value.strip()
+                        if "IPv4 Address" in key.strip(' .'):
+                            ipv4_address[interface] = \
+                                value.strip().replace("(Preferred)", "")
+                        if "IPv6 Address" in key.strip(' .'):
+                            ipv6_address[interface] = \
+                                value.strip().replace("(Preferred)", "")
+                        if "Subnet Mask" in key.strip(' .'):
+                            subnet_mask[interface] = value.strip()
+        else:
+            proc = subprocess.Popen(["ifconfig", self.interface],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    startupinfo=defaultStartupInfo,
+                                    creationflags=defaultCreationFlags)
+            stdout, _ = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(stdout)
+
+            mac_address = {}
+            ipv4_address = {}
+            ipv6_address = {}
+            subnet_mask = {}
+
+            for row in stdout.split("\n"):
+                m = re.match(r"\s+ether (\S*)\s*$", row)
+                if m:
+                    mac_address[self.interface] = m.groups()[0]
+                m = re.match(r"\s+inet (\S*)\s+netmask\s+(\S*)\s+.*$", row)
+                if m:
+                    ipv4_address[self.interface] = m.groups()[0]
+                    subnet_mask[self.interface] = m.groups()[1]
+                m = re.match(r"\s+inet6 (\S*)\s+.*$", row)
+                if m:
+                    ipv6_address[self.interface] = m.groups()[0]
+
         self.mac_address = mac_address[self.interface]
         self.ipv4_address = ipv4_address[self.interface]
         self.ipv6_address = ipv6_address[self.interface]
@@ -218,7 +260,11 @@ class UploaderModel():
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
 
-        response = requests.get(headers=headers, url=url)
+        try:
+            response = requests.get(headers=headers, url=url)
+        except Exception, e:
+            logger.error(str(e))
+            raise
         existingMatchingUploaderRecords = response.json()
         numExistingMatchingUploaderRecords = \
             existingMatchingUploaderRecords['meta']['total_count']
@@ -232,6 +278,37 @@ class UploaderModel():
         else:
             url = myTardisUrl + "/api/v1/uploader/"
 
+        self.os_platform = sys.platform
+        self.os_system = platform.system()
+        self.os_release = platform.release()
+        self.os_version = platform.version()
+        self.os_username = getpass.getuser()
+
+        self.machine = platform.machine()
+        self.architecture = str(platform.architecture())
+        self.processor = platform.processor()
+        self.memory = self._bytes2human(psutil.virtual_memory().total)
+        self.cpus = psutil.cpu_count()
+
+        self.hostname = platform.node()
+
+        uploaderFieldLength = {
+            "name": 64, "contact_name": 64, "contact_email": 64,
+            "user_agent_name": 64, "user_agent_version": 32,
+            "user_agent_install_location": 128,
+            "os_platform": 64, "os_system": 64, "os_release": 32,
+            "os_version": 128, "os_username": 64,
+            "machine": 64, "architecture": 64, "processor": 64, "memory": 32,
+            "data_path": 64, "default_user": 64,
+            "interface": 64, "mac_address": 64, "ipv4_address": 16,
+            "ipv6_address": 64, "subnet_mask": 16, "hostname": 64}
+
+        for field in uploaderFieldLength:
+            if len(getattr(self, field)) > uploaderFieldLength[field]:
+                raise StringTooLongForField("Uploader", field,
+                                            uploaderFieldLength[field],
+                                            getattr(self, field))
+            
         uploaderJson = {"name": self.name,
                         "contact_name": self.contact_name,
                         "contact_email": self.contact_email,
@@ -241,18 +318,17 @@ class UploaderModel():
                         "user_agent_install_location":
                             self.user_agent_install_location,
 
-                        "os_platform": sys.platform,
-                        "os_system": platform.system(),
-                        "os_release": platform.release(),
-                        "os_version": platform.version(),
-                        "os_username": getpass.getuser(),
+                        "os_platform": self.os_platform,
+                        "os_system": self.os_system,
+                        "os_release": self.os_release,
+                        "os_version": self.os_version,
+                        "os_username": self.os_username,
 
-                        "machine": platform.machine(),
-                        "architecture": str(platform.architecture()),
-                        "processor": platform.processor(),
-                        "memory": self._bytes2human(psutil.virtual_memory()
-                                                    .total),
-                        "cpus": psutil.cpu_count(),
+                        "machine": self.machine,
+                        "architecture": self.architecture,
+                        "processor": self.processor,
+                        "memory": self.memory,
+                        "cpus": self.cpus,
 
                         "disk_usage": self.disk_usage,
                         "data_path": self.data_path,
@@ -264,31 +340,29 @@ class UploaderModel():
                         "ipv6_address": self.ipv6_address,
                         "subnet_mask": self.subnet_mask,
 
-                        "hostname": platform.node()}
+                        "hostname": self.hostname}
 
-        data = json.dumps(uploaderJson)
+        data = json.dumps(uploaderJson, indent=4)
+        logger.debug(data)
         if numExistingMatchingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data)
         else:
             response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
             logger.info("Upload succeeded for uploader info.")
-            self.json = response.json()
+            self.responseJson = response.json()
         else:
-            logger.info("Upload failed for uploader info.")
-            logger.info("Status code = " + str(response.status_code))
-            logger.info(response.text)
+            logger.error("Upload failed for uploader info.")
+            logger.error("Status code = " + str(response.status_code))
+            logger.error(response.text)
+            raise Exception(response.text)
 
     def ExistingUploadToStagingRequest(self):
-        # FIXME: For now, the private key file path has to be ~/.ssh/MyData
-        if not os.path.exists(os.path.join(os.path.expanduser("~"), ".ssh",
-                                           "MyData")):
-            message = "~/.ssh/MyData was not found, so we will " \
-                      "generate a new key-pair and a new request " \
-                      "for staging access."
-            logger.info(message)
-            raise PrivateKeyDoesNotExist(message)
-        keyPair = OpenSSH.FindKeyPair("MyData")
+        try:
+            # FIXME: For now, the private key file path has to be ~/.ssh/MyData
+            keyPair = OpenSSH.FindKeyPair("MyData")
+        except PrivateKeyDoesNotExist:
+            keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         url = myTardisUrl + \
@@ -302,19 +376,24 @@ class UploaderModel():
         response = requests.get(headers=headers, url=url)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
+                response.close() 
                 raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
-            raise Exception(response.text)
+            message = response.text
+            response.close()
+            raise Exception(message)
         existingMatchingUploaderRecords = response.json()
         numExistingMatchingUploaderRecords = \
             existingMatchingUploaderRecords['meta']['total_count']
         if numExistingMatchingUploaderRecords > 0:
             approval_json = existingMatchingUploaderRecords['objects'][0]
             logger.info("A request already exists for this uploader.")
+            response.close()
             return approval_json
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
             logger.info(message)
+            response.close()
             raise DoesNotExist(message)
 
     def RequestUploadToStagingApproval(self):
@@ -332,7 +411,7 @@ class UploaderModel():
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
         uploaderRegistrationRequestJson = \
-            {"uploader": self.json['resource_uri'],
+            {"uploader": self.responseJson['resource_uri'],
              "name": self.name,
              "requester_name": self.contact_name,
              "requester_email": self.contact_email,
@@ -341,17 +420,27 @@ class UploaderModel():
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
-            return response.json()
+            responseJson = response.json()
+            response.close()
+            return responseJson
         else:
             if response.status_code == 404:
+                response.close()
                 raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
             logger.error("Status code = " + str(response.status_code))
             logger.error("URL = " + url)
-            raise Exception(response.text)
+            message = response.text
+            response.close()
+            raise Exception(message)
 
     def RequestStagingAccess(self):
         try:
-            self.UploadUploaderInfo()
+            try:
+                self.UploadUploaderInfo()
+            except:
+                print traceback.format_exc()
+                logger.error(traceback.format_exc())
+                raise
             uploadToStagingRequest = None
             try:
                 uploadToStagingRequest = self.ExistingUploadToStagingRequest()
@@ -372,6 +461,7 @@ class UploaderModel():
                 .SetUploadToStagingRequest(uploadToStagingRequest)
         except:
             logger.error(traceback.format_exc())
+            raise
 
     def SetInstrument(self, instrument):
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
@@ -391,6 +481,7 @@ class UploaderModel():
         if numExistingMatchingUploaderRecords > 0:
             uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
         else:
+            response.close()
             raise DoesNotExist("SetInstrument: Uploader record not found!")
         logger.info("Setting instrument in uploader record via "
                     "MyTardis API...")
@@ -406,8 +497,10 @@ class UploaderModel():
             logger.info("Setting uploader's instrument failed.")
             logger.info("Status code = " + str(response.status_code))
             logger.info(response.text)
+        response.close()
 
-    def GetActiveNetworkInterfaces(self):
+    @staticmethod
+    def GetActiveNetworkInterfaces():
         logger.info("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
@@ -475,3 +568,10 @@ class UploaderModel():
                     activeInterfaces.append(interface)
 
         return activeInterfaces
+
+    def GetSettingsModel(self):
+        return self.settingsModel
+
+    def SetSettingsModel(self, settingsModel):
+        self.settingsModel = settingsModel
+
