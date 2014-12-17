@@ -22,15 +22,19 @@ class UploadModel():
         self.folder = folderModel.GetFolder()
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = self.folderModel.GetDataFileName(dataFileIndex)
-        self.filesize = ""
+        self.filesize = ""  # Human-readable string displayed in data view
         self.bytesUploaded = 0
-        self.progress = 0.0  # Percentage used to render progress bar
+        self.bytesUploadedToStaging = None
+        # self.progress = 0.0  # Percentage used to render progress bar
+        self.progress = 0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
         self.bufferedReader = None
         self.scpUploadProcess = None
-        self.fileSize = 0
+        self.fileSize = 0  # File size long integer in bytes
         self.canceled = False
+
+        self.verificationModel = None
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -43,6 +47,12 @@ class UploadModel():
 
     def SetBytesUploaded(self, bytesUploaded):
         self.bytesUploaded = bytesUploaded
+
+    def GetBytesUploadedToStaging(self):
+        return self.bytesUploadedToStaging
+
+    def SetBytesUploadedToStaging(self, bytesUploadedToStaging):
+        self.bytesUploadedToStaging = bytesUploadedToStaging
 
     def GetProgress(self):
         return self.progress
@@ -76,6 +86,32 @@ class UploadModel():
     def SetBufferedReader(self, bufferedReader):
         self.bufferedReader = bufferedReader
 
+    def GetSshMasterProcess(self):
+        if hasattr(self, "sshMasterProcess"):
+            return self.sshMasterProcess
+        else:
+            # return None
+            return self.verificationModel.GetSshMasterProcess()
+
+    def SetSshMasterProcess(self, sshMasterProcess):
+        self.sshMasterProcess = sshMasterProcess
+
+    def GetSshControlPath(self):
+        if hasattr(self, "sshControlPath"):
+            return self.sshControlPath
+        else:
+            # return None
+            return self.verificationModel.GetSshControlPath()
+        
+    def SetSshControlPath(self, sshControlPath):
+        self.sshControlPath = sshControlPath
+
+    def GetScpUploadProcess(self):
+        if hasattr(self, "scpUploadProcess"):
+            return self.scpUploadProcess
+        else:
+            return None
+
     def SetScpUploadProcess(self, scpUploadProcess):
         self.scpUploadProcess = scpUploadProcess
 
@@ -88,32 +124,49 @@ class UploadModel():
     def Cancel(self):
         try:
             self.canceled = True
-            logger.debug("Canceling upload \"" +
-                         self.GetRelativePathToUpload() +
-                         "\".")
+            # logger.debug("Canceling upload \"" + self.GetRelativePathToUpload() + "\".")
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
                 logger.debug("Closed buffered reader for \"" +
                              self.GetRelativePathToUpload() +
                              "\".")
-            if self.scpUploadProcess is not None:
-                pid = self.scpUploadProcess.pid
-
+            scpUploadProcess = self.GetScpUploadProcess()
+            if scpUploadProcess and PidIsRunning(scpUploadProcess.pid):
                 self.scpUploadProcess.terminate()
-
                 # Check if the process has really
                 # terminated and force kill if not.
                 try:
+                    pid = self.scpUploadProcess.pid
                     # See if this throws psutil.NoSuchProcess:
                     p = psutil.Process(int(pid))
                     if sys.platform.startswith("win"):
                         os.kill(pid, signal.CTRL_C_EVENT)
                     else:
                         os.kill(pid, signal.SIGKILL)
-                    logger.debug("Force killed ssh upload process for %s"
+                    logger.debug("Force killed SCP upload process for %s"
                                  % self.GetRelativePathToUpload())
                 except psutil.NoSuchProcess:
-                    logger.debug("ssh upload process for %s was terminated "
+                    logger.debug("SCP upload process for %s was terminated "
+                                 "gracefully."
+                                 % self.GetRelativePathToUpload())
+
+            sshMasterProcess = self.GetSshMasterProcess()
+            if sshMasterProcess and PidIsRunning(sshMasterProcess.pid):
+                sshMasterProcess.terminate()
+                # Check if the process has really
+                # terminated and force kill if not.
+                try:
+                    pid = self.sshMasterProcess.pid
+                    # See if this throws psutil.NoSuchProcess:
+                    p = psutil.Process(int(pid))
+                    if sys.platform.startswith("win"):
+                        os.kill(pid, signal.CTRL_C_EVENT)
+                    else:
+                        os.kill(pid, signal.SIGKILL)
+                    logger.debug("Force killed SCP upload process for %s"
+                                 % self.GetRelativePathToUpload())
+                except psutil.NoSuchProcess:
+                    logger.debug("SCP upload process for %s was terminated "
                                  "gracefully."
                                  % self.GetRelativePathToUpload())
         except:
@@ -126,6 +179,12 @@ class UploadModel():
     def Canceled(self):
         return self.canceled
 
+    def GetVerificationModel(self):
+        return self.verificationModel
+
+    def SetVerificationModel(self, verificationModel):
+        self.verificationModel = verificationModel
+
 
 def HumanReadableSizeString(num):
     for x in ['bytes', 'KB', 'MB', 'GB']:
@@ -133,3 +192,15 @@ def HumanReadableSizeString(num):
             return "%3.0f %s" % (num, x)
         num /= 1024.0
     return "%3.0f %s" % (num, 'TB')
+
+def PidIsRunning(pid):
+    try:
+        p = psutil.Process(int(pid))
+        if p.status == psutil.STATUS_DEAD:
+            return False
+        if p.status == psutil.STATUS_ZOMBIE:
+            return False
+        return True # Assume other status are valid
+    except psutil.NoSuchProcess:
+        return False
+
