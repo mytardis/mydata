@@ -35,29 +35,35 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
     def CreatePopupMenu(self):
         self.menu = wx.Menu()
 
-        ms = wx.MenuItem(self.menu, wx.NewId(), "MyTardis Sync")
-        self.menu.AppendItem(ms)
-        self.Bind(wx.EVT_MENU, self.OnMyTardisSync, ms)
+        self.myTardisSyncMenuItem = wx.MenuItem(self.menu, wx.NewId(), "MyTardis Sync")
+        self.menu.AppendItem(self.myTardisSyncMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnMyTardisSync, self.myTardisSyncMenuItem, self.myTardisSyncMenuItem.GetId())
 
         self.menu.AppendSeparator()
 
-        mcp = wx.MenuItem(self.menu, wx.NewId(), "MyData Control Panel")
-        self.menu.AppendItem(mcp)
-        self.Bind(wx.EVT_MENU, self.OnMyDataControlPanel, mcp)
+        self.myTardisControlPanelMenuItem = wx.MenuItem(self.menu, wx.NewId(), "MyData Control Panel")
+        self.menu.AppendItem(self.myTardisControlPanelMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnMyDataControlPanel, self.myTardisControlPanelMenuItem)
 
         self.menu.AppendSeparator()
 
-        mh = wx.MenuItem(self.menu, wx.NewId(), "MyData Help")
-        self.menu.AppendItem(mh)
-        self.Bind(wx.EVT_MENU, self.OnMyDataHelp, mh)
+        self.myTardisHelpMenuItem = wx.MenuItem(self.menu, wx.NewId(), "MyData Help")
+        self.menu.AppendItem(self.myTardisHelpMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnMyDataHelp, self.myTardisHelpMenuItem)
 
         self.menu.AppendSeparator()
 
-        mh = wx.MenuItem(self.menu, wx.NewId(), "Exit MyData")
-        self.menu.AppendItem(mh)
-        self.Bind(wx.EVT_MENU, self.OnExit, mh)
+        self.exitMyDataMenuItem = wx.MenuItem(self.menu, wx.NewId(), "Exit MyData")
+        self.menu.AppendItem(self.exitMyDataMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnExit, self.exitMyDataMenuItem)
 
         return self.menu
+
+    def GetMyTardisSyncMenuItem(self):
+        if hasattr(self, "myTardisSyncMenuItem"):
+            return self.myTardisSyncMenuItem
+        else:
+            return None
 
     def OnMyDataControlPanel(self, event):
         self.frame.Restore()
