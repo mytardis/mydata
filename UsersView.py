@@ -17,6 +17,11 @@ class UsersView(wx.Panel):
                                                     | dv.DV_VERT_RULES
                                                     | dv.DV_MULTIPLE)
 
+        smallFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        if smallFont.GetPointSize() > 11:
+            smallFont.SetPointSize(11)
+        self.usersDataViewControl.SetFont(smallFont)
+
         self.usersModel = usersModel
 
         # ...and associate it with the dataview control.  Models can
