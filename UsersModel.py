@@ -6,18 +6,6 @@ import threading
 
 from logger.Logger import logger
 
-# This model class provides the data to the view when it is asked for.
-# Since it is a list-only model (no hierachical data) then it is able
-# to be referenced by row rather than by item object, so in this way
-# it is easier to comprehend and use than other model types.  In this
-# example we also provide a Compare function to assist with sorting of
-# items in our model.  Notice that the data items in the data model
-# object don't ever change position due to a sort or column
-# reordering.  The view manages all of that and maps view rows and
-# columns to the model's rows and columns as needed.
-#
-# Our data is stored in a list of UserModel objects.
-
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):
     def __init__(self, sqlitedb, settingsModel):
@@ -46,11 +34,9 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         self.maxDataViewId = 0
 
     def SetFoldersModel(self, foldersModel):
-
         self.foldersModel = foldersModel
 
     def Filter(self, searchString):
-
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -113,7 +99,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
     # particular row, col
     def GetValueByRow(self, row, col):
         columnKey = self.GetColumnKeyName(col)
-        return self.usersData[row].GetValueForKey(columnKey)
+        return str(self.usersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the usersData object for a
     # particular row, colname
@@ -266,7 +252,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return self.maxDataViewId
 
     def AddRow(self, value):
-
         self.Filter("")
         self.usersData.append(value)
         # Notify views
@@ -289,7 +274,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
         for username in usernames:
-            logger.debug("\nFound subdirectory assumed to be username: " +
+            logger.debug("Found subdirectory assumed to be username: " +
                          username)
             dataViewId = self.GetMaxDataViewId() + 1
             userRecord = UserModel.GetUserRecord(self.settingsModel, username)
