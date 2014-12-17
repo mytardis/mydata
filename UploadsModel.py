@@ -136,7 +136,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                     icon = self.failedIcon
                 return icon
             columnKey = self.GetColumnKeyName(col)
-            return self.uploadsData[row].GetValueForKey(columnKey)
+            if self.GetColumnType(col) == "string":
+                return str(self.uploadsData[row].GetValueForKey(columnKey))
+            else:
+                return self.uploadsData[row].GetValueForKey(columnKey)
         except IndexError:
             # A "list index out of range" exception can be
             # thrown if the row is currently being deleted
@@ -174,9 +177,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def GetDefaultColumnWidth(self, col):
         return self.defaultColumnWidths[col]
-
-    def GetColumnType(self, col):
-        return self.columnTypes[col]
 
     # Report how many rows this model provides data for.
     def GetRowCount(self):
