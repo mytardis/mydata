@@ -236,7 +236,8 @@ class SettingsDialog(wx.Dialog):
             wx.PostEvent(wx.GetApp().GetMainFrame(), settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
-        dlg = wx.DirDialog(self, "Choose a directory:")
+        dlg = wx.DirDialog(self, "Choose a directory:",
+                           defaultPath=self.GetDataDirectory())
         if dlg.ShowModal() == wx.ID_OK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
 
