@@ -6,6 +6,7 @@ import re
 import tempfile
 from datetime import datetime
 import errno
+import getpass
 
 from logger.Logger import logger
 from Exceptions import SshException
@@ -66,6 +67,17 @@ class OpenSSH():
             self.pwd = f("bin", "pwd.exe")
             self.dd = f("bin", "dd.exe")
             self.preferToUseShellInSubprocess = False
+
+            # This is not where we store the MyData private key.
+            # This is where the Msys SSH build looks for our
+            # known_hosts file.
+            dotSshDir = os.path.join(self.OPENSSH_BUILD_DIR,
+                                     "home",
+                                     getpass.getuser(),
+                                     ".ssh")
+            if not os.path.exists(dotSshDir):
+                os.makedirs(dotSshDir)
+
         elif sys.platform.startswith("darwin"):
             self.ssh = "/usr/bin/ssh"
             self.scp = "/usr/bin/scp"
@@ -318,6 +330,50 @@ def NewKeyPair(keyName=None,
 
 def GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
                                       privateKeyFilePath, hostname):
+    """
+    Unfortunately re-using an SSH connection with -oControlPath=...
+    only works on POSIX systems, not on Windows.
+    
+    To try to achieve a similar effect on Windows, we have the following 
+    options:
+
+    1. Use an SSH agent (ssh-agent.exe and ssh-add.exe are already bundled).
+    Subsequent remote commands over SSH channels would still have some 
+    connection overhead (unlike the -oControlPath method), but reading the
+    key from the agent should be faster than reading it from disk every time.
+
+    2. We can use a trick to slightly speed up SSH connection time:
+       mkdir openssh-msys...\home\<username>\.ssh\
+            where <username> can be determined from getpass.getuser()
+    the Msys build of ssh looks here for known_hosts and repeatedly complains
+    if this directory doesn't exist, so we can easily create it to keep Msys's
+    SSH happy and hopefully speed up connections slightly.
+
+    3. Use bigger chunk sizes on Windows to ensure that we create new SSH
+    connections less often.  Maybe return to having two different upload
+    methods - one for large files and one for small files.
+
+    4. Re-try the piping method (at least for small files).  Basically,
+    we repeatedly write chunks to a subprocess.stdin PIPE (one for each
+    upload thread) and keep the "ssh staging_host cat >>" process open.
+    This seemed to work OK on Windows previously, but it failed so dismally
+    on Mac OS X (incomplete file transfers probably due to buffering), that
+    I removed it (but we can resurrect it).
+
+    Whilst it will look messy to do different things for different OS's,
+    the path of least resistance might be just to resurrect what was working
+    on Windows before we did the Mac testing, and be careful to check which
+    OS we're on before deciding which upload method (and submethod) to use.
+
+    So I think I'm voting in favour of 4 (piping for small files on Windows
+    only) and 3 (the part about returning to different upload methods for
+    different file sizes, at least on Windows).  2. is easy, so we can
+    definitely do that, and might get some benefit, but 
+    """
+
+    if sys.platform.startswith("win"):
+        raise NotImplementedError("SSH connection caching is not implemented "
+                                  "in MinGW or Cygwin builds of OpenSSH.")
     if uploadOrVerificationModel.GetSshMasterProcess():
         sshMasterProcess = uploadOrVerificationModel.GetSshMasterProcess()
         sshControlPath = uploadOrVerificationModel.GetSshControlPath()
@@ -357,24 +413,36 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
     if not remoteFilePath.startswith('"'):
         remoteFilePath = openSSH.DoubleQuote(remoteFilePath)
 
-    sshMasterProcess, sshControlPath = \
-        GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
-                                          privateKeyFilePath, hostname)
+    if sys.platform.startswith("win"):
+        cmdAndArgs = [openSSH.ssh,
+                      "-c", openSSH.cipher,
+                      "-i", privateKeyFilePath,
+                      "-oIdentitiesOnly=yes",
+                      "-oPasswordAuthentication=no",
+                      "-oStrictHostKeyChecking=no",
+                      "-l", username,
+                      hostname,
+                      openSSH.DoubleQuote("wc -c %s" % remoteFilePath)]
+    else:
+        sshMasterProcess, sshControlPath = \
+            GetSshMasterProcessAndControlPath(uploadOrVerificationModel,
+                                              username,
+                                              privateKeyFilePath, hostname)
 
-    # The authentication options below (-i privateKeyFilePath etc.) shouldn't
-    # be necessary if the socket created by the SSH master process
-    # (sshControlPath)is ready), but we can't guarantee that it will be
-    # ready immediately.
-    cmdAndArgs = [openSSH.ssh,
-                  "-c", openSSH.cipher,
-                  "-i", privateKeyFilePath,
-                  "-oIdentitiesOnly=yes",
-                  "-oPasswordAuthentication=no ",
-                  "-oStrictHostKeyChecking=no ",
-                  "-l", username,
-                  "-oControlPath=%s " % openSSH.DoubleQuote(sshControlPath),
-                  hostname,
-                  openSSH.DoubleQuote("wc -c %s" % remoteFilePath)]
+        # The authentication options below (-i privateKeyFilePath etc.)
+        # shouldn't be necessary if the socket created by the SSH master
+        # process (sshControlPath)is ready), but we can't guarantee that it
+        # will be ready immediately.
+        cmdAndArgs = [openSSH.ssh,
+                      "-c", openSSH.cipher,
+                      "-i", privateKeyFilePath,
+                      "-oIdentitiesOnly=yes",
+                      "-oPasswordAuthentication=no",
+                      "-oStrictHostKeyChecking=no",
+                      "-l", username,
+                      "-oControlPath=%s" % openSSH.DoubleQuote(sshControlPath),
+                      hostname,
+                      openSSH.DoubleQuote("wc -c %s" % remoteFilePath)]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
@@ -463,14 +531,6 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                hostname, remoteFilePath, ProgressCallback,
                foldersController, uploadModel):
     """
-    We want to ensure that the partially uploaded datafile in MyTardis's
-    staging area always has a whole number of chunks.  If we were to
-    append each chunk directly to the datafile at the same time as
-    sending it over the SSH channel, there would be a risk of a broken
-    connection resulting in a partial chunk being appended to the datafile.
-    So we upload the chunk to its own file on the remote server first,
-    and then append the chunk onto the remote (partial) datafile.
-
     The file may have already been uploaded, so let's check
     for it (and check its size) on the server. We don't use
     checksums here because they are slow for large files,
@@ -488,7 +548,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
             bytesUploaded = uploadModel.GetBytesUploadedToStaging()
         else:
             bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
-                                                      username, privateKeyFilePath,
+                                                      username,
+                                                      privateKeyFilePath,
                                                       hostname, uploadModel)
             uploadModel.SetBytesUploadedToStaging(bytesUploaded)
     if 0 < bytesUploaded < fileSize:
@@ -512,10 +573,43 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                     "completed upload for \"%s\"..." % filePath)
     elif bytesUploaded == 0:
         # The most common use case.
-        pass
+        ProgressCallback(None, bytesUploaded, fileSize,
+                         message="Uploading...")
+    if not sys.platform.startswith("win"):
+        UploadFileFromPosixSystem(filePath, fileSize, username,
+                                  privateKeyFilePath, hostname,
+                                  remoteFilePath, ProgressCallback,
+                                  foldersController, uploadModel,
+                                  bytesUploaded)
+        return
+    if fileSize > largeFileSize:
+        return UploadLargeFileFromWindows(filePath, fileSize, username,
+                                          privateKeyFilePath, hostname,
+                                          remoteFilePath, ProgressCallback,
+                                          foldersController, uploadModel,
+                                          bytesUploaded)
+    else:
+        return UploadSmallFileFromWindows(filePath, fileSize, username,
+                                          privateKeyFilePath, hostname,
+                                          remoteFilePath, ProgressCallback,
+                                          foldersController, uploadModel)
 
-    if sys.platform.startswith("win"):
-        privateKeyFilePath = GetMsysPath(privateKeyFilePath)
+def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
+                              hostname, remoteFilePath, ProgressCallback,
+                              foldersController, uploadModel, bytesUploaded):
+    """
+    On POSIX systems, we use SSH connection caching (the ControlMaster
+    and ControlPath options in "man ssh_config"), but they are not 
+    available on Windows.
+
+    We want to ensure that the partially uploaded datafile in MyTardis's
+    staging area always has a whole number of chunks.  If we were to
+    append each chunk directly to the datafile at the same time as
+    sending it over the SSH channel, there would be a risk of a broken
+    connection resulting in a partial chunk being appended to the datafile.
+    So we upload the chunk to its own file on the remote server first,
+    and then append the chunk onto the remote (partial) datafile.
+    """
 
     remoteChunkPath = remoteFilePath + ".chunk"
 
@@ -575,7 +669,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     while bytesUploaded < fileSize:
         # for chunk in iter(lambda: fp.read(chunkSize), b''):
             if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadLargeFile 1: Aborting upload for "
+                logger.debug("UploadFile 1: Aborting upload for "
                              "%s" % filePath)
                 sshMasterProcess.terminate()
                 return
@@ -584,11 +678,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
             chunkFile = tempfile.NamedTemporaryFile(delete=False)
             # chunkFile.write(chunk)
             chunkFile.close()
-            if sys.platform.startswith("win"):
-                chunkFilePath = GetMsysPath(chunkFile.name)
-            else:
-                chunkFilePath = chunkFile.name
-
+            chunkFilePath = chunkFile.name
             ddCommandString = \
                 "%s bs=%d skip=%d count=1 if=%s of=%s" \
                 % (openSSH.dd,
@@ -692,7 +782,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
             ProgressCallback(None, bytesUploaded, fileSize)
 
             if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadLargeFile 2: Aborting upload for "
+                logger.debug("UploadFile 2: Aborting upload for "
                              "%s" % filePath)
                 sshMasterProcess.terminate()
                 return
@@ -724,6 +814,245 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
 
     sshMasterProcess.terminate()
 
+def UploadSmallFileFromWindows(filePath, fileSize, username,
+                               privateKeyFilePath, hostname, remoteFilePath,
+                               ProgressCallback, foldersController,
+                               uploadModel,
+                               # uploadMethod=SmallFileUploadMethod.SCP):
+                               uploadMethod=SmallFileUploadMethod.CAT):
+    """
+    Fast methods for uploading small files (less overhead from chunking).
+    These methods don't support resuming interrupted uploads.
+    The CAT method provides progress updates, but the SCP method doesn't.
+    See class SmallFileUploadMethod
+    """
+    remoteRemoveDatafileCommand = \
+        "/bin/rm -f %s" % openSSH.DoubleQuote(remoteFilePath)
+    rmCommandString = \
+        "%s -i %s -c %s " \
+        "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
+        "%s@%s %s" \
+        % (openSSH.ssh, GetMsysPath(privateKeyFilePath), openSSH.cipher,
+           username, hostname,
+           # openSSH.SingleQuote(remoteRemoveDatafileCommand))
+           openSSH.DoubleQuote(remoteRemoveDatafileCommand))
+    # logger.debug(rmCommandString)
+    removeRemoteDatafileProcess = subprocess.Popen(
+        rmCommandString,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        startupinfo=defaultStartupInfo,
+        creationflags=defaultCreationFlags)
+    stdout, _ = removeRemoteDatafileProcess.communicate()
+    if removeRemoteDatafileProcess.returncode != 0:
+        raise SshException(stdout, removeRemoteDatafileProcess.returncode)
+
+    bytesUploaded = 0
+
+    if uploadMethod == SmallFileUploadMethod.SCP:
+        scpCommandString = \
+            '%s -i %s -c %s ' \
+            '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
+            '%s "%s@%s:\\"%s\\""' \
+            % (openSSH.scp,
+               GetMsysPath(privateKeyFilePath),
+               openSSH.cipher,
+               openSSH.DoubleQuote(GetMsysPath(filePath)),
+               username, hostname,
+               os.path.dirname(remoteFilePath))
+        logger.debug(scpCommandString)
+        scpUploadProcess = subprocess.Popen(
+            scpCommandString,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags, shell=True)
+        uploadModel.SetScpUploadProcess(scpUploadProcess)
+
+        stdout, _ = scpUploadProcess.communicate()
+        if scpUploadProcess.returncode != 0:
+            raise ScpException(stdout, scpCommandString,
+                               scpUploadProcess.returncode)
+        bytesUploaded = fileSize
+        ProgressCallback(None, bytesUploaded, fileSize)
+        return
+
+    # uploadMethod == SmallFiledUploadMethod.CAT
+
+    defaultChunkSize = 128*1024  # FIXME: magic number
+    maxChunkSize = 1024*1024  # FIXME: magic number
+    chunkSize = defaultChunkSize
+    # FIXME: magic number (approximately 50 progress bar increments)
+    while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+        chunkSize = chunkSize * 2
+    remoteCatCommand = "cat >> %s" % openSSH.DoubleQuote(remoteFilePath)
+    catCommandString = \
+        "%s -i %s -c %s " \
+        "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
+        "%s@%s %s" \
+        % (openSSH.ssh, GetMsysPath(privateKeyFilePath),
+           openSSH.cipher,
+           username, hostname,
+           openSSH.DoubleQuote(remoteCatCommand))
+    logger.debug(catCommandString)
+    appendChunkProcess = subprocess.Popen(
+        catCommandString,
+        stdin=subprocess.PIPE,
+        # stdout=subprocess.PIPE,
+        # stderr=subprocess.STDOUT,
+        startupinfo=defaultStartupInfo,
+        creationflags=defaultCreationFlags)
+    with open(filePath, 'rb') as fp:
+        for chunk in iter(lambda: fp.read(chunkSize), b''):
+            if foldersController.IsShuttingDown() or uploadModel.Canceled():
+                logger.debug("UploadSmallFileFromWindows 1: "
+                             "Aborting upload for %s" % filePath)
+                return
+            # Append chunk to remote datafile.
+            appendChunkProcess.stdin.write(chunk)
+
+            bytesUploaded += len(chunk)
+            ProgressCallback(None, bytesUploaded, fileSize)
+
+            if foldersController.IsShuttingDown() or uploadModel.Canceled():
+                logger.debug("UploadSmallFileFromWindows 2: "
+                             "Aborting upload for %s" % filePath)
+                try:
+                    appendChunkProcess.stdin.close()
+                except:
+                    logger.error(traceback.format_exc())
+                return
+        appendChunkProcess.stdin.flush()
+        appendChunkProcess.stdin.close()
+        # stdout, _ = appendChunkProcess.communicate()
+        if appendChunkProcess.returncode is not None and \
+                appendChunkProcess.returncode != 0:
+            raise SshException(catCommandString, appendChunkProcess.returncode)
+
+
+def UploadLargeFileFromWindows(filePath, fileSize, username,
+                               privateKeyFilePath, hostname, remoteFilePath,
+                               ProgressCallback, foldersController,
+                               uploadModel, bytesUploaded):
+    """
+    We want to ensure that the partially uploaded datafile in MyTardis's
+    staging area always has a whole number of chunks.  If we were to
+    append each chunk directly to the datafile at the same time as
+    sending it over the SSH channel, there would be a risk of a broken
+    connection resulting in a partial chunk being appended to the datafile.
+    So we upload the chunk to its own file on the remote server first,
+    and then append the chunk onto the remote (partial) datafile.
+    """
+
+    remoteChunkPath = remoteFilePath + ".chunk"
+
+    # logger.warning("Assuming that the remote shell is Bash.")
+
+    defaultChunkSize = 1024*1024  # FIXME: magic number
+    maxChunkSize = 16*1024*1024  # FIXME: magic number
+    chunkSize = defaultChunkSize
+    # FIXME: magic number (approximately 50 progress bar increments)
+    while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+        chunkSize = chunkSize * 2
+    with open(filePath, 'rb') as fp:
+        if bytesUploaded > 0 and (bytesUploaded % chunkSize == 0):
+            ProgressCallback(None, bytesUploaded, fileSize,
+                             message="Performing seek on file, so we can "
+                             "resume the upload.")
+            fp.seek(bytesUploaded)
+            ProgressCallback(None, bytesUploaded, fileSize)
+        for chunk in iter(lambda: fp.read(chunkSize), b''):
+            if foldersController.IsShuttingDown() or uploadModel.Canceled():
+                logger.debug("UploadLargeFileFromWindows 1: "
+                             "Aborting upload for %s" % filePath)
+                return
+            # Write chunk to temporary file:
+            chunkFile = tempfile.NamedTemporaryFile(delete=False)
+            chunkFile.write(chunk)
+            chunkFile.close()
+            scpCommandString = \
+                '%s -i %s -c %s ' \
+                '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
+                '%s "%s@%s:\\"%s\\""' \
+                % (openSSH.scp,
+                   GetMsysPath(privateKeyFilePath),
+                   openSSH.cipher,
+                   GetMsysPath(chunkFile.name),
+                   username, hostname,
+                   remoteChunkPath)
+            logger.debug(scpCommandString)
+            scpUploadChunkProcess = subprocess.Popen(
+                scpCommandString,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                startupinfo=defaultStartupInfo,
+                creationflags=defaultCreationFlags)
+            uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
+            stdout, _ = scpUploadChunkProcess.communicate()
+            if scpUploadChunkProcess.returncode != 0:
+                raise ScpException(stdout,
+                                   scpCommandString,
+                                   scpUploadChunkProcess.returncode)
+            try:
+                os.unlink(chunkFile.name)
+            except:
+                logger.error(traceback.format_exc())
+            # Append chunk to remote datafile.
+            # FIXME: Investigate whether using an ampersand to put
+            # remote cat process in the background helps to make things
+            # more robust in the case of an interrupted connection.
+            # On Windows, we might need to escape the ampersand with a
+            # caret (^&)
+            remoteCatCommand = \
+                "cat %s >> %s" % (openSSH.DoubleQuote(remoteChunkPath),
+                                  openSSH.DoubleQuote(remoteFilePath))
+            catCommandString = \
+                "%s -i %s -c %s " \
+                "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
+                "%s@%s %s" \
+                % (openSSH.ssh, GetMsysPath(privateKeyFilePath),
+                   openSSH.cipher,
+                   username, hostname,
+                   openSSH.DoubleQuote(remoteCatCommand))
+            # logger.debug(catCommandString)
+            appendChunkProcess = subprocess.Popen(
+                catCommandString,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                startupinfo=defaultStartupInfo,
+                creationflags=defaultCreationFlags)
+            stdout, _ = appendChunkProcess.communicate()
+            if appendChunkProcess.returncode != 0:
+                raise SshException(stdout, appendChunkProcess.returncode)
+
+            bytesUploaded += len(chunk)
+            ProgressCallback(None, bytesUploaded, fileSize)
+
+            if foldersController.IsShuttingDown() or uploadModel.Canceled():
+                logger.debug("UploadLargeFileFromWindows 2: "
+                             "Aborting upload for %s" % filePath)
+                return
+
+    # remoteRemoveChunkCommand = \
+        # "/bin/rm -f %s" % openSSH.DoubleQuote(remoteChunkPath)
+    # rmCommandString = \
+        # "%s -i %s -c %s " \
+        # "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
+        # "%s@%s %s" \
+        # % (openSSH.ssh, GetMsysPath(privateKeyFilePath), openSSH.cipher,
+           # username, hostname,
+           # # openSSH.SingleQuote(remoteRemoveChunkCommand))
+           # openSSH.DoubleQuote(remoteRemoveChunkCommand))
+    # logger.debug(rmCommandString)
+    # removeRemoteChunkProcess = \
+        # subprocess.Popen(rmCommandString,
+                         # stdout=subprocess.PIPE,
+                         # stderr=subprocess.STDOUT,
+                         # startupinfo=defaultStartupInfo,
+                         # creationflags=defaultCreationFlags)
+    # stdout, _ = removeRemoteChunkProcess.communicate()
+    # if removeRemoteChunkProcess.returncode != 0:
+        # raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
 def GetMsysPath(path):
     """
