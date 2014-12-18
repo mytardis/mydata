@@ -269,20 +269,36 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         usernames = os.walk(dataDir).next()[1]
         return len(usernames)
 
-    def Refresh(self, incrementProgressDialog):
+    def Refresh(self, incrementProgressDialog, shouldAbort):
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
         for username in usernames:
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
             logger.debug("Found subdirectory assumed to be username: " +
                          username)
             dataViewId = self.GetMaxDataViewId() + 1
             userRecord = UserModel.GetUserRecord(self.settingsModel, username)
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
             if userRecord is not None:
                 userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
             else:
                 message = "Didn't find a MyTardis user record for \"" + \
                     username + "\""
@@ -295,14 +311,26 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                     showDialog()
                 else:
                     wx.CallAfter(showDialog)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
                 userRecord = UserModel(settingsModel=self.settingsModel,
                                        username=username,
                                        name="USER NOT FOUND IN MYTARDIS",
                                        email="USER NOT FOUND IN MYTARDIS")
                 userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
             else:
