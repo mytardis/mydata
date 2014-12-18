@@ -42,27 +42,27 @@ So where you see "Instrument Name" in MyData, you can use something like "James 
 which can be used to distinguish your "pretend instrument PC" from other pretend
 instrument PCs connecting to the same "Test Facility" in MyTardis.
 
-Contact Name
+**Contact Name**
 
 MyData's preferred upload method (staging) requires approval from a MyTardis administrator.
 This Contact Name will be used when sending confirmation that access to MyTardis's staging
 area has been approved for this MyData instance.
 
-Contact Email
+**Contact Email**
 
 MyData's preferred upload method (staging) requires approval from a MyTardis administrator.
 This Contact Name will be used when sending confirmation that access to MyTardis's staging
 area has been approved for this MyData instance.
 
-Data directory
+**Data Directory**
 
-Choose a folder where you would like to store your data.  (I chose "/Users/wettenhj/Desktop/MyDataTest")
+Choose a folder where you would like to store your data.  (I chose "/Users/Shared/MyDataTest")
 
-MyTardis URL
+**MyTardis URL**
 
-The URL of a MyTardis server running a MyTardis version compatible with MyData, e.g. http://118.138.241.91
+The URL of a MyTardis server running a MyTardis version compatible with MyData, e.g. http://118.138.241.91/
 
-MyTardis default username
+**MyTardis Username**
 
 DO NOT put your individual MyTardis username (e.g. "wettenhj") in here.  Because MyData is 
 designed to be able to upload multiple users' data from a instrument PC, the default username
@@ -70,7 +70,7 @@ used by MyData should generally be a shared facility role account.  For testing 
 http://118.138.241.91, we will use "testfacility".  Contact JW if you want the password for
 this test account.
 
-MyTardis API key
+**MyTardis API Key**
 
 API keys are similar to passwords, but they are easier to revoke and renew when necessary.
 Ask your MyTardis administrator for the API key corresponding to your facility role account.
