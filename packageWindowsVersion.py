@@ -20,6 +20,11 @@ distutils.dir_util.copy_tree(r"png-hot", r"dist\MyData\png-hot")
 
 distutils.dir_util.copy_tree(r"openssh-5.4p1-1-msys-1.0.13",
                 r"dist\MyData\openssh-5.4p1-1-msys-1.0.13")
+msysHomeDir = r"dist\MyData\openssh-5.4p1-1-msys-1.0.13\home"
+for subdir in os.listdir(msysHomeDir):
+    subdirpath = os.path.join(msysHomeDir, subdir)
+    if os.path.isdir(subdirpath):
+        shutil.rmtree(subdirpath)
 
 os.system('copy /Y GPL.txt dist\\MyData\\')
 os.system('copy /Y "Exit MyData.exe" dist\\MyData\\')
