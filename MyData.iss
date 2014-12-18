@@ -67,4 +67,4 @@ Name: "{pf}\{#MyDataAppName}\openssh-5.4p1-1-msys-1.0.13\home"; Permissions: "us
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
 ;Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
-Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
+Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry; Parameters: "--background"
