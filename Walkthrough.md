@@ -25,7 +25,7 @@ folders, which will be become datasets in MyTardis:<br/>
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DatasetsInUserFolder.png" alt="Data In User Folder" style="width:200px;"/>
 
 Launch MyData, and enter some basic settings in MyData's Settings Dialog (below).  Each
-field is described further below.
+field is described further below.<br/>
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/SettingsDialog.png" alt="Settings Dialog" style="width:200px;"/>
 
 **Facility Name**
