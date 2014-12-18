@@ -9,32 +9,25 @@ import traceback
 import threading
 import argparse
 
+import CommitDef
+import MyDataVersionNumber
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
 from FolderModel import FolderModel
 from FoldersController import FoldersController
-
 from UsersView import UsersView
 from UsersModel import UsersModel
 from UserModel import UserModel
-
 from UploadsView import UploadsView
 from UploadsModel import UploadsModel
 from UploadModel import UploadModel
-
 from UploaderModel import UploaderModel
-
 from LogView import LogView
-
 from SettingsModel import SettingsModel
 from SettingsDialog import SettingsDialog
-
 from Exceptions import NoActiveNetworkInterface
-
 import EnhancedStatusBar as ESB
-
 from logger.Logger import logger
-
 from MyDataTaskBarIcon import MyDataTaskBarIcon
 
 # ----------------------------------------------------------------------
@@ -114,6 +107,9 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
+        logger.debug("MyData version:   " +
+                     MyDataVersionNumber.versionNumber)
+        logger.debug("MyData commit:  " + CommitDef.LATEST_COMMIT)
         appname = "MyData"
         appauthor = "Monash University"
         appdirPath = appdirs.user_data_dir(appname, appauthor)
@@ -627,8 +623,6 @@ class MyData(wx.App):
         webbrowser.open(url, new=new)
 
     def OnAbout(self, event):
-        import CommitDef
-        import MyDataVersionNumber
         msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
