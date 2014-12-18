@@ -106,3 +106,4 @@ By clicking on the web browser icon on MyData's toolbar, you can view the upload
 
 If you are authorized to log into MyTardis's web interface as a facility manager, you can view the data in MyTardis's new Facility Overview.  Note the two owners - the facility role account ("testfacility") and the individual user ("wettenhj") who collected the data:
 
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/FacilityOverview.png" alt="Facility Overview" style="width:200px;"/>
