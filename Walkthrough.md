@@ -91,10 +91,13 @@ The HTTP POST upload method is only intended to be used for quick demos and for 
 
 2. SCP via staging is MyData's preferred upload method.  MyData will automatically use this method as soon as it become available, but uploads via staging need to be approved by a MyTardis administrator.  MyData generates an SSH key pair the first time it runs and sends the public key to the MyTardis server in a request for the ability to upload via staging.  The MyTardis administrator needs to approve the request and put the public key in a suitable authorized keys file on the staging server (which could be the same as the MyTardis server).  For example, the public key could be put in "/home/mydata/.ssh/authorized_keys" on the staging server.
 
+The first time a user runs MyData, they wil see a warning indicating that MyData's preferred upload method (SCP via staging) hasn't yet been approved by the MyTardis administartor:
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/UploadsToStagingRequireApprovalWarning.png" alt="Uploads To Staging Require Approval Warning", style="width:200px;"/>
 
-Explain Refresh. Show multiple upload threads.
+The MyTardis administrator can approve the request in the Django Admin interface (after adding the public key to the appropriate /home/mydata/.ssh/authorized_keys file):
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/UploaderRegistrationApproval.png" alt="Uploader Registration Approval" style="width:200px;"/>
 
+Once uploads to staging have been approved, MyData can manage multiple uploads at once (5 by default):
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/Multiple%20Upload%20Threads.png" alt="Multiple Upload Threads" style="width:200px;"/>
 
 Show web browser toolbar icon, show data in MyTardis.
