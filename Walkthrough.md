@@ -22,6 +22,7 @@ Create a folder whose name matches your MyTardis username ("wettenhj" for me):
 
 Put your data within your user folder, ensuring that all datafiles are grouped within
 folders, which will be become datasets in MyTardis:
+
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DatasetsInUserFolder.png" alt="Data In User Folder" style="width:200px;"/>
 
 Launch MyData, and enter some basic settings in MyData's Settings Dialog (below).  Each
