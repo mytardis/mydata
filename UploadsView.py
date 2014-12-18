@@ -4,6 +4,7 @@ import wx.dataview as dv
 
 from UploadsModel import UploadsModel
 from UploadModel import UploadModel
+# from MyDataProgressRenderer import MyDataProgressRenderer
 
 from logger.Logger import logger
 import traceback
@@ -21,6 +22,11 @@ class UploadsView(wx.Panel):
                                                       | dv.DV_VERT_RULES
                                                       | dv.DV_MULTIPLE)
 
+        smallFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        if smallFont.GetPointSize() > 11:
+            smallFont.SetPointSize(11)
+        self.uploadsDataViewControl.SetFont(smallFont)
+
         self.uploadsModel = uploadsModel
         self.foldersController = foldersController
 
@@ -28,14 +34,14 @@ class UploadsView(wx.Panel):
 
         from UploadsModel import ColumnType
         for col in range(0, self.uploadsModel.GetColumnCount()):
-            if self.uploadsModel.GetColumnType(col) == ColumnType.TEXT:
+            if self.uploadsModel.columnTypes[col] == ColumnType.TEXT:
                 column = self.uploadsDataViewControl\
                     .AppendTextColumn(self.uploadsModel.GetColumnName(col),
                                       col,
                                       width=self.uploadsModel
                                           .GetDefaultColumnWidth(col),
                                       mode=dv.DATAVIEW_CELL_INERT)
-            if self.uploadsModel.GetColumnType(col) == ColumnType.BITMAP:
+            if self.uploadsModel.columnTypes[col] == ColumnType.BITMAP:
                 column = self.uploadsDataViewControl\
                     .AppendBitmapColumn(self.uploadsModel.GetColumnName(col),
                                         col,
@@ -44,8 +50,8 @@ class UploadsView(wx.Panel):
                                         mode=dv.DATAVIEW_CELL_INERT)
                 column.Alignment = wx.ALIGN_CENTER
                 column.Renderer.Alignment = wx.ALIGN_CENTER
-            if self.uploadsModel.GetColumnType(col) == ColumnType.PROGRESS:
-                column = self.uploadsDataViewControl\
+            if self.uploadsModel.columnTypes[col] == ColumnType.PROGRESS:
+                self.uploadsDataViewControl\
                     .AppendProgressColumn(self.uploadsModel.GetColumnName(col),
                                           col,
                                           width=self.uploadsModel

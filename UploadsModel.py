@@ -136,7 +136,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                     icon = self.failedIcon
                 return icon
             columnKey = self.GetColumnKeyName(col)
-            return self.uploadsData[row].GetValueForKey(columnKey)
+            if self.GetColumnType(col) == "string":
+                return str(self.uploadsData[row].GetValueForKey(columnKey))
+            else:
+                return self.uploadsData[row].GetValueForKey(columnKey)
         except IndexError:
             # A "list index out of range" exception can be
             # thrown if the row is currently being deleted
@@ -174,9 +177,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     def GetDefaultColumnWidth(self, col):
         return self.defaultColumnWidths[col]
-
-    def GetColumnType(self, col):
-        return self.columnTypes[col]
 
     # Report how many rows this model provides data for.
     def GetRowCount(self):
@@ -265,6 +265,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             if self.uploadsData[row].GetFolderModel() == folderModel and \
                     self.uploadsData[row].GetDataFileIndex() == dataFileIndex:
                 del self.uploadsData[row]
+                del self.unfilteredUploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
                     self.TryRowDeleted(row)
@@ -397,9 +398,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         for row in reversed(rowsToDelete):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
+            del self.unfilteredUploadsData[row]
         wx.CallAfter(self.RowsDeleted, rowsToDelete)
 
-        self.unfilteredUploadsData = list()
         self.filteredUploadsData = list()
         self.filtered = False
         self.searchString = ""

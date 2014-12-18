@@ -1,6 +1,8 @@
 MyData User Guide
 =================
 
+See also: [MyData Walkthrough](Walkthrough.md)
+
 **1. Overview**  
 **2. MyTardis Prerequisites**  
 

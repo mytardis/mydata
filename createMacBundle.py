@@ -1,8 +1,7 @@
-# MyData - Desktop application for uploading data to MyTardis
+# MyData - easy data uploads to the MyTardis research data management system
 #
 # Copyright (c) 2012-2013, Monash e-Research Centre (Monash University,
-#                                                    Australia)
-# All rights reserved.
+# Australia). All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -10,8 +9,8 @@
 # any later version.
 #
 # In addition, redistribution and use in source and binary forms, with or
-# without modification, are permitted provided that the following conditions
-# are met:
+# without modification, are permitted provided that the following
+# conditions are met:
 #
 # -  Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
@@ -40,6 +39,58 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Enquiries: help@massive.org.au
+#  Enquiries: store.star.help@monash.edu
 
-versionNumber = "0.0.4"
+"""
+A distutils script to make a standalone .app of MyData for
+Mac OS X.  You can get py2app from https://pypi.python.org/pypi/py2app/.
+Use this command to build the .app and collect the other needed files:
+
+   python createMacBundle.py py2app
+
+Traditionally, this script would be named setup.py
+"""
+
+from setuptools import setup, Extension
+import MyDataVersionNumber
+import CreateCommitDef
+import requests
+import os
+import pkgutil
+
+appName = "MyData"
+
+resource_files=["MyData.icns", "favicon.ico", requests.certs.where()]
+
+for iconFilesPath in ("png-normal/icons16x16", "png-normal/icons24x24",
+                      "png-hot/icons24x24"):
+    for iconFile in os.listdir(iconFilesPath):
+        iconFilePath = os.path.join(iconFilesPath, iconFile)
+        if os.path.isfile(iconFilePath):
+            resource_file = (iconFilesPath, [iconFilePath])
+            resource_files.append(resource_file)
+
+mydataVersionNumberModulePath = \
+    os.path.dirname(pkgutil.get_loader("MyDataVersionNumber").filename)
+
+setup(
+    options=dict(py2app=dict(
+        arch='i386',
+        plist=dict(
+            CFBundleDevelopmentRegion="English",
+            CFBundleDisplayName=appName,
+            CFBundleExecutable=appName,
+            CFBundleIconFile="MyData.icns",
+            CFBundleIdentifier="org.mytardis.MyData",
+            CFBundleName=appName,
+            CFBundlePackageType="APPL",
+            CFBundleVersion="Version " + MyDataVersionNumber.versionNumber,
+            LSArchitecturePriority=["i386"]
+            )
+        )
+    ),
+    data_files=resource_files,
+    name=appName,
+    setup_requires=["py2app"],
+    app=['MyData.py']
+)

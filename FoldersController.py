@@ -20,6 +20,7 @@ import OpenSSH
 from ExperimentModel import ExperimentModel
 from DatasetModel import DatasetModel
 from UserModel import UserModel
+from VerificationModel import VerificationModel
 from UploadModel import UploadModel
 from UploadModel import UploadStatus
 from FolderModel import FolderModel
@@ -50,7 +51,7 @@ class ConnectionStatus():
 
 class UploadMethod():
     HTTP_POST = 0
-    SCP = 1
+    VIA_STAGING = 1
 
 
 class FoldersController():
@@ -186,6 +187,9 @@ class FoldersController():
         uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                   folderModel=folderModel,
                                   dataFileIndex=dfi)
+        if hasattr(event, "bytesUploadedToStaging"):
+            uploadModel.SetBytesUploadedToStaging(event.bytesUploadedToStaging)
+        uploadModel.SetVerificationModel(event.verificationModel)
         if self.IsShuttingDown():
             return
         uploadsModel.AddRow(uploadModel)
@@ -209,253 +213,159 @@ class FoldersController():
                            " blocked the main GUI thread for %d seconds." +
                            duration.total_seconds())
 
-    def StartDataUploads(self, folderModels=[]):
-        class UploadDataThread(threading.Thread):
-            def __init__(self, foldersController, foldersModel, settingsModel,
-                         folderModels=[]):
-                threading.Thread.__init__(self, name="UploadDataThread")
-                self.foldersController = foldersController
-                self.foldersModel = foldersModel
-                self.settingsModel = settingsModel
-                self.folderModels = folderModels
+    def StartDataUploads(self):
+        fc = self
+        settingsModel = fc.settingsModel
+        fc.canceled = False
+        fc.verifyDatafileRunnable = {}
+        fc.verificationsQueue = Queue.Queue()
+        # FIXME: Number of verify threads should be configurable
+        fc.numVerificationWorkerThreads = 5
+        fc.verificationWorkerThreads = []
 
-                fc = self.foldersController
+        for i in range(fc.numVerificationWorkerThreads):
+            t = threading.Thread(name="VerificationWorkerThread-%d"
+                                 % (i+1),
+                                 target=fc.verificationWorker,
+                                 args=(i+1,))
+            fc.verificationWorkerThreads.append(t)
+            t.start()
+        fc.uploadDatafileRunnable = {}
+        fc.uploadsQueue = Queue.Queue()
+        # FIXME: Number of upload threads should be configurable
+        fc.numUploadWorkerThreads = 5
+        # fc.numUploadWorkerThreads = 1
+        # print "FIXME: Set numUploadWorkerThreads to 1"
 
-                fc.canceled = False
+        fc.uploadMethod = UploadMethod.HTTP_POST
 
-                fc.verifyDatafileRunnable = {}
-                fc.verificationsQueue = Queue.Queue()
-                # FIXME: Number of verify threads should be configurable
-                fc.numVerificationWorkerThreads = 10  # FIXME: Magic number
+        settingsModel.GetUploaderModel().RequestStagingAccess()
+        uploadToStagingRequest = settingsModel\
+            .GetUploadToStagingRequest()
+        message = None 
+        if uploadToStagingRequest is None:
+            message = "Couldn't determine whether uploads to " \
+                      "staging have been approved.  " \
+                      "Falling back to HTTP POST."
+        elif uploadToStagingRequest['approved']:
+            logger.info("Uploads to staging have been approved.")
+            fc.uploadMethod = UploadMethod.VIA_STAGING
+        else:
+            message = \
+            "Uploads to MyTardis's staging area require " \
+            "approval from your MyTardis administrator.\n\n" \
+            "A request has been sent, and you will be contacted " \
+            "once the request has been approved. Until then, " \
+            "MyData will upload files using HTTP POST, and will " \
+            "only upload one file at a time.\n\n" \
+            "HTTP POST is generally only suitable for small " \
+            "files (up to 100 MB each)."
+        if message:
+            fc.uploadMethodWarningAcknowledged = False
+            logger.warning(message)
+            def acknowledgedUploadMethodWarning():
+                fc.uploadMethodWarningAcknowledged = True
+            wx.PostEvent(
+                self.notifyWindow,
+                self.ShowMessageDialogEvent(
+                        title="MyData",
+                        message=message,
+                        icon=wx.ICON_WARNING,
+                        cb=acknowledgedUploadMethodWarning))
+            fc.uploadMethod = UploadMethod.HTTP_POST
+        if fc.uploadMethod == UploadMethod.HTTP_POST and \
+                fc.numUploadWorkerThreads > 1:
+            logger.warning(
+                "Using HTTP POST, so setting "
+                "numUploadWorkerThreads to 1, "
+                "because urllib2 is not thread-safe.")
+            fc.numUploadWorkerThreads = 1
 
-                fc.verificationWorkerThreads = []
-                for i in range(fc.numVerificationWorkerThreads):
-                    t = threading.Thread(name="VerificationWorkerThread-%d"
-                                         % (i+1),
-                                         target=fc.verificationWorker,
-                                         args=(i+1,))
-                    fc.verificationWorkerThreads.append(t)
-                    t.start()
-
-                fc.uploadDatafileRunnable = {}
-                fc.uploadsQueue = Queue.Queue()
-                # FIXME: Number of upload threads should be configurable
-                fc.numUploadWorkerThreads = 5
-
-                fc.uploadMethod = UploadMethod.HTTP_POST
-
-                countMax = 50  # FIXME: Magic number
-                count = 0
-                while not self.settingsModel.GetUploadToStagingRequest():
-                    # Wait for up to 2 seconds for Uploader thread to complete.
-                    count = count + 1
-                    if count > countMax:
-                        break
-                    time.sleep(0.1)
-                uploadToStagingRequest = self.settingsModel\
-                    .GetUploadToStagingRequest()
-                message = None
-                if uploadToStagingRequest is not None and \
-                        uploadToStagingRequest['approved']:
-                    logger.info("Uploads to staging have been approved.")
-                    fc.uploadMethod = UploadMethod.SCP
-                else:
-                    self.settingsModel.GetUploaderModel().RequestStagingAccess()
-                    uploadToStagingRequest = self.settingsModel\
-                        .GetUploadToStagingRequest()
-                    if uploadToStagingRequest is None:
-                        message = "Couldn't determine whether uploads to " \
-                                  "staging have been approved.  " \
-                                  "Falling back to HTTP POST."
-                    elif uploadToStagingRequest['approved']:
-                        logger.info("Uploads to staging have been approved.")
-                        fc.uploadMethod = UploadMethod.SCP
-                    else:
-                        message = \
-                        "Uploads to MyTardis's staging area require " \
-                        "approval from your MyTardis administrator.\n\n" \
-                        "A request has been sent, and you will be contacted " \
-                        "once the request has been approved. Until then, " \
-                        "MyData will upload files using HTTP POST, and will " \
-                        "only upload one file at a time.\n\n" \
-                        "HTTP POST is generally only suitable for small " \
-                        "files (up to 100 MB each)."
-                if message:
-                    fc.uploadMethodWarningAcknowledged = False
-                    logger.warning(message)
-                    def acknowledgedUploadMethodWarning():
-                        fc.uploadMethodWarningAcknowledged = True
-                    wx.PostEvent(
-                        self.foldersController.notifyWindow,
-                        self.foldersController
-                            .ShowMessageDialogEvent(
-                                title="MyData",
-                                message=message,
-                                icon=wx.ICON_WARNING,
-                                cb=acknowledgedUploadMethodWarning))
-                    while not fc.uploadMethodWarningAcknowledged:
-                        time.sleep(0.1)
-                    fc.uploadMethod = UploadMethod.HTTP_POST
-                if fc.uploadMethod == UploadMethod.HTTP_POST and \
-                        fc.numUploadWorkerThreads > 1:
-                    logger.warning(
-                        "Using HTTP POST, so setting "
-                        "numUploadWorkerThreads to 1, "
-                        "because urllib2 is not thread-safe.")
-                    fc.numUploadWorkerThreads = 1
-
-                fc.uploadWorkerThreads = []
-                for i in range(fc.numUploadWorkerThreads):
-                    t = threading.Thread(name="UploadWorkerThread-%d" % (i+1),
-                                         target=fc.uploadWorker, args=())
-                    fc.uploadWorkerThreads.append(t)
-                    t.start()
-
-            def run(self):
+        fc.uploadWorkerThreads = []
+        for i in range(fc.numUploadWorkerThreads):
+            t = threading.Thread(name="UploadWorkerThread-%d" % (i+1),
+                                 target=fc.uploadWorker, args=())
+            fc.uploadWorkerThreads.append(t)
+            t.start()
+        try:
+            for row in range(0, self.foldersModel.GetRowCount()):
+                if self.IsShuttingDown():
+                    return
+                folderModel = self.foldersModel.foldersData[row]
+                logger.debug(
+                    "UploadDataThread: Starting verifications "
+                    "and uploads for folder: " +
+                    folderModel.GetFolder())
+                if self.IsShuttingDown():
+                    return
                 try:
-                    if len(folderModels) == 0:
-                        # Scan all folders
-                        for row in range(0, self.foldersModel.GetRowCount()):
-                            if self.foldersController.IsShuttingDown():
-                                return
-                            folderModel = self.foldersModel.foldersData[row]
-                            logger.debug(
-                                "UploadDataThread: Starting verifications "
-                                "and uploads for folder: " +
-                                folderModel.GetFolder())
-                            if self.foldersController.IsShuttingDown():
-                                return
-                            try:
-                                # Save MyTardis URL, so if it's changing in the
-                                # Settings Dialog while this thread is
-                                # attempting to connect, we ensure that any
-                                # exception thrown by this thread refers to the
-                                # old version of the URL.
-                                myTardisUrl = \
-                                    self.settingsModel.GetMyTardisUrl()
-                                try:
-                                    experimentModel = ExperimentModel\
-                                        .GetExperimentForFolder(folderModel)
-                                except Exception, e:
-                                    logger.error(str(e))
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                            .ShowMessageDialogEvent(
-                                                title="MyData",
-                                                message=str(e),
-                                                icon=wx.ICON_ERROR))
-                                    return
-                                folderModel.SetExperiment(experimentModel)
-                                CONNECTED = ConnectionStatus.CONNECTED
-                                wx.PostEvent(
-                                    self.foldersController.notifyWindow,
-                                    self.foldersController
-                                        .ConnectionStatusEvent(
-                                            myTardisUrl=myTardisUrl,
-                                            connectionStatus=CONNECTED))
-                                try:
-                                    datasetModel = DatasetModel\
-                                        .CreateDatasetIfNecessary(folderModel)
-                                except Exception, e:
-                                    logger.error(str(e))
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                            .ShowMessageDialogEvent(
-                                                title="MyData",
-                                                message=str(e),
-                                                icon=wx.ICON_ERROR))
-                                    return
-                                folderModel.SetDatasetModel(datasetModel)
-                                self.foldersController\
-                                    .VerifyDatafiles(folderModel)
-                            except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.IsShuttingDown():
-                                    DISCONNECTED = \
-                                        ConnectionStatus.DISCONNECTED
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                            .ConnectionStatusEvent(
-                                                myTardisUrl=myTardisUrl,
-                                                connectionStatus=DISCONNECTED))
-                                return
-                            except ValueError, e:
-                                logger.debug("Failed to retrieve experiment "
-                                             "for folder " +
-                                             str(folderModel.GetFolder()))
-                                logger.debug(traceback.format_exc())
-                                return
-                            if experimentModel is None:
-                                logger.debug("Failed to acquire a MyTardis "
-                                             "experiment to store data in for"
-                                             "folder " +
-                                             folderModel.GetFolder())
-                                return
-                            if self.foldersController.IsShuttingDown():
-                                return
-                    else:
-                        # Scan specific folders (e.g. dragged and dropped),
-                        # instead of all of them:
-                        for folderModel in folderModels:
-                            if self.foldersController.IsShuttingDown():
-                                return
-                            folderModel.SetCreatedDate()
-                            if self.foldersController.IsShuttingDown():
-                                return
-                            try:
-                                # Save MyTardis URL, so if it's changing in the
-                                # Settings Dialog while this thread is
-                                # attempting to connect, we ensure that any
-                                # exception thrown by this thread refers to the
-                                # old version of the URL.
-                                myTardisUrl = \
-                                    self.settingsModel.GetMyTardisUrl()
-                                experimentModel = ExperimentModel\
-                                    .GetExperimentForFolder(folderModel)
-                                folderModel.SetExperiment(experimentModel)
-                                CONNECTED = ConnectionStatus.CONNECTED
-                                wx.PostEvent(
-                                    self.foldersController.notifyWindow,
-                                    self.foldersController
-                                        .ConnectionStatusEvent(
-                                            myTardisUrl=myTardisUrl,
-                                            connectionStatus=CONNECTED))
-                                datasetModel = DatasetModel\
-                                    .CreateDatasetIfNecessary(folderModel)
-                                if self.foldersController.IsShuttingDown():
-                                    return
-                                folderModel.SetDatasetModel(datasetModel)
-                                self.foldersController\
-                                    .VerifyDatafiles(folderModel)
-                            except requests.exceptions.ConnectionError, e:
-                                if not self.foldersController.IsShuttingDown():
-                                    DISCONNECTED = \
-                                        ConnectionStatus.DISCONNECTED
-                                    wx.PostEvent(
-                                        self.foldersController.notifyWindow,
-                                        self.foldersController
-                                            .ConnectionStatusEvent(
-                                                myTardisUrl=myTardisUrl,
-                                                connectionStatus=DISCONNECTED))
-                                return
-                            except ValueError, e:
-                                logger.debug("Failed to retrieve experiment "
-                                             "for folder " +
-                                             str(folderModel.GetFolder()))
-                                return
-                            if self.foldersController.IsShuttingDown():
-                                return
-                except:
-                    logger.error(traceback.format_exc())
-
-        self.uploadDataThread = \
-            UploadDataThread(foldersController=self,
-                             foldersModel=self.foldersModel,
-                             settingsModel=self.foldersModel.settingsModel,
-                             folderModels=folderModels)
-        self.uploadDataThread.start()
+                    # Save MyTardis URL, so if it's changing in the
+                    # Settings Dialog while this thread is
+                    # attempting to connect, we ensure that any
+                    # exception thrown by this thread refers to the
+                    # old version of the URL.
+                    myTardisUrl = \
+                        settingsModel.GetMyTardisUrl()
+                    try:
+                        experimentModel = ExperimentModel\
+                            .GetExperimentForFolder(folderModel)
+                    except Exception, e:
+                        logger.error(str(e))
+                        wx.PostEvent(
+                            self.notifyWindow,
+                            self.ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=str(e),
+                                    icon=wx.ICON_ERROR))
+                        return
+                    folderModel.SetExperiment(experimentModel)
+                    CONNECTED = ConnectionStatus.CONNECTED
+                    wx.PostEvent(
+                        self.notifyWindow,
+                        self.ConnectionStatusEvent(
+                                myTardisUrl=myTardisUrl,
+                                connectionStatus=CONNECTED))
+                    try:
+                        datasetModel = DatasetModel\
+                            .CreateDatasetIfNecessary(folderModel)
+                    except Exception, e:
+                        logger.error(traceback.format_exc())
+                        wx.PostEvent(
+                            self.notifyWindow,
+                            self.ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=str(e),
+                                    icon=wx.ICON_ERROR))
+                        return
+                    folderModel.SetDatasetModel(datasetModel)
+                    self.VerifyDatafiles(folderModel)
+                except requests.exceptions.ConnectionError, e:
+                    if not self.IsShuttingDown():
+                        DISCONNECTED = \
+                            ConnectionStatus.DISCONNECTED
+                        wx.PostEvent(
+                            self.notifyWindow,
+                            self.ConnectionStatusEvent(
+                                    myTardisUrl=myTardisUrl,
+                                    connectionStatus=DISCONNECTED))
+                    return
+                except ValueError, e:
+                    logger.debug("Failed to retrieve experiment "
+                                 "for folder " +
+                                 str(folderModel.GetFolder()))
+                    logger.debug(traceback.format_exc())
+                    return
+                if experimentModel is None:
+                    logger.debug("Failed to acquire a MyTardis "
+                                 "experiment to store data in for"
+                                 "folder " +
+                                 folderModel.GetFolder())
+                    return
+                if self.IsShuttingDown():
+                    return
+            # End: for row in range(0, self.foldersModel.GetRowCount())
+        except:
+            logger.error(traceback.format_exc())
 
     def uploadWorker(self):
         """
@@ -751,6 +661,11 @@ class VerifyDatafileRunnable():
         self.dataFileIndex = dataFileIndex
         self.settingsModel = settingsModel
 
+        self.verificationModel = \
+            VerificationModel(folderModel=folderModel,
+                              dataFileIndex=dataFileIndex)
+
+
     def GetDatafileIndex(self):
         return self.dataFileIndex
 
@@ -767,13 +682,18 @@ class VerifyDatafileRunnable():
                 dataset=self.folderModel.GetDatasetModel(),
                 filename=dataFileName,
                 directory=dataFileDirectory)
+            # logger.debug("Found existing datafile record for %s in "
+                         # "directory %s" % (dataFileName, dataFileDirectory))
         except DoesNotExist, e:
+            # logger.debug("Didn't find existing datafile record for %s in "
+                         # "directory %s" % (dataFileName, dataFileDirectory))
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.DidntFindMatchingDatafileOnServerEvent(
                     foldersController=self.foldersController,
                     folderModel=self.folderModel,
-                    dataFileIndex=self.dataFileIndex))
+                    dataFileIndex=self.dataFileIndex,
+                    verificationModel=self.verificationModel))
         except MultipleObjectsReturned, e:
             self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
             self.foldersModel.FolderStatusUpdated(self.folderModel)
@@ -793,7 +713,7 @@ class VerifyDatafileRunnable():
                     .GetUploadToStagingRequest()
                 bytesUploadedToStaging = 0
                 if self.foldersController.uploadMethod == \
-                        UploadMethod.SCP and \
+                        UploadMethod.VIA_STAGING and \
                         uploadToStagingRequest is not None and \
                         uploadToStagingRequest['approved'] and \
                         len(replicas) > 0:
@@ -808,7 +728,10 @@ class VerifyDatafileRunnable():
                         bytesUploadedToStaging = \
                             OpenSSH.GetBytesUploadedToStaging(
                                 replicas[0].GetUri(),
-                                username, privateKeyFilePath, host)
+                                username, privateKeyFilePath, host,
+                                self.verificationModel)
+                        logger.debug("%d bytes uploaded to staging for %s"
+                                     % (bytesUploadedToStaging, replicas[0].GetUri()))
                     except StagingHostRefusedSshConnection, e:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
@@ -837,30 +760,33 @@ class VerifyDatafileRunnable():
                                     message=message,
                                     icon=wx.ICON_ERROR))
                         return
-                if bytesUploadedToStaging == int(existingDatafile.GetSize()):
-                    logger.debug("No need to re-upload \"%s\" to staging. "
-                                 "The file size (%s bytes) is correct in "
-                                 "staging."
-                                 % (dataFilePath,
-                                    "{:,}".format(bytesUploadedToStaging)))
-                    self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                         True)
-                    self.foldersModel.FolderStatusUpdated(self.folderModel)
-                    return
-                else:
-                    logger.debug("Re-uploading \"%s\" to staging, because "
-                                 "the file size is %d bytes in staging, but "
-                                 "it should be %d bytes."
-                                 % (dataFilePath,
-                                    bytesUploadedToStaging,
-                                    int(existingDatafile.GetSize())))
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.UnverifiedDatafileOnServerEvent(
-                        foldersController=self.foldersController,
-                        folderModel=self.folderModel,
-                        dataFileIndex=self.dataFileIndex,
-                        existingUnverifiedDatafile=existingDatafile))
+                    if bytesUploadedToStaging == \
+                            int(existingDatafile.GetSize()):
+                        # logger.debug("No need to re-upload \"%s\" to staging. "
+                                     # "The file size (%s bytes) is correct in "
+                                     # "staging."
+                                     # % (dataFilePath,
+                                        # "{:,}".format(bytesUploadedToStaging)))
+                        self.folderModel.SetDataFileUploaded(self.dataFileIndex,
+                                                             True)
+                        self.foldersModel.FolderStatusUpdated(self.folderModel)
+                        return
+                    else:
+                        logger.debug("Re-uploading \"%s\" to staging, because "
+                                     "the file size is %d bytes in staging, but "
+                                     "it should be %d bytes."
+                                     % (dataFilePath,
+                                        bytesUploadedToStaging,
+                                        int(existingDatafile.GetSize())))
+                    wx.PostEvent(
+                        self.foldersController.notifyWindow,
+                        self.foldersController.UnverifiedDatafileOnServerEvent(
+                            foldersController=self.foldersController,
+                            folderModel=self.folderModel,
+                            dataFileIndex=self.dataFileIndex,
+                            existingUnverifiedDatafile=existingDatafile,
+                            bytesUploadedToStaging=bytesUploadedToStaging,
+                            verificationModel=self.verificationModel))
             else:
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
@@ -934,7 +860,8 @@ class UploadDatafileRunnable():
                     100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
                     / dataFileSize
 
-                self.uploadModel.SetProgress(float(percentComplete))
+                # self.uploadModel.SetProgress(float(percentComplete))
+                self.uploadModel.SetProgress(int(percentComplete))
                 self.uploadsModel.UploadProgressUpdated(self.uploadModel)
                 if dataFileSize >= (1024 * 1024 * 1024):
                     self.uploadModel.SetMessage("%3.1f %%  MD5 summed"
@@ -964,7 +891,8 @@ class UploadDatafileRunnable():
         else:
             dataFileSize = int(self.existingUnverifiedDatafile.GetSize())
 
-        self.uploadModel.SetProgress(0.0)
+        # self.uploadModel.SetProgress(0.0)
+        self.uploadModel.SetProgress(0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
         if dataFileSize == 0:
             self.uploadsModel.UploadFileSizeUpdated(self.uploadModel)
@@ -1016,9 +944,9 @@ class UploadDatafileRunnable():
                 return
             percentComplete = \
                 100.0 - ((total - current) * 100.0) / total
-
             self.uploadModel.SetBytesUploaded(current)
-            self.uploadModel.SetProgress(float(percentComplete))
+            # self.uploadModel.SetProgress(float(percentComplete))
+            self.uploadModel.SetProgress(int(percentComplete))
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             if message:
                 self.uploadModel.SetMessage(message)
@@ -1224,11 +1152,11 @@ class UploadDatafileRunnable():
                             icon=wx.ICON_ERROR))
                 return
             except ScpException, e:
+                if self.foldersController.IsShuttingDown() or self.uploadModel.Canceled():
+                    return
                 message = str(e)
                 message += "\n\n" + e.command
                 logger.error(message)
-                # if self.foldersController.IsShuttingDown():
-                    # return
                 # wx.PostEvent(
                     # self.foldersController.notifyWindow,
                     # self.foldersController.AbortUploadsEvent(
@@ -1251,22 +1179,9 @@ class UploadDatafileRunnable():
                 else:
                     raise
         except urllib2.HTTPError, e:
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.AbortUploadsEvent(
-                    failed=True))
-            message = "An error occured while trying to POST data to " \
-                "the MyTardis server.\n\n"
-            message += str(e)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                    .ShowMessageDialogEvent(
-                        title="MyData",
-                        message=message,
-                        icon=wx.ICON_ERROR))
-            return
-        except urllib2.URLError, e:
+            logger.error("url: " + url)
+            logger.error(traceback.format_exc())
+            logger.error(e.read())
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.AbortUploadsEvent(
@@ -1336,12 +1251,15 @@ class UploadDatafileRunnable():
             self.uploadModel.SetStatus(UploadStatus.COMPLETED)
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             self.uploadModel.SetMessage("Upload complete!")
-            self.uploadModel.SetProgress(100.0)
+            # self.uploadModel.SetProgress(100.0)
+            self.uploadModel.SetProgress(100)
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                  uploaded=True)
             self.foldersModel.FolderStatusUpdated(self.folderModel)
         else:
+            if self.foldersController.IsShuttingDown() or self.uploadModel.Canceled():
+                return
             logger.error("Upload failed for " + dataFilePath)
             self.uploadModel.SetStatus(UploadStatus.FAILED)
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
@@ -1354,7 +1272,8 @@ class UploadDatafileRunnable():
             else:
                 self.uploadModel.SetMessage("Upload failed.")
 
-            self.uploadModel.SetProgress(0.0)
+            # self.uploadModel.SetProgress(0.0)
+            self.uploadModel.SetProgress(0)
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                  uploaded=False)

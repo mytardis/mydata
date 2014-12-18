@@ -1,9 +1,12 @@
+import wx
 import wx.dataview
 import sqlite3
 from FolderModel import FolderModel
 from ExperimentModel import ExperimentModel
 import threading
 import os
+import sys
+import traceback
 
 from logger.Logger import logger
 
@@ -55,7 +58,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.columnKeys = ("dataViewId", "folder", "location", "created",
                            "status", "owner.username", "owner.email")
 
-        self.defaultColumnWidths = (40, 185, 200, 70, 160, 120, 180)
+        if sys.platform.startswith("win"):
+            self.defaultColumnWidths = (40, 185, 200, 70, 160, 120, 180)
+        else:
+            self.defaultColumnWidths = (40, 185, 200, 80, 160, 120, 180)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -63,12 +69,16 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.maxDataViewId = 0
 
     def DeleteAllRows(self):
+        rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.foldersData[row]
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+            rowsDeleted.append(row)
+
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsDeleted)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+
         self.ufd = list()
         self.ffd = list()
         self.filtered = False
@@ -79,7 +89,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         return self.foldersData[row]
 
     def CleanUp(self):
-
         logger.debug("Joining FoldersModel's UploadDataThread...")
         self.uploadDataThread.join()
         logger.debug("Joined FoldersModel's UploadDataThread.")
@@ -171,7 +180,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 return owner.GetValueForKey(ownerKey)
             else:
                 return None
-        return self.foldersData[row].GetValueForKey(columnKey)
+        return str(self.foldersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the foldersData object for a
     # particular row,colname
@@ -255,7 +264,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
@@ -274,7 +282,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 wx.CallAfter(self.RowDeleted, row)
 
     def DeleteFolderById(self, id):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
@@ -313,7 +320,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         return self.maxDataViewId
 
     def AddRow(self, value):
-
         self.Filter("")
         self.foldersData.append(value)
         # Notify views
@@ -338,7 +344,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     wx.CallAfter(self.RowValueChanged, row, col)
 
     def FolderStatusUpdated(self, folderModel):
-
         for row in range(0, self.GetCount()):
             if self.foldersData[row] == folderModel:
                 col = self.columnNames.index("Status")
@@ -348,12 +353,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     wx.CallAfter(self.RowValueChanged, row, col)
 
     def ImportFolders(self, dataDirectory, owner):
-
+      try:
         logger.debug("Scanning " + dataDirectory + " for dataset folders...")
         datasetFolders = os.walk(dataDirectory).next()[1]
         for datasetFolder in datasetFolders:
-            logger.debug("  Found subdirectory, assumed to be data set: " +
-                         datasetFolder)
             dataViewId = self.GetMaxDataViewId() + 1
             folderModel = FolderModel(dataViewId=dataViewId,
                                       folder=datasetFolder,
@@ -365,3 +368,5 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                       settingsModel=self.settingsModel)
             folderModel.SetCreatedDate()
             self.AddRow(folderModel)
+      except:
+        print traceback.format_exc()

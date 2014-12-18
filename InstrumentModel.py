@@ -70,12 +70,16 @@ class InstrumentModel():
              "name": name}
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+        status_code = response.status_code
+        content = response.text
+        if status_code >= 200 and status_code < 300:
             instrumentJson = response.json()
+            response.close()
             return InstrumentModel(settingsModel=settingsModel, name=name,
                                    instrumentJson=instrumentJson)
         else:
-            if response.status_code == 401:
+            response.close()
+            if status_code == 401:
                 message = "Couldn't create instrument \"%s\" " \
                           "in facility \"%s\"." \
                           % (name, facility.GetName())
@@ -84,11 +88,11 @@ class InstrumentModel():
                            "check the permissions of the \"%s\" " \
                            "user account." % myTardisDefaultUsername
                 raise Unauthorized(message)
-            if response.status_code == 404:
+            if status_code == 404:
                 raise Exception("HTTP 404 (Not Found) received for: " + url)
-            logger.error("Status code = " + str(response.status_code))
+            logger.error("Status code = " + str(status_code))
             logger.error("URL = " + url)
-            raise Exception(response.text)
+            raise Exception(content)
 
     @staticmethod
     def GetInstrument(settingsModel, facility, name):
@@ -100,13 +104,12 @@ class InstrumentModel():
             "&name=" + urllib.quote(name)
         headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                    myTardisApiKey}
-        response = requests.get(url=url, headers=headers)
+        session = requests.Session()
+        response = session.get(url=url, headers=headers)
         if response.status_code != 200:
-            logger.debug("Failed to look up instrument \"%s\" "
-                         "in facility \"%s\"."
-                         % (name, facility.GetName()))
-            logger.debug(response.text)
-            return None
+            message = response.text
+            logger.error(message)
+            raise Exception(message)
         instrumentsJson = response.json()
         numInstrumentsFound = \
             instrumentsJson['meta']['total_count']
@@ -115,14 +118,19 @@ class InstrumentModel():
                            % name)
             logger.debug(url)
             logger.debug(response.text)
+            response.close()
+            session.close()
             return None
         else:
             logger.debug("Found instrument record for name \"%s\" "
                          "in facility \"%s\"" %
                          (name, facility.GetName()))
+            instrumentJson = instrumentsJson['objects'][0]
+            response.close()
+            session.close()
             return InstrumentModel(
                 settingsModel=settingsModel, name=name,
-                instrumentJson=instrumentsJson['objects'][0])
+                instrumentJson=instrumentJson)
 
     @staticmethod
     def GetMyInstruments(settingsModel, userModel):
@@ -139,13 +147,14 @@ class InstrumentModel():
                 "&facility__id=" + str(facility.GetId())
             headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                        myTardisApiKey}
-            response = requests.get(url=url, headers=headers)
+            session = requests.Session()
+            response = session.get(url=url, headers=headers)
             if response.status_code != 200:
-                logger.debug("Failed to look up instrument record for "
-                             "facility \"" + facility.GetName() + "\".")
-                logger.debug(response.text)
-                return None
+                message = response.text
+                raise Exception(message)
             instrumentsJson = response.json()
+            response.close()
+            session.close()
             for instrumentJson in instrumentsJson['objects']:
                 instruments.append(InstrumentModel(
                     settingsModel=settingsModel,
@@ -173,3 +182,11 @@ class InstrumentModel():
             logger.info("Renaming instrument failed.")
             logger.info("Status code = " + str(response.status_code))
             logger.info(response.text)
+        response.close()
+
+    def GetSettingsModel(self):
+        return self.settingsModel
+
+    def SetSettingsModel(self, settingsModel):
+        self.settingsModel = settingsModel
+

@@ -2,6 +2,7 @@ import sys
 import requests
 import traceback
 import os
+from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
 
@@ -92,11 +93,11 @@ class SettingsModel():
                                               self.GetInstrumentName())
         return self.instrument
 
+    def SetInstrument(self, instrument):
+        self.instrument = instrument
+
     def GetInstrumentName(self):
         return self.instrument_name
-
-    def GetInstrument(self):
-        return self.instrument
 
     def SetInstrumentName(self, instrumentName):
         self.instrument_name = instrumentName
@@ -218,6 +219,10 @@ class SettingsModel():
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
+        # self.mydataConfigPath could be None for the temporary
+        # settingsModel created during SettingsDialog's validation.
+        if self.mydataConfigPath is not None:
+            self.SaveToDisk()
 
     def Validate(self):
         try:
@@ -277,14 +282,39 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
+            filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
+            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            if len(dirsDepth1) == 0:
+                message = "The data directory: \"%s\" doesn't contain any " \
+                    "user folders!" % \
+                    self.GetDataDirectory()
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
+            filesDepth2 = glob(os.path.join(self.GetDataDirectory(), '*', '*'))
+            dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
+            if len(dirsDepth2) == 0:
+                message = "The data directory: \"%s\" should contain dataset " \
+                    "folders within user folders." % \
+                    self.GetDataDirectory()
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
 
             try:
-                r = requests.get(self.GetMyTardisUrl() + "/about/", timeout=5)
-                if r.status_code < 200 or r.status_code >= 300:
+                session = requests.Session()
+                r = session.get(self.GetMyTardisUrl() + "/about/")
+                status_code = r.status_code
+                content = r.text
+                history = r.history
+                url = r.url
+                r.close()
+                session.close()
+                if status_code < 200 or status_code >= 300:
                     logger.debug("Received HTTP %d while trying to access "
                                  "MyTardis server (%s)."
-                                 % (r.status_code, self.GetMyTardisUrl()))
-                    logger.debug(r.text)
+                                 % (status_code, self.GetMyTardisUrl()))
+                    logger.debug(content)
                     if not self.GetMyTardisUrl().startswith("http"):
                         message = "Please enter a valid MyTardis URL, " \
                             "beginning with \"http://\" or \"https://\"."
@@ -292,17 +322,17 @@ class SettingsModel():
                     else:
                         message = "Please enter a valid MyTardis URL.\n\n"
                         message += "Received HTTP status code %d" \
-                            % r.status_code
+                            % status_code
                         suggestion = None
                     self.validation = self.SettingsValidation(False, message,
                                                               "mytardis_url",
                                                               suggestion)
                     return self.validation
-                elif r.history:
+                elif history:
                     message = "MyData attempted to access MyTardis at " \
                             "\"%s\", but was redirected to:" \
                         "\n\n" % self.GetMyTardisUrl()
-                    message += "\t%s" % r.url
+                    message += "\t%s" % url
                     message += "\n\n"
                     message += "A redirection could be caused by any of " \
                         "the following reasons:" \
@@ -333,22 +363,6 @@ class SettingsModel():
                                                               "mytardis_url",
                                                               suggestion)
                     return self.validation
-                elif "MyTardis" not in r.text:
-                    if not self.GetMyTardisUrl().startswith("http"):
-                        message = "Please enter a valid MyTardis URL, " \
-                            "beginning with \"http://\" or \"https://\"."
-                        suggestion = "http://" + self.GetMyTardisUrl()
-                    else:
-                        logger.debug("Received HTTP %d while trying to "
-                                     "access MyTardis server (%s)."
-                                     % (r.status_code, self.GetMyTardisUrl()))
-                        logger.debug("Here 2")
-                        message = "Please enter a valid MyTardis URL."
-                        suggestion = None
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "mytardis_url",
-                                                              suggestion)
-                    return self.validation
             except:
                 if not self.GetMyTardisUrl().startswith("http"):
                     message = "Please enter a valid MyTardis URL, " \
@@ -375,8 +389,14 @@ class SettingsModel():
                        self.GetApiKey(),
                        "Content-Type": "application/json",
                        "Accept": "application/json"}
-            response = requests.get(headers=headers, url=url)
-            if response.status_code < 200 or response.status_code >= 300:
+            session = requests.Session()
+            response = session.get(headers=headers, url=url)
+            # Consume response content, so session will be closed.
+            content = response.text
+            status_code = response.status_code
+            response.close()
+            session.close()
+            if status_code < 200 or status_code >= 300:
                 message = "Your MyTardis credentials are invalid.\n\n" \
                     "Please check your Username and API Key."
                 self.validation = self.SettingsValidation(False, message,
@@ -396,6 +416,7 @@ class SettingsModel():
                     self.validation = self.SettingsValidation(False, message,
                                                               "facility_name",
                                                               suggestion)
+                    return self.validation
                 except:
                     logger.error(traceback.format_exc())
                     self.validation = self.SettingsValidation(False, message,
@@ -445,7 +466,7 @@ class SettingsModel():
                            "we really shouldn't reuse the same instrument "
                            "record, unless it is just a case of having "
                            "multiple uploader instances for multiple "
-                           "MAC addresses (Ethernet and WiFi) "
+                           "MAC addresses (Ethernet and Wi-Fi) "
                            "on the same instrument PC.")
             self.instrument = \
                 InstrumentModel.GetInstrument(self,
@@ -466,26 +487,34 @@ class SettingsModel():
                                                 "instrument_name")
                     return self.validation
                 logger.info("self.instrument = " + str(self.instrument))
+            logger.debug("Checking if settingsModel.instrument is None and whether settingsModel.uploaderModel is None.")
             if self.instrument is not None and self.uploaderModel is not None:
                 try:
                     self.uploaderModel.SetInstrument(self.instrument)
                 except DoesNotExist:
-                    logger.error("Tried to SetInstrument in uploader record"
-                                 "but uploader record doesn't exist yet.")
+                    message = "Tried to SetInstrument in uploader record" \
+                                 "but uploader record doesn't exist yet."
+                    logger.error(message)
+                    raise Exception(message)
 
+            logger.debug("Validating email address.")
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
                 self.validation = self.SettingsValidation(False, message,
                                                           "contact_email")
                 return self.validation
+            logger.debug("Done validating email address.")
         except IncompatibleMyTardisVersion:
+            logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
             raise
         except:
             message = traceback.format_exc()
+            logger.error(message)
             self.validation = self.SettingsValidation(False, message, "")
             return self.validation
 
+        logger.debug("SettingsModel validation succeeded!")
         return self.SettingsValidation(True)
 
     def RequiredFieldIsBlank(self):

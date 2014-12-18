@@ -3,12 +3,13 @@ import wx.aui
 import re
 import requests
 import threading
+from datetime import datetime
 
 from logger.Logger import logger
-
 from SettingsModel import SettingsModel
 from Exceptions import DuplicateKey
 from Exceptions import IncompatibleMyTardisVersion
+import MyDataEvents as mde
 
 
 class SettingsDialog(wx.Dialog):
@@ -140,6 +141,7 @@ class SettingsDialog(wx.Dialog):
         self.cancelButton = wx.Button(self, wx.ID_CANCEL)
         buttonSizer.AddButton(self.cancelButton)
         buttonSizer.Realize()
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, self.cancelButton)
 
         sizer.Add(buttonSizer, 0,
                   wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.ALL, 5)
@@ -197,184 +199,45 @@ class SettingsDialog(wx.Dialog):
     def SetApiKey(self, apiKey):
         self.apiKeyField.SetValue(apiKey)
 
+    def OnCancel(self, event):
+        self.EndModal(wx.ID_CANCEL)
+
     def OnOK(self, event):
         if self.GetInstrumentName() != \
-                self.settingsModel.GetInstrumentName():
-            message = "A previous instrument name of \"%s\" " \
-                "has been associated with this MyData instance.\n" \
-                "Please choose how you would like the new \"%s\" " \
-                "instrument name to be applied." \
-                % (self.settingsModel.GetInstrumentName(),
-                   self.GetInstrumentName())
-            renameChoice = "Rename the existing instrument record to " \
-                "\"%s\"." % self.GetInstrumentName()
-            discardChoice = "Discard the new instrument name and revert " \
-                "to \"%s\"." % self.settingsModel.GetInstrumentName()
-            createChoice = "Use a separate instrument record for \"%s\", " \
-                "creating it if necessary." \
-                % self.GetInstrumentName()
-            dlg = wx.SingleChoiceDialog(self, message,
-                                        "MyData - Instrument Name Changed",
-                                        [renameChoice, discardChoice,
-                                         createChoice], wx.CHOICEDLG_STYLE)
-            if dlg.ShowModal() == wx.ID_OK:
-                if dlg.GetStringSelection() == renameChoice:
-                    logger.info("OK, we will rename the "
-                                "existing instrument record.")
-                    self.duplicateKey = False
-
-                    def renameInstrument(settingsDialog, settingsModel,
-                                         facilityName,
-                                         oldInstrumentName, newInstrumentName):
-                        try:
-                            settingsModel.RenameInstrument(
-                                facilityName,
-                                oldInstrumentName, newInstrumentName)
-                        except DuplicateKey:
-                            settingsDialog.duplicateKey = True
-
-                    thread = threading.Thread(
-                        target=renameInstrument,
-                        args=(self,
-                              self.settingsModel,
-                              self.GetFacilityName(),
-                              self.settingsModel.GetInstrumentName(),
-                              self.GetInstrumentName()))
-                    wx.BeginBusyCursor()
-                    thread.start()
-                    # FIXME - Running join() on the thread immediately
-                    # after running start() could make the GUI appear
-                    # frozen.  Instead of including the code to run
-                    # after the renameInstrument thread immediately
-                    # below, the renameInstrument thread could (when
-                    # complete), use wx.PostEvent to trigger the code
-                    # below to  run.
-                    thread.join()
-                    wx.EndBusyCursor()
-                    if self.duplicateKey:
-                        message = "Instrument name \"%s\" already exists in " \
-                            "facility \"%s\"." \
-                            % (self.GetInstrumentName(),
-                               self.GetFacilityName())
-                        dlg = wx.MessageDialog(None, message, "MyData",
-                                               wx.OK | wx.ICON_ERROR)
-                        dlg.ShowModal()
-                        self.instrumentNameField.SetFocus()
-                        self.instrumentNameField.SelectAll()
-                        return
-                elif dlg.GetStringSelection() == discardChoice:
-                    logger.info("OK, we will discard the new instrument name.")
-                    self.SetInstrumentName(
-                        self.settingsModel.GetInstrumentName())
-                    self.instrumentNameField.SetFocus()
-                    self.instrumentNameField.SelectAll()
-                elif dlg.GetStringSelection() == createChoice:
-                    logger.info("OK, we will create a new instrument record.")
-            else:
-                return
-        tempSettingsModel = SettingsModel()
-        tempSettingsModel.SaveFieldsFromDialog(self)
-
-        def validate(tempSettingsModel):
-            try:
-                tempSettingsModel.Validate()
-            except IncompatibleMyTardisVersion, e:
-
-                def showDialog():
-                    message = str(e)
-                    logger.error(message)
-                    wx.EndBusyCursor()
-                    dlg = wx.MessageDialog(None, message, "MyData",
-                                           wx.OK | wx.ICON_ERROR)
-                    dlg.ShowModal()
-                wx.CallAfter(showDialog)
-
-        thread = threading.Thread(target=validate,
-                                  args=(tempSettingsModel,))
-        wx.BeginBusyCursor()
-        thread.start()
-        # FIXME - Running join() on the thread immediately
-        # after running start() could make the GUI appear
-        # frozen.  Instead of including the code to run
-        # after the validate thread immediately below, the
-        # validate thread could (when complete), use
-        # wx.PostEvent to trigger the code below to run.
-        thread.join()
-        if tempSettingsModel.IsIncompatibleMyTardisVersion():
-            return
-        wx.EndBusyCursor()
-
-        settingsValidation = tempSettingsModel.GetValidation()
-        if settingsValidation is not None and \
-                not settingsValidation.GetValid():
-            message = settingsValidation.GetMessage()
-            logger.error(message)
-
-            if settingsValidation.GetSuggestion():
-                currentValue = ""
-                if settingsValidation.GetField() == "instrument_name":
-                    currentValue = self.GetInstrumentName()
-                elif settingsValidation.GetField() == "facility_name":
-                    currentValue = self.GetFacilityName()
-                elif settingsValidation.GetField() == "mytardis_url":
-                    currentValue = self.GetMyTardisUrl()
-                message = message.strip()
-                if currentValue != "":
-                    message += "\n\nMyData suggests that you replace \"%s\" " \
-                        % currentValue
-                    message += "with \"%s\"." \
-                        % settingsValidation.GetSuggestion()
-                else:
-                    message += "\n\nMyData suggests that you use \"%s\"." \
-                        % settingsValidation.GetSuggestion()
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.CANCEL | wx.ICON_ERROR)
-                okToUseSuggestion = dlg.ShowModal()
-                if okToUseSuggestion == wx.ID_OK:
-                    if settingsValidation.GetField() == "instrument_name":
-                        self.SetInstrumentName(settingsValidation
-                                               .GetSuggestion())
-                    elif settingsValidation.GetField() == "facility_name":
-                        self.SetFacilityName(settingsValidation
-                                             .GetSuggestion())
-                    elif settingsValidation.GetField() == "mytardis_url":
-                        self.SetMyTardisUrl(settingsValidation
-                                            .GetSuggestion())
-            else:
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-            if settingsValidation.GetField() == "instrument_name":
-                self.instrumentNameField.SetFocus()
-                self.instrumentNameField.SelectAll()
-            elif settingsValidation.GetField() == "facility_name":
-                self.facilityNameField.SetFocus()
-                self.facilityNameField.SelectAll()
-            elif settingsValidation.GetField() == "data_directory":
-                self.dataDirectoryField.SetFocus()
-                self.dataDirectoryField.SelectAll()
-            elif settingsValidation.GetField() == "mytardis_url":
-                self.myTardisUrlField.SetFocus()
-                self.myTardisUrlField.SelectAll()
-            elif settingsValidation.GetField() == "contact_name":
-                self.contactNameField.SetFocus()
-                self.contactNameField.SelectAll()
-            elif settingsValidation.GetField() == "contact_email":
-                self.contactEmailField.SetFocus()
-                self.contactEmailField.SelectAll()
-            elif settingsValidation.GetField() == "username":
-                self.usernameField.SetFocus()
-                self.usernameField.SelectAll()
-            elif settingsValidation.GetField() == "api_key":
-                self.apiKeyField.SetFocus()
-                self.apiKeyField.SelectAll()
+                self.settingsModel.GetInstrumentName() and \
+                self.settingsModel.GetInstrumentName() != "":
+            instrumentNameMismatchEvent = mde.MyDataEvent(
+                mde.EVT_INSTRUMENT_NAME_MISMATCH,
+                settingsDialog=self,
+                settingsModel=self.settingsModel,
+                facilityName=self.GetFacilityName(),
+                oldInstrumentName=self.settingsModel.GetInstrumentName(),
+                newInstrumentName=self.GetInstrumentName())
+            wx.PostEvent(wx.GetApp().GetMainFrame(), instrumentNameMismatchEvent)
             return
 
-        self.settingsModel.SaveFieldsFromDialog(self)
-        event.Skip()
+        settingsDialogValidationEvent = \
+            mde.MyDataEvent(mde.EVT_SETTINGS_DIALOG_VALIDATION,
+                            settingsDialog=self,
+                            settingsModel=self.settingsModel,
+                            okEvent=event)
+
+        intervalSinceLastConnectivityCheck = \
+            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
+        # FIXME: Magic number of 30 seconds since last connectivity check.
+        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
+                not wx.GetApp().GetLastNetworkConnectivityCheckSuccess():
+            checkConnectivityEvent = \
+                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
+                                settingsModel=self.settingsModel,
+                                nextEvent=settingsDialogValidationEvent)
+            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
+        else:
+            wx.PostEvent(wx.GetApp().GetMainFrame(), settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
-        dlg = wx.DirDialog(self, "Choose a directory:")
+        dlg = wx.DirDialog(self, "Choose a directory:",
+                           defaultPath=self.GetDataDirectory())
         if dlg.ShowModal() == wx.ID_OK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
 

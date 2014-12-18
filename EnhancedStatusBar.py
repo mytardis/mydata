@@ -45,7 +45,6 @@ class EnhancedStatusBarItem(object):
 
 
 class EnhancedStatusBar(wx.StatusBar):
-
     def __init__(self, parent, id=wx.ID_ANY, style=wx.ST_SIZEGRIP,
                  name="EnhancedStatusBar"):
         """Default Class Constructor.
@@ -66,6 +65,21 @@ class EnhancedStatusBar(wx.StatusBar):
             self.OnSize(None)
         else:
             wx.CallAfter(self.OnSize, None)
+
+    def SetStatusMessage(self, msg):
+        if not hasattr(self, "statusbarStaticText"):
+            self.statusbarStaticText = wx.StaticText(self, wx.ID_ANY, "")
+            self.AddWidget(self.statusbarStaticText, pos=0)
+        self.statusbarStaticText.SetLabel(msg)
+
+        self.OnSize(None)
+
+    def SetStatusConnectionIcon(self, bitmap):
+        if not hasattr(self, "statusbarConnIcon"):
+            self.statusbarConnIcon = wx.StaticBitmap(self, wx.ID_ANY)
+            self.AddWidget(self.statusbarConnIcon, pos=1)
+        self.statusbarConnIcon.SetBitmap(bitmap)
+        self.OnSize(None)
 
     def OnSize(self, event):
         """Handles The wx.EVT_SIZE Events For The StatusBar.
@@ -195,32 +209,32 @@ class EnhancedStatusBar(wx.StatusBar):
             pos = self._curPos
             self._curPos += 1
 
-        if self.GetFieldsCount() <= pos:
-            raise "\nERROR: EnhancedStatusBar has a max of %d items, " + \
-                "you tried to set item #%d" % (self.GetFieldsCount(), pos)
+        # if self.GetFieldsCount() <= pos:
+            # raise Exception("\nERROR: EnhancedStatusBar has a max of %d items, "
+                            # "you tried to set item #%d" % (self.GetFieldsCount(), pos))
 
         if horizontalalignment not in [ESB_ALIGN_CENTER_HORIZONTAL,
                                        ESB_EXACT_FIT,
                                        ESB_ALIGN_LEFT, ESB_ALIGN_RIGHT]:
-            raise '\nERROR: Parameter "horizontalalignment" Should Be One Of '\
-                  '"ESB_ALIGN_CENTER_HORIZONTAL", "ESB_ALIGN_LEFT", "ESB_ALIGN_RIGHT"' \
-                  '"ESB_EXACT_FIT"'
+            raise Exception('\nERROR: Parameter "horizontalalignment" Should Be One Of '
+                            '"ESB_ALIGN_CENTER_HORIZONTAL", "ESB_ALIGN_LEFT", '
+                            '"ESB_ALIGN_RIGHT", "ESB_EXACT_FIT"')
 
         if verticalalignment not in [ESB_ALIGN_CENTER_VERTICAL, ESB_EXACT_FIT,
                                      ESB_ALIGN_TOP, ESB_ALIGN_BOTTOM]:
-            raise '\nERROR: Parameter "verticalalignment" Should Be One Of '\
-                  '"ESB_ALIGN_CENTER_VERTICAL", "ESB_ALIGN_TOP", "ESB_ALIGN_BOTTOM"' \
-                  '"ESB_EXACT_FIT"'
+            raise Exception('\nERROR: Parameter "verticalalignment" Should Be One Of '
+                            '"ESB_ALIGN_CENTER_VERTICAL", "ESB_ALIGN_TOP", '
+                            '"ESB_ALIGN_BOTTOM", "ESB_EXACT_FIT"')
 
         try:
             self.RemoveChild(self._items[pos].widget)
-            self._items[pos].widget.Destroy()
         except KeyError:
             pass
 
         self._items[pos] = \
             EnhancedStatusBarItem(widget, pos,
                                   horizontalalignment, verticalalignment)
+        # self.SetFieldsCount(len(self._items.keys()))
 
         if threading.current_thread().name == "MainThread":
             self.OnSize(None)
