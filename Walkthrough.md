@@ -100,8 +100,9 @@ The MyTardis administrator can approve the request in the Django Admin interface
 Once uploads to staging have been approved, MyData can manage multiple uploads at once (5 by default):
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/Multiple%20Upload%20Threads.png" alt="Multiple Upload Threads" style="width:200px;"/>
 
-Show web browser toolbar icon, show data in MyTardis.
+By clicking on the web browser icon on MyData's toolbar, you can view the uploaded data in MyTardis in your web browser.  The data will be jointly owned by the facility role account (e.g. "testfacility") and by the MyTardis user whose username (e.g. "wettenhj") was used to name the folder containing the datasets.  MyTardis allows grouping datasets together into experiments.  MyData uses the instrument name (e.g. "James Mac Laptop") and the date of creation of the dataset folders (e.g. "2014-12-18") to define a default experiment for the datasets it uploads:
 
-Show data in facility view.  Note the two owners.
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DataInMyTardis.png" alt="Data In MyTardis" style="width:200px;"/>
 
+If you are authorized to log into MyTardis's web interface as a facility manager, you can view the data in MyTardis's new Facility Overview.  Note the two owners - the facility role account ("testfacility") and the individual user ("wettenhj") who collected the data:
 
