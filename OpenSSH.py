@@ -1,3 +1,20 @@
+"""
+Methods for using OpenSSH functionality from MyData.
+On Windows, we bundle a MSYS/MinGW build of OpenSSH.
+
+subprocess is used extensively throughout this module.
+
+Given the complex quoting requirements when running commands like
+ssh staging_host "cat file.chunk >> file", I don't trust Python's
+automatic quoting which is done when converting a list of arguments
+to a command string in subprocess.Popen.  Furthermore, formatting
+the command string ourselves, rather than leaving it to Python
+means that we are restricted to using shell=True in subprocess on
+POSIX systems.  shell=False seems to work better on Windows,
+otherwise we need to worry about escaping special characters like
+'>' with carets (i.e. '^>').
+
+"""
 import sys
 import os
 import subprocess
@@ -133,7 +150,7 @@ class KeyPair():
             with open(self.publicKeyFilePath, "r") as pubKeyFile:
                 return pubKeyFile.read()
         elif os.path.exists(self.privateKeyFilePath):
-            cmdList = [openSSH.sshKeyGen,
+            cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen),
                        "-y",
                        "-f", openSSH.DoubleQuote(
                            GetMsysPath(self.privateKeyFilePath))]
@@ -192,7 +209,7 @@ class KeyPair():
             quotedPrivateKeyFilePath = openSSH.DoubleQuote(GetMsysPath(self.privateKeyFilePath))
         else:
             quotedPrivateKeyFilePath = openSSH.DoubleQuote(self.privateKeyFilePath)
-        cmdList = [openSSH.sshKeyGen, "-yl",
+        cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen), "-yl",
                    "-f", quotedPrivateKeyFilePath]
         cmd = " ".join(cmdList)
         logger.debug(cmd)
@@ -300,11 +317,12 @@ def NewKeyPair(keyName=None,
         os.makedirs(dotSshDir)
 
     if sys.platform.startswith('win'):
-        quotedPrivateKeyFilePath = openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath))
+        quotedPrivateKeyFilePath = \
+            openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath))
     else:
         quotedPrivateKeyFilePath = openSSH.DoubleQuote(privateKeyFilePath)
     cmdList = \
-        [openSSH.sshKeyGen,
+        [openSSH.DoubleQuote(openSSH.sshKeyGen),
          "-f", quotedPrivateKeyFilePath,
          "-N", '""',
          "-C", openSSH.DoubleQuote(keyComment)]
@@ -391,7 +409,7 @@ def GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
             "-oStrictHostKeyChecking=no " \
             "%s@%s" \
-            % (openSSH.ssh, privateKeyFilePath,
+            % (openSSH.DoubleQuote(openSSH.ssh), privateKeyFilePath,
                openSSH.cipher,
                openSSH.DoubleQuote(sshControlPath),
                username, hostname)
@@ -414,9 +432,9 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
         remoteFilePath = openSSH.DoubleQuote(remoteFilePath)
 
     if sys.platform.startswith("win"):
-        cmdAndArgs = [openSSH.ssh,
+        cmdAndArgs = [openSSH.DoubleQuote(openSSH.ssh),
                       "-c", openSSH.cipher,
-                      "-i", privateKeyFilePath,
+                      "-i", openSSH.DoubleQuote(privateKeyFilePath),
                       "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oStrictHostKeyChecking=no",
@@ -433,9 +451,9 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
         # shouldn't be necessary if the socket created by the SSH master
         # process (sshControlPath)is ready), but we can't guarantee that it
         # will be ready immediately.
-        cmdAndArgs = [openSSH.ssh,
+        cmdAndArgs = [openSSH.DoubleQuote(openSSH.ssh),
                       "-c", openSSH.cipher,
-                      "-i", privateKeyFilePath,
+                      "-i", openSSH.DoubleQuote(privateKeyFilePath),
                       "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oStrictHostKeyChecking=no",
@@ -627,7 +645,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
-        % (openSSH.ssh, privateKeyFilePath, openSSH.cipher,
+        % (openSSH.DoubleQuote(openSSH.ssh),
+           privateKeyFilePath, openSSH.cipher,
            openSSH.DoubleQuote(sshControlPath),
            username, hostname,
            openSSH.DoubleQuote(remoteRemoveChunkCommand))
@@ -713,7 +732,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
                 '-oStrictHostKeyChecking=no ' \
                 '%s "%s@%s:\\"%s\\""' \
-                % (openSSH.scp,
+                % (openSSH.DoubleQuote(openSSH.scp),
                    privateKeyFilePath,
                    openSSH.cipher,
                    openSSH.DoubleQuote(sshControlPath),
@@ -761,7 +780,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
                 "-oStrictHostKeyChecking=no " \
                 "%s@%s %s" \
-                % (openSSH.ssh, privateKeyFilePath,
+                % (openSSH.DoubleQuote(openSSH.ssh), privateKeyFilePath,
                    openSSH.cipher,
                    openSSH.DoubleQuote(sshControlPath),
                    username, hostname,
@@ -795,7 +814,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
-        % (openSSH.ssh, privateKeyFilePath, openSSH.cipher,
+        % (openSSH.DoubleQuote(openSSH.ssh),
+           privateKeyFilePath, openSSH.cipher,
            openSSH.DoubleQuote(sshControlPath),
            username, hostname,
            openSSH.DoubleQuote(remoteRemoveChunkCommand))
@@ -832,9 +852,10 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         "%s -i %s -c %s " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
-        % (openSSH.ssh, GetMsysPath(privateKeyFilePath), openSSH.cipher,
+        % (openSSH.DoubleQuote(openSSH.ssh),
+           openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+           openSSH.cipher,
            username, hostname,
-           # openSSH.SingleQuote(remoteRemoveDatafileCommand))
            openSSH.DoubleQuote(remoteRemoveDatafileCommand))
     # logger.debug(rmCommandString)
     removeRemoteDatafileProcess = subprocess.Popen(
@@ -854,8 +875,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
             '%s -i %s -c %s ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
-            % (openSSH.scp,
-               GetMsysPath(privateKeyFilePath),
+            % (openSSH.DoubleQuote(openSSH.scp),
+               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
                openSSH.cipher,
                openSSH.DoubleQuote(GetMsysPath(filePath)),
                username, hostname,
@@ -890,7 +911,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         "%s -i %s -c %s " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
-        % (openSSH.ssh, GetMsysPath(privateKeyFilePath),
+        % (openSSH.DoubleQuote(openSSH.ssh),
+           openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
            openSSH.cipher,
            username, hostname,
            openSSH.DoubleQuote(remoteCatCommand))
@@ -974,10 +996,10 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                 '%s -i %s -c %s ' \
                 '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
                 '%s "%s@%s:\\"%s\\""' \
-                % (openSSH.scp,
-                   GetMsysPath(privateKeyFilePath),
+                % (openSSH.DoubleQuote(openSSH.scp),
+                   openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
                    openSSH.cipher,
-                   GetMsysPath(chunkFile.name),
+                   openSSH.DoubleQuote(GetMsysPath(chunkFile.name)),
                    username, hostname,
                    remoteChunkPath)
             logger.debug(scpCommandString)
@@ -1010,7 +1032,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                 "%s -i %s -c %s " \
                 "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
                 "%s@%s %s" \
-                % (openSSH.ssh, GetMsysPath(privateKeyFilePath),
+                % (openSSH.DoubleQuote(openSSH.ssh),
+                   openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
                    openSSH.cipher,
                    username, hostname,
                    openSSH.DoubleQuote(remoteCatCommand))
@@ -1039,7 +1062,9 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         # "%s -i %s -c %s " \
         # "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         # "%s@%s %s" \
-        # % (openSSH.ssh, GetMsysPath(privateKeyFilePath), openSSH.cipher,
+        # % (openSSH.ssh,
+        # openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+        # openSSH.cipher,
            # username, hostname,
            # # openSSH.SingleQuote(remoteRemoveChunkCommand))
            # openSSH.DoubleQuote(remoteRemoveChunkCommand))
