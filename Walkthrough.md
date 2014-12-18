@@ -1,6 +1,8 @@
 MyData Walkthrough
 ==================
 
+See also: [MyData User Guide](User Guide.md)
+
 Download MyData from [here](https://github.com/monash-merc/mydata/blob/master/UserGuideImages/MyData%20v0.1.0alpha1.dmg?raw=true) (Mac) or from [here](https://github.com/wettenhj/mydata/raw/master/UserGuideImages/MyData_v0.1.0.exe) (Windows).
 
 On Mac OS X, after downloading and opening the disk image (DMG) file, drag the MyData
