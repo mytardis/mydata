@@ -135,7 +135,7 @@ class MyData(wx.App):
         parser.add_argument("-b", "--background", action="store_true",
                             help="run non-interactively")
         # parser.add_argument("--loglevel", help="set logging verbosity")
-        args = parser.parse_args()
+        args, unknown = parser.parse_known_args()
         self.settingsModel.SetBackgroundMode(args.background)
 
         # Most of the SQLite stuff was designed for the case where MyData
