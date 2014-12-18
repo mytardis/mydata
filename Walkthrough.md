@@ -6,7 +6,7 @@ Download MyData from [here](https://github.com/wettenhj/mydata/raw/master/UserGu
 On Mac OS X, after downloading and opening the disk image (DMG) file, drag the MyData
 application into your Applications folder and launch it.  (You can then eject the disk
 image.) 
-<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/MyDataDmg.png" alt="MyData DMG" style="width: 100px;"/>
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/MyDataDmg.png" alt="MyData DMG" style="width: 200px;"/>
 
 A test MyTardis site for authorized MyData testers is available at http://118.138.241.91/.
 Contact JW if you would like to register for testing MyData against this MyTardis test
@@ -14,13 +14,19 @@ site or if you would like assistance with setting up an alternative test site fo
 After registering as an authorized MyData tester, you will receive a MyTardis username and
 password.  In my case, my MyTardis username is "wettenhj".
 
-- Choose a folder where you would like to store your data.  (I chose "/Users/wettenhj/Desktop/MyDataTest")
-- Create a folder whose name matches your MyTardis username ("wettenhj" for me).
-- Put your data within your user folder, ensuring that all datafiles are grouped within
-folders, which will be become datasets in MyTardis.
+Choose a folder where you would like to store your data.  I chose "/Users/wettenhj/Desktop/MyDataTest":
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DataDirectory.png" alt="Data Directory" style="width:200px;"/>
+
+Create a folder whose name matches your MyTardis username ("wettenhj" for me):
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/UserFolder.png" alt="User Folder" style="width:200px;"/>
+
+Put your data within your user folder, ensuring that all datafiles are grouped within
+folders, which will be become datasets in MyTardis:
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DatasetsInUserFolder.png" alt="Data In User Folder" style="width:200px;"/>
 
 Launch MyData, and enter some basic settings in MyData's Settings Dialog (below).  Each
 field is described further below.
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/SettingsDialog.png" alt="Settings Dialog" style="width:200px;"/>
 
 **Facility Name**
 
