@@ -1,6 +1,7 @@
 import os
 import sys
 import distutils.dir_util
+import shutil
 
 if len(sys.argv) < 3:
     print "Usage: packageWindowsVersion.py <certificate.pfx> <password>"
