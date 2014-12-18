@@ -13,9 +13,14 @@ code_signing_certificate_password = sys.argv[2]
 os.system("del /Q dist\\*.*")
 
 os.system("C:\\Python27\\python.exe .\\pyinstaller\\pyinstaller.py "
-          "--icon=favicon.ico --windowed MyData.py")
+          "--icon=MyData.ico --windowed MyData.py")
 
+# favicon.ico and MyData.ico are really the same thing - favicon.ico
+# is the original from the MyTardis repository, and MyData.ico is the
+# result of converting it to PNG and then back to ICO, which fixed a
+# problem with the Windows build.
 os.system("copy /Y favicon.ico dist\\MyData\\")
+os.system("copy /Y MyData.ico dist\\MyData\\")
 distutils.dir_util.copy_tree(r"png-normal", r"dist\MyData\png-normal")
 distutils.dir_util.copy_tree(r"png-hot", r"dist\MyData\png-hot")
 
