@@ -6,7 +6,7 @@ Download MyData from [here](https://github.com/wettenhj/mydata/raw/master/UserGu
 On Mac OS X, after downloading and opening the disk image (DMG) file, drag the MyData
 application into your Applications folder and launch it.  (You can then eject the disk
 image.) 
-<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/MyDataDmg.png" alt="MyData DMG" style="width: 200px; border:5px solid black;"/>
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/MyDataDmg.png" alt="MyData DMG" style="width: 200px; border:1px solid black"/>
 
 A test MyTardis site for authorized MyData testers is available at http://118.138.241.91/.
 Contact JW if you would like to register for testing MyData against this MyTardis test
