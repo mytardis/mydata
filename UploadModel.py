@@ -156,7 +156,7 @@ class UploadModel():
                 # Check if the process has really
                 # terminated and force kill if not.
                 try:
-                    pid = self.sshMasterProcess.pid
+                    pid = self.GetSshMasterProcess().pid
                     # See if this throws psutil.NoSuchProcess:
                     p = psutil.Process(int(pid))
                     if sys.platform.startswith("win"):
