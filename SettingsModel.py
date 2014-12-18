@@ -2,6 +2,7 @@ import sys
 import requests
 import traceback
 import os
+from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
 
@@ -277,6 +278,24 @@ class SettingsModel():
                 return self.validation
             if not os.path.exists(self.GetDataDirectory()):
                 message = "The data directory: \"%s\" doesn't exist!" % \
+                    self.GetDataDirectory()
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
+            filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
+            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            if len(dirsDepth1) == 0:
+                message = "The data directory: \"%s\" doesn't contain any " \
+                    "user folders!" % \
+                    self.GetDataDirectory()
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
+            filesDepth2 = glob(os.path.join(self.GetDataDirectory(), '*', '*'))
+            dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
+            if len(dirsDepth2) == 0:
+                message = "The data directory: \"%s\" should contain dataset " \
+                    "folders within user folders." % \
                     self.GetDataDirectory()
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
