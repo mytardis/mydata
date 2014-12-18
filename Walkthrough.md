@@ -77,10 +77,7 @@ Ask your MyTardis administrator for the API key corresponding to your facility r
 Or if using the "testfacility" account with http://118.138.241.91, contact JW to obtain
 the API key for that account.
 
-
-WARNING: Uploads require approval.
-
-Show dialog.  Explain.
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/UploadsToStagingRequireApprovalWarning.png" alt="Uploads To Staging Require Approval Warning", style="width:200px;"/>
 
 Explain Refresh. Show multiple upload threads.
 
