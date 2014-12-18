@@ -14,7 +14,7 @@ site or if you would like assistance with setting up an alternative test site fo
 After registering as an authorized MyData tester, you will receive a MyTardis username and
 password.  In my case, my MyTardis username is "wettenhj".
 
-Choose a folder where you would like to store your data.  I chose "/Users/wettenhj/Desktop/MyDataTest":
+Choose a folder where you would like to store your data.  I chose "/Users/Shared/MyDataTest":
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DataDirectory.png" alt="Data Directory" style="width:200px;"/>
 
 Create a folder whose name matches your MyTardis username ("wettenhj" for me):
