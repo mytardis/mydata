@@ -72,10 +72,24 @@ this test account.
 
 **MyTardis API Key**
 
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/DownloadApiKey.png" alt="Download API Key" style="width:200px;"/>
+
 API keys are similar to passwords, but they are easier to revoke and renew when necessary.
 Ask your MyTardis administrator for the API key corresponding to your facility role account.
 Or if using the "testfacility" account with http://118.138.241.91, contact JW to obtain
 the API key for that account.
+
+Starting MyData's Scan and Upload Processes
+-------------------------------------------
+MyData will scan for data and attempt to upload it as soon as you click "OK" on the Settings dialog or whenever you press the refresh icon on MyData's toolbar.  If you launch MyData with a "--background" command-line argument, then it will automatically begin its scan and upload processes straight away, even without displaying its Settings dialog, assuming that valid settings have been entered previously.
+
+MyData Upload Methods
+---------------------
+MyData supports two upload methods - HTTP POST and SCP via staging.
+
+The HTTP POST upload method is only intended to be used for quick demos and for small data files.  Uploading large files with HTTP POST can put significant strain on the MyTardis server's resources (particularly memory usage).  The only advantage of HTTP POST is that it is easy to configure.  As long as you have access to a suitable MyTardis role account (e.g. "testfacility") and know its API key, then you can begin uploading from MyData straight away, although you should begin by testing small files only.
+
+2. SCP via staging is MyData's preferred upload method.  MyData will automatically use this method as soon as it become available, but uploads via staging need to be approved by a MyTardis administrator.  MyData generates an SSH key pair the first time it runs and sends the public key to the MyTardis server in a request for the ability to upload via staging.  The MyTardis administrator needs to approve the request and put the public key in a suitable authorized keys file on the staging server (which could be the same as the MyTardis server).  For example, the public key could be put in "/home/mydata/.ssh/authorized_keys" on the staging server.
 
 <img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/UploadsToStagingRequireApprovalWarning.png" alt="Uploads To Staging Require Approval Warning", style="width:200px;"/>
 
