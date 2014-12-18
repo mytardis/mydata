@@ -53,7 +53,10 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetStatusWidths([-1, 60])
         if hasattr(sys, "frozen"):
             sysExecutableDir = os.path.dirname(sys.executable)
-            pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
+            if sys.platform.startswith("darwin"):
+                pngNormalPath = "png-normal"
+            else:
+                pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
         else:
             myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
             pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
@@ -334,8 +337,14 @@ class MyData(wx.App):
 
         if hasattr(sys, "frozen"):
             sysExecutableDir = os.path.dirname(sys.executable)
-            pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
-            pngHotPath = os.path.join(sysExecutableDir, "png-hot")
+            if sys.platform.startswith("darwin"):
+                pngNormalPath = "png-normal"
+            else:
+                pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
+            if sys.platform.startswith("darwin"):
+                pngHotPath = "png-hot"
+            else:
+                pngHotPath = os.path.join(sysExecutableDir, "png-hot")
         else:
             myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
             pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
