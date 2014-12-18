@@ -87,8 +87,8 @@ os.environ['CODESIGN_ALLOCATE'] = \
     "/iPhoneOS.platform/Developer/usr/bin/codesign_allocate"
 # The bundle identifier (org.mytardis.MyData) referenced below is set in createMacBundle.py:
 if sign:
-    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" ' \
-        '--verbose=4 dist/MyData.app --keychain %s' % (certificateName, keychainName)
+    cmd = 'codesign --force -i "org.mytardis.MyData" --sign "%s" ' \
+        '--verbose=4 dist/MyData.app' % certificateName
     print cmd
     os.system(cmd)
     cmd = 'codesign -vvvv dist/MyData.app/'
@@ -157,16 +157,16 @@ if ATTEMPT_TO_SET_ICON_SIZE_IN_DMG:
 """
 if ATTEMPT_TO_LAY_OUT_ICONS_ON_DMG:
     applescript = applescript + """
-           set the bounds of container window to {400, 100, 885, 430}
+           set the bounds of container window to {400, 100, 885, 270}
            delay 1
            set arrangement of theViewOptions to not arranged
            delay 1
            set file_list to every file
            repeat with file_object in file_list
                if the name of file_object ends with ".app" then
-                   set the position of file_object to {120, 163}
+                   set the position of file_object to {120, 72}
                else if the name of file_object is "Applications" then
-                   set the position of file_object to {375, 163}
+                   set the position of file_object to {375, 72}
                end if
            end repeat
            delay 1
