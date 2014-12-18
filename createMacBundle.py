@@ -62,8 +62,6 @@ appName = "MyData"
 
 resource_files=["MyData.icns", "favicon.ico", requests.certs.where()]
 
-print "TO DO: Add icon image files to resources directory."
-
 for iconFilesPath in ("png-normal/icons16x16", "png-normal/icons24x24",
                       "png-hot/icons24x24"):
     for iconFile in os.listdir(iconFilesPath):
