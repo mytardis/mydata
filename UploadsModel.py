@@ -265,6 +265,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             if self.uploadsData[row].GetFolderModel() == folderModel and \
                     self.uploadsData[row].GetDataFileIndex() == dataFileIndex:
                 del self.uploadsData[row]
+                del self.unfilteredUploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
                     self.TryRowDeleted(row)
@@ -397,9 +398,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         for row in reversed(rowsToDelete):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
+            del self.unfilteredUploadsData[row]
         wx.CallAfter(self.RowsDeleted, rowsToDelete)
 
-        self.unfilteredUploadsData = list()
         self.filteredUploadsData = list()
         self.filtered = False
         self.searchString = ""

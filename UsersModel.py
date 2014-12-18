@@ -187,7 +187,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                        userRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
@@ -199,20 +198,25 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         for row in rows:
             del self.usersData[row]
             del self.unfilteredUsersData[row]
-            # Notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+
+        # Notify the view(s) using this model that it has been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rows)
+        else:
+            wx.CallAfter(self.RowsDeleted, rows)
 
     def DeleteAllRows(self):
+        rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.usersData[row]
-            # notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+            rowsDeleted.append(row)
+
+        # notify the view(s) using this model that it has been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsDeleted)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+
         self.unfilteredUsersData = list()
         self.filteredUsersData = list()
         self.filtered = False
@@ -270,6 +274,10 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return len(usernames)
 
     def Refresh(self, incrementProgressDialog, shouldAbort):
+        if self.foldersModel.GetCount() > 0:
+            self.foldersModel.DeleteAllRows()
+        if self.GetCount() > 0:
+            self.DeleteAllRows()
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
