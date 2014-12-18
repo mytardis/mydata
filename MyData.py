@@ -467,7 +467,10 @@ class MyData(wx.App):
             else:
                 logger.debug("OnRefresh called automatically from "
                              "OnSettings(), after displaying SettingsDialog.")
-            logger.debug("OnRefresh called with event = None")
+        elif event.GetId() == self.settingsTool.GetId():
+            logger.debug("OnRefresh called automatically from "
+                         "OnSettings(), after displaying SettingsDialog, "
+                         "which was launched from MyData's toolbar.")
         elif event.GetId() == self.refreshTool.GetId():
             logger.debug("OnRefresh triggered by Refresh toolbar icon.")
         elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \

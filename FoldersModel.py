@@ -69,12 +69,16 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.maxDataViewId = 0
 
     def DeleteAllRows(self):
+        rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.foldersData[row]
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+            rowsDeleted.append(row)
+
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsDeleted)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+
         self.ufd = list()
         self.ffd = list()
         self.filtered = False
