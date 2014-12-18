@@ -28,6 +28,7 @@ from Exceptions import NoActiveNetworkInterface
 from EnhancedStatusBar import EnhancedStatusBar
 from logger.Logger import logger
 from MyDataTaskBarIcon import MyDataTaskBarIcon
+from MyDataProgressDialog import MyDataProgressDialog
 import MyDataEvents as mde
 
 
@@ -284,7 +285,8 @@ class MyData(wx.App):
             okToExit = confirmationDialog.ShowModal()
             if okToExit == wx.ID_YES:
                 def shutDownDataScansAndUploads():
-                    logger.debug("Starting run() method for thread %s" % threading.current_thread().name)
+                    logger.debug("Starting run() method for thread %s"
+                                 % threading.current_thread().name)
                     try:
                         wx.CallAfter(wx.BeginBusyCursor)
                         self.foldersController.ShutDownUploadThreads()
@@ -292,11 +294,13 @@ class MyData(wx.App):
                             self.frame,
                             self.ShutdownForRefreshCompleteEvent(
                                 shutdownSuccessful=True))
+
                         def endBusyCursorIfRequired():
                             try:
                                 wx.EndBusyCursor()
                             except wx._core.PyAssertionError, e:
-                                if not "no matching wxBeginBusyCursor()" in str(e):
+                                if "no matching wxBeginBusyCursor()" \
+                                        not in str(e):
                                     logger.error(str(e))
                                     raise
                         wx.CallAfter(endBusyCursorIfRequired)
@@ -304,7 +308,8 @@ class MyData(wx.App):
                     except:
                         logger.debug(traceback.format_exc())
                         os._exit(1)
-                    logger.debug("Finishing run() method for thread %s" % threading.current_thread().name)
+                    logger.debug("Finishing run() method for thread %s"
+                                 % threading.current_thread().name)
 
                 thread = threading.Thread(target=shutDownDataScansAndUploads)
                 logger.debug("Starting thread %s" % thread.name)
@@ -373,7 +378,8 @@ class MyData(wx.App):
                                                       refreshIcon,
                                                       "Refresh", "")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
-        self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool, self.refreshTool.GetId())
+        self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool,
+                  self.refreshTool.GetId())
 
         self.toolbar.AddSeparator()
 
@@ -456,13 +462,17 @@ class MyData(wx.App):
         elif event.GetId() == self.refreshTool.GetId():
             logger.debug("OnRefresh triggered by Refresh toolbar icon.")
         elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
-                event.GetId() == self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
-            logger.debug("OnRefresh triggered by 'MyTardis Sync' task bar menu item.")
+                event.GetId() == \
+                self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
+            logger.debug("OnRefresh triggered by 'MyTardis Sync' "
+                         "task bar menu item.")
         elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
-            logger.debug("OnRefresh called from EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
+            logger.debug("OnRefresh called from "
+                         "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
             shutdownForRefreshAlreadyComplete = True
         elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
-            logger.debug("OnRefresh called from EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
+            logger.debug("OnRefresh called from "
+                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
             shutdownForRefreshAlreadyComplete = True
         else:
             logger.debug("OnRefresh: event.GetId() = %d" % event.GetId())
@@ -476,7 +486,8 @@ class MyData(wx.App):
         # Shutting down existing data scan and upload processes:
 
         if self.onRefreshRunning and not shutdownForRefreshAlreadyComplete:
-            message = "Shutting down existing data scan and upload processes..."
+            message = \
+                "Shutting down existing data scan and upload processes..."
             logger.debug(message)
             self.frame.SetStatusMessage(message)
 
@@ -517,7 +528,8 @@ class MyData(wx.App):
             self.settingsValidation = None
 
             def validateSettings():
-                logger.debug("Starting run() method for thread %s" % threading.current_thread().name)
+                logger.debug("Starting run() method for thread %s"
+                             % threading.current_thread().name)
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
                     self.uploaderModel = self.settingsModel.GetUploaderModel()
@@ -533,11 +545,13 @@ class MyData(wx.App):
                             dlg = wx.MessageDialog(None, message, "MyData",
                                                    wx.OK | wx.ICON_ERROR)
                             dlg.ShowModal()
+
                             def endBusyCursorIfRequired():
                                 try:
                                     wx.EndBusyCursor()
                                 except wx._core.PyAssertionError, e:
-                                    if not "no matching wxBeginBusyCursor()" in str(e):
+                                    if "no matching wxBeginBusyCursor()" \
+                                            not in str(e):
                                         logger.error(str(e))
                                         raise
                             wx.CallAfter(endBusyCursorIfRequired)
@@ -550,20 +564,23 @@ class MyData(wx.App):
                     self.settingsValidation = self.settingsModel.Validate()
                     settingsValidationForRefreshCompleteEvent = \
                         mde.MyDataEvent(mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
-                                         needToValidateSettings=False)
-                    wx.PostEvent(self.frame, settingsValidationForRefreshCompleteEvent)
+                                        needToValidateSettings=False)
+                    wx.PostEvent(self.frame,
+                                 settingsValidationForRefreshCompleteEvent)
+
                     def endBusyCursorIfRequired():
                         try:
                             wx.EndBusyCursor()
                         except wx._core.PyAssertionError, e:
-                            if not "no matching wxBeginBusyCursor()" in str(e):
+                            if "no matching wxBeginBusyCursor()" not in str(e):
                                 logger.error(str(e))
                                 raise
                     wx.CallAfter(endBusyCursorIfRequired)
                 except:
                     logger.debug(traceback.format_exc())
                     return
-                logger.debug("Finishing run() method for thread %s" % threading.current_thread().name)
+                logger.debug("Finishing run() method for thread %s"
+                             % threading.current_thread().name)
 
             thread = threading.Thread(target=validateSettings,
                                       name="OnRefreshValidateSettings")
@@ -585,11 +602,15 @@ class MyData(wx.App):
         logger.debug("OnRefresh: Creating progress dialog.")
         # Set up progress dialog...
         self.progressDialog = \
-            wx.ProgressDialog(
+            MyDataProgressDialog(
+                self.frame,
+                wx.ID_ANY,
+                "MyData",
                 "Scanning folders in " +
-                self.settingsModel.GetDataDirectory(), "",
+                self.settingsModel.GetDataDirectory(),
                 self.usersModel.GetNumUserFolders(),
-                style=wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
+                userCanAbort=True, cancelCallback=None)
+
         self.numUserFoldersScanned = 0
         self.keepGoing = True
 
@@ -603,15 +624,17 @@ class MyData(wx.App):
                 self.progressDialog.Update(self.numUserFoldersScanned,
                                            message)
 
-        # SECTION 4: Start UsersModel.Refresh(), followed by FoldersController.StartDataUploads().
+        # SECTION 4: Start UsersModel.Refresh(),
+        # followed by FoldersController.StartDataUploads().
 
         def scanDataDirs():
-            logger.debug("Starting run() method for thread %s" % threading.current_thread().name)
+            logger.debug("Starting run() method for thread %s"
+                         % threading.current_thread().name)
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
             self.usersModel.Refresh(incrementProgressDialog)
+
             def closeProgressDialog():
-                self.progressDialog.EndModal(wx.ID_CANCEL)
                 self.progressDialog.Show(False)
             wx.CallAfter(closeProgressDialog)
 
@@ -625,22 +648,18 @@ class MyData(wx.App):
                 try:
                     wx.EndBusyCursor()
                 except wx._core.PyAssertionError, e:
-                    if not "no matching wxBeginBusyCursor()" in str(e):
+                    if "no matching wxBeginBusyCursor()" not in str(e):
                         logger.error(str(e))
                         raise
             wx.CallAfter(endBusyCursorIfRequired)
-            logger.debug("Finishing run() method for thread %s" % threading.current_thread().name)
+            logger.debug("Finishing run() method for thread %s"
+                         % threading.current_thread().name)
 
-            # wx.CallAfter(self.frame.SetStatusMessage,
-                         # "Starting data uploads...")
-            # print "FIXME: StartDataUploads should be in a separate event from usersModel.Refresh()"
-            # self.foldersController.StartDataUploads()
-
-        thread = threading.Thread(target=scanDataDirs, name="ScanDataDirectoriesThread")
+        thread = threading.Thread(target=scanDataDirs,
+                                  name="ScanDataDirectoriesThread")
         logger.debug("OnRefresh: Starting scanDataDirs thread.")
         thread.start()
         logger.debug("OnRefresh: Started scanDataDirs thread.")
-
 
     def OnOpen(self, event):
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
@@ -719,14 +738,17 @@ class MyData(wx.App):
     def GetLastNetworkConnectivityCheckTime(self):
         return self.lastNetworkConnectivityCheckTime
 
-    def SetLastNetworkConnectivityCheckTime(self, lastNetworkConnectivityCheckTime):
-        self.lastNetworkConnectivityCheckTime = lastNetworkConnectivityCheckTime
+    def SetLastNetworkConnectivityCheckTime(self,
+                                            lastNetworkConnectivityCheckTime):
+        self.lastNetworkConnectivityCheckTime = \
+            lastNetworkConnectivityCheckTime
 
     def GetLastNetworkConnectivityCheckSuccess(self):
         return self.lastNetworkConnectivityCheckSuccess
 
     def SetLastNetworkConnectivityCheckSuccess(self, lastNetworkConnectivityCheckSuccess):
-        self.lastNetworkConnectivityCheckSuccess = lastNetworkConnectivityCheckSuccess
+        self.lastNetworkConnectivityCheckSuccess = \
+            lastNetworkConnectivityCheckSuccess
 
     def GetActiveNetworkInterface(self):
         return self.activeNetworkInterface
