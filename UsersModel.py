@@ -6,18 +6,6 @@ import threading
 
 from logger.Logger import logger
 
-# This model class provides the data to the view when it is asked for.
-# Since it is a list-only model (no hierachical data) then it is able
-# to be referenced by row rather than by item object, so in this way
-# it is easier to comprehend and use than other model types.  In this
-# example we also provide a Compare function to assist with sorting of
-# items in our model.  Notice that the data items in the data model
-# object don't ever change position due to a sort or column
-# reordering.  The view manages all of that and maps view rows and
-# columns to the model's rows and columns as needed.
-#
-# Our data is stored in a list of UserModel objects.
-
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):
     def __init__(self, sqlitedb, settingsModel):
@@ -46,11 +34,9 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         self.maxDataViewId = 0
 
     def SetFoldersModel(self, foldersModel):
-
         self.foldersModel = foldersModel
 
     def Filter(self, searchString):
-
         self.searchString = searchString
         q = self.searchString.lower()
         if not self.filtered:
@@ -113,7 +99,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
     # particular row, col
     def GetValueByRow(self, row, col):
         columnKey = self.GetColumnKeyName(col)
-        return self.usersData[row].GetValueForKey(columnKey)
+        return str(self.usersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the usersData object for a
     # particular row, colname
@@ -201,7 +187,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                        userRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
-
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
@@ -213,20 +198,25 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         for row in rows:
             del self.usersData[row]
             del self.unfilteredUsersData[row]
-            # Notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+
+        # Notify the view(s) using this model that it has been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rows)
+        else:
+            wx.CallAfter(self.RowsDeleted, rows)
 
     def DeleteAllRows(self):
+        rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.usersData[row]
-            # notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
+            rowsDeleted.append(row)
+
+        # notify the view(s) using this model that it has been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsDeleted)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+
         self.unfilteredUsersData = list()
         self.filteredUsersData = list()
         self.filtered = False
@@ -266,7 +256,6 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         return self.maxDataViewId
 
     def AddRow(self, value):
-
         self.Filter("")
         self.usersData.append(value)
         # Notify views
@@ -284,20 +273,40 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         usernames = os.walk(dataDir).next()[1]
         return len(usernames)
 
-    def Refresh(self, incrementProgressDialog):
+    def Refresh(self, incrementProgressDialog, shouldAbort):
+        if self.foldersModel.GetCount() > 0:
+            self.foldersModel.DeleteAllRows()
+        if self.GetCount() > 0:
+            self.DeleteAllRows()
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
         usernames = os.walk(dataDir).next()[1]
         for username in usernames:
-            logger.debug("\nFound subdirectory assumed to be username: " +
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
+            logger.debug("Found subdirectory assumed to be username: " +
                          username)
             dataViewId = self.GetMaxDataViewId() + 1
             userRecord = UserModel.GetUserRecord(self.settingsModel, username)
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                         "Data uploads canceled")
+                return
             if userRecord is not None:
                 userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
             else:
                 message = "Didn't find a MyTardis user record for \"" + \
                     username + "\""
@@ -310,14 +319,26 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
                     showDialog()
                 else:
                     wx.CallAfter(showDialog)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
                 userRecord = UserModel(settingsModel=self.settingsModel,
                                        username=username,
                                        name="USER NOT FOUND IN MYTARDIS",
                                        email="USER NOT FOUND IN MYTARDIS")
                 userRecord.SetDataViewId(dataViewId)
                 self.AddRow(userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
                 self.foldersModel\
                     .ImportFolders(os.path.join(dataDir, username), userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                             "Data uploads canceled")
+                    return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
             else:

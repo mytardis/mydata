@@ -61,13 +61,17 @@ class FacilityModel():
             urllib.quote(name)
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
-        response = requests.get(url=url, headers=headers)
+        session = requests.Session()
+        response = session.get(url=url, headers=headers, stream=False)
+        logger.debug(response.text)
         if response.status_code != 200:
-            logger.debug("Failed to look up facility record for name \"" +
-                         name + "\".")
-            logger.debug(response.text)
-            return None
+            message = response.text
+            response.close()
+            session.close()
+            raise Exception(message)
         facilitiesJson = response.json()
+        response.close()
+        session.close()
         numFacilitysFound = facilitiesJson['meta']['total_count']
 
         if numFacilitysFound == 0:
@@ -94,12 +98,15 @@ class FacilityModel():
                 "&manager_group__id=" + str(group.GetId())
             headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                        myTardisApiKey}
-            response = requests.get(url=url, headers=headers)
+            session = requests.Session()
+            response = session.get(url=url, headers=headers)
             if response.status_code != 200:
-                logger.debug("Failed to look up facility record for group \"" +
-                             group.GetName() + "\".")
-                logger.debug(response.text)
-                return None
+                message = response.text
+                response.close()
+                session.close()
+                raise Exception(message)
+            response.close()
+            session.close()
             facilitiesJson = response.json()
             for facilityJson in facilitiesJson['objects']:
                 facilities.append(FacilityModel(

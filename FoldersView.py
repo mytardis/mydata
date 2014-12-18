@@ -21,6 +21,11 @@ class FoldersView(wx.Panel):
                                                       | dv.DV_VERT_RULES
                                                       | dv.DV_MULTIPLE)
 
+        smallFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        if smallFont.GetPointSize() > 11:
+            smallFont.SetPointSize(11)
+        self.foldersDataViewControl.SetFont(smallFont)
+
         self.foldersModel = foldersModel
 
         # Associate model with the dataview control.  Models can
@@ -66,9 +71,6 @@ class FoldersView(wx.Panel):
         c0.Renderer.Alignment = wx.ALIGN_RIGHT
         c0.MinWidth = 40
 
-        # Through the magic of Python we can also access the columns
-        # as a list via the Columns property.  Here we'll mark them
-        # all as sortable and reorderable.
         for c in self.foldersDataViewControl.Columns:
             c.Sortable = True
             c.Reorderable = True
@@ -135,4 +137,3 @@ class FoldersView(wx.Panel):
         menu = FoldersPopupMenu(dataViewItem, openFolderCallback,
                                 deleteFoldersCallback)
         self.PopupMenu(menu, event.GetPosition())
-        menu.Destroy()
