@@ -112,7 +112,7 @@ class MyDataProgressDialog(wx.Frame):
                      "even though userCanAbort is False.")
 
     def OnCancel(self, event):
-        self.messageStaticText.SetLabel("Aborting login...")
+        self.messageStaticText.SetLabel("Aborting...")
         self.userRequestedAbort = True
         self.cancelButton.Enable(False)
         if self.cancelCallback is not None:

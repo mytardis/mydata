@@ -601,15 +601,25 @@ class MyData(wx.App):
 
         logger.debug("OnRefresh: Creating progress dialog.")
         # Set up progress dialog...
+        def cancelCallback():
+            def shutDownUploadThreads():
+                try:
+                    wx.CallAfter(wx.BeginBusyCursor)
+                    self.foldersController.ShutDownUploadThreads()
+                    wx.CallAfter(wx.EndBusyCursor)
+                except:
+                    logger.error(traceback.format_exc())
+            thread = threading.Thread(target=shutDownUploadThreads)
+            thread.start()
         self.progressDialog = \
             MyDataProgressDialog(
                 self.frame,
                 wx.ID_ANY,
-                "MyData",
+                "",
                 "Scanning folders in " +
                 self.settingsModel.GetDataDirectory(),
                 self.usersModel.GetNumUserFolders(),
-                userCanAbort=True, cancelCallback=None)
+                userCanAbort=True, cancelCallback=cancelCallback)
 
         self.numUserFoldersScanned = 0
         self.keepGoing = True
@@ -632,17 +642,12 @@ class MyData(wx.App):
                          % threading.current_thread().name)
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
-            self.usersModel.Refresh(incrementProgressDialog)
+            self.usersModel.Refresh(incrementProgressDialog,
+                                    self.progressDialog.ShouldAbort)
 
             def closeProgressDialog():
                 self.progressDialog.Show(False)
             wx.CallAfter(closeProgressDialog)
-
-            startDataUploadsEvent = \
-                mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
-                                foldersController=self.foldersController)
-            logger.debug("Posting startDataUploadsEvent")
-            wx.PostEvent(wx.GetApp().GetMainFrame(), startDataUploadsEvent)
 
             def endBusyCursorIfRequired():
                 try:
@@ -651,6 +656,17 @@ class MyData(wx.App):
                     if "no matching wxBeginBusyCursor()" not in str(e):
                         logger.error(str(e))
                         raise
+
+            if self.progressDialog.ShouldAbort():
+                wx.CallAfter(endBusyCursorIfRequired)
+                return
+
+            startDataUploadsEvent = \
+                mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
+                                foldersController=self.foldersController)
+            logger.debug("Posting startDataUploadsEvent")
+            wx.PostEvent(wx.GetApp().GetMainFrame(), startDataUploadsEvent)
+
             wx.CallAfter(endBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
