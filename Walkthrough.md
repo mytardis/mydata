@@ -81,6 +81,8 @@ the API key for that account.
 
 Explain Refresh. Show multiple upload threads.
 
+<img src="https://github.com/monash-merc/mydata/blob/master/WalkthroughImages/Multiple%20Upload%20Threads.png" alt="Multiple Upload Threads" style="width:200px;"/>
+
 Show web browser toolbar icon, show data in MyTardis.
 
 Show data in facility view.  Note the two owners.
