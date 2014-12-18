@@ -147,7 +147,7 @@ class UploaderModel():
                 m = re.match(r"^\S.*adapter (.*):\s*$", row)
                 if m:
                     interface = m.groups()[0]
-                if interface in activeInterfaces:
+                if interface == self.interface:
                     if ': ' in row:
                         key, value = row.split(': ')
                         if key.strip(' .') == "Physical Address":
