@@ -4,26 +4,22 @@ UploaderModel.py
 The purpose of this module is to help with registering MyData uploaders
 (which are usually instrument PCs) with the MyTardis server.
 
-Every time MyData runs, or when its settings are updated, it POSTs to its
-preferred MyTardis server some basic information about the PC and about the
-MyData installation.  This basic information is called an "uploader" record.
-This initial POST doesn't require any authentication, but once an uploader
-record has been created in MyTardis, then no other users (of MyTardis's
-RESTful API) will be able to access the uploader record unless they know
-its MAC address, a unique string associated with the MyData user's network
-interface (Ethernet or WiFi or ...).  A single MyData user could create
-multiple uploader records from each PC they run MyData on, one for each
-network interface on each PC.  The primary reason for allowing the initial
-POST without authentication is because (at least for now), the MyTardis
-administrators are keen to be notified of any users attempting to use
-MyData, even if those users can't figure out how to configure
-authentication in MyData.
+MyData POSTs some basic information about the PC and about the MyData
+installation to its MyTardis server.  This basic information is called an
+"uploader" record.  Once an uploader record has been created in MyTardis,
+no other users (of MyTardis's RESTful API) will be able to access the
+uploader record unless they know its MAC address, a unique string
+associated with the MyData user's network interface (Ethernet or WiFi).
+A single MyData user could create multiple uploader records from each PC
+they run MyData on, one for each network interface on each PC.
 
-Initially only HTTP POST uploads are enabled in MyData, but MyData will request
-uploads via "cat >>" over SSH to a staging area, and wait for a MyTardis
-administrator to approve the request.  Below is a sample of a MyTardis
-administrator's notes made (in the approval_comments field in MyTardis's
-UploadRegistrationRequest model) when approving one of these upload requests:
+Initially only HTTP POST uploads are enabled in MyData, but MyData will
+request uploads via SCP to a staging area, and wait for a MyTardis
+administrator to approve the request (which requires updating the
+UploaderRegistrationRequest record created by MyData in the Djano Admin
+interface).  Below is a sample of a MyTardis administrator's notes made
+(in the approval_comments field in MyTardis's UploadRegistrationRequest
+model) when approving one of these upload requests:
 
 Ran the following as root on the staging host (118.138.241.33) :
 
@@ -108,8 +104,8 @@ class UploaderModel():
                     "Please ensure that you have an active network interface " \
                     "(e.g. Ethernet or WiFi)."
                 raise NoActiveNetworkInterface(message)
-            # Sometimes on Windows XP, you can end up with multiple results from
-            # "netsh interface show interface"
+            # Sometimes on Windows XP, you can end up with multiple results
+            # from "netsh interface show interface"
             # If there is one called "Local Area Connection",
             # then that's the one we'll go with.
             if "Local Area Connection" in activeInterfaces:
@@ -308,7 +304,7 @@ class UploaderModel():
                 raise StringTooLongForField("Uploader", field,
                                             uploaderFieldLength[field],
                                             getattr(self, field))
-            
+
         uploaderJson = {"name": self.name,
                         "contact_name": self.contact_name,
                         "contact_email": self.contact_email,
@@ -376,7 +372,7 @@ class UploaderModel():
         response = requests.get(headers=headers, url=url)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
-                response.close() 
+                response.close()
                 raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
             message = response.text
             response.close()
@@ -574,4 +570,3 @@ class UploaderModel():
 
     def SetSettingsModel(self, settingsModel):
         self.settingsModel = settingsModel
-
