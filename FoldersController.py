@@ -296,10 +296,12 @@ class FoldersController():
             fc.uploadWorkerThreads.append(t)
             t.start()
         try:
+            fc.numVerificationsToBePerformed = 0
             for row in range(0, self.foldersModel.GetRowCount()):
                 if self.IsShuttingDown():
                     return
                 folderModel = self.foldersModel.foldersData[row]
+                fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
                 logger.debug(
                     "UploadDataThread: Starting verifications "
                     "and uploads for folder: " +
@@ -446,50 +448,24 @@ class FoldersController():
                 return
 
     def CountCompletedUploadsAndVerifications(self, event):
-        # Check if we have finished uploads and verifications,
-        # and if so, call ShutDownUploadThreads
-        if event.GetId() == self.EVT_FOUND_VERIFIED_DATAFILE:
-            logger.debug("CountCompletedUploadsAndVerifications: "
-                         "Found verified datafile on MyTardis.")
-        elif event.GetId() == self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE:
-            logger.debug("CountCompletedUploadsAndVerifications: "
-                         "Found unverified (but full size) "
-                         "datafile on staging server.")
-        elif event.GetId() == self.EVT_UPLOAD_COMPLETE:
-            logger.debug("CountCompletedUploadsAndVerifications: "
-                         "Upload complete")
-
-        logger.debug("")
-        logger.debug("Uploads scheduled: " + str(self.uploadsModel.GetRowCount()))
-        logger.debug("Uploads completed: " + str(self.uploadsModel.GetCompletedCount()))
-        logger.debug("Uploads failed: " + str(self.uploadsModel.GetFailedCount()))
-
-        numVerificationsScheduled = self.verificationsModel.GetRowCount()
+        """
+        Check if we have finished uploads and verifications,
+        and if so, call ShutDownUploadThreads
+        """
         numFilesFoundVerified = self.verificationsModel.GetFoundVerifiedCount()
         numFilesNotFound = self.verificationsModel.GetNotFoundCount()
         numFilesFoundUnverifiedFullSize = \
             self.verificationsModel.GetFoundUnverifiedFullSizeCount()
         numFilesFoundUnverifiedNotFullSize = \
             self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
+
         numVerificationsProcessed = \
             numFilesFoundVerified + \
             numFilesNotFound + \
             numFilesFoundUnverifiedFullSize + \
             numFilesFoundUnverifiedNotFullSize
 
-        logger.debug("")
-        logger.debug("Verifications scheduled: %d" % numVerificationsScheduled)
-        logger.debug("Files found verified on MyTardis: %d"
-                     % numFilesFoundVerified)
-        logger.debug("Files not found on MyTardis: %d" % numFilesNotFound)
-        logger.debug("Files found unverified (but full size) on MyTardis's "
-                     "staging server: %d" %
-                     self.verificationsModel.GetFoundUnverifiedFullSizeCount())
-        logger.debug("Files found unverified (and not full size) on "
-                     "MyTardis's staging server: %d" %
-                     self.verificationsModel.GetFoundUnverifiedNotFullSizeCount())
-
-        if numVerificationsProcessed == numVerificationsScheduled:
+        if numVerificationsProcessed == self.numVerificationsToBePerformed:
             logger.debug("All datafile verifications have been processed.")
             logger.debug("Shutting down upload and verification threads.")
             wx.PostEvent(self.notifyWindow,
@@ -537,6 +513,8 @@ class FoldersController():
 
         self.notifyWindow.SetOnRefreshRunning(False)
         self.SetShuttingDown(False)
+
+        logger.debug("")
 
     def OnDropFiles(self, filepaths):
         if len(filepaths) == 1 and self.foldersModel.Contains(filepaths[0]):
