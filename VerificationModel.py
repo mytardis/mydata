@@ -53,6 +53,9 @@ class VerificationModel():
     def GetFolderModel(self):
         return self.folderModel
 
+    def GetFolder(self):
+        return self.folder
+
     def GetDataFileIndex(self):
         return self.dataFileIndex
 
