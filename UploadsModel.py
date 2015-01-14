@@ -34,8 +34,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         wx.dataview.PyDataViewIndexListModel.__init__(self,
                                                       len(self.uploadsData))
 
-        self.unfilteredUploadsData = self.uploadsData
-        self.filteredUploadsData = list()
+        # Unfiltered uploads data:
+        self.uud = self.uploadsData
+        # Filtered uploads data:
+        self.fud = list()
         self.filtered = False
         self.searchString = ""
 
@@ -66,22 +68,23 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         q = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
-            self.unfilteredUploadsData = list(self.uploadsData)
+            self.uud = list(self.uploadsData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if q not in self.uploadsData[row].GetFilename().lower():
-                self.filteredUploadsData.append(self.uploadsData[row])
+            ud = self.uploadsData[row]
+            if q not in ud.GetFilename().lower():
+                self.fud.append(ud)
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
-                    self.TryRowDeleted(row)
+                    self.RowDeleted(row)
                 else:
-                    wx.CallAfter(self.TryRowDeleted, row)
+                    wx.CallAfter(self.RowDeleted, row)
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fud = self.filteredUploadsData[filteredRow]
-            if q in fud.lower():
+            fud = self.fud[filteredRow]
+            if q in fud.GetFilename().lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -106,7 +109,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                         self.RowInserted(row)
                     else:
                         wx.CallAfter(self.RowInserted, row)
-                del self.filteredUploadsData[filteredRow]
+                del self.fud[filteredRow]
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
 
@@ -184,11 +187,11 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
 
     # Report how many rows this model provides data for.
     def GetUnfilteredRowCount(self):
-        return len(self.unfilteredUploadsData)
+        return len(self.uud)
 
     # Report how many rows this model provides data for.
     def GetFilteredRowCount(self):
-        return len(self.filteredUploadsData)
+        return len(self.fud)
 
     # Report how many columns this model provides data for.
     def GetColumnCount(self):
@@ -249,7 +252,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                          self.uploadsData[row].GetRelativePathToUpload())
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
-            del self.unfilteredUploadsData[row]
+            del self.uud[row]
 
         # Notify the view(s) that these rows have been removed
         if threading.current_thread().name == "MainThread":
@@ -265,7 +268,7 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             if self.uploadsData[row].GetFolderModel() == folderModel and \
                     self.uploadsData[row].GetDataFileIndex() == dataFileIndex:
                 del self.uploadsData[row]
-                del self.unfilteredUploadsData[row]
+                del self.uud[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
                     self.TryRowDeleted(row)
@@ -302,8 +305,8 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         else:
             wx.CallAfter(self.RowAppended)
 
-        self.unfilteredUploadsData = self.uploadsData
-        self.filteredUploadsData = list()
+        self.uud = self.uploadsData
+        self.fud = list()
         self.Filter(self.searchString)
 
     def TryRowValueChanged(self, row, col):
@@ -398,10 +401,24 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         for row in reversed(rowsToDelete):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
-            del self.unfilteredUploadsData[row]
+            del self.uud[row]
         wx.CallAfter(self.RowsDeleted, rowsToDelete)
 
-        self.filteredUploadsData = list()
+        self.fud = list()
         self.filtered = False
         self.searchString = ""
         self.maxDataViewId = 0
+
+    def GetCompletedCount(self):
+        completedCount = 0
+        for row in range(0, self.GetRowCount()):
+            if self.uploadsData[row].GetStatus() == UploadStatus.COMPLETED:
+                completedCount += 1
+        return completedCount
+
+    def GetFailedCount(self):
+        failedCount = 0
+        for row in range(0, self.GetRowCount()):
+            if self.uploadsData[row].GetStatus() == UploadStatus.FAILED:
+                failedCount += 1
+        return failedCount

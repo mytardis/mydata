@@ -181,7 +181,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         if not ascending:
             userRecord2, userRecord1 = userRecord1, userRecord2
         if col == 0 or col == 3:
-            return cmp(int(userRecord1.GetId()), int(userRecord2.GetId()))
+            return cmp(int(userRecord1.GetDataViewId()), int(userRecord2.GetDataViewId()))
         else:
             return cmp(userRecord1.GetValueForKey(self.columnKeys[col]),
                        userRecord2.GetValueForKey(self.columnKeys[col]))
@@ -246,7 +246,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
     def GetMaxDataViewIdFromExistingRows(self):
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
-            if self.usersData[row].GetId() > maxDataViewId:
+            if self.usersData[row].GetDataViewId() > maxDataViewId:
                 maxDataViewId = self.usersData[row].GetDataViewId()
         return maxDataViewId
 

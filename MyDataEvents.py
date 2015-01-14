@@ -16,6 +16,7 @@ MYDATA_EVENT_BINDER = wx.PyEventBinder(MYDATA_EVENT_TYPE, 1)
 
 EVT_SHUTDOWN_FOR_REFRESH = wx.NewId()
 EVT_SHUTDOWN_FOR_REFRESH_COMPLETE = wx.NewId()
+EVT_SETTINGS_VALIDATION_FOR_REFRESH = wx.NewId()
 EVT_CHECK_CONNECTIVITY = wx.NewId()
 EVT_INSTRUMENT_NAME_MISMATCH = wx.NewId()
 EVT_RENAME_INSTRUMENT = wx.NewId()
@@ -30,6 +31,7 @@ class MyDataEvents():
         self.notifyWindow = notifyWindow
         notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.ShutdownForRefresh)
         notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.ShutdownForRefreshComplete)
+        notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.SettingsValidationForRefresh)
         notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.CheckConnectivity)
         notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.InstrumentNameMismatch)
         notifyWindow.Bind(MYDATA_EVENT_BINDER, MyDataEvent.RenameInstrument)
@@ -408,6 +410,12 @@ class MyDataEvent(wx.PyCommandEvent):
 
     def ShutdownForRefreshComplete(event):
         if event.id != EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
+            event.Skip()
+            return
+        wx.GetApp().OnRefresh(event)
+
+    def SettingsValidationForRefresh(event):
+        if event.id != EVT_SETTINGS_VALIDATION_FOR_REFRESH:
             event.Skip()
             return
         wx.GetApp().OnRefresh(event)

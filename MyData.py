@@ -19,6 +19,8 @@ from FoldersController import FoldersController
 from UsersView import UsersView
 from UsersModel import UsersModel
 from UserModel import UserModel
+from VerificationsView import VerificationsView
+from VerificationsModel import VerificationsModel
 from UploadsView import UploadsView
 from UploadsModel import UploadsModel
 from UploadModel import UploadModel
@@ -37,7 +39,8 @@ import MyDataEvents as mde
 class NotebookTabs:
     FOLDERS = 0
     USERS = 1
-    UPLOADS = 2
+    VERIFICATIONS = 2
+    UPLOADS = 3
 
 
 class MyDataFrame(wx.Frame):
@@ -79,6 +82,9 @@ class MyDataFrame(wx.Frame):
         # FIXME: Arbitrary separation between MyDataApp and MyDataFrame
         # classes.  Make MyDataApp class tiny and move most of its
         # methods to MyDataFrame?
+
+    def OnRefreshIsRunning(self):
+        return wx.GetApp().OnRefreshIsRunning()
 
     def SetOnRefreshRunning(self, onRefreshRunning):
         wx.GetApp().SetOnRefreshRunning(onRefreshRunning)
@@ -226,6 +232,7 @@ class MyData(wx.App):
         self.foldersModel = FoldersModel(self.sqlitedb, self.usersModel,
                                          self.settingsModel)
         self.usersModel.SetFoldersModel(self.foldersModel)
+        self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
 
         self.frame = MyDataFrame(None, -1, self.name,
@@ -268,11 +275,17 @@ class MyData(wx.App):
                               self.foldersModel,
                               self.foldersView,
                               self.usersModel,
+                              self.verificationsModel,
                               self.uploadsModel,
                               self.settingsModel)
 
         self.usersView = UsersView(self.frame, usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
+
+        self.verificationsView = \
+            VerificationsView(self.frame, verificationsModel=self.verificationsModel,
+                              foldersController=self.foldersController)
+        self.foldersUsersNotebook.AddPage(self.verificationsView, "Verifications")
 
         self.uploadsView = \
             UploadsView(self.frame, uploadsModel=self.uploadsModel,
@@ -513,8 +526,15 @@ class MyData(wx.App):
     def OnDoSearch(self, event):
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersModel.Filter(event.GetString())
-        else:
+        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.USERS:
             self.usersModel.Filter(event.GetString())
+        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.VERIFICATIONS:
+            self.verificationsModel.Filter(event.GetString())
+        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
+            self.uploadsModel.Filter(event.GetString())
+
+    def OnRefreshIsRunning(self):
+        return self.onRefreshRunning
 
     def SetOnRefreshRunning(self, onRefreshRunning):
         self.onRefreshRunning = onRefreshRunning
@@ -539,6 +559,9 @@ class MyData(wx.App):
                 self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
             logger.debug("OnRefresh triggered by 'MyTardis Sync' "
                          "task bar menu item.")
+        elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH:
+            logger.debug("OnRefresh called from "
+                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH event.")
         elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
             logger.debug("OnRefresh called from "
                          "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
@@ -558,7 +581,7 @@ class MyData(wx.App):
 
         # Shutting down existing data scan and upload processes:
 
-        if self.onRefreshRunning and not shutdownForRefreshAlreadyComplete:
+        if self.OnRefreshIsRunning() and not shutdownForRefreshAlreadyComplete:
             message = \
                 "Shutting down existing data scan and upload processes..."
             logger.debug(message)
@@ -575,11 +598,14 @@ class MyData(wx.App):
         self.frame.SetConnected(self.settingsModel.GetMyTardisUrl(),
                                 False)
         self.foldersController.SetShuttingDown(False)
-        self.onRefreshRunning = True
+        self.SetOnRefreshRunning(True)
 
         self.searchCtrl.SetValue("")
 
         # Network connectivity check:
+
+        settingsValidationForRefreshEvent = \
+            mde.MyDataEvent(mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH)
 
         intervalSinceLastConnectivityCheck = \
             datetime.now() - self.lastNetworkConnectivityCheckTime
@@ -589,7 +615,8 @@ class MyData(wx.App):
             logger.debug("Checking network connectivity...")
             checkConnectivityEvent = \
                 mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
-                                settingsModel=self.settingsModel)
+                                settingsModel=self.settingsModel,
+                                nextEvent=settingsValidationForRefreshEvent)
             wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
             return
 
