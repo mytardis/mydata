@@ -143,6 +143,46 @@ class MyData(wx.App):
         args, unknown = parser.parse_known_args()
         self.settingsModel.SetBackgroundMode(args.background)
 
+        if sys.platform.startswith("darwin"):
+            # On Mac OS X, adding an Edit menu seems to help with
+            # enabling command-c (copy) and command-v (paste)
+            self.menuBar  = wx.MenuBar()
+            self.editMenu = wx.Menu()
+            self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
+            self.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
+            self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
+            self.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
+            self.editMenu.AppendSeparator()
+            self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
+                                 "Cut the selected text")
+            self.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
+            self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
+                                 "Copy the selected text")
+            self.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
+            self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
+                                 "Paste text from the clipboard")
+            self.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
+            self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
+                                 "Select All")
+            self.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
+            self.menuBar.Append(self.editMenu, "Edit")
+
+            self.Bind(wx.EVT_MENU, self.OnCloseFrame, id=wx.ID_EXIT)
+
+            self.helpMenu = wx.Menu()
+
+            helpMenuItemID = wx.NewId()
+            self.helpMenu.Append(helpMenuItemID, "&MyData Help")
+            self.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
+
+            walkthroughMenuItemID = wx.NewId()
+            self.helpMenu.Append(walkthroughMenuItemID, "&MyData Walkthrough")
+            self.Bind(wx.EVT_MENU, self.OnWalkthrough, id=walkthroughMenuItemID)
+
+            self.helpMenu.Append(wx.ID_ABOUT,   "&About MyData")
+            self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+            self.menuBar.Append(self.helpMenu, "&Help")
+
         # Most of the SQLite stuff was designed for the case where MyData
         # is stateful, i.e. it remembers which folders were dragged into
         # the application during its previous runs.  However currently
@@ -191,6 +231,8 @@ class MyData(wx.App):
         self.frame = MyDataFrame(None, -1, self.name,
                                  style=wx.DEFAULT_FRAME_STYLE,
                                  settingsModel=self.settingsModel)
+        if sys.platform.startswith("darwin"):
+            self.frame.SetMenuBar(self.menuBar)
         self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
 
         self.onRefreshRunning = False
@@ -271,6 +313,38 @@ class MyData(wx.App):
                 self.OnSettings(event)
 
         return True
+
+    def OnUndo(self, event):
+        print "OnUndo"
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            print "Calling textCtrl.Undo()"
+            textCtrl.Undo()
+
+    def OnRedo(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            textCtrl.Redo()
+
+    def OnCut(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            textCtrl.Cut()
+
+    def OnCopy(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            textCtrl.Copy()
+
+    def OnPaste(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            textCtrl.Paste()
+
+    def OnSelectAll(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            textCtrl.SelectAll()
 
     def OnTaskBarLeftClick(self, evt):
         self.taskBarIcon.PopupMenu(self.taskBarIcon.CreatePopupMenu())
@@ -364,24 +438,6 @@ class MyData(wx.App):
         openTool = self.toolbar.AddSimpleTool(wx.ID_ANY, openIcon, "Open",
                                               "Open folder")
         self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
-
-        self.toolbar.AddSeparator()
-
-        undoIcon = wx.Image(os.path.join(pngNormalPath,
-                                         "icons24x24", "Undo.png"),
-                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.undoTool = self.toolbar.AddSimpleTool(wx.ID_UNDO, undoIcon,
-                                                   "Undo", "")
-        self.toolbar.EnableTool(wx.ID_UNDO, False)
-        # self.Bind(wx.EVT_TOOL, self.onUndo, self.undoTool)
-
-        redoIcon = wx.Image(os.path.join(pngNormalPath,
-                                         "icons24x24", "Redo.png"),
-                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.redoTool = self.toolbar.AddSimpleTool(wx.ID_REDO, redoIcon,
-                                                   "Redo", "")
-        self.toolbar.EnableTool(wx.ID_REDO, False)
-        # self.Bind(wx.EVT_TOOL, self.onRedo, self.redoTool)
 
         self.toolbar.AddSeparator()
 
@@ -744,6 +800,11 @@ class MyData(wx.App):
     def OnHelp(self, event):
         new = 2  # Open in a new tab, if possible
         url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
+        webbrowser.open(url, new=new)
+
+    def OnWalkthrough(self, event):
+        new = 2  # Open in a new tab, if possible
+        url = "https://github.com/wettenhj/mydata/blob/master/Walkthrough.md"
         webbrowser.open(url, new=new)
 
     def OnAbout(self, event):
