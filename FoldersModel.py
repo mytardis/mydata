@@ -258,7 +258,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         if not ascending:  # swap sort order?
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
-            return cmp(int(folderRecord1.GetId()), int(folderRecord2.GetId()))
+            return cmp(int(folderRecord1.GetDataViewId()), int(folderRecord2.GetDataViewId()))
         else:
             return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
