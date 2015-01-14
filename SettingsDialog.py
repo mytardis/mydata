@@ -117,6 +117,25 @@ class SettingsDialog(wx.Dialog):
                                   border=5)
         self.apiKeyField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "",
                                        style=wx.TE_PASSWORD)
+
+        # For security reasons, Mac OS X tries to disable copy/paste etc.
+        # in password fields.  Copy and Cut are genuine security risks,
+        # but we can re-enable paste and select all.  We make up new IDs,
+        # rather than using self.apiKeyField.GetId(), so that the OS doesn't
+        # try to impose it's security rules on our "password" field.
+        pasteId = wx.NewId()
+        selectAllId = wx.NewId()
+        acceleratorList = \
+            [(wx.ACCEL_CTRL, ord('V'), pasteId),
+             (wx.ACCEL_CTRL, ord('A'), selectAllId)]
+        self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
+        self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
+        acceleratorTable = wx.AcceleratorTable(acceleratorList)
+        self.SetAcceleratorTable(acceleratorTable)
+
+        self.Bind(wx.EVT_SET_FOCUS, self.OnApiKeyFieldFocused,
+                  self.apiKeyField)
+
         self.fieldsPanelSizer.Add(self.apiKeyField, flag=wx.EXPAND | wx.ALL,
                                   border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
@@ -133,19 +152,29 @@ class SettingsDialog(wx.Dialog):
 
         buttonSizer = wx.StdDialogButtonSizer()
 
-        self.okButton = wx.Button(self, wx.ID_OK)
+        self.okButton = wx.Button(self, wx.ID_OK, "OK")
         self.okButton.SetDefault()
         buttonSizer.AddButton(self.okButton)
-        self.Bind(wx.EVT_BUTTON, self.OnOK, self.okButton)
 
-        self.cancelButton = wx.Button(self, wx.ID_CANCEL)
+        self.cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
         buttonSizer.AddButton(self.cancelButton)
         buttonSizer.Realize()
+        # Using wx.ID_CANCEL makes command-c cancel on Mac OS X,
+        # but we want to use command-c for copying to the clipboard.
+        # We set the ID to wx.ID_CANCEL earlier to help
+        # wx.StdDialogButtonSizer to lay out the buttons correctly.
+        self.cancelButton.SetId(wx.NewId())
         self.Bind(wx.EVT_BUTTON, self.OnCancel, self.cancelButton)
+        # As with the Cancel button, we set the OK button's ID to
+        # wx.ID_OK initially to help wx.StdDialogButtonSizer to 
+        # lay out the buttons.  But at least on Mac OS X, I don't
+        # trust the event handling to work correctly, so I'm
+        # changing the button's ID here:
+        self.okButton.SetId(wx.NewId())
+        self.Bind(wx.EVT_BUTTON, self.OnOK, self.okButton)
 
         sizer.Add(buttonSizer, 0,
                   wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.ALL, 5)
-
         self.SetSizer(sizer)
         sizer.Fit(self)
 
@@ -213,7 +242,8 @@ class SettingsDialog(wx.Dialog):
                 facilityName=self.GetFacilityName(),
                 oldInstrumentName=self.settingsModel.GetInstrumentName(),
                 newInstrumentName=self.GetInstrumentName())
-            wx.PostEvent(wx.GetApp().GetMainFrame(), instrumentNameMismatchEvent)
+            wx.PostEvent(wx.GetApp().GetMainFrame(),
+                         instrumentNameMismatchEvent)
             return
 
         settingsDialogValidationEvent = \
@@ -233,7 +263,8 @@ class SettingsDialog(wx.Dialog):
                                 nextEvent=settingsDialogValidationEvent)
             wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
         else:
-            wx.PostEvent(wx.GetApp().GetMainFrame(), settingsDialogValidationEvent)
+            wx.PostEvent(wx.GetApp().GetMainFrame(),
+                         settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:",
@@ -250,3 +281,22 @@ class SettingsDialog(wx.Dialog):
         self.SetDataDirectory(settingsModel.GetDataDirectory())
         self.SetUsername(settingsModel.GetUsername())
         self.SetApiKey(settingsModel.GetApiKey())
+
+    def OnPaste(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            if textCtrl == self.apiKeyField:
+                textCtrl.Paste()
+            else:
+                event.Skip()
+
+    def OnSelectAll(self, event):
+        textCtrl = wx.Window.FindFocus()
+        if textCtrl is not None:
+            if textCtrl == self.apiKeyField:
+                textCtrl.SelectAll()
+            else:
+                event.Skip()
+
+    def OnApiKeyFieldFocused(self, event):
+        self.apiKeyField.SelectAll()
