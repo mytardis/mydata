@@ -57,6 +57,7 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         for row in reversed(range(0, self.GetRowCount())):
             vd = self.verificationsData[row]
             if q not in vd.GetFilename().lower() and \
+                    q not in vd.GetFolder().lower() and \
                     q not in vd.GetSubdirectory().lower() and \
                     q not in vd.GetMessage().lower():
                 self.fvd.append(vd)
@@ -71,6 +72,7 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
             fvd = self.fvd[filteredRow]
             if q in fvd.GetFilename().lower() or \
+                    q in fvd.GetFolder().lower() or \
                     q in fvd.GetSubdirectory().lower() or \
                     q in fvd.GetMessage().lower():
                 # Model doesn't care about currently sorted column.
