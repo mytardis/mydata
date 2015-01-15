@@ -1321,8 +1321,6 @@ class UploadDatafileRunnable():
                 if hasattr(response, "headers"):
                     # logger.debug(str(response.headers))
                     pass
-            self.uploadModel.SetMessage(str(e))
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             logger.debug(traceback.format_exc())
             return
 
