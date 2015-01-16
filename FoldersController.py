@@ -465,8 +465,14 @@ class FoldersController():
             numFilesFoundUnverifiedFullSize + \
             numFilesFoundUnverifiedNotFullSize
 
-        if numVerificationsProcessed == self.numVerificationsToBePerformed:
-            logger.debug("All datafile verifications have been processed.")
+        uploadsToBePerformed = self.uploadsModel.GetRowCount()
+        uploadsCompleted = self.uploadsModel.GetCompletedCount()
+        uploadsFailed = self.uploadsModel.GetFailedCount()
+        uploadsProcessed = uploadsCompleted + uploadsFailed
+
+        if numVerificationsProcessed == self.numVerificationsToBePerformed and \
+                uploadsProcessed == uploadsToBePerformed:
+            logger.debug("All datafile verifications and uploads have completed.")
             logger.debug("Shutting down upload and verification threads.")
             wx.PostEvent(self.notifyWindow,
                          self.ShutdownUploadsEvent(completed=True))
