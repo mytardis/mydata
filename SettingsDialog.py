@@ -4,6 +4,7 @@ import re
 import requests
 import threading
 from datetime import datetime
+import sys
 
 from logger.Logger import logger
 from SettingsModel import SettingsModel
@@ -40,7 +41,10 @@ class SettingsDialog(wx.Dialog):
         self.fieldsPanelSizer.Add(self.instrumentNameLabel,
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.instrumentNameField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "")
-        self.instrumentNameField.SetMinSize(wx.Size(250, -1))
+        if sys.platform.startswith("darwin"):
+            self.instrumentNameField.SetMinSize(wx.Size(275, -1))
+        else:
+            self.instrumentNameField.SetMinSize(wx.Size(250, -1))
         self.fieldsPanelSizer.Add(self.instrumentNameField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
         blankLine = wx.StaticText(self.fieldsPanel, wx.ID_ANY, "")
