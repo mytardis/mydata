@@ -97,10 +97,7 @@ class UserModel():
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
-            # response = requests.get(url=url, headers=headers, timeout=(0.1,0.1))
-            # response = settingsModel.requestsSession.get(url=url, headers=headers, timeout=(0.1,0.1))
             session = requests.Session()
-            # response = session.get(url=url, headers=headers, timeout=(5,10))
             response = session.get(url=url, headers=headers)
         except:
             response.close()
@@ -128,3 +125,11 @@ class UserModel():
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,
                              userRecordJson=userRecordsJson['objects'][0])
+
+
+class UserProfileModel():
+    """
+    Used with the DoesNotExist exception when a 404 from MyTardis's API
+    is assumed to have been caused by a missing user profile record.
+    """
+    pass

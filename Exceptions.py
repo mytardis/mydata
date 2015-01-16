@@ -18,17 +18,21 @@ class MultipleObjectsReturned(Exception):
 
 
 class DoesNotExist(Exception):
-    def __init__(self, message, url=None, response=None):
+    def __init__(self, message, url=None, response=None, modelClass=None):
         super(DoesNotExist, self).__init__(message)
 
         self.url = url
         self.response = response
+        self.modelClass = modelClass
 
     def GetUrl(self):
         return self.url
 
     def GetResponse(self):
         return self.response
+
+    def GetModelClass(self):
+        return self.modelClass
 
 
 class Unauthorized(Exception):
