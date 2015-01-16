@@ -310,15 +310,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
             else:
                 message = "Didn't find a MyTardis user record for \"" + \
                     username + "\""
-
-                def showDialog():
-                    dlg = wx.MessageDialog(None, message, "User not found",
-                                           wx.OK | wx.ICON_ERROR)
-                    dlg.ShowModal()
-                if threading.current_thread().name == "MainThread":
-                    showDialog()
-                else:
-                    wx.CallAfter(showDialog)
+                logger.warning(message)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                              "Data uploads canceled")
