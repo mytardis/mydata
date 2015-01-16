@@ -1,6 +1,7 @@
 import wx.dataview
 import os
 import threading
+import traceback
 
 from VerificationModel import VerificationModel
 from VerificationModel import VerificationStatus
