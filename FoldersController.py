@@ -318,9 +318,9 @@ class FoldersController():
                         settingsModel.GetMyTardisUrl()
                     try:
                         experimentModel = ExperimentModel\
-                            .GetExperimentForFolder(folderModel)
+                            .GetOrCreateExperimentForFolder(folderModel)
                     except Exception, e:
-                        logger.error(str(e))
+                        logger.error(traceback.format_exc())
                         wx.PostEvent(
                             self.notifyWindow,
                             self.ShowMessageDialogEvent(
