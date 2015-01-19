@@ -88,10 +88,12 @@ class FoldersController():
         self.foldersView.GetDataViewControl()\
             .Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self.OnOpenFolder)
 
-        self.DidntFindMatchingDatafileOnServerEvent, eventBinder = wx.lib.newevent.NewEvent()
+        self.DidntFindMatchingDatafileOnServerEvent, eventBinder = \
+            wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
-        self.UnverifiedDatafileOnServerEvent, eventBinder = wx.lib.newevent.NewEvent()
+        self.UnverifiedDatafileOnServerEvent, eventBinder = \
+            wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
         self.ConnectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
@@ -103,18 +105,23 @@ class FoldersController():
         self.ShutdownUploadsEvent, eventBinder = wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.ShutDownUploadThreads)
 
-        self.FoundVerifiedDatafileEvent, eventBinder = wx.lib.newevent.NewCommandEvent()
+        self.FoundVerifiedDatafileEvent, eventBinder = \
+            wx.lib.newevent.NewCommandEvent()
         self.EVT_FOUND_VERIFIED_DATAFILE = wx.NewId()
-        self.notifyWindow.Bind(eventBinder, self.CountCompletedUploadsAndVerifications)
+        self.notifyWindow.Bind(eventBinder,
+                               self.CountCompletedUploadsAndVerifications)
 
         self.FoundUnverifiedButFullSizeDatafileEvent, eventBinder = \
             wx.lib.newevent.NewCommandEvent()
         self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE = wx.NewId()
-        self.notifyWindow.Bind(eventBinder, self.CountCompletedUploadsAndVerifications)
+        self.notifyWindow.Bind(eventBinder,
+                               self.CountCompletedUploadsAndVerifications)
 
-        self.UploadCompleteEvent, eventBinder = wx.lib.newevent.NewCommandEvent()
+        self.UploadCompleteEvent, eventBinder = \
+            wx.lib.newevent.NewCommandEvent()
         self.EVT_UPLOAD_COMPLETE = wx.NewId()
-        self.notifyWindow.Bind(eventBinder, self.CountCompletedUploadsAndVerifications)
+        self.notifyWindow.Bind(eventBinder,
+                               self.CountCompletedUploadsAndVerifications)
 
     def Canceled(self):
         return self.canceled
@@ -242,15 +249,12 @@ class FoldersController():
         fc.uploadsQueue = Queue.Queue()
         # FIXME: Number of upload threads should be configurable
         fc.numUploadWorkerThreads = 5
-        # fc.numUploadWorkerThreads = 1
-        # print "FIXME: Set numUploadWorkerThreads to 1"
-
         fc.uploadMethod = UploadMethod.HTTP_POST
 
         settingsModel.GetUploaderModel().RequestStagingAccess()
         uploadToStagingRequest = settingsModel\
             .GetUploadToStagingRequest()
-        message = None 
+        message = None
         if uploadToStagingRequest is None:
             message = "Couldn't determine whether uploads to " \
                       "staging have been approved.  " \
@@ -260,26 +264,27 @@ class FoldersController():
             fc.uploadMethod = UploadMethod.VIA_STAGING
         else:
             message = \
-            "Uploads to MyTardis's staging area require " \
-            "approval from your MyTardis administrator.\n\n" \
-            "A request has been sent, and you will be contacted " \
-            "once the request has been approved. Until then, " \
-            "MyData will upload files using HTTP POST, and will " \
-            "only upload one file at a time.\n\n" \
-            "HTTP POST is generally only suitable for small " \
-            "files (up to 100 MB each)."
+                "Uploads to MyTardis's staging area require " \
+                "approval from your MyTardis administrator.\n\n" \
+                "A request has been sent, and you will be contacted " \
+                "once the request has been approved. Until then, " \
+                "MyData will upload files using HTTP POST, and will " \
+                "only upload one file at a time.\n\n" \
+                "HTTP POST is generally only suitable for small " \
+                "files (up to 100 MB each)."
         if message:
             fc.uploadMethodWarningAcknowledged = False
             logger.warning(message)
+
             def acknowledgedUploadMethodWarning():
                 fc.uploadMethodWarningAcknowledged = True
             wx.PostEvent(
                 self.notifyWindow,
                 self.ShowMessageDialogEvent(
-                        title="MyData",
-                        message=message,
-                        icon=wx.ICON_WARNING,
-                        cb=acknowledgedUploadMethodWarning))
+                    title="MyData",
+                    message=message,
+                    icon=wx.ICON_WARNING,
+                    cb=acknowledgedUploadMethodWarning))
             fc.uploadMethod = UploadMethod.HTTP_POST
         if fc.uploadMethod == UploadMethod.HTTP_POST and \
                 fc.numUploadWorkerThreads > 1:
@@ -324,17 +329,17 @@ class FoldersController():
                         wx.PostEvent(
                             self.notifyWindow,
                             self.ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=str(e),
-                                    icon=wx.ICON_ERROR))
+                                title="MyData",
+                                message=str(e),
+                                icon=wx.ICON_ERROR))
                         return
                     folderModel.SetExperiment(experimentModel)
                     CONNECTED = ConnectionStatus.CONNECTED
                     wx.PostEvent(
                         self.notifyWindow,
                         self.ConnectionStatusEvent(
-                                myTardisUrl=myTardisUrl,
-                                connectionStatus=CONNECTED))
+                            myTardisUrl=myTardisUrl,
+                            connectionStatus=CONNECTED))
                     try:
                         datasetModel = DatasetModel\
                             .CreateDatasetIfNecessary(folderModel)
@@ -343,9 +348,9 @@ class FoldersController():
                         wx.PostEvent(
                             self.notifyWindow,
                             self.ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=str(e),
-                                    icon=wx.ICON_ERROR))
+                                title="MyData",
+                                message=str(e),
+                                icon=wx.ICON_ERROR))
                         return
                     folderModel.SetDatasetModel(datasetModel)
                     self.VerifyDatafiles(folderModel)
@@ -356,8 +361,8 @@ class FoldersController():
                         wx.PostEvent(
                             self.notifyWindow,
                             self.ConnectionStatusEvent(
-                                    myTardisUrl=myTardisUrl,
-                                    connectionStatus=DISCONNECTED))
+                                myTardisUrl=myTardisUrl,
+                                connectionStatus=DISCONNECTED))
                     return
                 except ValueError, e:
                     logger.debug("Failed to retrieve experiment "
@@ -470,9 +475,10 @@ class FoldersController():
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
-        if numVerificationsProcessed == self.numVerificationsToBePerformed and \
-                uploadsProcessed == uploadsToBePerformed:
-            logger.debug("All datafile verifications and uploads have completed.")
+        if numVerificationsProcessed == self.numVerificationsToBePerformed \
+                and uploadsProcessed == uploadsToBePerformed:
+            logger.debug("All datafile verifications and uploads "
+                         "have completed.")
             logger.debug("Shutting down upload and verification threads.")
             wx.PostEvent(self.notifyWindow,
                          self.ShutdownUploadsEvent(completed=True))
@@ -515,7 +521,8 @@ class FoldersController():
         elif self.Completed():
             logger.info("Data scan and uploads completed successfully.")
         else:
-            logger.info("Data scan and uploads appear to have completed successfully.")
+            logger.info("Data scan and uploads appear to have "
+                        "completed successfully.")
 
         self.notifyWindow.SetOnRefreshRunning(False)
         self.SetShuttingDown(False)
@@ -718,11 +725,13 @@ class VerifyDatafileRunnable():
         dataFileName = os.path.basename(dataFilePath)
         verificationsModel = self.foldersController.verificationsModel
         verificationDataViewId = verificationsModel.GetMaxDataViewId() + 1
-        self.verificationModel = VerificationModel(dataViewId=verificationDataViewId,
-                                                   folderModel=self.folderModel,
-                                                   dataFileIndex=self.dataFileIndex)
+        self.verificationModel = \
+            VerificationModel(dataViewId=verificationDataViewId,
+                              folderModel=self.folderModel,
+                              dataFileIndex=self.dataFileIndex)
         verificationsModel.AddRow(self.verificationModel)
-        self.verificationModel.SetMessage("Looking for matching file on MyTardis server...")
+        self.verificationModel.SetMessage("Looking for matching file on "
+                                          "MyTardis server...")
         self.verificationModel.SetStatus(VerificationStatus.IN_PROGRESS)
         verificationsModel.VerificationMessageUpdated(self.verificationModel)
 
@@ -733,17 +742,17 @@ class VerifyDatafileRunnable():
                 dataset=self.folderModel.GetDatasetModel(),
                 filename=dataFileName,
                 directory=dataFileDirectory)
-            # logger.debug("Found existing datafile record for %s in "
-                         # "directory %s" % (dataFileName, dataFileDirectory))
-            self.verificationModel.SetMessage("Found datafile on MyTardis server.")
+            self.verificationModel.SetMessage("Found datafile on "
+                                              "MyTardis server.")
             self.verificationModel.SetStatus(VerificationStatus.FOUND_VERIFIED)
-            verificationsModel.VerificationMessageUpdated(self.verificationModel)
+            verificationsModel\
+                .VerificationMessageUpdated(self.verificationModel)
         except DoesNotExist, e:
-            # logger.debug("Didn't find existing datafile record for %s in "
-                         # "directory %s" % (dataFileName, dataFileDirectory))
-            self.verificationModel.SetMessage("Didn't find datafile on MyTardis server.")
+            self.verificationModel.SetMessage("Didn't find datafile on "
+                                              "MyTardis server.")
             self.verificationModel.SetStatus(VerificationStatus.NOT_FOUND)
-            verificationsModel.VerificationMessageUpdated(self.verificationModel)
+            verificationsModel\
+                .VerificationMessageUpdated(self.verificationModel)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.DidntFindMatchingDatafileOnServerEvent(
@@ -795,7 +804,8 @@ class VerifyDatafileRunnable():
                                 username, privateKeyFilePath, host,
                                 self.verificationModel)
                         logger.debug("%d bytes uploaded to staging for %s"
-                                     % (bytesUploadedToStaging, replicas[0].GetUri()))
+                                     % (bytesUploadedToStaging,
+                                        replicas[0].GetUri()))
                     except StagingHostRefusedSshConnection, e:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
@@ -826,33 +836,40 @@ class VerifyDatafileRunnable():
                         return
                     if bytesUploadedToStaging == \
                             int(existingDatafile.GetSize()):
-                        # logger.debug("No need to re-upload \"%s\" to staging. "
-                                     # "The file size (%s bytes) is correct in "
-                                     # "staging."
-                                     # % (dataFilePath,
-                                        # "{:,}".format(bytesUploadedToStaging)))
-                        self.verificationModel.SetMessage("Found unverified full-size datafile on staging server.")
-                        self.verificationModel.SetStatus(VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
-                        verificationsModel.VerificationMessageUpdated(self.verificationModel)
-                        self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+                        self.verificationModel\
+                            .SetMessage("Found unverified full-size datafile "
+                                        "on staging server.")
+                        self.verificationModel\
+                            .SetStatus(VerificationStatus
+                                       .FOUND_UNVERIFIED_FULL_SIZE)
+                        verificationsModel\
+                            .VerificationMessageUpdated(self.verificationModel)
+                        self.folderModel\
+                            .SetDataFileUploaded(self.dataFileIndex, True)
                         self.foldersModel.FolderStatusUpdated(self.folderModel)
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
-                            self.foldersController.FoundUnverifiedButFullSizeDatafileEvent(
-                                id=self.foldersController\
+                            self.foldersController
+                                .FoundUnverifiedButFullSizeDatafileEvent(
+                                    id=self.foldersController
                                     .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
-                                folderModel=self.folderModel,
-                                dataFileIndex=self.dataFileIndex,
-                                dataFilePath=dataFilePath))
+                                    folderModel=self.folderModel,
+                                    dataFileIndex=self.dataFileIndex,
+                                    dataFilePath=dataFilePath))
 
                         return
                     else:
-                        self.verificationModel.SetMessage("Found partially uploaded datafile on staging server.")
-                        self.verificationModel.SetStatus(VerificationStatus.FOUND_UNVERIFIED_NOT_FULL_SIZE)
-                        verificationsModel.VerificationMessageUpdated(self.verificationModel)
+                        self.verificationModel\
+                            .SetMessage("Found partially uploaded datafile "
+                                        "on staging server.")
+                        self.verificationModel\
+                            .SetStatus(VerificationStatus
+                                       .FOUND_UNVERIFIED_NOT_FULL_SIZE)
+                        verificationsModel\
+                            .VerificationMessageUpdated(self.verificationModel)
                         logger.debug("Re-uploading \"%s\" to staging, because "
-                                     "the file size is %d bytes in staging, but "
-                                     "it should be %d bytes."
+                                     "the file size is %d bytes in staging, "
+                                     "but it should be %d bytes."
                                      % (dataFilePath,
                                         bytesUploadedToStaging,
                                         int(existingDatafile.GetSize())))
@@ -866,7 +883,6 @@ class VerifyDatafileRunnable():
                             bytesUploadedToStaging=bytesUploadedToStaging,
                             verificationModel=self.verificationModel))
             else:
-                # logger.debug("Found verified datafile record for %s" % dataFilePath)
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
                 self.foldersModel.FolderStatusUpdated(self.folderModel)
@@ -938,6 +954,7 @@ class UploadDatafileRunnable():
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
                 not self.existingUnverifiedDatafile:
             self.uploadModel.SetMessage("Calculating MD5 checksum...")
+
             def Md5ProgressCallback(bytesProcessed):
                 if self.uploadModel.Canceled():
                     # self.foldersController.SetCanceled()
@@ -977,7 +994,6 @@ class UploadDatafileRunnable():
         else:
             dataFileSize = int(self.existingUnverifiedDatafile.GetSize())
 
-        # self.uploadModel.SetProgress(0.0)
         self.uploadModel.SetProgress(0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
         if dataFileSize == 0:
@@ -1106,24 +1122,34 @@ class UploadDatafileRunnable():
                                 .GetReplicas()[0].GetUri()
                         else:
                             uri = response.json()['replicas'][0]['uri']
-                            # logger.debug(response.text)
-                        # before = datetime.now()
-                        OpenSSH.UploadFile(dataFilePath, dataFileSize,
-                                           username, privateKeyFilePath,
-                                           host, uri,
-                                           ProgressCallback,
-                                           self.foldersController,
-                                           self.uploadModel)
-                        # after = datetime.now()
-                        # duration = after - before
-                        # print "Upload duration for %s was %d seconds." \
-                            # % (dataFilePath, duration.total_seconds())
+                        while True:
+                            try:
+                                OpenSSH.UploadFile(dataFilePath,
+                                                   dataFileSize,
+                                                   username,
+                                                   privateKeyFilePath,
+                                                   host, uri,
+                                                   ProgressCallback,
+                                                   self.foldersController,
+                                                   self.uploadModel)
+                            except IOError, e:
+                                if self.uploadModel.GetRetries() < \
+                                        self.uploadModel.GetMaxRetries():
+                                    self.uploadModel.IncrementRetries()
+                                    logger.debug("Restarting upload for " +
+                                                 dataFilePath)
+                                    self.uploadModel.SetMessage(
+                                        "This file will be re-uploaded...")
+                                    self.uploadModel.SetProgress(0)
+                                    continue
+                                else:
+                                    raise
+                            break
                         if self.uploadModel.Canceled():
-                            # self.foldersController.SetCanceled()
                             logger.debug("FoldersController: "
                                          "Aborting upload for \"%s\"."
                                          % self.uploadModel
-                                             .GetRelativePathToUpload())
+                                         .GetRelativePathToUpload())
                             return
                         bytesUploaded = 0
                         bytesUploaded = self.uploadModel.GetBytesUploaded()
@@ -1238,23 +1264,12 @@ class UploadDatafileRunnable():
                             icon=wx.ICON_ERROR))
                 return
             except ScpException, e:
-                if self.foldersController.IsShuttingDown() or self.uploadModel.Canceled():
+                if self.foldersController.IsShuttingDown() or \
+                        self.uploadModel.Canceled():
                     return
                 message = str(e)
                 message += "\n\n" + e.command
                 logger.error(message)
-                # wx.PostEvent(
-                    # self.foldersController.notifyWindow,
-                    # self.foldersController.ShutdownUploadsEvent(
-                        # failed=True))
-                # wx.PostEvent(
-                    # self.foldersController.notifyWindow,
-                    # self.foldersController
-                        # .ShowMessageDialogEvent(
-                            # title="MyData",
-                            # message=message,
-                            # icon=wx.ICON_ERROR))
-                # return
             except ValueError, e:
                 if str(e) == "read of closed file" or \
                         str(e) == "seek of closed file":
@@ -1349,7 +1364,8 @@ class UploadDatafileRunnable():
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
         else:
-            if self.foldersController.IsShuttingDown() or self.uploadModel.Canceled():
+            if self.foldersController.IsShuttingDown() or \
+                    self.uploadModel.Canceled():
                 return
             logger.error("Upload failed for " + dataFilePath)
             self.uploadModel.SetStatus(UploadStatus.FAILED)
