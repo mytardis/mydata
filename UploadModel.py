@@ -33,6 +33,7 @@ class UploadModel():
         self.scpUploadProcess = None
         self.fileSize = 0  # File size long integer in bytes
         self.canceled = False
+        self.retries = 0
 
         self.verificationModel = None
 
@@ -102,7 +103,7 @@ class UploadModel():
         else:
             # return None
             return self.verificationModel.GetSshControlPath()
-        
+
     def SetSshControlPath(self, sshControlPath):
         self.sshControlPath = sshControlPath
 
@@ -124,7 +125,8 @@ class UploadModel():
     def Cancel(self):
         try:
             self.canceled = True
-            # logger.debug("Canceling upload \"" + self.GetRelativePathToUpload() + "\".")
+            # logger.debug("Canceling upload \"" +
+            #              self.GetRelativePathToUpload() + "\".")
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
                 logger.debug("Closed buffered reader for \"" +
@@ -185,6 +187,15 @@ class UploadModel():
     def SetVerificationModel(self, verificationModel):
         self.verificationModel = verificationModel
 
+    def GetRetries(self):
+        return self.retries
+
+    def IncrementRetries(self):
+        self.retries += 1 
+
+    def GetMaxRetries(self):
+        return 5  # FIXME: Magic number
+
 
 def HumanReadableSizeString(num):
     for x in ['bytes', 'KB', 'MB', 'GB']:
@@ -193,6 +204,7 @@ def HumanReadableSizeString(num):
         num /= 1024.0
     return "%3.0f %s" % (num, 'TB')
 
+
 def PidIsRunning(pid):
     try:
         p = psutil.Process(int(pid))
@@ -200,7 +212,6 @@ def PidIsRunning(pid):
             return False
         if p.status == psutil.STATUS_ZOMBIE:
             return False
-        return True # Assume other status are valid
+        return True  # Assume other status are valid
     except psutil.NoSuchProcess:
         return False
-
