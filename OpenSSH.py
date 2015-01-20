@@ -206,9 +206,11 @@ class KeyPair():
                 pubKeyFile.write(publicKey)
 
         if sys.platform.startswith('win'):
-            quotedPrivateKeyFilePath = openSSH.DoubleQuote(GetMsysPath(self.privateKeyFilePath))
+            quotedPrivateKeyFilePath = \
+                openSSH.DoubleQuote(GetMsysPath(self.privateKeyFilePath))
         else:
-            quotedPrivateKeyFilePath = openSSH.DoubleQuote(self.privateKeyFilePath)
+            quotedPrivateKeyFilePath = \
+                openSSH.DoubleQuote(self.privateKeyFilePath)
         cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen), "-yl",
                    "-f", quotedPrivateKeyFilePath]
         cmd = " ".join(cmdList)
@@ -217,7 +219,7 @@ class KeyPair():
         # to subprocess, rather than a list requires using "shell=True",
         # otherwise Python will check whether the "file"
         # "/usr/bin/ssh-keygen -yl -f /Users/wettenhj/.ssh/MyData" exists
-        # which of course it doesn't.  Passing a command list on the 
+        # which of course it doesn't.  Passing a command list on the
         # other hand is problematic on Windows where Python's automatic
         # quoting to convert the command list to a command doesn't always
         # work as desired.
@@ -346,17 +348,18 @@ def NewKeyPair(keyName=None,
     else:
         raise SshException(stdout)
 
+
 def GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
                                       privateKeyFilePath, hostname):
     """
     Unfortunately re-using an SSH connection with -oControlPath=...
     only works on POSIX systems, not on Windows.
-    
-    To try to achieve a similar effect on Windows, we have the following 
+
+    To try to achieve a similar effect on Windows, we have the following
     options:
 
     1. Use an SSH agent (ssh-agent.exe and ssh-add.exe are already bundled).
-    Subsequent remote commands over SSH channels would still have some 
+    Subsequent remote commands over SSH channels would still have some
     connection overhead (unlike the -oControlPath method), but reading the
     key from the agent should be faster than reading it from disk every time.
 
@@ -386,7 +389,7 @@ def GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
     So I think I'm voting in favour of 4 (piping for small files on Windows
     only) and 3 (the part about returning to different upload methods for
     different file sizes, at least on Windows).  2. is easy, so we can
-    definitely do that, and might get some benefit, but 
+    definitely do that, and might get some benefit, but
     """
 
     if sys.platform.startswith("win"):
@@ -484,7 +487,6 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                 "Connection reset by peer" or \
                 line == "ssh_exchange_identification: " \
                         "Connection closed by remote host":
-            # print "Encountered ssh_exchange_identification error for %s." % remoteFilePath
             message = "The MyTardis staging host assigned to your " \
                 "MyData instance (%s) refused MyData's attempted " \
                 "SSH connection." \
@@ -612,12 +614,13 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                                           remoteFilePath, ProgressCallback,
                                           foldersController, uploadModel)
 
+
 def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               hostname, remoteFilePath, ProgressCallback,
                               foldersController, uploadModel, bytesUploaded):
     """
     On POSIX systems, we use SSH connection caching (the ControlMaster
-    and ControlPath options in "man ssh_config"), but they are not 
+    and ControlPath options in "man ssh_config"), but they are not
     available on Windows.
 
     We want to ensure that the partially uploaded datafile in MyTardis's
@@ -716,8 +719,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             stdout, _ = ddProcess.communicate()
             if ddProcess.returncode != 0:
                 raise Exception(stdout,
-                                   ddCommandString,
-                                   ddProcess.returncode)
+                                ddCommandString,
+                                ddProcess.returncode)
             lines = stdout.splitlines()
             bytesTransferred = 0
             for line in lines:
@@ -833,6 +836,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
     sshMasterProcess.terminate()
+
 
 def UploadSmallFileFromWindows(filePath, fileSize, username,
                                privateKeyFilePath, hostname, remoteFilePath,
@@ -971,7 +975,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     # logger.warning("Assuming that the remote shell is Bash.")
 
     defaultChunkSize = 1024*1024  # FIXME: magic number
-    maxChunkSize = 16*1024*1024  # FIXME: magic number
+    maxChunkSize = 256*1024*1024  # FIXME: magic number
     chunkSize = defaultChunkSize
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
@@ -1056,28 +1060,6 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                              "Aborting upload for %s" % filePath)
                 return
 
-    # remoteRemoveChunkCommand = \
-        # "/bin/rm -f %s" % openSSH.DoubleQuote(remoteChunkPath)
-    # rmCommandString = \
-        # "%s -i %s -c %s " \
-        # "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
-        # "%s@%s %s" \
-        # % (openSSH.ssh,
-        # openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
-        # openSSH.cipher,
-           # username, hostname,
-           # # openSSH.SingleQuote(remoteRemoveChunkCommand))
-           # openSSH.DoubleQuote(remoteRemoveChunkCommand))
-    # logger.debug(rmCommandString)
-    # removeRemoteChunkProcess = \
-        # subprocess.Popen(rmCommandString,
-                         # stdout=subprocess.PIPE,
-                         # stderr=subprocess.STDOUT,
-                         # startupinfo=defaultStartupInfo,
-                         # creationflags=defaultCreationFlags)
-    # stdout, _ = removeRemoteChunkProcess.communicate()
-    # if removeRemoteChunkProcess.returncode != 0:
-        # raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
 def GetMsysPath(path):
     """
