@@ -152,7 +152,7 @@ class MyData(wx.App):
         if sys.platform.startswith("darwin"):
             # On Mac OS X, adding an Edit menu seems to help with
             # enabling command-c (copy) and command-v (paste)
-            self.menuBar  = wx.MenuBar()
+            self.menuBar = wx.MenuBar()
             self.editMenu = wx.Menu()
             self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
             self.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
@@ -183,7 +183,8 @@ class MyData(wx.App):
 
             walkthroughMenuItemID = wx.NewId()
             self.helpMenu.Append(walkthroughMenuItemID, "&MyData Walkthrough")
-            self.Bind(wx.EVT_MENU, self.OnWalkthrough, id=walkthroughMenuItemID)
+            self.Bind(wx.EVT_MENU, self.OnWalkthrough,
+                      id=walkthroughMenuItemID)
 
             self.helpMenu.Append(wx.ID_ABOUT,   "&About MyData")
             self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
@@ -266,7 +267,7 @@ class MyData(wx.App):
         self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGING,
                   self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
-        self.foldersView = FoldersView(self.frame,
+        self.foldersView = FoldersView(self.foldersUsersNotebook,
                                        foldersModel=self.foldersModel)
 
         self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
@@ -279,20 +280,24 @@ class MyData(wx.App):
                               self.uploadsModel,
                               self.settingsModel)
 
-        self.usersView = UsersView(self.frame, usersModel=self.usersModel)
+        self.usersView = UsersView(self.foldersUsersNotebook,
+                                   usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
 
         self.verificationsView = \
-            VerificationsView(self.frame, verificationsModel=self.verificationsModel,
+            VerificationsView(self.foldersUsersNotebook,
+                              verificationsModel=self.verificationsModel,
                               foldersController=self.foldersController)
-        self.foldersUsersNotebook.AddPage(self.verificationsView, "Verifications")
+        self.foldersUsersNotebook.AddPage(self.verificationsView,
+                                          "Verifications")
 
         self.uploadsView = \
-            UploadsView(self.frame, uploadsModel=self.uploadsModel,
+            UploadsView(self.foldersUsersNotebook,
+                        uploadsModel=self.uploadsModel,
                         foldersController=self.foldersController)
         self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
 
-        self.logView = LogView(self.frame, self.settingsModel)
+        self.logView = LogView(self.foldersUsersNotebook, self.settingsModel)
         self.foldersUsersNotebook.AddPage(self.logView, "Log")
 
         self.CreateToolbar()
@@ -528,7 +533,8 @@ class MyData(wx.App):
             self.foldersModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.USERS:
             self.usersModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.VERIFICATIONS:
+        elif self.foldersUsersNotebook.GetSelection() == \
+                NotebookTabs.VERIFICATIONS:
             self.verificationsModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
             self.uploadsModel.Filter(event.GetString())
@@ -700,7 +706,7 @@ class MyData(wx.App):
             return
 
         logger.debug("OnRefresh: Creating progress dialog.")
-        # Set up progress dialog...
+
         def cancelCallback():
             def shutDownUploadThreads():
                 try:
@@ -865,9 +871,8 @@ class MyData(wx.App):
     def GetLastNetworkConnectivityCheckSuccess(self):
         return self.lastNetworkConnectivityCheckSuccess
 
-    def SetLastNetworkConnectivityCheckSuccess(self, lastNetworkConnectivityCheckSuccess):
-        self.lastNetworkConnectivityCheckSuccess = \
-            lastNetworkConnectivityCheckSuccess
+    def SetLastNetworkConnectivityCheckSuccess(self, success):
+        self.lastNetworkConnectivityCheckSuccess = success
 
     def GetActiveNetworkInterface(self):
         return self.activeNetworkInterface
