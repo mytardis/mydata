@@ -46,7 +46,7 @@
 
 [Setup]
 AppName={#MyDataAppName}
-AppVersion=0.0.4
+AppVersion=0.1.0
 DefaultDirName={pf}\{#MyDataAppName}
 DefaultGroupName={#MyDataAppName}
 UninstallDisplayIcon={app}\{#MyDataAppExeName}
