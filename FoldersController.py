@@ -197,16 +197,20 @@ class FoldersController():
         if folderModel not in foldersController.uploadDatafileRunnable:
             foldersController.uploadDatafileRunnable[folderModel] = {}
 
+        if not hasattr(self, "uploadsThreadingLock"):
+            self.uploadsThreadingLock = threading.Lock()
+        self.uploadsThreadingLock.acquire()
         uploadDataViewId = uploadsModel.GetMaxDataViewId() + 1
         uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                   folderModel=folderModel,
                                   dataFileIndex=dfi)
+        uploadsModel.AddRow(uploadModel)
+        self.uploadsThreadingLock.release()
         if hasattr(event, "bytesUploadedToStaging"):
             uploadModel.SetBytesUploadedToStaging(event.bytesUploadedToStaging)
         uploadModel.SetVerificationModel(event.verificationModel)
         if self.IsShuttingDown():
             return
-        uploadsModel.AddRow(uploadModel)
         existingUnverifiedDatafile = False
         if hasattr(event, "existingUnverifiedDatafile"):
             existingUnverifiedDatafile = event.existingUnverifiedDatafile
@@ -724,12 +728,17 @@ class VerifyDatafileRunnable():
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         verificationsModel = self.foldersController.verificationsModel
+        fc = self.foldersController
+        if not hasattr(fc, "verificationsThreadingLock"):
+            fc.verificationsThreadingLock = threading.Lock()
+        fc.verificationsThreadingLock.acquire()
         verificationDataViewId = verificationsModel.GetMaxDataViewId() + 1
         self.verificationModel = \
             VerificationModel(dataViewId=verificationDataViewId,
                               folderModel=self.folderModel,
                               dataFileIndex=self.dataFileIndex)
         verificationsModel.AddRow(self.verificationModel)
+        fc.verificationsThreadingLock.release()
         self.verificationModel.SetMessage("Looking for matching file on "
                                           "MyTardis server...")
         self.verificationModel.SetStatus(VerificationStatus.IN_PROGRESS)
