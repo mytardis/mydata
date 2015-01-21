@@ -42,7 +42,8 @@ class Logger():
             logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
         logWindowHandler.setLevel(logging.DEBUG)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
-            "%(functionName)s - %(currentThreadName)s - %(levelname)s - %(message)s"
+            "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
+            "%(message)s"
         logWindowHandler.setFormatter(logging.Formatter(logFormatString))
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(logWindowHandler)
@@ -52,7 +53,8 @@ class Logger():
         self.loggerObject.setLevel(logging.DEBUG)
 
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
-            "%(functionName)s - %(currentThreadName)s - %(levelname)s - %(message)s"
+            "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
+            "%(message)s"
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
@@ -160,6 +162,9 @@ class Logger():
                          "because myDataMainFrame is None.")
             return
 
+        self.contactName = settingsModel.GetContactName()
+        self.contactEmail = settingsModel.GetContactEmail()
+
         def showSubmitDebugLogDialog():
             dlg = SubmitDebugReportDialog(myDataMainFrame, wx.ID_ANY,
                                           "MyData - Submit Debug Log",
@@ -176,8 +181,8 @@ class Logger():
                     wx.BeginBusyCursor()
                 myDataMainFrame.submitDebugLog = (result == wx.ID_OK)
                 if myDataMainFrame.submitDebugLog:
-                    self.name = dlg.GetName()
-                    self.email = dlg.GetEmail()
+                    self.contactName = dlg.GetName()
+                    self.contactEmail = dlg.GetEmail()
                     self.comments = dlg.GetComments()
                     self.pleaseContactMe = dlg.GetPleaseContactMe()
             finally:
@@ -204,9 +209,8 @@ class Logger():
             if settingsModel is not None:
                 debugLog = debugLog + "Username: " + \
                     settingsModel.GetUsername() + "\n"
-            debugLog = debugLog + "Name: %s\n" % settingsModel.GetContactName()
-            debugLog = debugLog + "Email: %s\n" \
-                % settingsModel.GetContactEmail()
+            debugLog = debugLog + "Name: %s\n" % self.contactName
+            debugLog = debugLog + "Email: %s\n" % self.contactEmail
             debugLog = debugLog + "Contact me? "
             if self.pleaseContactMe:
                 debugLog = debugLog + "Yes" + "\n"
