@@ -531,6 +531,11 @@ class FoldersController():
         self.notifyWindow.SetOnRefreshRunning(False)
         self.SetShuttingDown(False)
 
+        try:
+            wx.EndBusyCursor()
+        except:
+            pass
+
         logger.debug("")
 
     def OnDropFiles(self, filepaths):
