@@ -132,7 +132,16 @@ class UploadsView(wx.Panel):
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
-                wx.CallAfter(wx.EndBusyCursor)
+
+                def endBusyCursorIfRequired():
+                    try:
+                        wx.EndBusyCursor()
+                    except wx._core.PyAssertionError, e:
+                        if "no matching wxBeginBusyCursor()" \
+                                not in str(e):
+                            logger.error(str(e))
+                            raise
+                wx.CallAfter(endBusyCursorIfRequired)
             except:
                 logger.error(traceback.format_exc())
         thread = threading.Thread(target=shutDownUploadThreads)
