@@ -792,9 +792,11 @@ class VerifyDatafileRunnable():
         if existingDatafile:
             replicas = existingDatafile.GetReplicas()
             if len(replicas) == 0 or not replicas[0].IsVerified():
-                logger.info("Found datafile record for %s "
-                            "but it has no verified replicas."
-                            % dataFilePath)
+                message = "Found datafile record for %s " \
+                    "but it has no verified replicas." % dataFilePath
+                logger.warning(message)
+                message = "Found unverified datafile record on MyTardis."
+                self.verificationModel.SetMessage(message)
                 # logger.debug(str(existingDatafile.GetJson()))
                 uploadToStagingRequest = self.settingsModel\
                     .GetUploadToStagingRequest()
@@ -896,6 +898,17 @@ class VerifyDatafileRunnable():
                             existingUnverifiedDatafile=existingDatafile,
                             bytesUploadedToStaging=bytesUploadedToStaging,
                             verificationModel=self.verificationModel))
+                else:
+                    logger.debug("Found unverified datafile record for \"%s\" "
+                                 "on MyTardis while using HTTP POST for "
+                                 "uploads." % dataFilePath)
+                    self.verificationModel\
+                        .SetMessage("Found unverified datafile record. "
+                                    "You can wait for MyTardis to verify the "
+                                    "file, or if necessary, you can ask your "
+                                    "MyTardis administrator to delete the "
+                                    "file from the server, so you can "
+                                    "re-upload it.")
             else:
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
