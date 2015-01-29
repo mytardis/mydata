@@ -256,7 +256,13 @@ class MyDataEvent(wx.PyCommandEvent):
                 def showDialog():
                     message = str(e)
                     logger.error(message)
-                    wx.EndBusyCursor()
+                    try:
+                        wx.EndBusyCursor()
+                    except wx._core.PyAssertionError, e:
+                        if "no matching wxBeginBusyCursor()" \
+                                not in str(e):
+                            logger.error(str(e))
+                            raise
                     dlg = wx.MessageDialog(None, message, "MyData",
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
@@ -352,6 +358,7 @@ class MyDataEvent(wx.PyCommandEvent):
         tempInstrument = tempSettingsModel.GetInstrument()
         tempInstrument.SetSettingsModel(event.settingsModel)
         event.settingsModel.SetInstrument(tempSettingsModel.GetInstrument())
+        event.settingsModel.GetUploaderModel().SetInstrument(tempSettingsModel.GetInstrument())
         event.settingsModel.SaveFieldsFromDialog(event.settingsDialog)
         event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
