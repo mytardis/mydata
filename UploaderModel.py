@@ -94,34 +94,36 @@ class UploaderModel():
 
         intervalSinceLastConnectivityCheck = \
             datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
-        # FIXME: Magic number of 30 seconds since last connectivity check.
-        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
-                not wx.GetApp().GetLastNetworkConnectivityCheckSuccess():
-            activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
-            if len(activeInterfaces) == 0:
-                message = "No active network interfaces." \
-                    "\n\n" \
-                    "Please ensure that you have an active network interface " \
-                    "(e.g. Ethernet or WiFi)."
-                raise NoActiveNetworkInterface(message)
-            # Sometimes on Windows XP, you can end up with multiple results
-            # from "netsh interface show interface"
-            # If there is one called "Local Area Connection",
-            # then that's the one we'll go with.
-            if "Local Area Connection" in activeInterfaces:
-                activeInterfaces = ["Local Area Connection"]
-            elif "Local Area Connection 2" in activeInterfaces:
-                activeInterfaces = ["Local Area Connection 2"]
 
-            # For now, we're only dealing with one active network interface.
-            # It is possible to have more than one active network interface,
-            # but we hope that the code above has picked the best one.
-            # If there are no active interfaces, then we shouldn't have
-            # reached this point - we should have already raised an
-            # exception.
-            self.interface = activeInterfaces[0]
-        else:
-            self.interface = wx.GetApp().GetActiveNetworkInterface()
+        # Here we check connectivity even if we've already done so, because
+        # we need to ensure that we get the correct network interface for
+        # self.interface, otherwise if the active interface changes,
+        # we can get errors like this: KeyError: 'RTC'
+        # when accessing things like ipv4_address[self.interface] 
+
+        activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
+        if len(activeInterfaces) == 0:
+            message = "No active network interfaces." \
+                "\n\n" \
+                "Please ensure that you have an active network interface " \
+                "(e.g. Ethernet or WiFi)."
+            raise NoActiveNetworkInterface(message)
+        # Sometimes on Windows XP, you can end up with multiple results
+        # from "netsh interface show interface"
+        # If there is one called "Local Area Connection",
+        # then that's the one we'll go with.
+        if "Local Area Connection" in activeInterfaces:
+            activeInterfaces = ["Local Area Connection"]
+        elif "Local Area Connection 2" in activeInterfaces:
+            activeInterfaces = ["Local Area Connection 2"]
+
+        # For now, we're only dealing with one active network interface.
+        # It is possible to have more than one active network interface,
+        # but we hope that the code above has picked the best one.
+        # If there are no active interfaces, then we shouldn't have
+        # reached this point - we should have already raised an
+        # exception.
+        self.interface = activeInterfaces[0]
 
         if sys.platform.startswith("win"):
             proc = subprocess.Popen(["ipconfig", "/all"],
