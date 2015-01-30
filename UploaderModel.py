@@ -249,11 +249,15 @@ class UploaderModel():
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisDefaultUsername = self.settingsModel.GetUsername()
+        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/uploader/?format=json" + \
             "&mac_address=" + urllib.quote(self.mac_address)
 
-        headers = {"Content-Type": "application/json",
+        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
+                   myTardisDefaultUserApiKey,
+                   "Content-Type": "application/json",
                    "Accept": "application/json"}
 
         try:
@@ -336,7 +340,10 @@ class UploaderModel():
                         "ipv6_address": self.ipv6_address,
                         "subnet_mask": self.subnet_mask,
 
-                        "hostname": self.hostname}
+                        "hostname": self.hostname,
+
+                        "instruments": [self.settingsModel.GetInstrument()
+                                        .GetResourceUri()]}
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
@@ -458,42 +465,6 @@ class UploaderModel():
         except:
             logger.error(traceback.format_exc())
             raise
-
-    def SetInstrument(self, instrument):
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = self.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
-        url = myTardisUrl + "/api/v1/uploader/?format=json" + \
-            "&mac_address=" + urllib.quote(self.mac_address)
-        logger.debug(url)
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
-        response = requests.get(headers=headers, url=url)
-        existingMatchingUploaderRecords = response.json()
-        numExistingMatchingUploaderRecords = \
-            existingMatchingUploaderRecords['meta']['total_count']
-        if numExistingMatchingUploaderRecords > 0:
-            uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
-        else:
-            response.close()
-            raise DoesNotExist("SetInstrument: Uploader record not found!")
-        logger.info("Setting instrument in uploader record via "
-                    "MyTardis API...")
-        url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
-        logger.debug(url)
-        uploaderJson = {"instruments": [instrument.GetResourceUri()],
-                        "mac_address": self.mac_address}
-        data = json.dumps(uploaderJson)
-        response = requests.put(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
-            logger.info("Setting uploader's instrument succeeded.")
-        else:
-            logger.info("Setting uploader's instrument failed.")
-            logger.info("Status code = " + str(response.status_code))
-            logger.info(response.text)
-        response.close()
 
     @staticmethod
     def GetActiveNetworkInterfaces():

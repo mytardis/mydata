@@ -359,7 +359,6 @@ class MyDataEvent(wx.PyCommandEvent):
         tempInstrument.SetSettingsModel(event.settingsModel)
         event.settingsModel.SaveFieldsFromDialog(event.settingsDialog)
         event.settingsModel.SetInstrument(tempSettingsModel.GetInstrument())
-        event.settingsModel.GetUploaderModel().SetInstrument(tempSettingsModel.GetInstrument())
         event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
         # event.settingsDialog.Destroy()

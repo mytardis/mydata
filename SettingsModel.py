@@ -487,16 +487,6 @@ class SettingsModel():
                                                 "instrument_name")
                     return self.validation
                 logger.info("self.instrument = " + str(self.instrument))
-            logger.debug("Checking if settingsModel.instrument is None and whether settingsModel.uploaderModel is None.")
-            if self.instrument is not None and self.uploaderModel is not None:
-                try:
-                    self.uploaderModel.SetInstrument(self.instrument)
-                except DoesNotExist:
-                    message = "Tried to SetInstrument in uploader record" \
-                                 "but uploader record doesn't exist yet."
-                    logger.error(message)
-                    raise Exception(message)
-
             logger.debug("Validating email address.")
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
