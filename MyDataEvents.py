@@ -352,17 +352,20 @@ class MyDataEvent(wx.PyCommandEvent):
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
-        tempUploaderModel = tempSettingsModel.GetUploaderModel()
-        tempUploaderModel.SetSettingsModel(event.settingsModel)
-        event.settingsModel.SetUploaderModel(tempUploaderModel)
-        tempInstrument = tempSettingsModel.GetInstrument()
-        tempInstrument.SetSettingsModel(event.settingsModel)
-        event.settingsModel.SaveFieldsFromDialog(event.settingsDialog)
-        event.settingsModel.SetInstrument(tempSettingsModel.GetInstrument())
-        event.settingsDialog.EndModal(wx.ID_OK)
-        event.settingsDialog.Show(False)
-        # event.settingsDialog.Destroy()
-        logger.debug("Closed Settings dialog.")
+        try:
+            tempUploaderModel = tempSettingsModel.GetUploaderModel()
+            tempUploaderModel.SetSettingsModel(event.settingsModel)
+            event.settingsModel.SetUploaderModel(tempUploaderModel)
+            tempInstrument = tempSettingsModel.GetInstrument()
+            tempInstrument.SetSettingsModel(event.settingsModel)
+            event.settingsModel.SaveFieldsFromDialog(event.settingsDialog)
+            event.settingsModel.SetInstrument(tempSettingsModel.GetInstrument())
+            event.settingsDialog.EndModal(wx.ID_OK)
+            event.settingsDialog.Show(False)
+            # event.settingsDialog.Destroy()
+            logger.debug("Closed Settings dialog.")
+        except:
+            logger.debug(traceback.format_exc())
 
         def ProvideSettingsValidationResultsWorker3():
             logger.debug("Starting run() method for thread %s" % threading.current_thread().name)
