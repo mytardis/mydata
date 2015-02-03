@@ -60,6 +60,8 @@ class MyDataProgressDialog(wx.Frame):
         self.progressBar = wx.Gauge(self, -1, maxValue)
 
         statusMessageWidth = self.messageStaticText.GetSize().width
+        statusMessageWidth = max(statusMessageWidth, 300)
+        self.messageStaticText.SetMinSize(wx.Size(statusMessageWidth, -1))
         self.progressBar.SetSize(wx.Size(statusMessageWidth, -1))
 
         if userCanAbort:
