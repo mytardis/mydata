@@ -48,7 +48,7 @@ class ExperimentModel():
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
-        experimentName = instrumentName + " " + createdDate
+        experimentName = folderModel.GetExperimentTitle()
         expNameEncoded = urllib2.quote(experimentName)
         instrumentNameEncoded = urllib2.quote(instrumentName)
         url = myTardisUrl + "/api/v1/experiment/?format=json" + \
@@ -117,6 +117,7 @@ class ExperimentModel():
 
         instrumentName = settingsModel.GetInstrumentName()
         experimentName = instrumentName + " " + createdDate
+        experimentName = folderModel.GetExperimentTitle()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
