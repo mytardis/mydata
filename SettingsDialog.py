@@ -272,7 +272,7 @@ class SettingsDialog(wx.Dialog):
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:",
-                           defaultPath=self.GetDataDirectory())
+                           defaultPath=self.GetDataDirectory().encode('ascii', 'ignore'))
         if dlg.ShowModal() == wx.ID_OK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
 
