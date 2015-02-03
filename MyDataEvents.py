@@ -9,6 +9,7 @@ from SettingsModel import SettingsModel
 from UploaderModel import UploaderModel
 from Exceptions import NoActiveNetworkInterface
 from Exceptions import IncompatibleMyTardisVersion
+from Exceptions import DuplicateKey
 from logger.Logger import logger
 
 MYDATA_EVENT_TYPE = wx.NewEventType()
@@ -87,7 +88,14 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(wx.BeginBusyCursor)
             activeNetworkInterfaces = \
                 UploaderModel.GetActiveNetworkInterfaces()
-            wx.CallAfter(wx.EndBusyCursor)
+            def endBusyCursorIfRequired():
+                try:
+                    wx.EndBusyCursor()
+                except wx._core.PyAssertionError, e:
+                    if not "no matching wxBeginBusyCursor()" in str(e):
+                        logger.error(str(e))
+                        raise
+            wx.CallAfter(endBusyCursorIfRequired)
             if len(activeNetworkInterfaces) > 0:
                 logger.debug("Found at least one active network interface: %s." \
                     % activeNetworkInterfaces[0])
@@ -144,13 +152,18 @@ class MyDataEvent(wx.PyCommandEvent):
             if dlg.GetStringSelection() == renameChoice:
                 logger.info("OK, we will rename the "
                             "existing instrument record.")
+                settingsDialogValidationEvent = \
+                    MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
+                                settingsDialog=event.settingsDialog,
+                                settingsModel=event.settingsModel)
                 renameInstrumentEvent = MyDataEvent(
                     EVT_RENAME_INSTRUMENT,
                     settingsDialog=event.settingsDialog,
                     settingsModel=event.settingsModel,
                     facilityName=event.settingsDialog.GetFacilityName(),
                     oldInstrumentName=event.oldInstrumentName,
-                    newInstrumentName=event.newInstrumentName)
+                    newInstrumentName=event.newInstrumentName,
+                    nextEvent=settingsDialogValidationEvent)
                 wx.PostEvent(wx.GetApp().GetMainFrame(), renameInstrumentEvent)
                 return
             elif dlg.GetStringSelection() == discardChoice:
@@ -191,7 +204,16 @@ class MyDataEvent(wx.PyCommandEvent):
                     event.facilityName,
                     event.oldInstrumentName,
                     event.newInstrumentName)
-                wx.CallAfter(wx.EndBusyCursor)
+                def endBusyCursorIfRequired():
+                    try:
+                        wx.EndBusyCursor()
+                    except wx._core.PyAssertionError, e:
+                        if not "no matching wxBeginBusyCursor()" in str(e):
+                            logger.error(str(e))
+                            raise
+                wx.CallAfter(endBusyCursorIfRequired)
+                if hasattr(event, "nextEvent"):
+                    wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             except DuplicateKey:
                 wx.CallAfter(wx.EndBusyCursor)
                 def notifyUserOfDuplicateInstrumentName():
