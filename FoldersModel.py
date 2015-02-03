@@ -53,15 +53,15 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Folder", "Location", "Created", "Status",
+        self.columnNames = ("Id", "Folder (dataset)", "Location", "Experiment", "Status",
                             "Owner", "Email")
-        self.columnKeys = ("dataViewId", "folder", "location", "created",
+        self.columnKeys = ("dataViewId", "folder", "location", "experimentTitle",
                            "status", "owner.username", "owner.email")
 
         if sys.platform.startswith("win"):
-            self.defaultColumnWidths = (40, 185, 200, 70, 160, 120, 180)
+            self.defaultColumnWidths = (40, 185, 200, 150, 160, 120, 180)
         else:
-            self.defaultColumnWidths = (40, 185, 200, 80, 160, 120, 180)
+            self.defaultColumnWidths = (40, 185, 200, 160, 160, 120, 180)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -113,7 +113,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if q not in fd.GetFolder().lower() and \
                     q not in fd.GetLocation().lower() and \
                     q not in fd.GetOwner().GetUsername().lower() and \
-                    q not in fd.GetCreated():
+                    q not in fd.GetExperimentTitle():
                 self.ffd.append(fd)
                 del self.foldersData[row]
                 # Notify the view(s) using this model that it has been removed
@@ -128,7 +128,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if q in ffd.GetFolder().lower() or \
                     q in ffd.GetLocation().lower() or \
                     q in ffd.GetOwner().GetUsername().lower() or \
-                    q in ffd.GetCreated():
+                    q in ffd.GetExperimentTitle():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -352,21 +352,54 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 else:
                     wx.CallAfter(self.RowValueChanged, row, col)
 
-    def ImportFolders(self, dataDirectory, owner):
+    def ImportFolders(self, userFolderPath, owner):
       try:
-        logger.debug("Scanning " + dataDirectory + " for dataset folders...")
-        datasetFolders = os.walk(dataDirectory).next()[1]
-        for datasetFolder in datasetFolders:
-            dataViewId = self.GetMaxDataViewId() + 1
-            folderModel = FolderModel(dataViewId=dataViewId,
-                                      folder=datasetFolder,
-                                      location=dataDirectory,
-                                      folder_type='Dataset',
-                                      owner_id=owner.GetId(),
-                                      foldersModel=self,
-                                      usersModel=self.usersModel,
-                                      settingsModel=self.settingsModel)
-            folderModel.SetCreatedDate()
-            self.AddRow(folderModel)
+        logger.debug("Scanning " + userFolderPath + " for dataset folders...")
+        datasetFolders = os.walk(userFolderPath).next()[1]
+        for datasetFolderName in datasetFolders:
+            if datasetFolderName.lower() == 'mytardis':
+                mytardisFolderName = datasetFolderName
+                logger.debug("Found '%s' folder in %s folder."
+                             % (mytardisFolderName, userFolderPath))
+                mytardisFolderPath = os.path.join(userFolderPath, mytardisFolderName)
+                self.ImportFoldersUsingSpecialSchema(mytardisFolderPath, owner)
+            else:
+                dataViewId = self.GetMaxDataViewId() + 1
+                folderModel = FolderModel(dataViewId=dataViewId,
+                                          folder=datasetFolderName,
+                                          location=userFolderPath,
+                                          folder_type='Dataset',
+                                          owner_id=owner.GetId(),
+                                          foldersModel=self,
+                                          usersModel=self.usersModel,
+                                          settingsModel=self.settingsModel)
+                folderModel.SetCreatedDate()
+                self.AddRow(folderModel)
       except:
         print traceback.format_exc()
+
+    def ImportFoldersUsingSpecialSchema(self, mytardisFolderPath, owner):
+        """
+        Instead of looking for dataset folders as direct children of
+        the username folder, this method looks for dataset folders
+        structured in the following format:
+        <username>\mytardis\<experiment_title>\<dataset_name>
+
+        """
+        expFolders = os.walk(mytardisFolderPath).next()[1]
+        for expFolderName in expFolders:
+            expFolderPath = os.path.join(mytardisFolderPath, expFolderName)
+            datasetFolders = os.walk(expFolderPath).next()[1]
+            for datasetFolderName in datasetFolders:
+                dataViewId = self.GetMaxDataViewId() + 1
+                folderModel = FolderModel(dataViewId=dataViewId,
+                                          folder=datasetFolderName,
+                                          location=expFolderPath,
+                                          folder_type='Dataset',
+                                          owner_id=owner.GetId(),
+                                          foldersModel=self,
+                                          usersModel=self.usersModel,
+                                          settingsModel=self.settingsModel)
+                folderModel.SetCreatedDate()
+                folderModel.SetExperimentTitle(expFolderName)
+                self.AddRow(folderModel)

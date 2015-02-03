@@ -32,6 +32,7 @@ class FolderModel():
             self.dataFileDirectories[i] = \
                 self.dataFileDirectories[i].replace("\\", "/")
         self.created = ""
+        self.experimentTitle = ""
         self.status = "0 of %d files uploaded" % (self.numFiles,)
         self.folder_type = folder_type
         self.owner_id = owner_id
@@ -132,6 +133,17 @@ class FolderModel():
         self.created = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
+        self.SetExperimentTitle()
+
+    def GetExperimentTitle(self):
+        return self.experimentTitle
+
+    def SetExperimentTitle(self, experimentTitle=None):
+        if experimentTitle is not None:
+            self.experimentTitle = experimentTitle
+        else:
+            self.experimentTitle = \
+                self.settingsModel.GetInstrumentName() + " " + self.created
 
     def Refresh(self):
         absoluteFolderPath = os.path.join(self.location, self.folder)
