@@ -306,6 +306,7 @@ class FoldersController():
             t.start()
         try:
             fc.numVerificationsToBePerformed = 0
+            fc.finishedCountingNumVerificationsToBePerformed = False
             for row in range(0, self.foldersModel.GetRowCount()):
                 if self.IsShuttingDown():
                     return
@@ -382,6 +383,7 @@ class FoldersController():
                     return
                 if self.IsShuttingDown():
                     return
+            fc.finishedCountingNumVerificationsToBePerformed = True
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
@@ -480,6 +482,7 @@ class FoldersController():
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
         if numVerificationsProcessed == self.numVerificationsToBePerformed \
+                and self.finishedCountingNumVerificationsToBePerformed \
                 and uploadsProcessed == uploadsToBePerformed:
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
