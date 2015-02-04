@@ -186,9 +186,18 @@ class UploaderModel():
                     ipv6_address[self.interface] = m.groups()[0]
 
         self.mac_address = mac_address[self.interface]
-        self.ipv4_address = ipv4_address[self.interface]
-        self.ipv6_address = ipv6_address[self.interface]
-        self.subnet_mask = subnet_mask[self.interface]
+        if self.interface in ipv4_address:
+            self.ipv4_address = ipv4_address[self.interface]
+        else:
+            self.ipv4_address = ""
+        if self.interface in ipv6_address:
+            self.ipv6_address = ipv6_address[self.interface]
+        else:
+            self.ipv6_address = ""
+        if self.interface in subnet_mask:
+            self.subnet_mask = subnet_mask[self.interface]
+        else:
+            self.subnet_mask = ""
 
         logger.info("The active network interface is: " + str(self.interface))
 
