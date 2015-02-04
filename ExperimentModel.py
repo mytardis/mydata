@@ -47,13 +47,20 @@ class ExperimentModel():
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
+        experimentTitle = folderModel.GetExperimentTitle()
 
-        experimentName = folderModel.GetExperimentTitle()
-        expNameEncoded = urllib2.quote(experimentName)
-        instrumentNameEncoded = urllib2.quote(instrumentName)
-        url = myTardisUrl + "/api/v1/experiment/?format=json" + \
-            "&instrument=" + instrumentNameEncoded + \
-            "&owner=" + ownerUsername + "&date=" + createdDate
+        if folderModel.ExperimentTitleSetManually():
+            expTitleEncoded = urllib2.quote(experimentTitle)
+            instrumentNameEncoded = urllib2.quote(instrumentName)
+            url = myTardisUrl + "/api/v1/experiment/?format=json" + \
+                "&instrument=" + instrumentNameEncoded + \
+                "&owner=" + ownerUsername + "&title=" + expTitleEncoded
+        else:
+            instrumentNameEncoded = urllib2.quote(instrumentName)
+            url = myTardisUrl + "/api/v1/experiment/?format=json" + \
+                "&instrument=" + instrumentNameEncoded + \
+                "&owner=" + ownerUsername + "&date=" + createdDate
+
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey}
         response = requests.get(url=url, headers=headers)
@@ -69,7 +76,7 @@ class ExperimentModel():
             if response.status_code == 404:
                 message = "Couldn't retrieve experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentName, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 message += "A 404 (Not Found) error occurred while " \
                            "attempting to retrieve the experiment.\n\n" \
@@ -80,9 +87,13 @@ class ExperimentModel():
                 raise DoesNotExist(message, modelClass=UserProfileModel)
             raise
         if numExperimentsFound == 0:
-                message = "Experiment not found for %s, %s, %s" \
+            if folderModel.ExperimentTitleSetManually():
+                message = "Experiment not found for '%s', %s, '%s'" \
+                    % (instrumentName, ownerUsername, experimentTitle)
+            else:
+                message = "Experiment not found for '%s', %s, %s" \
                     % (instrumentName, ownerUsername, createdDate)
-                raise DoesNotExist(message, modelClass=ExperimentModel)
+            raise DoesNotExist(message, modelClass=ExperimentModel)
         if numExperimentsFound == 1:
             logger.debug("Found existing experiment for instrument \"" +
                          instrumentName + "\" and user " + ownerUsername +
@@ -94,11 +105,18 @@ class ExperimentModel():
                          "instrument name and creation date for user 'mmi':\n")
             for expJson in experimentsJson['objects']:
                 logger.error("\t" + expJson['title'])
-            message = "Multiple experiments were found matching " \
-                      "instrument \"%s\", owner \"%s\" and date " \
-                      "\"%s\" for folder \"%s\"." \
-                      % (instrumentName, ownerUsername, createdDate,
-                         folderModel.GetFolder())
+            if folderModel.ExperimentTitleSetManually():
+                message = "Multiple experiments were found matching " \
+                          "instrument \"%s\", owner \"%s\" and title " \
+                          "\"%s\" for folder \"%s\"." \
+                          % (instrumentName, ownerUsername, experimentTitle,
+                             folderModel.GetFolder())
+            else:
+                message = "Multiple experiments were found matching " \
+                          "instrument \"%s\", owner \"%s\" and date " \
+                          "\"%s\" for folder \"%s\"." \
+                          % (instrumentName, ownerUsername, createdDate,
+                             folderModel.GetFolder())
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
                        "MyTardis administrator to investigate."
@@ -116,8 +134,8 @@ class ExperimentModel():
             ownerUserId = None
 
         instrumentName = settingsModel.GetInstrumentName()
-        experimentName = instrumentName + " " + createdDate
-        experimentName = folderModel.GetExperimentTitle()
+        experimentTitle = folderModel.GetExperimentTitle()
+
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
@@ -125,14 +143,14 @@ class ExperimentModel():
         logger.debug("Creating experiment for instrument \"" +
                      instrumentName + ", username " + ownerUsername +
                      " and created date " + createdDate)
+        description = "Instrument: %s\n\n" \
+                       "Owner: %s\n\n" \
+                       % (instrumentName, ownerUsername)
+        if not folderModel.ExperimentTitleSetManually():
+            description += "\n\nData collected: %s" % createdDate
         experimentJson = {
-            "title": experimentName,
-            "description": "Instrument: %s\n\n"
-                           "Owner: %s\n\n"
-                           "Data collected: %s" %
-                           (instrumentName,
-                            ownerUsername,
-                            createdDate),
+            "title": experimentTitle,
+            "description": description,
             "immutable": False,
             "parameter_sets": [{
                 "schema": "http://tardis.edu.au/schemas"
@@ -163,7 +181,7 @@ class ExperimentModel():
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentName, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" user " \
@@ -172,7 +190,7 @@ class ExperimentModel():
             elif response.status_code == 404:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentName, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 message += "A 404 (Not Found) error occurred while " \
                            "attempting to create the experiment.\n\n" \
@@ -208,7 +226,7 @@ class ExperimentModel():
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentName, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" user " \
@@ -217,7 +235,7 @@ class ExperimentModel():
             elif response.status_code == 404:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentName, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 message += "A 404 (Not Found) error occurred while " \
                            "attempting to create the experiment.\n\n" \
