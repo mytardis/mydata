@@ -4,7 +4,7 @@ class DuplicateKey(Exception):
 
 
 class MultipleObjectsReturned(Exception):
-    def __init__(self, message, url, response):
+    def __init__(self, message, url=None, response=None):
         super(MultipleObjectsReturned, self).__init__(message)
 
         self.url = url
