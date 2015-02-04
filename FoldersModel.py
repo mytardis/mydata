@@ -174,8 +174,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         columnKey = self.GetColumnKeyName(col)
         if columnKey.startswith("owner."):
             ownerKey = columnKey.split("owner.")[1]
-            owner_id = self.foldersData[row].GetValueForKey('owner_id')
-            owner = self.usersModel.GetUserById(id=owner_id)
+            owner = self.foldersData[row].GetOwner()
             if owner is not None:
                 return owner.GetValueForKey(ownerKey)
             else:
@@ -369,7 +368,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                           folder=datasetFolderName,
                                           location=userFolderPath,
                                           folder_type='Dataset',
-                                          owner_id=owner.GetId(),
+                                          owner=owner,
                                           foldersModel=self,
                                           usersModel=self.usersModel,
                                           settingsModel=self.settingsModel)
@@ -396,7 +395,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                           folder=datasetFolderName,
                                           location=expFolderPath,
                                           folder_type='Dataset',
-                                          owner_id=owner.GetId(),
+                                          owner=owner,
                                           foldersModel=self,
                                           usersModel=self.usersModel,
                                           settingsModel=self.settingsModel)

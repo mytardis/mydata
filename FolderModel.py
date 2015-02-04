@@ -11,7 +11,7 @@ from DatasetModel import DatasetModel
 
 class FolderModel():
 
-    def __init__(self, dataViewId, folder, location, folder_type, owner_id,
+    def __init__(self, dataViewId, folder, location, folder_type, owner,
                  foldersModel, usersModel, settingsModel):
         self.dataViewId = dataViewId
         self.folder = folder
@@ -36,7 +36,7 @@ class FolderModel():
         self.experimentTitleSetManually = False
         self.status = "0 of %d files uploaded" % (self.numFiles,)
         self.folder_type = folder_type
-        self.owner_id = owner_id
+        self.owner = owner
         self.foldersModel = foldersModel
         self.usersModel = usersModel
         self.settingsModel = settingsModel
@@ -118,10 +118,10 @@ class FolderModel():
         return self.folder_type
 
     def GetOwnerId(self):
-        return self.owner_id
+        return self.owner.GetId()
 
     def GetOwner(self):
-        return self.usersModel.GetUserById(self.owner_id)
+        return self.owner
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
