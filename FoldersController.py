@@ -591,7 +591,7 @@ class FoldersController():
                 folderModel = FolderModel(dataViewId=dataViewId, folder=folder,
                                           location=location,
                                           folder_type=self.lastUsedFolderType,
-                                          owner_id=owner.GetId(),
+                                          owner=owner,
                                           foldersModel=self.foldersModel,
                                           usersModel=usersModel,
                                           settingsModel=settingsModel)
