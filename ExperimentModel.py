@@ -144,7 +144,7 @@ class ExperimentModel():
                      instrumentName + ", username " + ownerUsername +
                      " and created date " + createdDate)
         description = "Instrument: %s\n\n" \
-                       "Owner: %s\n\n" \
+                       "Owner: %s" \
                        % (instrumentName, ownerUsername)
         if not folderModel.ExperimentTitleSetManually():
             description += "\n\nData collected: %s" % createdDate
