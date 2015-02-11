@@ -112,3 +112,8 @@ class StringTooLongForField(Exception):
             "The maximum length allowed is %d\n" \
             % (value, field, model, maxLength)
         super(StringTooLongForField, self).__init__(message)
+
+
+class InvalidFolderStructure(Exception):
+    def __init__(self, message):
+        super(InvalidFolderStructure, self).__init__(message)
