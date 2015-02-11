@@ -72,9 +72,9 @@ class FacilityModel():
         facilitiesJson = response.json()
         response.close()
         session.close()
-        numFacilitysFound = facilitiesJson['meta']['total_count']
+        numFacilitiesFound = facilitiesJson['meta']['total_count']
 
-        if numFacilitysFound == 0:
+        if numFacilitiesFound == 0:
             logger.warning("Facility \"%s\" was not found in MyTardis" % name)
             return None
         else:

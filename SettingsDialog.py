@@ -30,7 +30,7 @@ class SettingsDialog(wx.Dialog):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.fieldsPanel = wx.Panel(self)
-        self.fieldsPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
+        self.fieldsPanelSizer = wx.FlexGridSizer(rows=10, cols=3,
                                                  vgap=5, hgap=5)
         self.fieldsPanel.SetSizer(self.fieldsPanelSizer)
 
@@ -101,6 +101,16 @@ class SettingsDialog(wx.Dialog):
                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.myTardisUrlField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "")
         self.fieldsPanelSizer.Add(self.myTardisUrlField,
+                                  flag=wx.EXPAND | wx.ALL, border=5)
+        self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                                ""))
+
+        groupPrefixLabel = wx.StaticText(self.fieldsPanel, wx.ID_ANY,
+                                      "Group Prefix:")
+        self.fieldsPanelSizer.Add(groupPrefixLabel,
+                                  flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.groupPrefixField = wx.TextCtrl(self.fieldsPanel, wx.ID_ANY, "")
+        self.fieldsPanelSizer.Add(self.groupPrefixField,
                                   flag=wx.EXPAND | wx.ALL, border=5)
         self.fieldsPanelSizer.Add(wx.StaticText(self.fieldsPanel, wx.ID_ANY,
                                                 ""))
@@ -220,6 +230,12 @@ class SettingsDialog(wx.Dialog):
     def SetMyTardisUrl(self, myTardisUrl):
         self.myTardisUrlField.SetValue(myTardisUrl)
 
+    def GetGroupPrefix(self):
+        return self.groupPrefixField.GetValue()
+
+    def SetGroupPrefix(self, groupPrefix):
+        self.groupPrefixField.SetValue(groupPrefix)
+
     def GetUsername(self):
         return self.usernameField.GetValue()
 
@@ -284,6 +300,7 @@ class SettingsDialog(wx.Dialog):
         self.SetMyTardisUrl(settingsModel.GetMyTardisUrl())
         self.SetDataDirectory(settingsModel.GetDataDirectory())
         self.SetUsername(settingsModel.GetUsername())
+        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
         self.SetApiKey(settingsModel.GetApiKey())
 
     def OnPaste(self, event):

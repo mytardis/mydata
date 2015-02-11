@@ -47,6 +47,7 @@ class SettingsModel():
         self.contact_email = ""
         self.data_directory = ""
         self.mytardis_url = ""
+        self.group_prefix = ""
         self.username = ""
         self.api_key = ""
 
@@ -78,6 +79,8 @@ class SettingsModel():
                                                       "contact_email", "")
                 self.mytardis_url = configParser.get(configFileSection,
                                                      "mytardis_url", "")
+                self.group_prefix = configParser.get(configFileSection,
+                                                     "group_prefix", "")
                 self.username = configParser.get(configFileSection,
                                                  "username", "")
                 self.api_key = configParser.get(configFileSection,
@@ -135,11 +138,25 @@ class SettingsModel():
     def SetMyTardisUrl(self, myTardisUrl):
         self.mytardis_url = myTardisUrl
 
+    def GetGroupPrefix(self):
+        return self.group_prefix
+
+    def SetGroupPrefix(self, groupPrefix):
+        self.group_prefix = groupPrefix
+
     def GetUsername(self):
         return self.username
 
     def SetUsername(self, username):
         self.username = username
+
+    def GetDefaultOwner(self):
+        if hasattr(self, "defaultOwner") and \
+                self.defaultOwner.GetUsername() == self.GetUsername():
+            return self.defaultOwner
+        self.defaultOwner = UserModel.GetUserByUsername(self,
+                                                        self.GetUsername())
+        return self.defaultOwner
 
     def GetApiKey(self):
         return self.api_key
@@ -202,6 +219,8 @@ class SettingsModel():
                              self.GetContactEmail())
             configParser.set("MyData", "data_directory",
                              self.GetDataDirectory())
+            configParser.set("MyData", "group_prefix",
+                             self.GetGroupPrefix())
             configParser.set("MyData", "username",
                              self.GetUsername())
             configParser.set("MyData", "api_key",
@@ -217,6 +236,7 @@ class SettingsModel():
         self.SetContactName(settingsDialog.GetContactName())
         self.SetContactEmail(settingsDialog.GetContactEmail())
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
+        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
         # self.mydataConfigPath could be None for the temporary
@@ -330,7 +350,7 @@ class SettingsModel():
                     return self.validation
                 elif history:
                     message = "MyData attempted to access MyTardis at " \
-                            "\"%s\", but was redirected to:" \
+                        "\"%s\", but was redirected to:" \
                         "\n\n" % self.GetMyTardisUrl()
                     message += "\t%s" % url
                     message += "\n\n"
@@ -407,8 +427,7 @@ class SettingsModel():
                 message = "Please enter a valid facility name."
                 suggestion = None
                 try:
-                    defaultUserModel = UserModel\
-                        .GetUserRecord(self, self.GetUsername())
+                    defaultUserModel = self.GetDefaultOwner()
                     facilities = FacilityModel\
                         .GetMyFacilities(self, defaultUserModel)
                     if len(facilities) == 1:
@@ -423,8 +442,7 @@ class SettingsModel():
                                                               "facility_name",
                                                               suggestion)
                     return self.validation
-            defaultUserModel = UserModel.GetUserRecord(self,
-                                                       self.GetUsername())
+            defaultUserModel = self.GetDefaultOwner()
             facilities = FacilityModel.GetMyFacilities(self,
                                                        defaultUserModel)
             for f in facilities:
@@ -522,7 +540,7 @@ class SettingsModel():
 
     def RenameInstrument(self, facilityName,
                          oldInstrumentName, newInstrumentName):
-        defaultUserModel = UserModel.GetUserRecord(self, self.GetUsername())
+        defaultUserModel = self.GetDefaultOwner()
         facilities = FacilityModel.GetMyFacilities(self, defaultUserModel)
         facility = None
         for f in facilities:

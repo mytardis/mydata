@@ -5,6 +5,7 @@ import traceback
 from logger.Logger import logger
 from GroupModel import GroupModel
 from Exceptions import IncompatibleMyTardisVersion
+from Exceptions import DoesNotExist
 
 
 class UserModel():
@@ -88,7 +89,7 @@ class UserModel():
         return "UserModel: " + self.GetUsername()
 
     @staticmethod
-    def GetUserRecord(settingsModel, username):
+    def GetUserByUsername(settingsModel, username):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -120,7 +121,9 @@ class UserModel():
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
-            logger.warning("User %s was not found in MyTardis" % username)
+            raise DoesNotExist(
+                message="User \"%s\" was not found in MyTardis" % username,
+                url=url, response=response)
         else:
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,

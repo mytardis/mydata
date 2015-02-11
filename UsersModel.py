@@ -1,16 +1,16 @@
 import wx.dataview
-import sqlite3
 from UserModel import UserModel
+from GroupModel import GroupModel
 import os
 import threading
 
 from logger.Logger import logger
+from Exceptions import DoesNotExist
 
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):
-    def __init__(self, sqlitedb, settingsModel):
+    def __init__(self, settingsModel):
 
-        self.sqlitedb = sqlitedb
         self.settingsModel = settingsModel
         self.foldersModel = None
 
@@ -181,7 +181,8 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         if not ascending:
             userRecord2, userRecord1 = userRecord1, userRecord2
         if col == 0 or col == 3:
-            return cmp(int(userRecord1.GetDataViewId()), int(userRecord2.GetDataViewId()))
+            return cmp(int(userRecord1.GetDataViewId()),
+                       int(userRecord2.GetDataViewId()))
         else:
             return cmp(userRecord1.GetValueForKey(self.columnKeys[col]),
                        userRecord2.GetValueForKey(self.columnKeys[col]))
@@ -268,68 +269,96 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         self.filteredUsersData = list()
         self.Filter(self.searchString)
 
-    def GetNumUserFolders(self):
+    def GetNumUserOrGroupFolders(self):
         dataDir = self.settingsModel.GetDataDirectory()
-        usernames = os.walk(dataDir).next()[1]
-        return len(usernames)
+        userOrGroupFolderNames = os.walk(dataDir).next()[1]
+        return len(userOrGroupFolderNames)
 
-    def Refresh(self, incrementProgressDialog, shouldAbort):
+    def Refresh(self, groupsModel, incrementProgressDialog, shouldAbort):
         if self.foldersModel.GetCount() > 0:
             self.foldersModel.DeleteAllRows()
         if self.GetCount() > 0:
             self.DeleteAllRows()
+        if groupsModel.GetCount() > 0:
+            groupsModel.DeleteAllRows()
         dataDir = self.settingsModel.GetDataDirectory()
         logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
-        usernames = os.walk(dataDir).next()[1]
-        for username in usernames:
+        userOrGroupFolderNames = os.walk(dataDir).next()[1]
+        for userOrGroupFolderName in userOrGroupFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                         "Data uploads canceled")
+                             "Data uploads canceled")
                 return
+            logger.debug("Found folder assumed to be username " +
+                         "or group name: " + userOrGroupFolderName)
+            usersDataViewId = self.GetMaxDataViewId() + 1
+            groupsDataViewId = groupsModel.GetMaxDataViewId() + 1
+            userRecord = None
+            groupRecord = None
+            try:
+                userRecord = UserModel.GetUserByUsername(self.settingsModel,
+                                                         userOrGroupFolderName)
+            except DoesNotExist:
+                try:
+                    groupName = self.settingsModel.GetGroupPrefix() + \
+                        userOrGroupFolderName
+                    groupRecord = \
+                        GroupModel.GetGroupByName(self.settingsModel,
+                                                  groupName)
+                except DoesNotExist:
+                    pass
+
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                         "Data uploads canceled")
-                return
-            logger.debug("Found subdirectory assumed to be username: " +
-                         username)
-            dataViewId = self.GetMaxDataViewId() + 1
-            userRecord = UserModel.GetUserRecord(self.settingsModel, username)
-            if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                         "Data uploads canceled")
+                             "Data uploads canceled")
                 return
             if userRecord is not None:
-                userRecord.SetDataViewId(dataViewId)
+                userRecord.SetDataViewId(usersDataViewId)
                 self.AddRow(userRecord)
                 self.foldersModel\
-                    .ImportFolders(os.path.join(dataDir, username), userRecord)
+                    .ImportUserFolders(os.path.join(dataDir,
+                                                    userOrGroupFolderName),
+                                       userRecord)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                             "Data uploads canceled")
+                                 "Data uploads canceled")
+                    return
+            elif groupRecord is not None:
+                groupRecord.SetDataViewId(groupsDataViewId)
+                groupsModel.AddRow(groupRecord)
+                self.foldersModel\
+                    .ImportGroupFolders(os.path.join(dataDir,
+                                                     userOrGroupFolderName),
+                                        groupRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                 "Data uploads canceled")
                     return
             else:
                 message = "Didn't find a MyTardis user record for \"" + \
-                    username + "\""
+                    userOrGroupFolderName + "\""
                 logger.warning(message)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                             "Data uploads canceled")
+                                 "Data uploads canceled")
                     return
                 userRecord = UserModel(settingsModel=self.settingsModel,
-                                       username=username,
+                                       username=userOrGroupFolderName,
                                        name="USER NOT FOUND IN MYTARDIS",
                                        email="USER NOT FOUND IN MYTARDIS")
-                userRecord.SetDataViewId(dataViewId)
+                userRecord.SetDataViewId(usersDataViewId)
                 self.AddRow(userRecord)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                             "Data uploads canceled")
+                                 "Data uploads canceled")
                     return
                 self.foldersModel\
-                    .ImportFolders(os.path.join(dataDir, username), userRecord)
+                    .ImportUserFolders(os.path.join(dataDir,
+                                                    userOrGroupFolderName),
+                                       userRecord)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                             "Data uploads canceled")
+                                 "Data uploads canceled")
                     return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
