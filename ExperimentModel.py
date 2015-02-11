@@ -143,9 +143,9 @@ class ExperimentModel():
         logger.debug("Creating experiment for instrument \"" +
                      instrumentName + ", username " + ownerUsername +
                      " and created date " + createdDate)
-        description = "Instrument: %s\n\n" \
-                       "Owner: %s" \
-                       % (instrumentName, ownerUsername)
+        description = ("Instrument: %s\n\n"
+                       "Owner: %s"
+                       % (instrumentName, ownerUsername))
         if not folderModel.ExperimentTitleSetManually():
             description += "\n\nData collected: %s" % createdDate
         experimentJson = {
@@ -214,6 +214,9 @@ class ExperimentModel():
                     ownerUserId is not None:
                 ObjectAclModel.ShareExperimentWithUser(createdExperiment,
                                                        owner)
+            if folderModel.GetGroup() is not None:
+                ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
+                                                        folderModel.GetGroup())
         else:
             logger.debug("Failed to create experiment for instrument " +
                          instrumentName + " and user " + ownerUsername +

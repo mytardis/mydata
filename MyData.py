@@ -14,16 +14,15 @@ import CommitDef
 import MyDataVersionNumber
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
-from FolderModel import FolderModel
 from FoldersController import FoldersController
 from UsersView import UsersView
 from UsersModel import UsersModel
-from UserModel import UserModel
+from GroupsView import GroupsView
+from GroupsModel import GroupsModel
 from VerificationsView import VerificationsView
 from VerificationsModel import VerificationsModel
 from UploadsView import UploadsView
 from UploadsModel import UploadsModel
-from UploadModel import UploadModel
 from UploaderModel import UploaderModel
 from LogView import LogView
 from SettingsModel import SettingsModel
@@ -39,8 +38,9 @@ import MyDataEvents as mde
 class NotebookTabs:
     FOLDERS = 0
     USERS = 1
-    VERIFICATIONS = 2
-    UPLOADS = 3
+    GROUPS = 2
+    VERIFICATIONS = 3
+    UPLOADS = 4
 
 
 class MyDataFrame(wx.Frame):
@@ -229,7 +229,8 @@ class MyData(wx.App):
         except:
             logger.error(traceback.format_exc())
 
-        self.usersModel = UsersModel(self.sqlitedb, self.settingsModel)
+        self.usersModel = UsersModel(self.settingsModel)
+        self.groupsModel = GroupsModel(self.settingsModel)
         self.foldersModel = FoldersModel(self.sqlitedb, self.usersModel,
                                          self.settingsModel)
         self.usersModel.SetFoldersModel(self.foldersModel)
@@ -283,6 +284,10 @@ class MyData(wx.App):
         self.usersView = UsersView(self.foldersUsersNotebook,
                                    usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
+
+        self.groupsView = GroupsView(self.foldersUsersNotebook,
+                                     groupsModel=self.groupsModel)
+        self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
 
         self.verificationsView = \
             VerificationsView(self.foldersUsersNotebook,
@@ -533,6 +538,8 @@ class MyData(wx.App):
             self.foldersModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.USERS:
             self.usersModel.Filter(event.GetString())
+        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.GROUPS:
+            self.groupsModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == \
                 NotebookTabs.VERIFICATIONS:
             self.verificationsModel.Filter(event.GetString())
@@ -732,7 +739,7 @@ class MyData(wx.App):
                 "",
                 "Scanning folders in " +
                 self.settingsModel.GetDataDirectory(),
-                self.usersModel.GetNumUserFolders(),
+                self.usersModel.GetNumUserOrGroupFolders(),
                 userCanAbort=True, cancelCallback=cancelCallback)
 
         self.numUserFoldersScanned = 0
@@ -742,7 +749,7 @@ class MyData(wx.App):
             self.numUserFoldersScanned = self.numUserFoldersScanned + 1
             message = "Scanned %d of %d folders in %s" % (
                 self.numUserFoldersScanned,
-                self.usersModel.GetNumUserFolders(),
+                self.usersModel.GetNumUserOrGroupFolders(),
                 self.settingsModel.GetDataDirectory())
             self.keepGoing = \
                 self.progressDialog.Update(self.numUserFoldersScanned,
@@ -756,7 +763,8 @@ class MyData(wx.App):
                          % threading.current_thread().name)
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
-            self.usersModel.Refresh(incrementProgressDialog,
+            self.usersModel.Refresh(self.groupsModel,
+                                    incrementProgressDialog,
                                     self.progressDialog.ShouldAbort)
 
             def closeProgressDialog():

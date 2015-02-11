@@ -2,6 +2,7 @@ import wx
 import wx.dataview
 import sqlite3
 from FolderModel import FolderModel
+from UserModel import UserModel
 from ExperimentModel import ExperimentModel
 import threading
 import os
@@ -9,6 +10,9 @@ import sys
 import traceback
 
 from logger.Logger import logger
+from Exceptions import InvalidFolderStructure
+from Exceptions import DoesNotExist
+
 
 # This model class provides the data to the view when it is asked for.
 # Since it is a list-only model (no hierachical data) then it is able
@@ -53,15 +57,16 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Folder (dataset)", "Location", "Experiment", "Status",
-                            "Owner", "Email")
-        self.columnKeys = ("dataViewId", "folder", "location", "experimentTitle",
-                           "status", "owner.username", "owner.email")
+        self.columnNames = ("Id", "Folder (dataset)", "Location",
+                            "Experiment", "Status", "Owner", "Group")
+        self.columnKeys = ("dataViewId", "folder", "location",
+                           "experimentTitle", "status",
+                           "owner.username", "group.shortName")
 
         if sys.platform.startswith("win"):
-            self.defaultColumnWidths = (40, 185, 200, 150, 160, 120, 180)
+            self.defaultColumnWidths = (40, 185, 200, 150, 160, 90, 150)
         else:
-            self.defaultColumnWidths = (40, 185, 200, 160, 160, 120, 180)
+            self.defaultColumnWidths = (40, 185, 200, 160, 160, 90, 150)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -179,6 +184,13 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 return owner.GetValueForKey(ownerKey)
             else:
                 return None
+        elif columnKey.startswith("group."):
+            groupKey = columnKey.split("group.")[1]
+            group = self.foldersData[row].GetGroup()
+            if group is not None:
+                return group.GetValueForKey(groupKey)
+            else:
+                return None
         return str(self.foldersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the foldersData object for a
@@ -257,7 +269,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         if not ascending:  # swap sort order?
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
-            return cmp(int(folderRecord1.GetDataViewId()), int(folderRecord2.GetDataViewId()))
+            return cmp(int(folderRecord1.GetDataViewId()),
+                       int(folderRecord2.GetDataViewId()))
         else:
             return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
@@ -351,31 +364,34 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 else:
                     wx.CallAfter(self.RowValueChanged, row, col)
 
-    def ImportFolders(self, userFolderPath, owner):
-      try:
-        logger.debug("Scanning " + userFolderPath + " for dataset folders...")
-        datasetFolders = os.walk(userFolderPath).next()[1]
-        for datasetFolderName in datasetFolders:
-            if datasetFolderName.lower() == 'mytardis':
-                mytardisFolderName = datasetFolderName
-                logger.debug("Found '%s' folder in %s folder."
-                             % (mytardisFolderName, userFolderPath))
-                mytardisFolderPath = os.path.join(userFolderPath, mytardisFolderName)
-                self.ImportFoldersUsingSpecialSchema(mytardisFolderPath, owner)
-            else:
-                dataViewId = self.GetMaxDataViewId() + 1
-                folderModel = FolderModel(dataViewId=dataViewId,
-                                          folder=datasetFolderName,
-                                          location=userFolderPath,
-                                          folder_type='Dataset',
-                                          owner=owner,
-                                          foldersModel=self,
-                                          usersModel=self.usersModel,
-                                          settingsModel=self.settingsModel)
-                folderModel.SetCreatedDate()
-                self.AddRow(folderModel)
-      except:
-        print traceback.format_exc()
+    def ImportUserFolders(self, userFolderPath, owner):
+        try:
+            logger.debug("Scanning " + userFolderPath +
+                         " for dataset folders...")
+            datasetFolders = os.walk(userFolderPath).next()[1]
+            for datasetFolderName in datasetFolders:
+                if datasetFolderName.lower() == 'mytardis':
+                    mytardisFolderName = datasetFolderName
+                    logger.debug("Found '%s' folder in %s folder."
+                                 % (mytardisFolderName, userFolderPath))
+                    mytardisFolderPath = os.path.join(userFolderPath,
+                                                      mytardisFolderName)
+                    self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
+                                                         owner)
+                else:
+                    dataViewId = self.GetMaxDataViewId() + 1
+                    folderModel = FolderModel(dataViewId=dataViewId,
+                                              folder=datasetFolderName,
+                                              location=userFolderPath,
+                                              folder_type='Dataset',
+                                              owner=owner,
+                                              foldersModel=self,
+                                              usersModel=self.usersModel,
+                                              settingsModel=self.settingsModel)
+                    folderModel.SetCreatedDate()
+                    self.AddRow(folderModel)
+        except:
+            print traceback.format_exc()
 
     def ImportFoldersUsingSpecialSchema(self, mytardisFolderPath, owner):
         """
@@ -402,3 +418,67 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 folderModel.SetCreatedDate()
                 folderModel.SetExperimentTitle(expFolderName)
                 self.AddRow(folderModel)
+
+    def ImportGroupFolders(self, groupFolderPath, groupModel):
+        try:
+            logger.debug("Scanning " + groupFolderPath +
+                         " for instrument folders...")
+            instrumentFolders = os.walk(groupFolderPath).next()[1]
+
+            if len(instrumentFolders) > 1:
+                message = "Multiple instrument folders found in %s" \
+                    % groupFolderPath
+                logger.error(message)
+                raise InvalidFolderStructure(message=message)
+            elif len(instrumentFolders) == 0:
+                message = "No instrument folder was found in %s" \
+                    % groupFolderPath
+                logger.error(message)
+                raise InvalidFolderStructure(message=message)
+            elif instrumentFolders[0] != \
+                    self.settingsModel.GetInstrumentName():
+                message = "Instrument folder name \"%s\" doesn't match " \
+                    "instrument name \"%s\" in MyData Settings in \"%s\"." \
+                    % (instrumentFolders[0],
+                       self.settingsModel.GetInstrumentName(),
+                       groupFolderPath)
+                logger.warning(message)
+                # raise InvalidFolderStructure(message=message)
+
+            instrumentFolderPath = os.path.join(groupFolderPath,
+                                                instrumentFolders[0])
+
+            defaultOwner = self.settingsModel.GetDefaultOwner()
+
+            logger.debug("Scanning " + instrumentFolderPath +
+                         " for user folders...")
+            userFolders = os.walk(instrumentFolderPath).next()[1]
+            for userFolderName in userFolders:
+                userFolderPath = os.path.join(instrumentFolderPath,
+                                              userFolderName)
+                owner = defaultOwner
+                try:
+                    owner = UserModel.GetUserByUsername(self.settingsModel,
+                                                        userFolderName)
+                except DoesNotExist:
+                    owner = defaultOwner
+                logger.debug("Scanning " + userFolderPath +
+                             " for dataset folders...")
+                datasetFolders = os.walk(userFolderPath).next()[1]
+                for datasetFolderName in datasetFolders:
+                    dataViewId = self.GetMaxDataViewId() + 1
+                    folderModel = FolderModel(dataViewId=dataViewId,
+                                              folder=datasetFolderName,
+                                              location=userFolderPath,
+                                              folder_type='Dataset',
+                                              owner=owner,
+                                              foldersModel=self,
+                                              usersModel=self.usersModel,
+                                              settingsModel=self.settingsModel)
+                    folderModel.SetGroup(groupModel)
+                    folderModel.SetCreatedDate()
+                    self.AddRow(folderModel)
+        except InvalidFolderStructure:
+            raise
+        except:
+            logger.error(traceback.format_exc())

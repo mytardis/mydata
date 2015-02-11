@@ -33,6 +33,7 @@ class FolderModel():
                 self.dataFileDirectories[i].replace("\\", "/")
         self.created = ""
         self.experimentTitle = ""
+        self.group = None
         self.experimentTitleSetManually = False
         self.status = "0 of %d files uploaded" % (self.numFiles,)
         self.folder_type = folder_type
@@ -86,14 +87,12 @@ class FolderModel():
             return None
 
     def SetExperiment(self, experimentModel):
-
         self.experimentModel = experimentModel
 
     def GetExperiment(self):
         return self.experimentModel
 
     def SetDatasetModel(self, datasetModel):
-
         self.datasetModel = datasetModel
 
     def GetDataViewId(self):
@@ -149,6 +148,12 @@ class FolderModel():
 
     def ExperimentTitleSetManually(self):
         return self.experimentTitleSetManually
+
+    def GetGroup(self):
+        return self.group
+
+    def SetGroup(self, group):
+        self.group = group
 
     def Refresh(self):
         absoluteFolderPath = os.path.join(self.location, self.folder)

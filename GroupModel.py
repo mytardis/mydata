@@ -3,6 +3,7 @@ import json
 import urllib
 
 from logger.Logger import logger
+from Exceptions import DoesNotExist
 
 
 class GroupModel():
@@ -17,6 +18,11 @@ class GroupModel():
             if name is None:
                 self.name = groupJson['name']
 
+        self.shortName = name
+        if settingsModel is not None:
+            l = len(settingsModel.GetGroupPrefix())
+            self.shortName = self.name[l:]
+
     def __str__(self):
         return "GroupModel " + self.name
 
@@ -29,14 +35,26 @@ class GroupModel():
     def GetId(self):
         return self.id
 
+    def GetDataViewId(self):
+        return self.dataViewId
+
+    def SetDataViewId(self, dataViewId):
+        self.dataViewId = dataViewId
+
     def GetName(self):
         return self.name
+
+    def GetShortName(self):
+        return self.shortName
 
     def GetJson(self):
         return self.groupJson
 
+    def GetValueForKey(self, key):
+        return self.__dict__[key]
+
     @staticmethod
-    def GetGroup(settingsModel, name):
+    def GetGroupByName(settingsModel, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -50,12 +68,14 @@ class GroupModel():
             logger.debug("Failed to look up group record for name \"" +
                          name + "\".")
             logger.debug(response.text)
-            return None
+            raise Exception(response.text)
         groupsJson = response.json()
         numGroupsFound = groupsJson['meta']['total_count']
 
         if numGroupsFound == 0:
-            logger.warning("Group \"%s\" was not found in MyTardis" % name)
+            raise DoesNotExist(
+                message="Group \"%s\" was not found in MyTardis" % name,
+                url=url, response=response)
         else:
             logger.debug("Found group record for name '" + name + "'.")
             return GroupModel(settingsModel=settingsModel, name=name,
