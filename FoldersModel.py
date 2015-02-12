@@ -477,6 +477,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                               settingsModel=self.settingsModel)
                     folderModel.SetGroup(groupModel)
                     folderModel.SetCreatedDate()
+                    folderModel.SetExperimentTitle("%s - %s" %
+                                                   (instrumentFolders[0],
+                                                    userFolderName))
                     self.AddRow(folderModel)
         except InvalidFolderStructure:
             raise
