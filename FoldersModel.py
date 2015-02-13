@@ -183,14 +183,14 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if owner is not None:
                 return owner.GetValueForKey(ownerKey)
             else:
-                return None
+                return ""
         elif columnKey.startswith("group."):
             groupKey = columnKey.split("group.")[1]
             group = self.foldersData[row].GetGroup()
             if group is not None:
                 return group.GetValueForKey(groupKey)
             else:
-                return None
+                return ""
         return str(self.foldersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the foldersData object for a
