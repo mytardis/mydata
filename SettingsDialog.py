@@ -178,7 +178,7 @@ class SettingsDialog(wx.Dialog):
         generalPanelSize = self.generalPanel.GetSize()
         self.settingsTabsNotebook.AddPage(self.generalPanel, "General")
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=3, cols=4,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=5, cols=4,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -192,8 +192,41 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
 
+        folderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                         "Folder Structure:")
+        self.advancedPanelSizer.Add(folderStructureLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.folderStructures = [
+            'Username / Dataset',
+            'Username / "MyTardis" / Experiment / Dataset',
+            'Group / Instrument / Full Name / Dataset']
+        self.folderStructureComboBox = \
+            wx.ComboBox(self.advancedPanel, wx.ID_ANY,
+                        choices=self.folderStructures, style=wx.CB_READONLY)
+        self.folderStructureComboBox.SetValue("Username / Dataset")
+        self.advancedPanelSizer.Add(self.folderStructureComboBox,
+                                    flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        datasetGroupingLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                         "Experiment (Dataset Grouping):")
+        self.advancedPanelSizer.Add(datasetGroupingLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.datasetGroupingField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
+        self.datasetGroupingField.SetValue("Instrument Name - Data Owner's Full Name")
+        self.datasetGroupingField.SetEditable(False)
+        self.advancedPanelSizer.Add(self.datasetGroupingField,
+                                    flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
         groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                         "Group Prefix:")
+                                         "User Group Prefix:")
         self.advancedPanelSizer.Add(groupPrefixLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.groupPrefixField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
@@ -259,6 +292,9 @@ class SettingsDialog(wx.Dialog):
         self.okButton.SetDefault()
         buttonSizer.AddButton(self.okButton)
 
+        self.helpButton = wx.Button(self, wx.ID_HELP, "Help")
+        buttonSizer.AddButton(self.helpButton)
+
         self.cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
         buttonSizer.AddButton(self.cancelButton)
         buttonSizer.Realize()
@@ -275,6 +311,8 @@ class SettingsDialog(wx.Dialog):
         # changing the button's ID here:
         self.okButton.SetId(wx.NewId())
         self.Bind(wx.EVT_BUTTON, self.OnOK, self.okButton)
+        self.helpButton.SetId(wx.NewId())
+        self.Bind(wx.EVT_BUTTON, self.OnHelp, self.helpButton)
 
         sizer.Add(buttonSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer)
@@ -449,3 +487,12 @@ class SettingsDialog(wx.Dialog):
                 self.intervalUnitsComboBox.AppendItems(self.intervalUnits)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
+
+    def OnHelp(self, event):
+        from help.HelpController import helpController
+        if helpController is not None and helpController.initializationSucceeded:
+            # helpController.DisplayContents()
+            helpController.Display("Settings")
+        else:
+            wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
+                          "Error", wx.OK|wx.ICON_EXCLAMATION)
