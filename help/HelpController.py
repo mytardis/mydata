@@ -92,7 +92,7 @@ class HelpController():
                                          "help", "helpfiles")
                 else:
                     mydataModulePath = \
-                        os.path.dirname(pkgutil.get_loader("mydata").filename)
+                        os.path.dirname(pkgutil.get_loader("MyData").filename)
                     self.helpFilesDirectory = os.path.join(mydataModulePath,
                                                            "help", "helpfiles")
 
