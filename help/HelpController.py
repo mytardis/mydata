@@ -6,6 +6,7 @@ import requests
 import traceback
 import pkgutil
 from logger.Logger import logger
+import zipfile
 
 mydataHtmlHelpProjectFilename = "mydata.hhp"
 
@@ -34,8 +35,8 @@ class HelpController():
         self.helpFilesDirectory = None
 
         self.mydataHelpUrl = \
-            "https://raw.github.com/monash-merc/mydata" \
-            "/master/help/helpfiles.zip"
+            "https://github.com/monash-merc/mydata/blob" \
+            "/master/help/helpfiles.zip?raw=true"
         self.initializationSucceeded = False
         try:
             # Download helpfiles.zip:
