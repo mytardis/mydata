@@ -122,6 +122,8 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
+        from help.HelpController import helpController
+
         logger.debug("MyData version:   " +
                      MyDataVersionNumber.versionNumber)
         logger.debug("MyData commit:  " + CommitDef.LATEST_COMMIT)
