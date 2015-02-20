@@ -11,6 +11,7 @@ up-to-date at the time of that MyData release.
 
 After updating the help content, rebuild the zip archive with:
 
+rm helpfiles.zip
 zip -r helpfiles.zip helpfiles/
 
 and then commit the changes and push them to GitHub:
