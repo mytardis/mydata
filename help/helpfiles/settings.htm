@@ -1,4 +1,45 @@
 <html><title>MyData Settings</title><body>
 <h2>MyData Settings</h2>
-<p>Here's some help about MyData's settings.</p>
+<dl>
+<dt>Facility Name</dt>
+<dd>
+The name of the facility containing the instrument to upload data from.  A facility record must have been created by your MyTardis administrator before you can use MyData, and the default MyTardis username you enter below (the initial owner of all data uploaded by this instance) must be a member of the "managers group" for that facility.
+</dd>
+
+<dt>Instrument Name</dt>
+<dd>
+The name of the instrument associated with this MyData instance.  If an instrument with this name doesn't already exist within the facility, then MyData will offer to create one (assuming that you are a member of 
+a facility managers group in MyTardis).
+</dd>
+
+<dt>Contact Name</dt>
+<dd>
+MyData's preferred upload method (staging) requires approval from a MyTardis administrator. This Contact Name will be used when sending confirmation that access to MyTardis's staging area has been approved for this MyData instance.
+</dd>
+
+<dt>Contact Email</dt>
+<dd>
+MyData's preferred upload method (staging) requires approval from a MyTardis administrator. This Contact Name will be used when sending confirmation that access to MyTardis's staging area has been approved for this MyData instance.
+</dd>
+
+<dt>Data Directory</dt>
+<dd>
+Choose a folder where you would like to store your data. e.g. D:\Data
+</dd>
+
+<dt>MyTardis URL</dt>
+<dd>
+The URL of a MyTardis server running a MyTardis version compatible with MyData, e.g. http://118.138.241.91/
+</dd>
+
+<dt>MyTardis Username</dt>
+<dd>
+DO NOT put your individual MyTardis username (e.g. "jsmith") in here. Because MyData is designed to be able to upload multiple users' data from a instrument PC, the default username used by MyData should generally be a shared facility role account.
+</dd>
+
+<dt>MyTardis API Key</dt>
+<dd>
+API keys are similar to passwords, but they are easier to revoke and renew when necessary. Ask your MyTardis administrator for the API key corresponding to your facility role account.
+</dd>
+</dl>
 </body></html>
