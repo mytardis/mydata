@@ -199,10 +199,12 @@ class SettingsDialog(wx.Dialog):
         self.folderStructures = [
             'Username / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
-            'Group / Instrument / Full Name / Dataset']
+            'User Group / Instrument / Full Name / Dataset']
         self.folderStructureComboBox = \
             wx.ComboBox(self.advancedPanel, wx.ID_ANY,
                         choices=self.folderStructures, style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectFolderStructure,
+                  self.folderStructureComboBox)
         self.folderStructureComboBox.SetValue("Username / Dataset")
         self.advancedPanelSizer.Add(self.folderStructureComboBox,
                                     flag=wx.EXPAND | wx.ALL, border=5)
@@ -496,3 +498,13 @@ class SettingsDialog(wx.Dialog):
         else:
             wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
                           "Error", wx.OK|wx.ICON_EXCLAMATION)
+
+    def OnSelectFolderStructure(self, event):
+        folderStructure = self.folderStructureComboBox.GetValue()
+        if folderStructure == 'Username / Dataset':
+            self.datasetGroupingField.SetValue("Instrument Name - Data Owner's Full Name")
+        elif folderStructure == 'Username / "MyTardis" / Experiment / Dataset':
+            self.datasetGroupingField.SetValue("Experiment")
+        elif folderStructure == 'User Group / Instrument / Full Name / Dataset':
+            self.datasetGroupingField.SetValue("Instrument - Full Name")
+
