@@ -62,17 +62,18 @@ necessary. Ask your MyTardis administrator for the API key corresponding to
 your facility role account.
 </dd>
 
-<dt><b>Folder Structure</b></dt>
+<dt><b>Folder Structure - Username / Dataset</b></dt>
 <dd>
-    <b>Username / Dataset:</b>
     Folders immediately inside the main data directory
     (e.g. &quot;D:\Data\jsmith&quot;) are assumed to be MyTardis usernames.
     Folders inside each user folder (e.g. &quot;D:\Data\jsmith\Dataset1&quot;
     will be mapped to MyTardis datasets.
     Datasets will be automatically grouped into MyTardis experiments according
     to the &quot;Experiment (Dataset Grouping)&quot; field below.
+</dd>
 
-    <b>Username / "MyTardis" / Experiment / Dataset:</b>
+<dt><b>Folder Structure - Username / "MyTardis" / Experiment / Dataset</b></dt>
+<dd>
     Folders immediately inside the main data directory
     (e.g. &quot;D:\Data\jsmith&quot;) are assumed to be MyTardis usernames.
     Folders inside each &quot;MyTardis&quot; folder
@@ -81,8 +82,10 @@ your facility role account.
     Folders inside each experiment folder
     (e.g. &quot;D:\Data\jsmith\MyTardis\Experiment1\Dataset1&quot;) will be
     mapped to MyTardis datasets.
+</dd>
 
-    <b>User Group / Instrument / Full Name / Dataset:</b>
+<dt><b>Folder Structure - User Group / Instrument / Full Name / Dataset</b></dt>
+<dd>
     Folders immediately inside the main data directory
     (e.g. &quot;D:\Data\SmithLab&quot;) are assumed to be MyTardis user groups.
     The actual group name in MyTardis (e.g. &quot;TestFacility-SmithLab&quot;)
