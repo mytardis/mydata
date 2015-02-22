@@ -1,5 +1,4 @@
 import wx.dataview
-import sqlite3
 import threading
 import traceback
 
