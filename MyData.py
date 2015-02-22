@@ -16,7 +16,7 @@ from FoldersModel import FoldersModel
 from FoldersController import FoldersController
 from UsersView import UsersView
 from UsersModel import UsersModel
-from GroupsView import GroupsView
+# from GroupsView import GroupsView
 from GroupsModel import GroupsModel
 from VerificationsView import VerificationsView
 from VerificationsModel import VerificationsModel
@@ -246,9 +246,9 @@ class MyData(wx.App):
                                    usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
 
-        self.groupsView = GroupsView(self.foldersUsersNotebook,
-                                     groupsModel=self.groupsModel)
-        self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
+        # self.groupsView = GroupsView(self.foldersUsersNotebook,
+                                     # groupsModel=self.groupsModel)
+        # self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
 
         self.verificationsView = \
             VerificationsView(self.foldersUsersNotebook,
