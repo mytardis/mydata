@@ -4,7 +4,6 @@ import wx.aui
 import webbrowser
 import os
 import appdirs
-import sqlite3
 import traceback
 import threading
 import argparse
@@ -138,11 +137,11 @@ class MyData(wx.App):
         self.lastNetworkConnectivityCheckSuccess = False
         self.activeNetworkInterface = None
 
-        # mydata.cfg stores settings in INI format, readable by ConfigParser
-        self.mydataConfigPath = os.path.join(appdirPath, appname + '.cfg')
-        logger.debug("self.mydataConfigPath: " + self.mydataConfigPath)
+        # MyData.cfg stores settings in INI format, readable by ConfigParser
+        self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
+        logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
 
-        self.settingsModel = SettingsModel(self.mydataConfigPath)
+        self.settingsModel = SettingsModel(self.GetConfigPath())
 
         parser = argparse.ArgumentParser()
         parser.add_argument("-b", "--background", action="store_true",
@@ -192,49 +191,9 @@ class MyData(wx.App):
             self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
             self.menuBar.Append(self.helpMenu, "&Help")
 
-        # Most of the SQLite stuff was designed for the case where MyData
-        # is stateful, i.e. it remembers which folders were dragged into
-        # the application during its previous runs.  However currently
-        # development is focusing on the case where MyData scans a data
-        # directory every time it runs and doesn't "remember" any
-        # dragged and dropped folders from previous runs.  So the SQLite
-        # functionality is being phased out (at least for Settings), and
-        # being replaced with a ConfigParser-readable plain-text file.
-
-        self.sqlitedb = os.path.join(appdirPath, appname + '.db')
-        logger.debug("self.sqlitedb: " + self.sqlitedb)
-
-        try:
-            conn = sqlite3.connect(self.sqlitedb)
-
-            with conn:
-                c = conn.cursor()
-                c.execute("CREATE TABLE IF NOT EXISTS users (" +
-                          "id integer primary key," +
-                          "username text," +
-                          "name text," +
-                          "email text)")
-                c.execute("CREATE TABLE IF NOT EXISTS folders (" +
-                          "id integer primary key," +
-                          "folder text," +
-                          "location text," +
-                          "folder_type text," +
-                          "owner_id integer)")
-                # Currently we are not saving uploads to disk,
-                # i.e. they are only per session, so maybe we don't need this:
-                c.execute("CREATE TABLE IF NOT EXISTS uploads (" +
-                          "id integer primary key," +
-                          "folder_id integer," +
-                          "datafile_index integer," +
-                          "progress integer)")
-                c.execute("DELETE FROM uploads")
-        except:
-            logger.error(traceback.format_exc())
-
         self.usersModel = UsersModel(self.settingsModel)
         self.groupsModel = GroupsModel(self.settingsModel)
-        self.foldersModel = FoldersModel(self.sqlitedb, self.usersModel,
-                                         self.settingsModel)
+        self.foldersModel = FoldersModel(self.usersModel, self.settingsModel)
         self.usersModel.SetFoldersModel(self.foldersModel)
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
@@ -897,6 +856,12 @@ class MyData(wx.App):
 
     def SetActiveNetworkInterface(self, activeNetworkInterface):
         self.activeNetworkInterface = activeNetworkInterface
+
+    def GetConfigPath(self):
+        return self.configPath
+
+    def SetConfigPath(self, configPath):
+        self.configPath = configPath
 
 
 def main(argv):

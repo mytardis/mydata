@@ -36,8 +36,8 @@ class SettingsModel():
         def GetSuggestion(self):
             return self.suggestion
 
-    def __init__(self, mydataConfigPath=None):
-        self.mydataConfigPath = mydataConfigPath
+    def __init__(self, configPath=None):
+        self.SetConfigPath(configPath)
 
         self.instrument_name = ""
         self.instrument = None
@@ -60,12 +60,18 @@ class SettingsModel():
         self.validation = self.SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
 
-        if self.mydataConfigPath is not None and \
-                os.path.exists(self.mydataConfigPath):
-            logger.info("Reading settings from: " + self.mydataConfigPath)
+        self.LoadSettings()
+
+    def LoadSettings(self, configPath=None):
+        if configPath is None:
+            configPath = self.GetConfigPath()
+
+        if self.GetConfigPath() is not None and \
+                os.path.exists(self.GetConfigPath()):
+            logger.info("Reading settings from: " + self.GetConfigPath())
             try:
                 configParser = ConfigParser()
-                configParser.read(self.mydataConfigPath)
+                configParser.read(self.GetConfigPath())
                 configFileSection = "MyData"
                 self.instrument_name = configParser.get(configFileSection,
                                                         "instrument_name", "")
@@ -199,13 +205,15 @@ class SettingsModel():
     def GetValueForKey(self, key):
         return self.__dict__[key]
 
-    def SaveToDisk(self):
-        if self.mydataConfigPath is None:
+    def SaveToDisk(self, configPath=None):
+        if configPath is None:
+            configPath = self.GetConfigPath()
+        if configPath is None:
             raise Exception("SettingsModel.SaveToDisk called "
-                            "with mydataConfigPath == None.")
+                            "with configPath == None.")
 
         configParser = ConfigParser()
-        with open(self.mydataConfigPath, 'w') as configFile:
+        with open(configPath, 'w') as configFile:
             configParser.add_section("MyData")
             configParser.set("MyData", "instrument_name",
                              self.GetInstrumentName())
@@ -227,9 +235,11 @@ class SettingsModel():
                              self.GetApiKey())
             configParser.write(configFile)
 
-        logger.info("Saved settings to " + self.mydataConfigPath)
+        logger.info("Saved settings to " + configPath)
 
-    def SaveFieldsFromDialog(self, settingsDialog):
+    def SaveFieldsFromDialog(self, settingsDialog, configPath=None):
+        if configPath is None:
+            configPath = self.GetConfigPath()
         self.SetInstrumentName(settingsDialog.GetInstrumentName())
         self.SetFacilityName(settingsDialog.GetFacilityName())
         self.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
@@ -241,8 +251,8 @@ class SettingsModel():
         self.SetApiKey(settingsDialog.GetApiKey())
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
-        if self.mydataConfigPath is not None:
-            self.SaveToDisk()
+        if self.GetConfigPath() is not None:
+            self.SaveToDisk(self.GetConfigPath())
 
     def Validate(self):
         try:
@@ -320,6 +330,13 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
+            print "Number of dirs at depth 2 is %d" % len(dirsDepth2)
+            filesDepth3 = glob(os.path.join(self.GetDataDirectory(), '*', '*', '*'))
+            dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
+            print "Number of dirs at depth 3 is %d" % len(dirsDepth3)
+            filesDepth4 = glob(os.path.join(self.GetDataDirectory(), '*', '*', '*'))
+            dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
+            print "Number of dirs at depth 4 is %d" % len(dirsDepth4)
 
             try:
                 session = requests.Session()
@@ -563,3 +580,9 @@ class SettingsModel():
                 message="Instrument with name \"%s\" "
                         "already exists" % newInstrumentName)
         oldInstrument.Rename(newInstrumentName)
+
+    def GetConfigPath(self):
+        return self.configPath
+
+    def SetConfigPath(self, configPath):
+        self.configPath = configPath
