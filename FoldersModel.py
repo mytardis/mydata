@@ -1,6 +1,5 @@
 import wx
 import wx.dataview
-import sqlite3
 from FolderModel import FolderModel
 from UserModel import UserModel
 from ExperimentModel import ExperimentModel
@@ -32,9 +31,7 @@ def GetFolderTypes():
 
 
 class FoldersModel(wx.dataview.PyDataViewIndexListModel):
-    def __init__(self, sqlitedb, usersModel, settingsModel):
-
-        self.sqlitedb = sqlitedb
+    def __init__(self, usersModel, settingsModel):
 
         self.foldersData = []
 
