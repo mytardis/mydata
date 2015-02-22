@@ -193,7 +193,7 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
 
         folderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                         "Folder Structure:")
+                                             "Folder Structure:")
         self.advancedPanelSizer.Add(folderStructureLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.folderStructures = [
@@ -214,11 +214,13 @@ class SettingsDialog(wx.Dialog):
                                                   wx.ID_ANY, ""))
 
         datasetGroupingLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                         "Experiment (Dataset Grouping):")
+                                             "Experiment (Dataset Grouping):")
         self.advancedPanelSizer.Add(datasetGroupingLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.datasetGroupingField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
-        self.datasetGroupingField.SetValue("Instrument Name - Data Owner's Full Name")
+        self.datasetGroupingField = wx.TextCtrl(self.advancedPanel,
+                                                wx.ID_ANY, "")
+        self.datasetGroupingField\
+            .SetValue("Instrument Name - Data Owner's Full Name")
         self.datasetGroupingField.SetEditable(False)
         self.advancedPanelSizer.Add(self.datasetGroupingField,
                                     flag=wx.EXPAND | wx.ALL, border=5)
@@ -491,20 +493,24 @@ class SettingsDialog(wx.Dialog):
                 self.showingSingularUnits = False
 
     def OnHelp(self, event):
+        wx.BeginBusyCursor()
         from help.HelpController import helpController
-        if helpController is not None and helpController.initializationSucceeded:
-            # helpController.DisplayContents()
+        if helpController is not None and \
+                helpController.initializationSucceeded:
             helpController.Display("Settings")
+            wx.EndBusyCursor()
         else:
+            wx.EndBusyCursor()
             wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
-                          "Error", wx.OK|wx.ICON_EXCLAMATION)
+                          "Error", wx.OK | wx.ICON_EXCLAMATION)
 
     def OnSelectFolderStructure(self, event):
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure == 'Username / Dataset':
-            self.datasetGroupingField.SetValue("Instrument Name - Data Owner's Full Name")
+            self.datasetGroupingField\
+                .SetValue("Instrument Name - Data Owner's Full Name")
         elif folderStructure == 'Username / "MyTardis" / Experiment / Dataset':
             self.datasetGroupingField.SetValue("Experiment")
-        elif folderStructure == 'User Group / Instrument / Full Name / Dataset':
+        elif folderStructure == \
+                'User Group / Instrument / Full Name / Dataset':
             self.datasetGroupingField.SetValue("Instrument - Full Name")
-
