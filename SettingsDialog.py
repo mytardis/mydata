@@ -11,6 +11,7 @@ from SettingsModel import SettingsModel
 from Exceptions import DuplicateKey
 from Exceptions import IncompatibleMyTardisVersion
 import MyDataEvents as mde
+from DragAndDrop import MyDataSettingsDropTarget
 
 
 class SettingsDialog(wx.Dialog):
@@ -26,6 +27,8 @@ class SettingsDialog(wx.Dialog):
 
         self.parent = parent
         self.settingsModel = settingsModel
+
+        self.SetDropTarget(MyDataSettingsDropTarget(self))
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -514,3 +517,9 @@ class SettingsDialog(wx.Dialog):
         elif folderStructure == \
                 'User Group / Instrument / Full Name / Dataset':
             self.datasetGroupingField.SetValue("Instrument - Full Name")
+
+    def OnDropFiles(self, filepaths):
+        self.settingsModel.SetConfigPath(filepaths[0])
+        self.settingsModel.LoadSettings()
+        self.UpdateFieldsFromModel(self.settingsModel)
+

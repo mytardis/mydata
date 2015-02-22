@@ -380,7 +380,29 @@ class MyDataEvent(wx.PyCommandEvent):
             event.settingsModel.SetUploaderModel(tempUploaderModel)
             tempInstrument = tempSettingsModel.GetInstrument()
             tempInstrument.SetSettingsModel(event.settingsModel)
-            event.settingsModel.SaveFieldsFromDialog(event.settingsDialog)
+
+            mydataConfigPath = event.settingsModel.GetConfigPath()
+            if mydataConfigPath is not None:
+                dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
+                                    "Save MyData configuration as...",
+                                    os.path.dirname(mydataConfigPath),
+                                    "MyData.cfg", "*.cfg", \
+                                    wx.SAVE | wx.OVERWRITE_PROMPT)
+                if dlg.ShowModal() == wx.ID_OK:
+                    configPath = dlg.GetPath()
+                    wx.GetApp().SetConfigPath(configPath)
+                    event.settingsModel.SetConfigPath(configPath)
+                    event.settingsModel\
+                        .SaveFieldsFromDialog(event.settingsDialog,
+                                              configPath=configPath)
+                    if configPath != wx.GetApp().GetConfigPath():
+                        event.settingsModel.SaveFieldsFromDialog(
+                            event.settingsDialog,
+                            configPath=wx.GetApp().GetConfigPath())
+                else:
+                    print "Didn't save settings."
+                    return
+
             event.settingsModel.SetInstrument(tempSettingsModel.GetInstrument())
             event.settingsDialog.EndModal(wx.ID_OK)
             event.settingsDialog.Show(False)
