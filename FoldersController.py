@@ -25,7 +25,6 @@ from VerificationModel import VerificationStatus
 from UploadModel import UploadModel
 from UploadModel import UploadStatus
 from FolderModel import FolderModel
-from FoldersModel import GetFolderTypes
 from DataFileModel import DataFileModel
 from Exceptions import DoesNotExist
 from Exceptions import MultipleObjectsReturned
@@ -571,10 +570,6 @@ class FoldersController():
                                         "Add Folder(s)", usersModel,
                                         size=(350, 200),
                                         style=wx.DEFAULT_DIALOG_STYLE)
-                    if self.lastUsedFolderType is not None:
-                        addFolderDialog\
-                            .SetFolderType(GetFolderTypes()
-                                           .index(self.lastUsedFolderType))
 
                     addFolderDialog.CenterOnParent()
 
