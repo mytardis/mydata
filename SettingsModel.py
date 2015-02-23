@@ -47,9 +47,15 @@ class SettingsModel():
         self.contact_email = ""
         self.data_directory = ""
         self.mytardis_url = ""
-        self.group_prefix = ""
         self.username = ""
         self.api_key = ""
+
+        self.folder_structure = "Username / Dataset"
+        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
+        self.group_prefix = ""
+        self.ignore_old_datasets = False
+        self.ignore_interval_number = 0
+        self.ignore_interval_unit = "months"
 
         self.background_mode = "False"
 
@@ -73,24 +79,25 @@ class SettingsModel():
                 configParser = ConfigParser()
                 configParser.read(self.GetConfigPath())
                 configFileSection = "MyData"
-                self.instrument_name = configParser.get(configFileSection,
-                                                        "instrument_name", "")
-                self.facility_name = configParser.get(configFileSection,
-                                                      "facility_name", "")
-                self.data_directory = configParser.get(configFileSection,
-                                                       "data_directory", "")
-                self.contact_name = configParser.get(configFileSection,
-                                                     "contact_name", "")
-                self.contact_email = configParser.get(configFileSection,
-                                                      "contact_email", "")
-                self.mytardis_url = configParser.get(configFileSection,
-                                                     "mytardis_url", "")
-                self.group_prefix = configParser.get(configFileSection,
-                                                     "group_prefix", "")
-                self.username = configParser.get(configFileSection,
-                                                 "username", "")
-                self.api_key = configParser.get(configFileSection,
-                                                "api_key", "")
+                fields = ["instrument_name", "facility_name", "data_directory",
+                          "contact_name", "contact_email", "mytardis_url",
+                          "username", "api_key", "folder_structure",
+                          "dataset_grouping", "group_prefix",
+                          "ignore_interval_unit"]
+                for field in fields:
+                    if configParser.has_option(configFileSection, field):
+                        self.__dict__[field] = \
+                            configParser.get(configFileSection, field)
+                if configParser.has_option(configFileSection,
+                                           "ignore_old_datasets"):
+                    self.ignore_old_datasets = \
+                        configParser.getboolean(configFileSection,
+                                                "ignore_old_datasets")
+                if configParser.has_option(configFileSection,
+                                           "ignore_interval_number"):
+                    self.ignore_interval_number = \
+                        configParser.getint(configFileSection,
+                                            "ignore_interval_number")
             except:
                 logger.error(traceback.format_exc())
 
@@ -144,12 +151,6 @@ class SettingsModel():
     def SetMyTardisUrl(self, myTardisUrl):
         self.mytardis_url = myTardisUrl
 
-    def GetGroupPrefix(self):
-        return self.group_prefix
-
-    def SetGroupPrefix(self, groupPrefix):
-        self.group_prefix = groupPrefix
-
     def GetUsername(self):
         return self.username
 
@@ -169,6 +170,42 @@ class SettingsModel():
 
     def SetApiKey(self, apiKey):
         self.api_key = apiKey
+
+    def GetFolderStructure(self):
+        return self.folder_structure
+
+    def SetFolderStructure(self, folderStructure):
+        self.folder_structure = folderStructure
+
+    def GetDatasetGrouping(self):
+        return self.dataset_grouping
+
+    def SetDatasetGrouping(self, datasetGrouping):
+        self.dataset_grouping = datasetGrouping
+
+    def GetGroupPrefix(self):
+        return self.group_prefix
+
+    def SetGroupPrefix(self, groupPrefix):
+        self.group_prefix = groupPrefix
+
+    def IgnoreOldDatasets(self):
+        return self.ignore_old_datasets
+
+    def SetIgnoreOldDatasets(self, ignoreOldDatasets):
+        self.ignore_old_datasets = ignoreOldDatasets
+
+    def GetIgnoreOldDatasetIntervalNumber(self):
+        return self.ignore_interval_number
+
+    def SetIgnoreOldDatasetIntervalNumber(self, ignoreOldDatasetIntervalNumber):
+        self.ignore_interval_number = ignoreOldDatasetIntervalNumber
+
+    def GetIgnoreOldDatasetIntervalUnit(self):
+        return self.ignore_interval_unit
+
+    def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
+        self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
 
     def RunningInBackgroundMode(self):
         return self.background_mode
@@ -211,30 +248,17 @@ class SettingsModel():
         if configPath is None:
             raise Exception("SettingsModel.SaveToDisk called "
                             "with configPath == None.")
-
         configParser = ConfigParser()
         with open(configPath, 'w') as configFile:
             configParser.add_section("MyData")
-            configParser.set("MyData", "instrument_name",
-                             self.GetInstrumentName())
-            configParser.set("MyData", "facility_name",
-                             self.GetFacilityName())
-            configParser.set("MyData", "mytardis_url",
-                             self.GetMyTardisUrl())
-            configParser.set("MyData", "contact_name",
-                             self.GetContactName())
-            configParser.set("MyData", "contact_email",
-                             self.GetContactEmail())
-            configParser.set("MyData", "data_directory",
-                             self.GetDataDirectory())
-            configParser.set("MyData", "group_prefix",
-                             self.GetGroupPrefix())
-            configParser.set("MyData", "username",
-                             self.GetUsername())
-            configParser.set("MyData", "api_key",
-                             self.GetApiKey())
+            fields = ["instrument_name", "facility_name", "data_directory",
+                      "contact_name", "contact_email", "mytardis_url",
+                      "username", "api_key", "folder_structure",
+                      "dataset_grouping", "group_prefix", "ignore_old_datasets",
+                      "ignore_interval_number", "ignore_interval_unit"]
+            for field in fields:
+                configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
-
         logger.info("Saved settings to " + configPath)
 
     def SaveFieldsFromDialog(self, settingsDialog, configPath=None):
@@ -246,9 +270,18 @@ class SettingsModel():
         self.SetContactName(settingsDialog.GetContactName())
         self.SetContactEmail(settingsDialog.GetContactEmail())
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
-        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
+
+        self.SetFolderStructure(settingsDialog.GetFolderStructure())
+        self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
+        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
+        self.SetIgnoreOldDatasets(settingsDialog.IgnoreOldDatasets())
+        self.SetIgnoreOldDatasetIntervalNumber(
+            settingsDialog.GetIgnoreOldDatasetIntervalNumber())
+        self.SetIgnoreOldDatasetIntervalUnit(
+            settingsDialog.GetIgnoreOldDatasetIntervalUnit())
+
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
         if self.GetConfigPath() is not None:
@@ -330,13 +363,6 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
-            print "Number of dirs at depth 2 is %d" % len(dirsDepth2)
-            filesDepth3 = glob(os.path.join(self.GetDataDirectory(), '*', '*', '*'))
-            dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
-            print "Number of dirs at depth 3 is %d" % len(dirsDepth3)
-            filesDepth4 = glob(os.path.join(self.GetDataDirectory(), '*', '*', '*'))
-            dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
-            print "Number of dirs at depth 4 is %d" % len(dirsDepth4)
 
             try:
                 session = requests.Session()
