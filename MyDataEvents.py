@@ -80,16 +80,6 @@ class MyDataEvent(wx.PyCommandEvent):
         for key in kwargs:
             self.__dict__[key] = kwargs[key]
 
-    # def Shutdown(event):
-        # """ Just for testing - not used in production. """
-        # if event.id != EVT_SHUTDOWN:
-            # event.Skip()
-            # return
-        # print "Shutting down..."
-        # myDataThreads.Join()
-        # print "Exiting..."
-        # os._exit(0)
-
     def CheckConnectivity(event):
         if event.id != EVT_CHECK_CONNECTIVITY:
             event.Skip()
@@ -409,27 +399,8 @@ class MyDataEvent(wx.PyCommandEvent):
             tempInstrument = tempSettingsModel.GetInstrument()
             tempInstrument.SetSettingsModel(event.settingsModel)
 
-            mydataConfigPath = event.settingsModel.GetConfigPath()
-            if mydataConfigPath is not None:
-                dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
-                                    "Save MyData configuration as...",
-                                    os.path.dirname(mydataConfigPath),
-                                    "MyData.cfg", "*.cfg",
-                                    wx.SAVE | wx.OVERWRITE_PROMPT)
-                if dlg.ShowModal() == wx.ID_OK:
-                    configPath = dlg.GetPath()
-                    wx.GetApp().SetConfigPath(configPath)
-                    event.settingsModel.SetConfigPath(configPath)
-                    event.settingsModel\
-                        .SaveFieldsFromDialog(event.settingsDialog,
-                                              configPath=configPath)
-                    if configPath != wx.GetApp().GetConfigPath():
-                        event.settingsModel.SaveFieldsFromDialog(
-                            event.settingsDialog,
-                            configPath=wx.GetApp().GetConfigPath())
-                else:
-                    return
-
+            event.settingsModel\
+                .SaveFieldsFromDialog(event.settingsDialog)
             event.settingsModel\
                 .SetInstrument(tempSettingsModel.GetInstrument())
             event.settingsDialog.EndModal(wx.ID_OK)
