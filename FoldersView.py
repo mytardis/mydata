@@ -2,9 +2,6 @@
 import wx
 import wx.dataview as dv
 
-# I'll probably get rid of "folder types" and make all folders datasets:
-from FoldersModel import GetFolderTypes
-
 from FolderModel import FolderModel
 
 from AddFolderDialog import AddFolderDialog

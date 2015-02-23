@@ -27,6 +27,7 @@ from LogView import LogView
 from SettingsModel import SettingsModel
 from SettingsDialog import SettingsDialog
 from Exceptions import NoActiveNetworkInterface
+from Exceptions import InvalidFolderStructure
 from EnhancedStatusBar import EnhancedStatusBar
 from logger.Logger import logger
 from MyDataTaskBarIcon import MyDataTaskBarIcon
@@ -77,10 +78,6 @@ class MyDataFrame(wx.Frame):
                      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
-
-        # FIXME: Arbitrary separation between MyDataApp and MyDataFrame
-        # classes.  Make MyDataApp class tiny and move most of its
-        # methods to MyDataFrame?
 
     def OnRefreshIsRunning(self):
         return wx.GetApp().OnRefreshIsRunning()
@@ -193,7 +190,8 @@ class MyData(wx.App):
 
         self.usersModel = UsersModel(self.settingsModel)
         self.groupsModel = GroupsModel(self.settingsModel)
-        self.foldersModel = FoldersModel(self.usersModel, self.settingsModel)
+        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
+                                         self.settingsModel)
         self.usersModel.SetFoldersModel(self.foldersModel)
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
@@ -247,7 +245,7 @@ class MyData(wx.App):
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
 
         # self.groupsView = GroupsView(self.foldersUsersNotebook,
-                                     # groupsModel=self.groupsModel)
+        #                              groupsModel=self.groupsModel)
         # self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
 
         self.verificationsView = \
@@ -716,7 +714,7 @@ class MyData(wx.App):
                 self.progressDialog.Update(self.numUserFoldersScanned,
                                            message)
 
-        # SECTION 4: Start UsersModel.Refresh(),
+        # SECTION 4: Start FoldersModel.Refresh(),
         # followed by FoldersController.StartDataUploads().
 
         def scanDataDirs():
@@ -724,9 +722,22 @@ class MyData(wx.App):
                          % threading.current_thread().name)
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
-            self.usersModel.Refresh(self.groupsModel,
-                                    incrementProgressDialog,
-                                    self.progressDialog.ShouldAbort)
+            try:
+                self.foldersModel.Refresh(incrementProgressDialog,
+                                          self.progressDialog.ShouldAbort)
+            except InvalidFolderStructure, ifs:
+                # Should not be raised when running in background mode.
+                def closeProgressDialog():
+                    self.progressDialog.Show(False)
+                wx.CallAfter(closeProgressDialog)
+
+                def showMessageDialog():
+                    dlg = wx.MessageDialog(None, str(ifs), "MyData",
+                                           wx.OK | wx.ICON_ERROR)
+                    dlg.ShowModal()
+                wx.CallAfter(showMessageDialog)
+                self.frame.SetStatusMessage(str(ifs))
+                return
 
             def closeProgressDialog():
                 self.progressDialog.Show(False)

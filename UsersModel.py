@@ -6,6 +6,7 @@ import threading
 
 from logger.Logger import logger
 from Exceptions import DoesNotExist
+from Exceptions import InvalidFolderStructure
 
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):
@@ -273,94 +274,3 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
         dataDir = self.settingsModel.GetDataDirectory()
         userOrGroupFolderNames = os.walk(dataDir).next()[1]
         return len(userOrGroupFolderNames)
-
-    def Refresh(self, groupsModel, incrementProgressDialog, shouldAbort):
-        if self.foldersModel.GetCount() > 0:
-            self.foldersModel.DeleteAllRows()
-        if self.GetCount() > 0:
-            self.DeleteAllRows()
-        if groupsModel.GetCount() > 0:
-            groupsModel.DeleteAllRows()
-        dataDir = self.settingsModel.GetDataDirectory()
-        logger.debug("UsersModel.Refresh(): Scanning " + dataDir + "...")
-        userOrGroupFolderNames = os.walk(dataDir).next()[1]
-        for userOrGroupFolderName in userOrGroupFolderNames:
-            if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
-                return
-            logger.debug("Found folder assumed to be username " +
-                         "or group name: " + userOrGroupFolderName)
-            usersDataViewId = self.GetMaxDataViewId() + 1
-            groupsDataViewId = groupsModel.GetMaxDataViewId() + 1
-            userRecord = None
-            groupRecord = None
-            try:
-                userRecord = UserModel.GetUserByUsername(self.settingsModel,
-                                                         userOrGroupFolderName)
-            except DoesNotExist:
-                try:
-                    groupName = self.settingsModel.GetGroupPrefix() + \
-                        userOrGroupFolderName
-                    groupRecord = \
-                        GroupModel.GetGroupByName(self.settingsModel,
-                                                  groupName)
-                except DoesNotExist:
-                    pass
-
-            if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
-                return
-            if userRecord is not None:
-                userRecord.SetDataViewId(usersDataViewId)
-                self.AddRow(userRecord)
-                self.foldersModel\
-                    .ImportUserFolders(os.path.join(dataDir,
-                                                    userOrGroupFolderName),
-                                       userRecord)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-            elif groupRecord is not None:
-                groupRecord.SetDataViewId(groupsDataViewId)
-                groupsModel.AddRow(groupRecord)
-                self.foldersModel\
-                    .ImportGroupFolders(os.path.join(dataDir,
-                                                     userOrGroupFolderName),
-                                        groupRecord)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-            else:
-                message = "Didn't find a MyTardis user record for \"" + \
-                    userOrGroupFolderName + "\""
-                logger.warning(message)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-                userRecord = UserModel(settingsModel=self.settingsModel,
-                                       username=userOrGroupFolderName,
-                                       name="USER NOT FOUND IN MYTARDIS",
-                                       email="USER NOT FOUND IN MYTARDIS")
-                userRecord.SetDataViewId(usersDataViewId)
-                self.AddRow(userRecord)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-                self.foldersModel\
-                    .ImportUserFolders(os.path.join(dataDir,
-                                                    userOrGroupFolderName),
-                                       userRecord)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-            if threading.current_thread().name == "MainThread":
-                incrementProgressDialog()
-            else:
-                wx.CallAfter(incrementProgressDialog)

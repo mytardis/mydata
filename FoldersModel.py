@@ -2,6 +2,7 @@ import wx
 import wx.dataview
 from FolderModel import FolderModel
 from UserModel import UserModel
+from GroupModel import GroupModel
 from ExperimentModel import ExperimentModel
 import threading
 import os
@@ -26,12 +27,8 @@ from Exceptions import DoesNotExist
 # Our data is stored in a list of FolderModel objects.
 
 
-def GetFolderTypes():
-    return ['User', 'Experiment', 'Dataset']
-
-
 class FoldersModel(wx.dataview.PyDataViewIndexListModel):
-    def __init__(self, usersModel, settingsModel):
+    def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
 
@@ -45,6 +42,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                                       len(self.foldersData))
 
         self.usersModel = usersModel
+        self.groupsModel = groupsModel
         self.settingsModel = settingsModel
 
         # Unfiltered folders data:
@@ -341,17 +339,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.ffd = list()
         self.Filter(self.searchString)
 
-    def Refresh(self):
-        # Only recalculate number of files (uploaded) per folder for now.
-        col = 3
-        for row in range(0, self.GetRowCount()):
-            modified = self.foldersData[row].Refresh()
-            if modified:
-                if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
-                else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
-
     def FolderStatusUpdated(self, folderModel):
         for row in range(0, self.GetCount()):
             if self.foldersData[row] == folderModel:
@@ -361,32 +348,174 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 else:
                     wx.CallAfter(self.RowValueChanged, row, col)
 
+    def Refresh(self, incrementProgressDialog, shouldAbort):
+        if self.GetCount() > 0:
+            self.DeleteAllRows()
+        if self.usersModel.GetCount() > 0:
+            self.usersModel.DeleteAllRows()
+        if self.groupsModel.GetCount() > 0:
+            self.groupsModel.DeleteAllRows()
+        dataDir = self.settingsModel.GetDataDirectory()
+        folderStructure = self.settingsModel.GetFolderStructure()
+        logger.debug("FoldersModel.Refresh(): Scanning " + dataDir + "...")
+        if folderStructure.startswith("Username"):
+            self.ScanForUserFolders(incrementProgressDialog, shouldAbort)
+        elif folderStructure.startswith("User Group"):
+            self.ScanForGroupFolders(incrementProgressDialog, shouldAbort)
+        else:
+            raise InvalidFolderStructure("Unknown folder structure.")
+
+    def ScanForUserFolders(self, incrementProgressDialog, shouldAbort):
+        dataDir = self.settingsModel.GetDataDirectory()
+        userFolderNames = os.walk(dataDir).next()[1]
+        for userFolderName in userFolderNames:
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
+            logger.debug("Found folder assumed to be username: " +
+                         userFolderName)
+            usersDataViewId = self.GetMaxDataViewId() + 1
+            try:
+                userRecord = \
+                    UserModel.GetUserByUsername(self.settingsModel,
+                                                userFolderName)
+            except DoesNotExist:
+                userRecord = None
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
+            if userRecord is not None:
+                userRecord.SetDataViewId(usersDataViewId)
+                self.usersModel.AddRow(userRecord)
+                self.ImportUserFolders(os.path.join(dataDir,
+                                                    userFolderName),
+                                       userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame()
+                                 .SetStatusMessage,
+                                 "Data uploads canceled")
+                    return
+            else:
+                message = "Didn't find a MyTardis user record for folder " \
+                    "\"%s\" in %s" % (userFolderName, dataDir)
+                logger.warning(message)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                 "Data uploads canceled")
+                    return
+                userRecord = UserModel(settingsModel=self.settingsModel,
+                                       username=userFolderName,
+                                       name="USER NOT FOUND IN MYTARDIS",
+                                       email="USER NOT FOUND IN MYTARDIS")
+                userRecord.SetDataViewId(usersDataViewId)
+                self.usersModel.AddRow(userRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                 "Data uploads canceled")
+                    return
+                self.ImportUserFolders(os.path.join(dataDir,
+                                                    userFolderName),
+                                       userRecord)
+            if threading.current_thread().name == "MainThread":
+                incrementProgressDialog()
+            else:
+                wx.CallAfter(incrementProgressDialog)
+
+    def ScanForGroupFolders(self, incrementProgressDialog, shouldAbort):
+        dataDir = self.settingsModel.GetDataDirectory()
+        groupFolderNames = os.walk(dataDir).next()[1]
+        for groupFolderName in groupFolderNames:
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
+            logger.debug("Found folder assumed to be user group name: " +
+                         groupFolderName)
+            groupsDataViewId = self.groupsModel.GetMaxDataViewId() + 1
+            try:
+                groupName = self.settingsModel.GetGroupPrefix() + \
+                    groupFolderName
+                groupRecord = \
+                    GroupModel.GetGroupByName(self.settingsModel,
+                                              groupName)
+            except DoesNotExist:
+                groupRecord = None
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
+            if groupRecord is not None:
+                groupRecord.SetDataViewId(groupsDataViewId)
+                self.groupsModel.AddRow(groupRecord)
+                self.ImportGroupFolders(os.path.join(dataDir,
+                                                     groupFolderName),
+                                        groupRecord)
+                if shouldAbort():
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                 "Data uploads canceled")
+                    return
+            else:
+                message = "Didn't find a MyTardis user group record for " \
+                    "folder \"%s\" in %s" % (groupFolderName,
+                                             dataDir)
+                logger.warning(message)
+                if not self.settingsModel.RunningInBackgroundMode():
+                    raise InvalidFolderStructure(message)
+            if threading.current_thread().name == "MainThread":
+                incrementProgressDialog()
+            else:
+                wx.CallAfter(incrementProgressDialog)
+
     def ImportUserFolders(self, userFolderPath, owner):
         try:
-            logger.debug("Scanning " + userFolderPath +
-                         " for dataset folders...")
-            datasetFolders = os.walk(userFolderPath).next()[1]
-            for datasetFolderName in datasetFolders:
-                if datasetFolderName.lower() == 'mytardis':
-                    mytardisFolderName = datasetFolderName
-                    logger.debug("Found '%s' folder in %s folder."
-                                 % (mytardisFolderName, userFolderPath))
-                    mytardisFolderPath = os.path.join(userFolderPath,
-                                                      mytardisFolderName)
-                    self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
-                                                         owner)
-                else:
-                    dataViewId = self.GetMaxDataViewId() + 1
-                    folderModel = FolderModel(dataViewId=dataViewId,
-                                              folder=datasetFolderName,
-                                              location=userFolderPath,
-                                              folder_type='Dataset',
-                                              owner=owner,
-                                              foldersModel=self,
-                                              usersModel=self.usersModel,
-                                              settingsModel=self.settingsModel)
-                    folderModel.SetCreatedDate()
-                    self.AddRow(folderModel)
+            folderStructure = self.settingsModel.GetFolderStructure()
+            if folderStructure == 'Username / Dataset':
+                logger.debug("Scanning " + userFolderPath +
+                             " for dataset folders...")
+                datasetFolders = os.walk(userFolderPath).next()[1]
+                for datasetFolderName in datasetFolders:
+                    if datasetFolderName.lower() == 'mytardis':
+                        mytardisFolderName = datasetFolderName
+                        logger.debug("Found '%s' folder in %s folder."
+                                     % (mytardisFolderName, userFolderPath))
+                        mytardisFolderPath = os.path.join(userFolderPath,
+                                                          mytardisFolderName)
+                        self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
+                                                             owner)
+                    else:
+                        dataViewId = self.GetMaxDataViewId() + 1
+                        folderModel = \
+                            FolderModel(dataViewId=dataViewId,
+                                        folder=datasetFolderName,
+                                        location=userFolderPath,
+                                        folder_type='Dataset',
+                                        owner=owner,
+                                        foldersModel=self,
+                                        usersModel=self.usersModel,
+                                        settingsModel=self.settingsModel)
+                        folderModel.SetCreatedDate()
+                        self.AddRow(folderModel)
+            elif folderStructure == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                logger.debug("Scanning " + userFolderPath +
+                             " for a MyTardis folder...")
+                folders = os.walk(userFolderPath).next()[1]
+                foundMyTardisFolder = False
+                for folderName in folders:
+                    if folderName.lower() == 'mytardis':
+                        foundMyTardisFolder = True
+                        mytardisFolderName = folderName
+                        logger.debug("Found '%s' folder in %s folder."
+                                     % (mytardisFolderName, userFolderPath))
+                        mytardisFolderPath = os.path.join(userFolderPath,
+                                                          mytardisFolderName)
+                        self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
+                                                             owner)
+                if not foundMyTardisFolder:
+                    raise InvalidFolderStructure("MyTardis folder not found " \
+                                                 "in %s" % userFolderPath)
         except:
             print traceback.format_exc()
 
