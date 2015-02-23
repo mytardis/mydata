@@ -284,8 +284,8 @@ class SettingsModel():
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
-        if self.GetConfigPath() is not None:
-            self.SaveToDisk(self.GetConfigPath())
+        if configPath is not None:
+            self.SaveToDisk(configPath)
 
     def Validate(self):
         try:
