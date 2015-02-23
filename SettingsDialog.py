@@ -236,9 +236,9 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
-        groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+        self.groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                          "User Group Prefix:")
-        self.advancedPanelSizer.Add(groupPrefixLabel,
+        self.advancedPanelSizer.Add(self.groupPrefixLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.groupPrefixField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer.Add(self.groupPrefixField,
@@ -330,6 +330,12 @@ class SettingsDialog(wx.Dialog):
         self.Fit()
 
         self.UpdateFieldsFromModel(self.settingsModel)
+
+        folderStructure = self.folderStructureComboBox.GetValue()
+        if folderStructure != \
+                'User Group / Instrument / Full Name / Dataset':
+            self.groupPrefixLabel.Show(False)
+            self.groupPrefixField.Show(False)
 
     def GetInstrumentName(self):
         return self.instrumentNameField.GetValue()
@@ -588,14 +594,29 @@ class SettingsDialog(wx.Dialog):
         if folderStructure == 'Username / Dataset':
             self.datasetGroupingField\
                 .SetValue("Instrument Name - Data Owner's Full Name")
+            self.groupPrefixLabel.Show(False)
+            self.groupPrefixField.Show(False)
         elif folderStructure == 'Username / "MyTardis" / Experiment / Dataset':
             self.datasetGroupingField.SetValue("Experiment")
+            self.groupPrefixLabel.Show(False)
+            self.groupPrefixField.Show(False)
         elif folderStructure == \
                 'User Group / Instrument / Full Name / Dataset':
             self.datasetGroupingField.SetValue("Instrument - Full Name")
+            self.groupPrefixLabel.Show(True)
+            self.groupPrefixField.Show(True)
 
     def OnDropFiles(self, filepaths):
         self.settingsModel.SetConfigPath(filepaths[0])
         self.settingsModel.LoadSettings()
         self.UpdateFieldsFromModel(self.settingsModel)
+
+        folderStructure = self.folderStructureComboBox.GetValue()
+        if folderStructure == \
+                'User Group / Instrument / Full Name / Dataset':
+            self.groupPrefixLabel.Show(True)
+            self.groupPrefixField.Show(True)
+        else:
+            self.groupPrefixLabel.Show(False)
+            self.groupPrefixField.Show(False)
 
