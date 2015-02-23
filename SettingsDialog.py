@@ -5,6 +5,7 @@ import requests
 import threading
 from datetime import datetime
 import sys
+import os
 
 from logger.Logger import logger
 from SettingsModel import SettingsModel
@@ -154,11 +155,14 @@ class SettingsDialog(wx.Dialog):
         # doesn't try to impose its security rules on our "password" field.
         pasteId = wx.NewId()
         selectAllId = wx.NewId()
+        saveId = wx.NewId()
         acceleratorList = \
             [(wx.ACCEL_CTRL, ord('V'), pasteId),
-             (wx.ACCEL_CTRL, ord('A'), selectAllId)]
+             (wx.ACCEL_CTRL, ord('A'), selectAllId),
+             (wx.ACCEL_CTRL, ord('S'), saveId)]
         self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
         self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
+        self.Bind(wx.EVT_MENU, self.OnSave, id=saveId)
         acceleratorTable = wx.AcceleratorTable(acceleratorList)
         self.SetAcceleratorTable(acceleratorTable)
 
@@ -505,6 +509,25 @@ class SettingsDialog(wx.Dialog):
                 textCtrl.SelectAll()
             else:
                 event.Skip()
+
+    def OnSave(self, event):
+        mydataConfigPath = self.settingsModel.GetConfigPath()
+        if mydataConfigPath is not None:
+            dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
+                                "Save MyData configuration as...",
+                                os.path.dirname(mydataConfigPath),
+                                "MyData.cfg", "*.cfg",
+                                wx.SAVE | wx.OVERWRITE_PROMPT)
+            if dlg.ShowModal() == wx.ID_OK:
+                configPath = dlg.GetPath()
+                wx.GetApp().SetConfigPath(configPath)
+                self.settingsModel.SetConfigPath(configPath)
+                self.settingsModel\
+                    .SaveFieldsFromDialog(self,
+                                          configPath=configPath)
+                if configPath != wx.GetApp().GetConfigPath():
+                    self.settingsModel.SaveFieldsFromDialog(
+                        self, configPath=wx.GetApp().GetConfigPath())
 
     def OnApiKeyFieldFocused(self, event):
         self.apiKeyField.SelectAll()
