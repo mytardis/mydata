@@ -264,12 +264,12 @@ class SettingsDialog(wx.Dialog):
         self.ignoreDatasetsOlderThanSpinCtrl.Enable(False)
         self.ignoreIntervalPanelSizer.Add(self.ignoreDatasetsOlderThanSpinCtrl,
                                           flag=wx.EXPAND | wx.ALL, border=5)
-        self.intervalUnits = ['days', 'weeks', 'months', 'years']
+        self.intervalUnitsPlural = ['days', 'weeks', 'months', 'years']
         self.intervalUnitsSingular = ['day', 'week', 'month', 'year']
         self.showingSingularUnits = False
         self.intervalUnitsComboBox = \
             wx.ComboBox(self.ignoreIntervalPanel, wx.ID_ANY,
-                        choices=self.intervalUnits, style=wx.CB_READONLY)
+                        choices=self.intervalUnitsPlural, style=wx.CB_READONLY)
         self.intervalUnitsComboBox.Enable(False)
         self.ignoreIntervalPanelSizer.Add(self.intervalUnitsComboBox,
                                           flag=wx.EXPAND | wx.ALL, border=5)
@@ -363,12 +363,6 @@ class SettingsDialog(wx.Dialog):
     def SetMyTardisUrl(self, myTardisUrl):
         self.myTardisUrlField.SetValue(myTardisUrl)
 
-    def GetGroupPrefix(self):
-        return self.groupPrefixField.GetValue()
-
-    def SetGroupPrefix(self, groupPrefix):
-        self.groupPrefixField.SetValue(groupPrefix)
-
     def GetUsername(self):
         return self.usernameField.GetValue()
 
@@ -380,6 +374,43 @@ class SettingsDialog(wx.Dialog):
 
     def SetApiKey(self, apiKey):
         self.apiKeyField.SetValue(apiKey)
+
+    def GetFolderStructure(self):
+        return self.folderStructureComboBox.GetValue()
+
+    def SetFolderStructure(self, folderStructure):
+        self.folderStructureComboBox.SetValue(folderStructure)
+
+    def GetDatasetGrouping(self):
+        return self.datasetGroupingField.GetValue()
+
+    def SetDatasetGrouping(self, datasetGrouping):
+        self.datasetGroupingField.SetValue(datasetGrouping)
+
+    def GetGroupPrefix(self):
+        return self.groupPrefixField.GetValue()
+
+    def SetGroupPrefix(self, groupPrefix):
+        self.groupPrefixField.SetValue(groupPrefix)
+
+    def IgnoreOldDatasets(self):
+        return self.ignoreDatasetsOlderThanCheckBox.GetValue()
+
+    def SetIgnoreOldDatasets(self, ignoreOldDatasets):
+        self.ignoreDatasetsOlderThanCheckBox.SetValue(ignoreOldDatasets)
+
+    def GetIgnoreOldDatasetIntervalNumber(self):
+        return self.ignoreDatasetsOlderThanSpinCtrl.GetValue()
+
+    def SetIgnoreOldDatasetIntervalNumber(self, ignoreOldDatasetIntervalNumber):
+        self.ignoreDatasetsOlderThanSpinCtrl\
+            .SetValue(ignoreOldDatasetIntervalNumber)
+
+    def GetIgnoreOldDatasetIntervalUnit(self):
+        return self.intervalUnitsComboBox.GetValue()
+
+    def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
+        self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
 
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
@@ -434,8 +465,30 @@ class SettingsDialog(wx.Dialog):
         self.SetMyTardisUrl(settingsModel.GetMyTardisUrl())
         self.SetDataDirectory(settingsModel.GetDataDirectory())
         self.SetUsername(settingsModel.GetUsername())
-        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
         self.SetApiKey(settingsModel.GetApiKey())
+
+        self.SetFolderStructure(settingsModel.GetFolderStructure())
+        self.SetDatasetGrouping(settingsModel.GetDatasetGrouping())
+        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
+        self.SetIgnoreOldDatasets(settingsModel.IgnoreOldDatasets())
+        self.SetIgnoreOldDatasetIntervalNumber(
+            settingsModel.GetIgnoreOldDatasetIntervalNumber())
+        if settingsModel.IgnoreOldDatasets():
+            self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
+            self.intervalUnitsComboBox.Enable(True)
+        ignoreIntervalUnit = settingsModel.GetIgnoreOldDatasetIntervalUnit()
+        if ignoreIntervalUnit in self.intervalUnitsPlural and \
+                self.showingSingularUnits:
+             self.intervalUnitsComboBox.Clear()
+             self.intervalUnitsComboBox.AppendItems(self.intervalUnitsPlural)
+             self.showingSingularUnits = False
+        elif ignoreIntervalUnit in self.intervalUnitsSingular and \
+                not self.showingSingularUnits:
+             self.intervalUnitsComboBox.Clear()
+             self.intervalUnitsComboBox.AppendItems(self.intervalUnitsSingular)
+             self.showingSingularUnits = True
+        self.SetIgnoreOldDatasetIntervalUnit(
+            settingsModel.GetIgnoreOldDatasetIntervalUnit())
 
     def OnPaste(self, event):
         textCtrl = wx.Window.FindFocus()
@@ -462,7 +515,7 @@ class SettingsDialog(wx.Dialog):
             self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
             if self.showingSingularUnits:
                 self.intervalUnitsComboBox.Clear()
-                self.intervalUnitsComboBox.AppendItems(self.intervalUnits)
+                self.intervalUnitsComboBox.AppendItems(self.intervalUnitsPlural)
                 self.showingSingularUnits = False
             self.intervalUnitsComboBox.SetValue("months")
             self.intervalUnitsComboBox.Enable(True)
@@ -491,7 +544,7 @@ class SettingsDialog(wx.Dialog):
             if self.showingSingularUnits:
                 intervalUnitValue = self.intervalUnitsComboBox.GetValue()
                 self.intervalUnitsComboBox.Clear()
-                self.intervalUnitsComboBox.AppendItems(self.intervalUnits)
+                self.intervalUnitsComboBox.AppendItems(self.intervalUnitsPlural)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
 
