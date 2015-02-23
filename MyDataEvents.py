@@ -399,8 +399,12 @@ class MyDataEvent(wx.PyCommandEvent):
             tempInstrument = tempSettingsModel.GetInstrument()
             tempInstrument.SetSettingsModel(event.settingsModel)
 
+            # Use the config path determined by appdirs, not the one
+            # determined by a user dragging and dropping a config
+            # file onto MyData's Settings dialog:
             event.settingsModel\
-                .SaveFieldsFromDialog(event.settingsDialog)
+                .SaveFieldsFromDialog(event.settingsDialog,
+                                      configPath=wx.GetApp().GetConfigPath())
             event.settingsModel\
                 .SetInstrument(tempSettingsModel.GetInstrument())
             event.settingsDialog.EndModal(wx.ID_OK)
