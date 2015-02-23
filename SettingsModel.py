@@ -349,20 +349,71 @@ class SettingsModel():
             dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
             if len(dirsDepth1) == 0:
                 message = "The data directory: \"%s\" doesn't contain any " \
-                    "user folders!" % \
-                    self.GetDataDirectory()
+                    % self.GetDataDirectory()
+                if self.GetFolderStructure() == 'Username / Dataset' or \
+                        self.GetFolderStructure() == \
+                        'Username / "MyTardis" / Experiment / Dataset':
+                    message += "user folders!"
+                elif self.GetFolderStructure() == \
+                        'User Group / Instrument / Full Name / Dataset':
+                    message += "user group folders!"
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(), '*', '*'))
             dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
             if len(dirsDepth2) == 0:
-                message = "The data directory: \"%s\" should contain dataset " \
-                    "folders within user folders." % \
+                if self.GetFolderStructure() == 'Username / Dataset':
+                    message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within user folders." % \
                     self.GetDataDirectory()
+                elif self.GetFolderStructure() == \
+                        'Username / "MyTardis" / Experiment / Dataset':
+                    message = "Each user folder should contain a " \
+                        "\"MyTardis\" folder."
+                elif self.GetFolderStructure() == \
+                        'User Group / Instrument / Full Name / Dataset':
+                    message = "Each user group folder should contain an " \
+                        "instrument name folder."
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
+            filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*', '*', '*'))
+            dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
+            if len(dirsDepth3) == 0:
+                if self.GetFolderStructure() == \
+                        'Username / "MyTardis" / Experiment / Dataset':
+                    message = "Each \"MyTardis\" folder should contain at " \
+                        "least one experiment folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                elif self.GetFolderStructure() == \
+                        'User Group / Instrument / Full Name / Dataset':
+                    message = "Each instrument folder should contain at " \
+                        "least one full name (dataset group) folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+            filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*', '*', '*', '*'))
+            dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
+            if len(dirsDepth4) == 0:
+                if self.GetFolderStructure() == \
+                        'Username / "MyTardis" / Experiment / Dataset':
+                    message = "Each experiment folder should contain at " \
+                        "least one dataset folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                elif self.GetFolderStructure() == \
+                        'User Group / Instrument / Full Name / Dataset':
+                    message = "Each full name (dataset group) folder " \
+                        "should contain at least one dataset folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
 
             try:
                 session = requests.Session()
