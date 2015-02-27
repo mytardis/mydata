@@ -118,6 +118,12 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
+        self.instance = wx.SingleInstanceChecker(self.name)
+        if self.instance.IsAnotherRunning():
+            wx.MessageBox("MyData is already running!", "MyData",
+                          wx.ICON_ERROR)
+            return False
+
         from help.HelpController import helpController
 
         logger.debug("MyData version:   " +
