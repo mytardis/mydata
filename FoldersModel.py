@@ -8,6 +8,7 @@ import threading
 import os
 import sys
 import traceback
+from datetime import datetime
 
 from logger.Logger import logger
 from Exceptions import InvalidFolderStructure
@@ -52,16 +53,16 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Folder (dataset)", "Location",
+        self.columnNames = ("Id", "Folder (dataset)", "Location", "Created",
                             "Experiment", "Status", "Owner", "Group")
-        self.columnKeys = ("dataViewId", "folder", "location",
+        self.columnKeys = ("dataViewId", "folder", "location", "created",
                            "experimentTitle", "status",
                            "owner.username", "group.shortName")
 
         if sys.platform.startswith("win"):
-            self.defaultColumnWidths = (40, 185, 200, 150, 160, 90, 150)
+            self.defaultColumnWidths = (40, 185, 200, 80, 150, 160, 90, 150)
         else:
-            self.defaultColumnWidths = (40, 185, 200, 160, 160, 90, 150)
+            self.defaultColumnWidths = (40, 185, 200, 80, 160, 160, 90, 150)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -357,6 +358,23 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             self.groupsModel.DeleteAllRows()
         dataDir = self.settingsModel.GetDataDirectory()
         folderStructure = self.settingsModel.GetFolderStructure()
+        self.ignoreOldDatasets = self.settingsModel.IgnoreOldDatasets()
+        if self.ignoreOldDatasets:
+            seconds = {}
+            seconds['day'] = 24 * 60 * 60
+            seconds['week'] = 7 * seconds['day']
+            seconds['year'] = int(365.25 * seconds['day'])
+            seconds['month'] = seconds['year'] / 12
+            singularIgnoreIntervalUnit = \
+                self.settingsModel.GetIgnoreOldDatasetIntervalUnit().rstrip('s')
+            ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
+
+            self.ignoreIntervalNumber = \
+                self.settingsModel.GetIgnoreOldDatasetIntervalNumber()
+            self.ignoreIntervalUnit = \
+                self.settingsModel.GetIgnoreOldDatasetIntervalUnit()
+            self.ignoreIntervalSeconds = \
+                self.ignoreIntervalNumber * ignoreIntervalUnitSeconds
         logger.debug("FoldersModel.Refresh(): Scanning " + dataDir + "...")
         if folderStructure.startswith("Username"):
             self.ScanForUserFolders(incrementProgressDialog, shouldAbort)
@@ -485,6 +503,20 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                         self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
                                                              owner)
                     else:
+                        if self.ignoreOldDatasets:
+                            datasetFolderPath = os.path.join(userFolderPath,
+                                                             datasetFolderName)
+                            ctimestamp = os.path.getctime(datasetFolderPath)
+                            ctime = datetime.fromtimestamp(ctimestamp)
+                            age = datetime.now() - ctime
+                            if age.total_seconds() > self.ignoreIntervalSeconds:
+                                message = "Ignoring \"%s\", because it is " \
+                                    "older than %d %s" \
+                                    % (datasetFolderPath,
+                                       self.ignoreIntervalNumber,
+                                       self.ignoreIntervalUnit)
+                                logger.warning(message)
+                                continue
                         dataViewId = self.GetMaxDataViewId() + 1
                         folderModel = \
                             FolderModel(dataViewId=dataViewId,
@@ -514,7 +546,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                         self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
                                                              owner)
                 if not foundMyTardisFolder:
-                    raise InvalidFolderStructure("MyTardis folder not found " \
+                    raise InvalidFolderStructure("MyTardis folder not found "
                                                  "in %s" % userFolderPath)
         except:
             print traceback.format_exc()
@@ -532,6 +564,19 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             expFolderPath = os.path.join(mytardisFolderPath, expFolderName)
             datasetFolders = os.walk(expFolderPath).next()[1]
             for datasetFolderName in datasetFolders:
+                if self.ignoreOldDatasets:
+                    datasetFolderPath = os.path.join(expFolderPath,
+                                                     datasetFolderName)
+                    ctimestamp = os.path.getctime(datasetFolderPath)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() > self.ignoreIntervalSeconds:
+                        message = "Ignoring \"%s\", because it is " \
+                            "older than %d %s" \
+                            % (datasetFolderPath, self.ignoreIntervalNumber,
+                               self.ignoreIntervalUnit)
+                        logger.warning(message)
+                        continue
                 dataViewId = self.GetMaxDataViewId() + 1
                 folderModel = FolderModel(dataViewId=dataViewId,
                                           folder=datasetFolderName,
@@ -592,6 +637,19 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                              " for dataset folders...")
                 datasetFolders = os.walk(userFolderPath).next()[1]
                 for datasetFolderName in datasetFolders:
+                    if self.ignoreOldDatasets:
+                        datasetFolderPath = os.path.join(userFolderPath,
+                                                         datasetFolderName)
+                        ctimestamp = os.path.getctime(datasetFolderPath)
+                        ctime = datetime.fromtimestamp(ctimestamp)
+                        age = datetime.now() - ctime
+                        if age.total_seconds() > self.ignoreIntervalSeconds:
+                            message = "Ignoring \"%s\", because it is " \
+                                "older than %d %s" \
+                                % (datasetFolderPath, self.ignoreIntervalNumber,
+                                   self.ignoreIntervalUnit)
+                            logger.warning(message)
+                            continue
                     dataViewId = self.GetMaxDataViewId() + 1
                     folderModel = FolderModel(dataViewId=dataViewId,
                                               folder=datasetFolderName,

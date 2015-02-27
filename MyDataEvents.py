@@ -390,6 +390,54 @@ class MyDataEvent(wx.PyCommandEvent):
                          "should remain visible.")
             return
 
+        if tempSettingsModel.UsingMaxDatasetCount() and \
+                settingsValidation.GetDatasetCount() > \
+                tempSettingsModel.GetMaxDatasetCount():
+            if tempSettingsModel.IgnoreOldDatasets():
+                intervalIfUsed = " (created within the past %d %s)" \
+                    % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
+                       tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
+            else:
+                intervalIfUsed = ""
+            message = "Assuming a folder structure of '%s', " \
+                "there are %d datasets in \"%s\"%s, " \
+                "which is more than %d (the maximum " \
+                "dataset count).\n\n" \
+                "Do you want to continue anyway?" \
+                % (tempSettingsModel.GetFolderStructure(),
+                   settingsValidation.GetDatasetCount(),
+                   event.settingsDialog.GetDataDirectory(),
+                   intervalIfUsed,
+                   tempSettingsModel.GetMaxDatasetCount())
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION
+                                 | wx.ICON_WARNING)
+            okToContinue = confirmationDialog.ShowModal()
+            if okToContinue != wx.ID_YES:
+                return
+        else:
+            if tempSettingsModel.IgnoreOldDatasets():
+                intervalIfUsed = " (created within the past %d %s)" \
+                    % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
+                       tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
+            else:
+                intervalIfUsed = ""
+            message = "Assuming a folder structure of '%s', " \
+                "there are %d datasets in \"%s\"%s.\n\n" \
+                "Do you want to continue?" \
+                % (tempSettingsModel.GetFolderStructure(),
+                   settingsValidation.GetDatasetCount(),
+                   event.settingsDialog.GetDataDirectory(),
+                   intervalIfUsed)
+            if not event.settingsModel.RunningInBackgroundMode():
+                confirmationDialog = \
+                    wx.MessageDialog(None, message, "MyData",
+                                     wx.YES | wx.NO | wx.ICON_QUESTION)
+                okToContinue = confirmationDialog.ShowModal()
+                if okToContinue != wx.ID_YES:
+                    return
+
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
         try:
