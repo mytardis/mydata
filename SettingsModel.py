@@ -5,6 +5,7 @@ import os
 from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
+from datetime import datetime
 
 from logger.Logger import logger
 from UserModel import UserModel
@@ -18,11 +19,13 @@ from Exceptions import IncompatibleMyTardisVersion
 
 class SettingsModel():
     class SettingsValidation():
-        def __init__(self, valid, message="", field="", suggestion=None):
+        def __init__(self, valid, message="", field="", suggestion=None,
+                     datasetCount=0):
             self.valid = valid
             self.message = message
             self.field = field
             self.suggestion = suggestion
+            self.datasetCount = datasetCount
 
         def GetValid(self):
             return self.valid
@@ -35,6 +38,9 @@ class SettingsModel():
 
         def GetSuggestion(self):
             return self.suggestion
+
+        def GetDatasetCount(self):
+            return self.datasetCount
 
     def __init__(self, configPath=None):
         self.SetConfigPath(configPath)
@@ -56,6 +62,8 @@ class SettingsModel():
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
+        self.using_max_dataset_count = False
+        self.max_dataset_count = 0
 
         self.background_mode = "False"
 
@@ -83,7 +91,8 @@ class SettingsModel():
                           "contact_name", "contact_email", "mytardis_url",
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
-                          "ignore_interval_unit"]
+                          "ignore_interval_unit", "using_max_dataset_count",
+                          "max_dataset_count"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -98,6 +107,16 @@ class SettingsModel():
                     self.ignore_interval_number = \
                         configParser.getint(configFileSection,
                                             "ignore_interval_number")
+                if configParser.has_option(configFileSection,
+                                           "using_max_dataset_count"):
+                    self.using_max_dataset_count = \
+                        configParser.getboolean(configFileSection,
+                                                "using_max_dataset_count")
+                if configParser.has_option(configFileSection,
+                                           "max_dataset_count"):
+                    self.max_dataset_count = \
+                        configParser.getint(configFileSection,
+                                            "max_dataset_count")
             except:
                 logger.error(traceback.format_exc())
 
@@ -207,6 +226,18 @@ class SettingsModel():
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
 
+    def UsingMaxDatasetCount(self):
+        return self.using_max_dataset_count
+
+    def SetUsingMaxDatasetCount(self, usingMaxDatasetCount):
+        self.using_max_dataset_count = usingMaxDatasetCount
+
+    def GetMaxDatasetCount(self):
+        return self.max_dataset_count
+
+    def SetMaxDatasetCount(self, maxDatasetCount):
+        self.max_dataset_count = maxDatasetCount
+
     def RunningInBackgroundMode(self):
         return self.background_mode
 
@@ -255,7 +286,8 @@ class SettingsModel():
                       "contact_name", "contact_email", "mytardis_url",
                       "username", "api_key", "folder_structure",
                       "dataset_grouping", "group_prefix", "ignore_old_datasets",
-                      "ignore_interval_number", "ignore_interval_unit"]
+                      "ignore_interval_number", "ignore_interval_unit",
+                      "using_max_dataset_count", "max_dataset_count"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -281,6 +313,8 @@ class SettingsModel():
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
+        self.SetUsingMaxDatasetCount(settingsDialog.UsingMaxDatasetCount())
+        self.SetMaxDatasetCount(settingsDialog.GetMaxDatasetCount())
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
@@ -288,6 +322,7 @@ class SettingsModel():
             self.SaveToDisk(configPath)
 
     def Validate(self):
+        datasetCount = 0
         try:
             if self.GetInstrumentName().strip() == "":
                 message = "Please enter a valid instrument name."
@@ -365,8 +400,8 @@ class SettingsModel():
             if len(dirsDepth2) == 0:
                 if self.GetFolderStructure() == 'Username / Dataset':
                     message = "The data directory: \"%s\" should contain " \
-                    "dataset folders within user folders." % \
-                    self.GetDataDirectory()
+                        "dataset folders within user folders." % \
+                        self.GetDataDirectory()
                 elif self.GetFolderStructure() == \
                         'Username / "MyTardis" / Experiment / Dataset':
                     message = "Each user folder should contain a " \
@@ -378,6 +413,29 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
+
+            seconds = {}
+            seconds['day'] = 24 * 60 * 60
+            seconds['week'] = 7 * seconds['day']
+            seconds['year'] = int(365.25 * seconds['day'])
+            seconds['month'] = seconds['year'] / 12
+            singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
+            ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
+            ignoreIntervalSeconds = \
+                self.ignore_interval_number * ignoreIntervalUnitSeconds
+
+            if self.GetFolderStructure() == 'Username / Dataset':
+                if self.IgnoreOldDatasets():
+                    datasetCount = 0
+                    for folder in dirsDepth2:
+                        ctimestamp = os.path.getctime(folder)
+                        ctime = datetime.fromtimestamp(ctimestamp)
+                        age = datetime.now() - ctime
+                        if age.total_seconds() <= ignoreIntervalSeconds:
+                            datasetCount += 1
+                else:
+                    datasetCount = len(dirsDepth2)
+
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
                                             '*', '*', '*'))
             dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
@@ -414,6 +472,21 @@ class SettingsModel():
                     self.validation = self.SettingsValidation(False, message,
                                                               "data_directory")
                     return self.validation
+
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset' or \
+                    self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                if self.IgnoreOldDatasets():
+                    datasetCount = 0
+                    for folder in dirsDepth4:
+                        ctimestamp = os.path.getctime(folder)
+                        ctime = datetime.fromtimestamp(ctimestamp)
+                        age = datetime.now() - ctime
+                        if age.total_seconds() <= ignoreIntervalSeconds:
+                            datasetCount += 1
+                else:
+                    datasetCount = len(dirsDepth4)
 
             try:
                 session = requests.Session()
@@ -513,8 +586,8 @@ class SettingsModel():
             if status_code < 200 or status_code >= 300:
                 message = "Your MyTardis credentials are invalid.\n\n" \
                     "Please check your Username and API Key."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "username")
+                self.validation = \
+                    self.SettingsValidation(False, message, "username")
                 return self.validation
 
             if self.GetFacilityName().strip() == "":
@@ -527,14 +600,12 @@ class SettingsModel():
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
                     self.validation = self.SettingsValidation(False, message,
-                                                              "facility_name",
-                                                              suggestion)
+                                                              "facility_name")
                     return self.validation
                 except:
                     logger.error(traceback.format_exc())
                     self.validation = self.SettingsValidation(False, message,
-                                                              "facility_name",
-                                                              suggestion)
+                                                              "facility_name")
                     return self.validation
             defaultUserModel = self.GetDefaultOwner()
             facilities = FacilityModel.GetMyFacilities(self,
@@ -602,8 +673,8 @@ class SettingsModel():
             logger.debug("Validating email address.")
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "contact_email")
+                self.validation = \
+                    self.SettingsValidation(False, message, "contact_email")
                 return self.validation
             logger.debug("Done validating email address.")
         except IncompatibleMyTardisVersion:
@@ -617,7 +688,9 @@ class SettingsModel():
             return self.validation
 
         logger.debug("SettingsModel validation succeeded!")
-        return self.SettingsValidation(True)
+        self.validation = self.SettingsValidation(True,
+                                                  datasetCount=datasetCount)
+        return self.validation
 
     def RequiredFieldIsBlank(self):
         return self.GetInstrumentName() == "" or \
