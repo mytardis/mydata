@@ -949,8 +949,8 @@ class UploadDatafileRunnable():
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         datasetId = self.folderModel.GetDatasetModel().GetId()
 
-        twoMinutes = 2 * 60
-        if (time.time() - os.path.getmtime(dataFilePath)) <= twoMinutes:
+        thirtySeconds = 30
+        if (time.time() - os.path.getmtime(dataFilePath)) <= thirtySeconds:
             message = "Not uploading file, in case it is still being modified."
             self.uploadModel.SetMessage(message)
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
