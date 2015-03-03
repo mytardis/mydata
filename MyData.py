@@ -677,6 +677,11 @@ class MyData(wx.App):
             self.OnSettings(event)
             return
 
+        if "Group" in self.settingsModel.GetFolderStructure():
+            self.foldersView.ShowGroupColumn(True)
+        else:
+            self.foldersView.ShowGroupColumn(False)
+
         logger.debug("OnRefresh: Creating progress dialog.")
 
         def cancelCallback():
