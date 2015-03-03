@@ -129,6 +129,48 @@ class UserModel():
             return UserModel(settingsModel=settingsModel, username=username,
                              userRecordJson=userRecordsJson['objects'][0])
 
+    @staticmethod
+    def GetUserByEmail(settingsModel, email):
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+
+        url = myTardisUrl + "/api/v1/user/?format=json&email=" + email
+        headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
+                   myTardisApiKey}
+        try:
+            session = requests.Session()
+            response = session.get(url=url, headers=headers)
+        except:
+            response.close()
+            session.close()
+            raise Exception(traceback.format_exc())
+        if response.status_code != 200:
+            message = response.text
+            response.close()
+            session.close()
+            raise Exception(message)
+        try:
+            userRecordsJson = response.json()
+        except:
+            logger.error(traceback.format_exc())
+            response.close()
+            session.close()
+            raise
+        response.close()
+        session.close()
+        numUserRecordsFound = userRecordsJson['meta']['total_count']
+
+        if numUserRecordsFound == 0:
+            raise DoesNotExist(
+                message="User with email \"%s\" was not found in MyTardis"
+                % email,
+                url=url, response=response)
+        else:
+            logger.debug("Found user record for email '" + email + "'.")
+            return UserModel(settingsModel=settingsModel,
+                             userRecordJson=userRecordsJson['objects'][0])
+
 
 class UserProfileModel():
     """

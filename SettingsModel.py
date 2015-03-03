@@ -217,7 +217,8 @@ class SettingsModel():
     def GetIgnoreOldDatasetIntervalNumber(self):
         return self.ignore_interval_number
 
-    def SetIgnoreOldDatasetIntervalNumber(self, ignoreOldDatasetIntervalNumber):
+    def SetIgnoreOldDatasetIntervalNumber(self,
+                                          ignoreOldDatasetIntervalNumber):
         self.ignore_interval_number = ignoreOldDatasetIntervalNumber
 
     def GetIgnoreOldDatasetIntervalUnit(self):
@@ -285,8 +286,9 @@ class SettingsModel():
             fields = ["instrument_name", "facility_name", "data_directory",
                       "contact_name", "contact_email", "mytardis_url",
                       "username", "api_key", "folder_structure",
-                      "dataset_grouping", "group_prefix", "ignore_old_datasets",
-                      "ignore_interval_number", "ignore_interval_unit",
+                      "dataset_grouping", "group_prefix",
+                      "ignore_old_datasets", "ignore_interval_number",
+                      "ignore_interval_unit",
                       "using_max_dataset_count", "max_dataset_count"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
@@ -385,8 +387,11 @@ class SettingsModel():
             if len(dirsDepth1) == 0:
                 message = "The data directory: \"%s\" doesn't contain any " \
                     % self.GetDataDirectory()
-                if self.GetFolderStructure() == 'Username / Dataset' or \
-                        self.GetFolderStructure() == \
+                if self.GetFolderStructure() == 'Username / Dataset':
+                    message += "user folders!"
+                elif self.GetFolderStructure() == 'Email / Dataset':
+                    message += "email folders!"
+                elif self.GetFolderStructure() == \
                         'Username / "MyTardis" / Experiment / Dataset':
                     message += "user folders!"
                 elif self.GetFolderStructure() == \
@@ -401,6 +406,10 @@ class SettingsModel():
                 if self.GetFolderStructure() == 'Username / Dataset':
                     message = "The data directory: \"%s\" should contain " \
                         "dataset folders within user folders." % \
+                        self.GetDataDirectory()
+                elif self.GetFolderStructure() == 'Email / Dataset':
+                    message = "The data directory: \"%s\" should contain " \
+                        "dataset folders within email folders." % \
                         self.GetDataDirectory()
                 elif self.GetFolderStructure() == \
                         'Username / "MyTardis" / Experiment / Dataset':
@@ -424,7 +433,8 @@ class SettingsModel():
             ignoreIntervalSeconds = \
                 self.ignore_interval_number * ignoreIntervalUnitSeconds
 
-            if self.GetFolderStructure() == 'Username / Dataset':
+            if self.GetFolderStructure() == 'Username / Dataset' or \
+                    self.GetFolderStructure() == 'Email / Dataset':
                 if self.IgnoreOldDatasets():
                     datasetCount = 0
                     for folder in dirsDepth2:
@@ -677,6 +687,17 @@ class SettingsModel():
                     self.SettingsValidation(False, message, "contact_email")
                 return self.validation
             logger.debug("Done validating email address.")
+            if self.GetFolderStructure() == 'Email / Dataset':
+                dataDir = self.GetDataDirectory()
+                folderNames = os.walk(dataDir).next()[1]
+                for folderName in folderNames:
+                    if not validate_email(folderName):
+                        message = "Folder name \"%s\" in \"%s\" is not a " \
+                            "valid email address." % (folderName, dataDir)
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)

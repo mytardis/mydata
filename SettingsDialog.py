@@ -205,6 +205,7 @@ class SettingsDialog(wx.Dialog):
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.folderStructures = [
             'Username / Dataset',
+            'Email / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
             'User Group / Instrument / Full Name / Dataset']
         self.folderStructureComboBox = \
@@ -443,7 +444,8 @@ class SettingsDialog(wx.Dialog):
     def GetIgnoreOldDatasetIntervalNumber(self):
         return self.ignoreDatasetsOlderThanSpinCtrl.GetValue()
 
-    def SetIgnoreOldDatasetIntervalNumber(self, ignoreOldDatasetIntervalNumber):
+    def SetIgnoreOldDatasetIntervalNumber(self,
+                                          ignoreOldDatasetIntervalNumber):
         self.ignoreDatasetsOlderThanSpinCtrl\
             .SetValue(ignoreOldDatasetIntervalNumber)
 
@@ -591,7 +593,8 @@ class SettingsDialog(wx.Dialog):
             self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
             if self.showingSingularUnits:
                 self.intervalUnitsComboBox.Clear()
-                self.intervalUnitsComboBox.AppendItems(self.intervalUnitsPlural)
+                self.intervalUnitsComboBox\
+                    .AppendItems(self.intervalUnitsPlural)
                 self.showingSingularUnits = False
             self.intervalUnitsComboBox.SetValue("months")
             self.intervalUnitsComboBox.Enable(True)
@@ -620,7 +623,8 @@ class SettingsDialog(wx.Dialog):
             if self.showingSingularUnits:
                 intervalUnitValue = self.intervalUnitsComboBox.GetValue()
                 self.intervalUnitsComboBox.Clear()
-                self.intervalUnitsComboBox.AppendItems(self.intervalUnitsPlural)
+                self.intervalUnitsComboBox\
+                    .AppendItems(self.intervalUnitsPlural)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
 
@@ -647,7 +651,8 @@ class SettingsDialog(wx.Dialog):
 
     def OnSelectFolderStructure(self, event):
         folderStructure = self.folderStructureComboBox.GetValue()
-        if folderStructure == 'Username / Dataset':
+        if folderStructure == 'Username / Dataset' or \
+                folderStructure == 'Email / Dataset':
             self.datasetGroupingField\
                 .SetValue("Instrument Name - Data Owner's Full Name")
             self.groupPrefixLabel.Show(False)

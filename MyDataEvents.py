@@ -399,13 +399,16 @@ class MyDataEvent(wx.PyCommandEvent):
                        tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
             else:
                 intervalIfUsed = ""
+            numDatasets = settingsValidation.GetDatasetCount()
             message = "Assuming a folder structure of '%s', " \
-                "there are %d datasets in \"%s\"%s, " \
+                "there %s %d %s in \"%s\"%s, " \
                 "which is more than %d (the maximum " \
                 "dataset count).\n\n" \
                 "Do you want to continue anyway?" \
                 % (tempSettingsModel.GetFolderStructure(),
+                   "are" if numDatasets != 1 else "is",
                    settingsValidation.GetDatasetCount(),
+                   "datasets" if numDatasets != 1 else "dataset",
                    event.settingsDialog.GetDataDirectory(),
                    intervalIfUsed,
                    tempSettingsModel.GetMaxDatasetCount())
@@ -423,11 +426,14 @@ class MyDataEvent(wx.PyCommandEvent):
                        tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
             else:
                 intervalIfUsed = ""
+            numDatasets = settingsValidation.GetDatasetCount()
             message = "Assuming a folder structure of '%s', " \
-                "there are %d datasets in \"%s\"%s.\n\n" \
+                "there %s %d %s in \"%s\"%s.\n\n" \
                 "Do you want to continue?" \
                 % (tempSettingsModel.GetFolderStructure(),
+                   "are" if numDatasets != 1 else "is",
                    settingsValidation.GetDatasetCount(),
+                   "datasets" if numDatasets != 1 else "dataset",
                    event.settingsDialog.GetDataDirectory(),
                    intervalIfUsed)
             if not event.settingsModel.RunningInBackgroundMode():
