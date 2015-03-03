@@ -134,3 +134,13 @@ class FoldersView(wx.Panel):
         menu = FoldersPopupMenu(dataViewItem, openFolderCallback,
                                 deleteFoldersCallback)
         self.PopupMenu(menu, event.GetPosition())
+
+    def ShowGroupColumn(self, showOrHide):
+        for col in range(0, self.foldersModel.GetColumnCount()):
+            column = self.foldersDataViewControl.Columns[col]
+            if column.GetTitle() == "Group":
+                if showOrHide:
+                    width = self.foldersModel.GetDefaultColumnWidth(col)
+                else:
+                    width = 0
+                column.SetWidth(width)
