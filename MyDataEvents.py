@@ -260,6 +260,7 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
+                event.settingsDialog.okButton.Disable()
                 tempSettingsModel.Validate()
 
                 def endBusyCursorIfRequired():
@@ -271,6 +272,7 @@ class MyDataEvent(wx.PyCommandEvent):
                             raise
                 wx.CallAfter(endBusyCursorIfRequired)
                 if tempSettingsModel.IsIncompatibleMyTardisVersion():
+                    event.settingsDialog.okButton.Enable()
                     return
                 provideSettingsValidationResultsEvent = MyDataEvent(
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
@@ -305,6 +307,8 @@ class MyDataEvent(wx.PyCommandEvent):
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
                 wx.CallAfter(showDialog)
+            finally:
+                event.settingsDialog.okButton.Enable()
             logger.debug("Finished running tempSettingsModel.Validate() 4")
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
