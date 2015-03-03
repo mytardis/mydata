@@ -376,7 +376,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             self.ignoreIntervalSeconds = \
                 self.ignoreIntervalNumber * ignoreIntervalUnitSeconds
         logger.debug("FoldersModel.Refresh(): Scanning " + dataDir + "...")
-        if folderStructure.startswith("Username"):
+        if folderStructure.startswith("Username") or \
+                folderStructure.startswith("Email"):
             self.ScanForUserFolders(incrementProgressDialog, shouldAbort)
         elif folderStructure.startswith("User Group"):
             self.ScanForGroupFolders(incrementProgressDialog, shouldAbort)
@@ -385,19 +386,30 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def ScanForUserFolders(self, incrementProgressDialog, shouldAbort):
         dataDir = self.settingsModel.GetDataDirectory()
+        folderStructure = self.settingsModel.GetFolderStructure()
         userFolderNames = os.walk(dataDir).next()[1]
         for userFolderName in userFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data uploads canceled")
                 return
-            logger.debug("Found folder assumed to be username: " +
-                         userFolderName)
-            usersDataViewId = self.GetMaxDataViewId() + 1
+            if folderStructure.startswith("Username"):
+                logger.debug("Found folder assumed to be username: " +
+                             userFolderName)
+            elif folderStructure.startswith("Email"):
+                logger.debug("Found folder assumed to be email: " +
+                             userFolderName)
+            usersDataViewId = self.usersModel.GetMaxDataViewId() + 1
             try:
-                userRecord = \
-                    UserModel.GetUserByUsername(self.settingsModel,
-                                                userFolderName)
+                if folderStructure.startswith("Username"):
+                    userRecord = \
+                        UserModel.GetUserByUsername(self.settingsModel,
+                                                    userFolderName)
+                elif folderStructure.startswith("Email"):
+                    userRecord = \
+                        UserModel.GetUserByEmail(self.settingsModel,
+                                                 userFolderName)
+
             except DoesNotExist:
                 userRecord = None
             if shouldAbort():
@@ -489,7 +501,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
     def ImportUserFolders(self, userFolderPath, owner):
         try:
             folderStructure = self.settingsModel.GetFolderStructure()
-            if folderStructure == 'Username / Dataset':
+            if folderStructure == 'Username / Dataset' or \
+                    folderStructure == 'Email / Dataset':
                 logger.debug("Scanning " + userFolderPath +
                              " for dataset folders...")
                 datasetFolders = os.walk(userFolderPath).next()[1]
@@ -509,7 +522,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                             ctimestamp = os.path.getctime(datasetFolderPath)
                             ctime = datetime.fromtimestamp(ctimestamp)
                             age = datetime.now() - ctime
-                            if age.total_seconds() > self.ignoreIntervalSeconds:
+                            if age.total_seconds() > \
+                                    self.ignoreIntervalSeconds:
                                 message = "Ignoring \"%s\", because it is " \
                                     "older than %d %s" \
                                     % (datasetFolderPath,
@@ -646,7 +660,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                         if age.total_seconds() > self.ignoreIntervalSeconds:
                             message = "Ignoring \"%s\", because it is " \
                                 "older than %d %s" \
-                                % (datasetFolderPath, self.ignoreIntervalNumber,
+                                % (datasetFolderPath,
+                                   self.ignoreIntervalNumber,
                                    self.ignoreIntervalUnit)
                             logger.warning(message)
                             continue
