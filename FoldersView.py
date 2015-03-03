@@ -93,9 +93,6 @@ class FoldersView(wx.Panel):
 
         self.lastUsedFolderType = None
 
-        # Pop-up (right-click) menu:
-        self.Bind(dv.EVT_DATAVIEW_ITEM_CONTEXT_MENU, self.OnItemMenu)
-
     def GetDataViewControl(self):
         return self.foldersDataViewControl
 
@@ -121,19 +118,6 @@ class FoldersView(wx.Panel):
 
     def OnValueChanged(self, evt):
         pass
-
-    def OnItemMenu(self, event):
-        # event.GetItem() should return the selected item (if any) or None.
-        dataViewItem = event.GetItem()
-        folderId = dataViewItem.GetID()
-        if folderId == 0:
-            return
-        from FoldersPopupMenu import FoldersPopupMenu
-        openFolderCallback = None
-        deleteFoldersCallback = None
-        menu = FoldersPopupMenu(dataViewItem, openFolderCallback,
-                                deleteFoldersCallback)
-        self.PopupMenu(menu, event.GetPosition())
 
     def ShowGroupColumn(self, showOrHide):
         for col in range(0, self.foldersModel.GetColumnCount()):

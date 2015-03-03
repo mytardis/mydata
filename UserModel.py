@@ -9,11 +9,10 @@ from Exceptions import DoesNotExist
 
 
 class UserModel():
-
     def __init__(self, settingsModel=None, dataViewId=None,
                  username=None, name=None,
-                 email=None, userRecordJson=None):
-
+                 email=None, userRecordJson=None,
+                 userNotFoundInMyTardis=False):
         self.settingsModel = settingsModel
         self.id = None
         self.dataViewId = dataViewId
@@ -22,6 +21,7 @@ class UserModel():
         self.email = email
         self.groups = []
         self.userRecordJson = userRecordJson
+        self.userNotFoundInMyTardis = userNotFoundInMyTardis
 
         if userRecordJson is not None:
             self.id = userRecordJson['id']
@@ -62,22 +62,43 @@ class UserModel():
         self.dataViewId = dataViewId
 
     def GetUsername(self):
-        return self.username
+        if self.username:
+            return self.username
+        else:
+            return self.GetUserNotFoundInMyTardisString()
 
     def GetName(self):
-        return self.name
+        if self.name:
+            return self.name
+        else:
+            return self.GetUserNotFoundInMyTardisString()
 
     def GetEmail(self):
-        return self.email
+        if self.email:
+            return self.email
+        else:
+            return self.GetUserNotFoundInMyTardisString()
 
     def GetGroups(self):
         return self.groups
 
     def GetValueForKey(self, key):
-        return self.__dict__[key]
+        if self.__dict__[key]:
+            return self.__dict__[key]
+        if key in ('username', 'name', 'email') and \
+                self.UserNotFoundInMyTardis():
+            return self.GetUserNotFoundInMyTardisString()
+        else:
+            return None
 
     def GetJson(self):
         return self.userRecordJson
+
+    def UserNotFoundInMyTardis(self):
+        return self.userNotFoundInMyTardis
+
+    def GetUserNotFoundInMyTardisString(self):
+        return "USER NOT FOUND IN MYTARDIS"
 
     def __str__(self):
         return "UserModel: " + self.GetUsername()

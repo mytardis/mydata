@@ -115,14 +115,6 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         columnKey = self.GetColumnKeyName(col)
         return str(self.verificationsData[row].GetValueForKey(columnKey))
 
-    # This method is called to provide the verificationsData object for a
-    # particular row, colname
-    def GetValueForRowColname(self, row, colname):
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                return self.GetValueByRow(row, col)
-        return None
-
     def GetValuesForColname(self, colname):
         values = []
         for col in range(0, self.GetColumnCount()):

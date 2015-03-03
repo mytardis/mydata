@@ -190,10 +190,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         return str(self.foldersData[row].GetValueForKey(columnKey))
 
     # This method is called to provide the foldersData object for a
-    # particular row,colname
-    def GetValueForRowColname(self, row, colname):
+    # particular row,columnKeyName
+    def GetValueForRowColumnKeyName(self, row, columnKeyName):
         for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
+            if self.GetColumnKeyName(col) == columnKeyName:
                 return self.GetValueByRow(row, col)
         return None
 
@@ -435,10 +435,15 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  "Data uploads canceled")
                     return
-                userRecord = UserModel(settingsModel=self.settingsModel,
-                                       username=userFolderName,
-                                       name="USER NOT FOUND IN MYTARDIS",
-                                       email="USER NOT FOUND IN MYTARDIS")
+                if folderStructure.startswith("Username"):
+                    userRecord = UserModel(settingsModel=self.settingsModel,
+                                           username=userFolderName,
+                                           userNotFoundInMyTardis=True)
+                elif folderStructure.startswith("Email"):
+                    userRecord = \
+                        UserModel(settingsModel=self.settingsModel,
+                                  email=userFolderName,
+                                  userNotFoundInMyTardis=True)
                 userRecord.SetDataViewId(usersDataViewId)
                 self.usersModel.AddRow(userRecord)
                 if shouldAbort():
@@ -542,9 +547,32 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                         usersModel=self.usersModel,
                                         settingsModel=self.settingsModel)
                         folderModel.SetCreatedDate()
-                        experimentTitle = "%s - %s" \
-                            % (self.settingsModel.GetInstrumentName(),
-                               owner.GetName())
+                        if not owner.UserNotFoundInMyTardis():
+                            experimentTitle = "%s - %s" \
+                                % (self.settingsModel.GetInstrumentName(),
+                                   owner.GetName())
+                        elif owner.GetName() != \
+                                owner.GetUserNotFoundInMyTardisString():
+                            experimentTitle = "%s - %s (%s)" \
+                                % (self.settingsModel.GetInstrumentName(),
+                                   owner.GetName(),
+                                   owner.GetUserNotFoundInMyTardisString())
+                        elif owner.GetUsername() != \
+                                owner.GetUserNotFoundInMyTardisString():
+                            experimentTitle = "%s - %s (%s)" \
+                                % (self.settingsModel.GetInstrumentName(),
+                                   owner.GetUsername(),
+                                   owner.GetUserNotFoundInMyTardisString())
+                        elif owner.GetEmail() != \
+                                owner.GetUserNotFoundInMyTardisString():
+                            experimentTitle = "%s - %s (%s)" \
+                                % (self.settingsModel.GetInstrumentName(),
+                                   owner.GetEmail(),
+                                   owner.GetUserNotFoundInMyTardisString())
+                        else:
+                            experimentTitle = "%s - %s" \
+                                % (self.settingsModel.GetInstrumentName(),
+                                   owner.GetUserNotFoundInMyTardisString())
                         folderModel.SetExperimentTitle(experimentTitle)
                         self.AddRow(folderModel)
             elif folderStructure == \

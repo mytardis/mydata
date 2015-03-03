@@ -634,7 +634,8 @@ class FoldersController():
             message = "Are you sure you want to remove the selected folders?"
         elif len(rows) == 1:
             message = "Are you sure you want to remove the \"" + \
-                self.foldersModel.GetValueForRowColname(rows[0], "Folder") + \
+                self.foldersModel\
+                .GetValueForRowColumnKeyName(rows[0], "folder") + \
                 "\" folder?"
         else:
             dlg = wx.MessageDialog(self.notifyWindow,
@@ -664,9 +665,9 @@ class FoldersController():
         row = rows[0]
 
         path = os.path.join(self.foldersModel
-                            .GetValueForRowColname(row, "Location"),
+                            .GetValueForRowColumnKeyName(row, "location"),
                             self.foldersModel
-                            .GetValueForRowColname(row, "Folder"))
+                            .GetValueForRowColumnKeyName(row, "folder"))
         if not os.path.exists(path):
             message = "Path doesn't exist: " + path
             dlg = wx.MessageDialog(None, message, "Open Folder", wx.OK)
