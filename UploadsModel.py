@@ -149,16 +149,6 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             #              "called on missing row.")
             return None
 
-    def GetValueForRowColname(self, row, colname):
-        """
-        This method is called to provide the uploadsData
-        object for a particular row,colname
-        """
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                return self.GetValueByRow(row, col)
-        return None
-
     def GetValuesForColname(self, colname):
         values = []
         for col in range(0, self.GetColumnCount()):
