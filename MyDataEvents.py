@@ -490,7 +490,14 @@ class MyDataEvent(wx.PyCommandEvent):
                     shutdownSuccessful=True)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              shutdownForRefreshCompleteEvent)
-                wx.CallAfter(wx.EndBusyCursor)
+                def endBusyCursorIfRequired():
+                    try:
+                        wx.EndBusyCursor()
+                    except wx._core.PyAssertionError, e:
+                        if "no matching wxBeginBusyCursor()" not in str(e):
+                            logger.error(str(e))
+                            raise
+                wx.CallAfter(endBusyCursorIfRequired)
             except:
                 logger.debug(traceback.format_exc())
                 message = "An error occurred while trying to shut down " \
