@@ -542,6 +542,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                         usersModel=self.usersModel,
                                         settingsModel=self.settingsModel)
                         folderModel.SetCreatedDate()
+                        experimentTitle = "%s - %s" \
+                            % (self.settingsModel.GetInstrumentName(),
+                               owner.GetName())
+                        folderModel.SetExperimentTitle(experimentTitle)
                         self.AddRow(folderModel)
             elif folderStructure == \
                     'Username / "MyTardis" / Experiment / Dataset':
