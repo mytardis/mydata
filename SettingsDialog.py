@@ -68,9 +68,9 @@ class SettingsDialog(wx.Dialog):
         self.instrumentNameField = wx.TextCtrl(self.generalPanel,
                                                wx.ID_ANY, "")
         if sys.platform.startswith("darwin"):
-            self.instrumentNameField.SetMinSize(wx.Size(275, -1))
+            self.instrumentNameField.SetMinSize(wx.Size(290, -1))
         else:
-            self.instrumentNameField.SetMinSize(wx.Size(250, -1))
+            self.instrumentNameField.SetMinSize(wx.Size(265, -1))
         self.generalPanelSizer.Add(self.instrumentNameField,
                                    flag=wx.EXPAND | wx.ALL, border=5)
         blankLine = wx.StaticText(self.generalPanel, wx.ID_ANY, "")
@@ -590,15 +590,6 @@ class SettingsDialog(wx.Dialog):
         import webbrowser
         webbrowser.open("http://mydata.readthedocs.org/en/latest/settings.html")
         wx.EndBusyCursor()
-        # from help.HelpController import helpController
-        # if helpController is not None and \
-                # helpController.initializationSucceeded:
-            # helpController.Display("Settings")
-            # wx.EndBusyCursor()
-        # else:
-            # wx.EndBusyCursor()
-            # wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
-                          # "Error", wx.OK | wx.ICON_EXCLAMATION)
 
     def OnSelectFolderStructure(self, event):
         folderStructure = self.folderStructureComboBox.GetValue()
