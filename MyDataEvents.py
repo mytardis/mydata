@@ -394,59 +394,29 @@ class MyDataEvent(wx.PyCommandEvent):
                          "should remain visible.")
             return
 
-        if tempSettingsModel.UsingMaxDatasetCount() and \
-                settingsValidation.GetDatasetCount() > \
-                tempSettingsModel.GetMaxDatasetCount():
-            if tempSettingsModel.IgnoreOldDatasets():
-                intervalIfUsed = " (created within the past %d %s)" \
-                    % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
-                       tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
-            else:
-                intervalIfUsed = ""
-            numDatasets = settingsValidation.GetDatasetCount()
-            message = "Assuming a folder structure of '%s', " \
-                "there %s %d %s in \"%s\"%s, " \
-                "which is more than %d (the maximum " \
-                "dataset count).\n\n" \
-                "Do you want to continue anyway?" \
-                % (tempSettingsModel.GetFolderStructure(),
-                   "are" if numDatasets != 1 else "is",
-                   settingsValidation.GetDatasetCount(),
-                   "datasets" if numDatasets != 1 else "dataset",
-                   event.settingsDialog.GetDataDirectory(),
-                   intervalIfUsed,
-                   tempSettingsModel.GetMaxDatasetCount())
+        if tempSettingsModel.IgnoreOldDatasets():
+            intervalIfUsed = " (created within the past %d %s)" \
+                % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
+                   tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
+        else:
+            intervalIfUsed = ""
+        numDatasets = settingsValidation.GetDatasetCount()
+        message = "Assuming a folder structure of '%s', " \
+            "there %s %d %s in \"%s\"%s.\n\n" \
+            "Do you want to continue?" \
+            % (tempSettingsModel.GetFolderStructure(),
+               "are" if numDatasets != 1 else "is",
+               settingsValidation.GetDatasetCount(),
+               "datasets" if numDatasets != 1 else "dataset",
+               event.settingsDialog.GetDataDirectory(),
+               intervalIfUsed)
+        if not event.settingsModel.RunningInBackgroundMode():
             confirmationDialog = \
                 wx.MessageDialog(None, message, "MyData",
-                                 wx.YES | wx.NO | wx.ICON_QUESTION
-                                 | wx.ICON_WARNING)
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
-        else:
-            if tempSettingsModel.IgnoreOldDatasets():
-                intervalIfUsed = " (created within the past %d %s)" \
-                    % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
-                       tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
-            else:
-                intervalIfUsed = ""
-            numDatasets = settingsValidation.GetDatasetCount()
-            message = "Assuming a folder structure of '%s', " \
-                "there %s %d %s in \"%s\"%s.\n\n" \
-                "Do you want to continue?" \
-                % (tempSettingsModel.GetFolderStructure(),
-                   "are" if numDatasets != 1 else "is",
-                   settingsValidation.GetDatasetCount(),
-                   "datasets" if numDatasets != 1 else "dataset",
-                   event.settingsDialog.GetDataDirectory(),
-                   intervalIfUsed)
-            if not event.settingsModel.RunningInBackgroundMode():
-                confirmationDialog = \
-                    wx.MessageDialog(None, message, "MyData",
-                                     wx.YES | wx.NO | wx.ICON_QUESTION)
-                okToContinue = confirmationDialog.ShowModal()
-                if okToContinue != wx.ID_YES:
-                    return
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")

@@ -185,7 +185,7 @@ class SettingsDialog(wx.Dialog):
         generalPanelSize = self.generalPanel.GetSize()
         self.settingsTabsNotebook.AddPage(self.generalPanel, "General")
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=6, cols=4,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=5, cols=4,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -285,35 +285,6 @@ class SettingsDialog(wx.Dialog):
                                     border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
-
-        self.usingMaxDatasetCountCheckBox = \
-            wx.CheckBox(self.advancedPanel, wx.ID_ANY,
-                        "Maximum dataset count:")
-        self.Bind(wx.EVT_CHECKBOX, self.OnUsingMaxDatasetCountCheckBox,
-                  self.usingMaxDatasetCountCheckBox)
-        self.advancedPanelSizer.Add(self.usingMaxDatasetCountCheckBox,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-
-        self.maxDatasetCountPanel = wx.Panel(self.advancedPanel)
-        self.maxDatasetCountPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.maxDatasetCountPanel.SetSizer(self.maxDatasetCountPanelSizer)
-
-        self.maximumDatasetCountSpinCtrl = \
-            wx.SpinCtrl(self.maxDatasetCountPanel, wx.ID_ANY,
-                        "50", min=0, max=999)
-        self.maximumDatasetCountSpinCtrl.Enable(False)
-        self.maxDatasetCountPanelSizer\
-            .Add(self.maximumDatasetCountSpinCtrl,
-                 flag=wx.EXPAND | wx.ALL, border=5)
-        self.maxDatasetCountPanelSizer\
-            .Add(wx.StaticText(self.maxDatasetCountPanel, wx.ID_ANY,
-                               ""),
-                 flag=wx.EXPAND | wx.ALL, border=5)
-
-        self.advancedPanelSizer.Add(self.maxDatasetCountPanel, flag=wx.EXPAND,
-                                    border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
@@ -457,18 +428,6 @@ class SettingsDialog(wx.Dialog):
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
 
-    def UsingMaxDatasetCount(self):
-        return self.usingMaxDatasetCountCheckBox.GetValue()
-
-    def SetUsingMaxDatasetCount(self, usingMaxDatasetCount):
-        self.usingMaxDatasetCountCheckBox.SetValue(usingMaxDatasetCount)
-
-    def GetMaxDatasetCount(self):
-        return self.maximumDatasetCountSpinCtrl.GetValue()
-
-    def SetMaxDatasetCount(self, numberOfDatasets):
-        self.maximumDatasetCountSpinCtrl.SetValue(numberOfDatasets)
-
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
 
@@ -546,10 +505,6 @@ class SettingsDialog(wx.Dialog):
             self.showingSingularUnits = True
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
-        self.SetUsingMaxDatasetCount(settingsModel.UsingMaxDatasetCount())
-        if settingsModel.UsingMaxDatasetCount():
-            self.maximumDatasetCountSpinCtrl.Enable(True)
-        self.SetMaxDatasetCount(settingsModel.GetMaxDatasetCount())
 
     def OnPaste(self, event):
         textCtrl = wx.Window.FindFocus()
@@ -629,15 +584,6 @@ class SettingsDialog(wx.Dialog):
                     .AppendItems(self.intervalUnitsPlural)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
-
-    def OnUsingMaxDatasetCountCheckBox(self, event):
-        if event.IsChecked():
-            self.maximumDatasetCountSpinCtrl.SetValue(50)
-            self.maximumDatasetCountSpinCtrl.Enable(True)
-        else:
-            self.maximumDatasetCountSpinCtrl.SetValue(999)
-            self.maximumDatasetCountSpinCtrl.Enable(False)
-        pass
 
     def OnHelp(self, event):
         wx.BeginBusyCursor()
