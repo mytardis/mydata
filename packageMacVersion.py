@@ -104,7 +104,7 @@ source = os.path.join(os.getcwd(), 'dist')
 applicationName = "MyData"
 title = applicationName + " " + version
 size = "160000"
-finalDmgName = applicationName + " " + version
+finalDmgName = applicationName + "_" + version
 
 tempDmgFile = tempfile.NamedTemporaryFile(prefix=finalDmgName+"_",
                                           suffix=".dmg", delete=True)
