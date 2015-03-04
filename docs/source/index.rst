@@ -8,6 +8,7 @@ Contents
    :maxdepth: 2
 
    overview
+   mytardis-prerequisites
    settings
    license
 
