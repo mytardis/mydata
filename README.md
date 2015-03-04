@@ -1,8 +1,8 @@
 MyData
 ======
 
-Desktop application (initially targeting Windows) for uploading data to MyTardis
+Desktop application for uploading data to MyTardis
 
 See: 
-* [MyData User Guide](User Guide.md)
+* [MyData Documentation @ Read the Docs](http://mydata.readthedocs.org/en/latest/)
 * [MyData Walkthrough](Walkthrough.md)
