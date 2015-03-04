@@ -423,6 +423,19 @@ class SettingsModel():
                                                           "data_directory")
                 return self.validation
 
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                for folderName in dirsDepth2:
+                    folderName = os.path.basename(folderName)
+                    if folderName.lower() != 'mytardis':
+                        message = "A folder name of \"%s\" was found where " \
+                            "a \"MyTardis\" folder was expected." \
+                            % folderName
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+
             seconds = {}
             seconds['day'] = 24 * 60 * 60
             seconds['week'] = 7 * seconds['day']
