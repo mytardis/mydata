@@ -124,7 +124,7 @@ class MyData(wx.App):
                           wx.ICON_ERROR)
             return False
 
-        from help.HelpController import helpController
+        # from help.HelpController import helpController
 
         logger.debug("MyData version:   " +
                      MyDataVersionNumber.versionNumber)
