@@ -419,9 +419,29 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if userRecord is not None:
                 userRecord.SetDataViewId(usersDataViewId)
                 self.usersModel.AddRow(userRecord)
-                self.ImportUserFolders(os.path.join(dataDir,
-                                                    userFolderName),
-                                       userRecord)
+
+                if folderStructure == 'Username / Dataset' or \
+                        folderStructure == 'Email / Dataset':
+                    self.ScanForDatasetFolders(os.path.join(dataDir,
+                                                            userFolderName),
+                                               userRecord)
+                elif folderStructure == \
+                        'Username / "MyTardis" / Experiment / Dataset':
+                    userFolderPath = os.path.join(dataDir, userFolderName)
+                    userFolderContents = os.listdir(userFolderPath)
+                    myTardisFolderName = None
+                    for item in userFolderContents:
+                        if item.lower() == 'mytardis':
+                            myTardisFolderName = item
+                    if not myTardisFolderName:
+                        message = 'Didn\'t find "MyTardis" folder in ' \
+                            '"%s"' % userFolderPath
+                        logger.error(message)
+                        raise InvalidFolderStructure(message)
+                    myTardisFolderPath = os.path.join(userFolderPath,
+                                                      myTardisFolderName)
+                    self.ScanForExperimentFolders(myTardisFolderPath,
+                                                  userRecord)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame()
                                  .SetStatusMessage,
@@ -450,9 +470,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  "Data uploads canceled")
                     return
-                self.ImportUserFolders(os.path.join(dataDir,
-                                                    userFolderName),
-                                       userRecord)
+                self.ScanForDatasetFolders(os.path.join(dataDir,
+                                                        userFolderName),
+                                           userRecord)
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
             else:
@@ -503,101 +523,70 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             else:
                 wx.CallAfter(incrementProgressDialog)
 
-    def ImportUserFolders(self, userFolderPath, owner):
+    def ScanForDatasetFolders(self, pathToScan, owner):
         try:
-            folderStructure = self.settingsModel.GetFolderStructure()
-            if folderStructure == 'Username / Dataset' or \
-                    folderStructure == 'Email / Dataset':
-                logger.debug("Scanning " + userFolderPath +
-                             " for dataset folders...")
-                datasetFolders = os.walk(userFolderPath).next()[1]
-                for datasetFolderName in datasetFolders:
-                    if datasetFolderName.lower() == 'mytardis':
-                        mytardisFolderName = datasetFolderName
-                        logger.debug("Found '%s' folder in %s folder."
-                                     % (mytardisFolderName, userFolderPath))
-                        mytardisFolderPath = os.path.join(userFolderPath,
-                                                          mytardisFolderName)
-                        self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
-                                                             owner)
-                    else:
-                        if self.ignoreOldDatasets:
-                            datasetFolderPath = os.path.join(userFolderPath,
-                                                             datasetFolderName)
-                            ctimestamp = os.path.getctime(datasetFolderPath)
-                            ctime = datetime.fromtimestamp(ctimestamp)
-                            age = datetime.now() - ctime
-                            if age.total_seconds() > \
-                                    self.ignoreIntervalSeconds:
-                                message = "Ignoring \"%s\", because it is " \
-                                    "older than %d %s" \
-                                    % (datasetFolderPath,
-                                       self.ignoreIntervalNumber,
-                                       self.ignoreIntervalUnit)
-                                logger.warning(message)
-                                continue
-                        dataViewId = self.GetMaxDataViewId() + 1
-                        folderModel = \
-                            FolderModel(dataViewId=dataViewId,
-                                        folder=datasetFolderName,
-                                        location=userFolderPath,
-                                        folder_type='Dataset',
-                                        owner=owner,
-                                        foldersModel=self,
-                                        usersModel=self.usersModel,
-                                        settingsModel=self.settingsModel)
-                        folderModel.SetCreatedDate()
-                        if not owner.UserNotFoundInMyTardis():
-                            experimentTitle = "%s - %s" \
-                                % (self.settingsModel.GetInstrumentName(),
-                                   owner.GetName())
-                        elif owner.GetName() != \
-                                owner.GetUserNotFoundInMyTardisString():
-                            experimentTitle = "%s - %s (%s)" \
-                                % (self.settingsModel.GetInstrumentName(),
-                                   owner.GetName(),
-                                   owner.GetUserNotFoundInMyTardisString())
-                        elif owner.GetUsername() != \
-                                owner.GetUserNotFoundInMyTardisString():
-                            experimentTitle = "%s - %s (%s)" \
-                                % (self.settingsModel.GetInstrumentName(),
-                                   owner.GetUsername(),
-                                   owner.GetUserNotFoundInMyTardisString())
-                        elif owner.GetEmail() != \
-                                owner.GetUserNotFoundInMyTardisString():
-                            experimentTitle = "%s - %s (%s)" \
-                                % (self.settingsModel.GetInstrumentName(),
-                                   owner.GetEmail(),
-                                   owner.GetUserNotFoundInMyTardisString())
-                        else:
-                            experimentTitle = "%s - %s" \
-                                % (self.settingsModel.GetInstrumentName(),
-                                   owner.GetUserNotFoundInMyTardisString())
-                        folderModel.SetExperimentTitle(experimentTitle)
-                        self.AddRow(folderModel)
-            elif folderStructure == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                logger.debug("Scanning " + userFolderPath +
-                             " for a MyTardis folder...")
-                folders = os.walk(userFolderPath).next()[1]
-                foundMyTardisFolder = False
-                for folderName in folders:
-                    if folderName.lower() == 'mytardis':
-                        foundMyTardisFolder = True
-                        mytardisFolderName = folderName
-                        logger.debug("Found '%s' folder in %s folder."
-                                     % (mytardisFolderName, userFolderPath))
-                        mytardisFolderPath = os.path.join(userFolderPath,
-                                                          mytardisFolderName)
-                        self.ImportFoldersUsingSpecialSchema(mytardisFolderPath,
-                                                             owner)
-                if not foundMyTardisFolder:
-                    raise InvalidFolderStructure("MyTardis folder not found "
-                                                 "in %s" % userFolderPath)
+            logger.debug("Scanning " + pathToScan +
+                         " for dataset folders...")
+            datasetFolders = os.walk(pathToScan).next()[1]
+            for datasetFolderName in datasetFolders:
+                if self.ignoreOldDatasets:
+                    datasetFolderPath = os.path.join(pathToScan,
+                                                     datasetFolderName)
+                    ctimestamp = os.path.getctime(datasetFolderPath)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() > \
+                            self.ignoreIntervalSeconds:
+                        message = "Ignoring \"%s\", because it is " \
+                            "older than %d %s" \
+                            % (datasetFolderPath,
+                               self.ignoreIntervalNumber,
+                               self.ignoreIntervalUnit)
+                        logger.warning(message)
+                        continue
+                dataViewId = self.GetMaxDataViewId() + 1
+                folderModel = \
+                    FolderModel(dataViewId=dataViewId,
+                                folder=datasetFolderName,
+                                location=pathToScan,
+                                folder_type='Dataset',
+                                owner=owner,
+                                foldersModel=self,
+                                usersModel=self.usersModel,
+                                settingsModel=self.settingsModel)
+                folderModel.SetCreatedDate()
+                if not owner.UserNotFoundInMyTardis():
+                    experimentTitle = "%s - %s" \
+                        % (self.settingsModel.GetInstrumentName(),
+                           owner.GetName())
+                elif owner.GetName() != \
+                        owner.GetUserNotFoundInMyTardisString():
+                    experimentTitle = "%s - %s (%s)" \
+                        % (self.settingsModel.GetInstrumentName(),
+                           owner.GetName(),
+                           owner.GetUserNotFoundInMyTardisString())
+                elif owner.GetUsername() != \
+                        owner.GetUserNotFoundInMyTardisString():
+                    experimentTitle = "%s - %s (%s)" \
+                        % (self.settingsModel.GetInstrumentName(),
+                           owner.GetUsername(),
+                           owner.GetUserNotFoundInMyTardisString())
+                elif owner.GetEmail() != \
+                        owner.GetUserNotFoundInMyTardisString():
+                    experimentTitle = "%s - %s (%s)" \
+                        % (self.settingsModel.GetInstrumentName(),
+                           owner.GetEmail(),
+                           owner.GetUserNotFoundInMyTardisString())
+                else:
+                    experimentTitle = "%s - %s" \
+                        % (self.settingsModel.GetInstrumentName(),
+                           owner.GetUserNotFoundInMyTardisString())
+                folderModel.SetExperimentTitle(experimentTitle)
+                self.AddRow(folderModel)
         except:
             print traceback.format_exc()
 
-    def ImportFoldersUsingSpecialSchema(self, mytardisFolderPath, owner):
+    def ScanForExperimentFolders(self, pathToScan, owner):
         """
         Instead of looking for dataset folders as direct children of
         the username folder, this method looks for dataset folders
@@ -605,9 +594,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         <username>\mytardis\<experiment_title>\<dataset_name>
 
         """
-        expFolders = os.walk(mytardisFolderPath).next()[1]
+        expFolders = os.walk(pathToScan).next()[1]
         for expFolderName in expFolders:
-            expFolderPath = os.path.join(mytardisFolderPath, expFolderName)
+            expFolderPath = os.path.join(pathToScan, expFolderName)
             datasetFolders = os.walk(expFolderPath).next()[1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
