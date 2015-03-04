@@ -227,18 +227,6 @@ class SettingsModel():
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
 
-    def UsingMaxDatasetCount(self):
-        return self.using_max_dataset_count
-
-    def SetUsingMaxDatasetCount(self, usingMaxDatasetCount):
-        self.using_max_dataset_count = usingMaxDatasetCount
-
-    def GetMaxDatasetCount(self):
-        return self.max_dataset_count
-
-    def SetMaxDatasetCount(self, maxDatasetCount):
-        self.max_dataset_count = maxDatasetCount
-
     def RunningInBackgroundMode(self):
         return self.background_mode
 
@@ -315,8 +303,6 @@ class SettingsModel():
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
-        self.SetUsingMaxDatasetCount(settingsDialog.UsingMaxDatasetCount())
-        self.SetMaxDatasetCount(settingsDialog.GetMaxDatasetCount())
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
