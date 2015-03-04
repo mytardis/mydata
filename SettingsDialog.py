@@ -587,15 +587,18 @@ class SettingsDialog(wx.Dialog):
 
     def OnHelp(self, event):
         wx.BeginBusyCursor()
-        from help.HelpController import helpController
-        if helpController is not None and \
-                helpController.initializationSucceeded:
-            helpController.Display("Settings")
-            wx.EndBusyCursor()
-        else:
-            wx.EndBusyCursor()
-            wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
-                          "Error", wx.OK | wx.ICON_EXCLAMATION)
+        import webbrowser
+        webbrowser.open("http://mydata.readthedocs.org/en/latest/settings.html")
+        wx.EndBusyCursor()
+        # from help.HelpController import helpController
+        # if helpController is not None and \
+                # helpController.initializationSucceeded:
+            # helpController.Display("Settings")
+            # wx.EndBusyCursor()
+        # else:
+            # wx.EndBusyCursor()
+            # wx.MessageBox("Unable to open: " + helpController.mydataHelpUrl,
+                          # "Error", wx.OK | wx.ICON_EXCLAMATION)
 
     def OnSelectFolderStructure(self, event):
         folderStructure = self.folderStructureComboBox.GetValue()
