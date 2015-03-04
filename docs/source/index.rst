@@ -1,6 +1,8 @@
 MyData Documentation
 ====================
 
+See also: https://github.com/monash-merc/mydata/blob/master/Walkthrough.md
+
 Contents
 ^^^^^^^^
 

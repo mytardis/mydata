@@ -829,12 +829,12 @@ class MyData(wx.App):
 
     def OnHelp(self, event):
         new = 2  # Open in a new tab, if possible
-        url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
+        url = "http://mydata.readthedocs.org/en/latest/"
         webbrowser.open(url, new=new)
 
     def OnWalkthrough(self, event):
         new = 2  # Open in a new tab, if possible
-        url = "https://github.com/wettenhj/mydata/blob/master/Walkthrough.md"
+        url = "https://github.com/monash-merc/mydata/blob/master/Walkthrough.md"
         webbrowser.open(url, new=new)
 
     def OnAbout(self, event):
@@ -844,7 +844,7 @@ class MyData(wx.App):
               "MyData is being developed at the Monash e-Research Centre " \
               "(Monash University, Australia)\n\n" \
               "MyData is open source (GPL3) software available from " \
-              "https://github.com/wettenhj/mydata\n\n" \
+              "https://github.com/monash-merc/mydata\n\n" \
               "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
               "Commit:  " + CommitDef.LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",

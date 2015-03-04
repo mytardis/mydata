@@ -1,7 +1,7 @@
 MyData Walkthrough
 ==================
 
-See also: [MyData User Guide](User Guide.md)
+See also: [MyData Documentation @ Read the Docs](http://mydata.readthedocs.org/en/latest/)
 
 Download MyData from [here](https://github.com/monash-merc/mydata/blob/master/UserGuideImages/MyData%20v0.1.1.dmg?raw=true) (Mac) or from [here](https://github.com/monash-merc/mydata/blob/master/UserGuideImages/MyData_v0.1.3.exe?raw=true) (Windows).
 

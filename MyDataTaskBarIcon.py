@@ -74,7 +74,7 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
 
     def OnMyDataHelp(self, event):
         new = 2  # Open in a new tab, if possible
-        url = "https://github.com/wettenhj/mydata/blob/master/User%20Guide.md"
+        url = "http://mydata.readthedocs.org/en/latest/"
         webbrowser.open(url, new=new)
 
     def OnExit(self, event):
