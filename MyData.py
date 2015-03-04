@@ -118,6 +118,11 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
+        # Using wx.SingleInstanceChecker to check whether MyData is already
+        # running. A workaround for the 'Deleted stale lock file' issue with
+        # SingleInstanceChecker on Mac OS X is to lower the wx logging level.
+        # MyData doesn't use wx.Log
+        wx.Log.SetLogLevel(wx.LOG_Error)
         self.instance = wx.SingleInstanceChecker(self.name)
         if self.instance.IsAnotherRunning():
             wx.MessageBox("MyData is already running!", "MyData",
