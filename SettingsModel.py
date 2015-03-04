@@ -389,7 +389,13 @@ class SettingsModel():
                     % self.GetDataDirectory()
                 if self.GetFolderStructure() == 'Username / Dataset':
                     message += "user folders!"
+                elif self.GetFolderStructure() == \
+                        'Username / Experiment / Dataset':
+                    message += "user folders!"
                 elif self.GetFolderStructure() == 'Email / Dataset':
+                    message += "email folders!"
+                elif self.GetFolderStructure() == \
+                        'Email / Experiment / Dataset':
                     message += "email folders!"
                 elif self.GetFolderStructure() == \
                         'Username / "MyTardis" / Experiment / Dataset':
@@ -410,6 +416,16 @@ class SettingsModel():
                 elif self.GetFolderStructure() == 'Email / Dataset':
                     message = "The data directory: \"%s\" should contain " \
                         "dataset folders within email folders." % \
+                        self.GetDataDirectory()
+                elif self.GetFolderStructure() == \
+                        'Username / Experiment / Dataset':
+                    message = "The data directory: \"%s\" should contain " \
+                        "experiment folders within user folders." % \
+                        self.GetDataDirectory()
+                elif self.GetFolderStructure() == \
+                        'Email / Experiment / Dataset':
+                    message = "The data directory: \"%s\" should contain " \
+                        "experiment folders within email folders." % \
                         self.GetDataDirectory()
                 elif self.GetFolderStructure() == \
                         'Username / "MyTardis" / Experiment / Dataset':
@@ -471,12 +487,42 @@ class SettingsModel():
                                                               "data_directory")
                     return self.validation
                 elif self.GetFolderStructure() == \
+                        'Username / Experiment / Dataset':
+                    message = "Each experiment folder should contain at " \
+                        "least one dataset folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                elif self.GetFolderStructure() == \
+                        'Email / Experiment / Dataset':
+                    message = "Each experiment folder should contain at " \
+                        "least one dataset folder."
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                elif self.GetFolderStructure() == \
                         'User Group / Instrument / Full Name / Dataset':
                     message = "Each instrument folder should contain at " \
                         "least one full name (dataset group) folder."
                     self.validation = self.SettingsValidation(False, message,
                                                               "data_directory")
                     return self.validation
+
+            if self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset' or \
+                    self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                if self.IgnoreOldDatasets():
+                    datasetCount = 0
+                    for folder in dirsDepth3:
+                        ctimestamp = os.path.getctime(folder)
+                        ctime = datetime.fromtimestamp(ctimestamp)
+                        age = datetime.now() - ctime
+                        if age.total_seconds() <= ignoreIntervalSeconds:
+                            datasetCount += 1
+                else:
+                    datasetCount = len(dirsDepth3)
+
             filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
                                             '*', '*', '*', '*'))
             dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
@@ -700,7 +746,7 @@ class SettingsModel():
                     self.SettingsValidation(False, message, "contact_email")
                 return self.validation
             logger.debug("Done validating email address.")
-            if self.GetFolderStructure() == 'Email / Dataset':
+            if self.GetFolderStructure().startswith('Email'):
                 dataDir = self.GetDataDirectory()
                 folderNames = os.walk(dataDir).next()[1]
                 for folderName in folderNames:
