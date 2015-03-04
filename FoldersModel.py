@@ -419,15 +419,16 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if userRecord is not None:
                 userRecord.SetDataViewId(usersDataViewId)
                 self.usersModel.AddRow(userRecord)
-
+                userFolderPath = os.path.join(dataDir, userFolderName)
                 if folderStructure == 'Username / Dataset' or \
                         folderStructure == 'Email / Dataset':
-                    self.ScanForDatasetFolders(os.path.join(dataDir,
-                                                            userFolderName),
-                                               userRecord)
+                    self.ScanForDatasetFolders(userFolderPath, userRecord)
+                elif folderStructure == \
+                        'Username / Experiment / Dataset' or \
+                        folderStructure == 'Email / Experiment / Dataset':
+                    self.ScanForExperimentFolders(userFolderPath, userRecord)
                 elif folderStructure == \
                         'Username / "MyTardis" / Experiment / Dataset':
-                    userFolderPath = os.path.join(dataDir, userFolderName)
                     userFolderContents = os.listdir(userFolderPath)
                     myTardisFolderName = None
                     for item in userFolderContents:

@@ -206,6 +206,8 @@ class SettingsDialog(wx.Dialog):
         self.folderStructures = [
             'Username / Dataset',
             'Email / Dataset',
+            'Username / Experiment / Dataset',
+            'Email / Experiment / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
             'User Group / Instrument / Full Name / Dataset']
         self.folderStructureComboBox = \
@@ -657,7 +659,10 @@ class SettingsDialog(wx.Dialog):
                 .SetValue("Instrument Name - Data Owner's Full Name")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
-        elif folderStructure == 'Username / "MyTardis" / Experiment / Dataset':
+        elif folderStructure == \
+                'Username / "MyTardis" / Experiment / Dataset' or \
+                folderStructure == 'Username / Experiment / Dataset' or \
+                folderStructure == 'Email / Experiment / Dataset':
             self.datasetGroupingField.SetValue("Experiment")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
