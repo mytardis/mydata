@@ -38,7 +38,7 @@ class UserModel():
                                                   groupJson=group))
             except KeyError:
                 # 'groups' should be available in the user record's JSON
-                # if using https://github.com/wettenhj/mytardis/tree/mydata
+                # if using https://github.com/monash-merc/mytardis/tree/mydata
                 message = "Incompatible MyTardis version" \
                     "\n\n" \
                     "You appear to be connecting to a MyTardis server whose " \
