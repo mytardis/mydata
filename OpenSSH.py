@@ -217,8 +217,8 @@ class KeyPair():
         logger.debug(cmd)
         # On Mac OS X, passing the entire command string (with arguments)
         # to subprocess, rather than a list requires using "shell=True",
-        # otherwise Python will check whether the "file"
-        # "/usr/bin/ssh-keygen -yl -f /Users/wettenhj/.ssh/MyData" exists
+        # otherwise Python will check whether the "file", e.g.
+        # "/usr/bin/ssh-keygen -yl -f ~/.ssh/MyData" exists
         # which of course it doesn't.  Passing a command list on the
         # other hand is problematic on Windows where Python's automatic
         # quoting to convert the command list to a command doesn't always
