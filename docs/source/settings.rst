@@ -1,6 +1,9 @@
 Settings
 ========
 
+General
+^^^^^^^
+
 **Instrument Name**
   The name of the instrument (e.g. "Nikon Microscope #1") whose data
   is to be uploaded to MyTardis by this MyData instance.  If an instrument
@@ -46,6 +49,9 @@ Settings
   API keys are similar to passwords, but they are easier to revoke and renew
   when necessary. Ask your MyTardis administrator for the API key corresponding
   to your facility role account.
+
+Advanced
+^^^^^^^^
 
 **Folder Structure - Username / Dataset**
     Folders immediately inside the main data directory
