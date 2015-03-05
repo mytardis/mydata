@@ -29,10 +29,11 @@ Create a folder whose name matches your MyTardis username ("wettenhj" for me):
 Put your data within your user folder, ensuring that all datafiles are grouped
 within folders, which will become datasets in MyTardis:
 
-  ..image:: images/DatasetsInUserFolder.png
+  .. image:: images/DatasetsInUserFolder.png
 
 Launch MyData, and enter some basic settings in MyData's Settings dialog
-(below).
+(below).  Each field within the Settings dialog is described here:
+http://mydata.readthedocs.org/en/latest/settings.html
 
   .. image:: images/SettingsDialogMacOSX.png
 
