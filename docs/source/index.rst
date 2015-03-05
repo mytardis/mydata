@@ -13,6 +13,7 @@ Contents
    download
    mytardis-prerequisites
    settings
+   macosx-walkthrough
    license
 
 
