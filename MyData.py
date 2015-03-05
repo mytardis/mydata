@@ -189,7 +189,7 @@ class MyData(wx.App):
             self.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
 
             walkthroughMenuItemID = wx.NewId()
-            self.helpMenu.Append(walkthroughMenuItemID, "&MyData Walkthrough")
+            self.helpMenu.Append(walkthroughMenuItemID, "Mac OS X &Walkthrough")
             self.Bind(wx.EVT_MENU, self.OnWalkthrough,
                       id=walkthroughMenuItemID)
 
@@ -839,7 +839,7 @@ class MyData(wx.App):
 
     def OnWalkthrough(self, event):
         new = 2  # Open in a new tab, if possible
-        url = "https://github.com/monash-merc/mydata/blob/master/Walkthrough.md"
+        url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
         webbrowser.open(url, new=new)
 
     def OnAbout(self, event):
