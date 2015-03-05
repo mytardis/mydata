@@ -51,6 +51,8 @@ General
   when necessary. Ask your MyTardis administrator for the API key corresponding
   to your facility role account.
 
+  .. image:: images/DownloadApiKey.png
+
 Advanced
 ^^^^^^^^
   .. image:: images/SettingsAdvanced.PNG
