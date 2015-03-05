@@ -3,6 +3,7 @@ Settings
 
 General
 ^^^^^^^
+  .. image:: images/SettingsGeneral.PNG
 
 **Instrument Name**
   The name of the instrument (e.g. "Nikon Microscope #1") whose data
@@ -52,6 +53,7 @@ General
 
 Advanced
 ^^^^^^^^
+  .. image:: images/SettingsAdvanced.PNG
 
 **Folder Structure - Username / Dataset**
     Folders immediately inside the main data directory
