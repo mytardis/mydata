@@ -11,6 +11,7 @@ Contents
    download
    mytardis-prerequisites
    settings
+   user-groups
    macosx-walkthrough
    license
 
