@@ -85,6 +85,7 @@ confirmed to have the correct file size and MD5 checksum.
   .. image:: images/FacilityOverviewUserGroups.PNG
 
 User and Group Management in MyTardis for Facility Managers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The "testfacility" account in this MyTardis instance is a group administrator
 for the "TestFacility-Group1" group, which means that they can view all members
