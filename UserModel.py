@@ -9,6 +9,9 @@ from Exceptions import DoesNotExist
 
 
 class UserModel():
+
+    USER_NOT_FOUND_STRING = "USER NOT FOUND IN MYTARDIS"
+
     def __init__(self, settingsModel=None, dataViewId=None,
                  username=None, name=None,
                  email=None, userRecordJson=None,
@@ -65,19 +68,19 @@ class UserModel():
         if self.username:
             return self.username
         else:
-            return self.GetUserNotFoundInMyTardisString()
+            return UserModel.USER_NOT_FOUND_STRING
 
     def GetName(self):
         if self.name:
             return self.name
         else:
-            return self.GetUserNotFoundInMyTardisString()
+            return UserModel.USER_NOT_FOUND_STRING
 
     def GetEmail(self):
         if self.email:
             return self.email
         else:
-            return self.GetUserNotFoundInMyTardisString()
+            return UserModel.USER_NOT_FOUND_STRING
 
     def GetGroups(self):
         return self.groups
@@ -87,7 +90,7 @@ class UserModel():
             return self.__dict__[key]
         if key in ('username', 'name', 'email') and \
                 self.UserNotFoundInMyTardis():
-            return self.GetUserNotFoundInMyTardisString()
+            return UserModel.USER_NOT_FOUND_STRING
         else:
             return None
 
@@ -96,9 +99,6 @@ class UserModel():
 
     def UserNotFoundInMyTardis(self):
         return self.userNotFoundInMyTardis
-
-    def GetUserNotFoundInMyTardisString(self):
-        return "USER NOT FOUND IN MYTARDIS"
 
     def __str__(self):
         return "UserModel: " + self.GetUsername()
