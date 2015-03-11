@@ -557,31 +557,33 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                 settingsModel=self.settingsModel)
                 folderModel.SetCreatedDate()
                 if not owner.UserNotFoundInMyTardis():
-                    experimentTitle = "%s - %s" \
-                        % (self.settingsModel.GetInstrumentName(),
-                           owner.GetName())
-                elif owner.GetName() != \
-                        owner.GetUserNotFoundInMyTardisString():
+                    if owner.GetName().strip() != "":
+                        experimentTitle = "%s - %s" \
+                            % (self.settingsModel.GetInstrumentName(),
+                               owner.GetName())
+                    else:
+                        experimentTitle = "%s - %s" \
+                            % (self.settingsModel.GetInstrumentName(),
+                               owner.GetUsername())
+                elif owner.GetName() != UserModel.USER_NOT_FOUND_STRING:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetName(),
-                           owner.GetUserNotFoundInMyTardisString())
-                elif owner.GetUsername() != \
-                        owner.GetUserNotFoundInMyTardisString():
+                           UserModel.USER_NOT_FOUND_STRING)
+                elif owner.GetUsername() != UserModel.USER_NOT_FOUND_STRING:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetUsername(),
-                           owner.GetUserNotFoundInMyTardisString())
-                elif owner.GetEmail() != \
-                        owner.GetUserNotFoundInMyTardisString():
+                           UserModel.USER_NOT_FOUND_STRING)
+                elif owner.GetEmail() != UserModel.USER_NOT_FOUND_STRING:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetEmail(),
-                           owner.GetUserNotFoundInMyTardisString())
+                           UserModel.USER_NOT_FOUND_STRING)
                 else:
                     experimentTitle = "%s - %s" \
                         % (self.settingsModel.GetInstrumentName(),
-                           owner.GetUserNotFoundInMyTardisString())
+                            UserModel.USER_NOT_FOUND_STRING)
                 folderModel.SetExperimentTitle(experimentTitle)
                 self.AddRow(folderModel)
         except:
