@@ -1317,14 +1317,21 @@ class UploadDatafileRunnable():
         except urllib2.HTTPError, e:
             logger.error("url: " + url)
             logger.error(traceback.format_exc())
-            logger.error(e.read())
+            errorResponse = e.read()
+            logger.error(errorResponse)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.ShutdownUploadsEvent(
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
-            message += str(e)
+            try:
+                # If running MyTardis in DEBUG mode, there should
+                # be an error_message returned in JSON format.
+                message += "ERROR: \"%s\"" \
+                    % json.loads(errorResponse)['error_message']
+            except:
+                message += str(e)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController
