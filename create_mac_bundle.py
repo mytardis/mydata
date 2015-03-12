@@ -75,7 +75,7 @@ mydataVersionNumberModulePath = \
 
 setup(
     options=dict(py2app=dict(
-        arch='i386',
+        arch='x86_64',
         plist=dict(
             CFBundleDevelopmentRegion="English",
             CFBundleDisplayName=appName,
@@ -85,7 +85,7 @@ setup(
             CFBundleName=appName,
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + MyDataVersionNumber.versionNumber,
-            LSArchitecturePriority=["i386"]
+            LSArchitecturePriority=["x86_64"]
             )
         )
     ),
