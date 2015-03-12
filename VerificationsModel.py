@@ -16,8 +16,9 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
 
         self.verificationsData = list()
 
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.verificationsData))
+        wx.dataview.PyDataViewIndexListModel\
+            .__init__(self,
+                      len(self.verificationsData))
 
         # Unfiltered verifications data:
         self.uvd = self.verificationsData
@@ -26,8 +27,10 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Folder", "Subdirectory", "Filename", "Message")
-        self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename", "message")
+        self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
+                            "Message")
+        self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
+                           "message")
         self.defaultColumnWidths = (40, 170, 170, 200, 500)
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.TEXT, ColumnType.TEXT)
@@ -36,14 +39,6 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
-
-        # self.inProgressIcon = wx.Image('png-normal/icons16x16/Refresh.png',
-                                       # wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        # self.completedIcon = wx.Image('png-normal/icons16x16/Apply.png',
-                                      # wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        # self.failedIcon = wx.Image('png-normal/icons16x16/Delete.png',
-                                   # wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-
 
     def SetFoldersModel(self, foldersModel):
         self.foldersModel = foldersModel
@@ -82,8 +77,8 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
                 col = 0
                 ascending = True
                 while row < self.GetRowCount() and \
-                        self.CompareVerificationRecords(self.verificationsData[row],
-                                                        fvd, col, ascending) < 0:
+                        self.CompareVerifications(self.verificationsData[row],
+                                                  fvd, col, ascending) < 0:
                     row = row + 1
 
                 if row == self.GetRowCount():
@@ -180,18 +175,19 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
             return cmp(self.GetValueByRow(row1, col),
                        self.GetValueByRow(row2, col))
 
-    # Unlike the previous Compare method, in this case, the verification records
+    # Unlike the previous Compare method, in this case, the verifications
     # don't need to be visible in the current (possibly filtered) data view.
-    def CompareVerificationRecords(self, verificationRecord1, verificationRecord2, col, ascending):
+    def CompareVerifications(self, verification1, verification2,
+                             col, ascending):
         # Swap sort order?
         if not ascending:
-            verificationRecord2, verificationRecord1 = verificationRecord1, verificationRecord2
+            verification2, verification1 = verification1, verification2
         if col == 0:
-            return cmp(int(verificationRecord1.GetDataViewId()),
-                       int(verificationRecord2.GetDataViewId()))
+            return cmp(int(verification1.GetDataViewId()),
+                       int(verification2.GetDataViewId()))
         else:
-            return cmp(verificationRecord1.GetValueForKey(self.columnKeys[col]),
-                       verificationRecord2.GetValueForKey(self.columnKeys[col]))
+            return cmp(verification1.GetValueForKey(self.columnKeys[col]),
+                       verification2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
         # Ensure that we save the largest ID used so far:
@@ -313,7 +309,14 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
     def GetFailedCount(self):
         failedCount = 0
         for row in range(0, self.GetRowCount()):
-            if self.verificationsData[row].GetStatus() == VerificationStatus.FAILED:
+            if self.verificationsData[row].GetStatus() == \
+                    VerificationStatus.FAILED:
                 failedCount += 1
         return failedCount
 
+    def GetCompletedCount(self):
+        foundCompletedCount = 0
+        for row in range(0, self.GetRowCount()):
+            if self.verificationsData[row].GetComplete():
+                foundCompletedCount += 1
+        return foundCompletedCount
