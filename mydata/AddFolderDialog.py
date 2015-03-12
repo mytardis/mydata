@@ -4,11 +4,12 @@ from UserModel import UserModel
 
 
 class AddFolderDialog(wx.Dialog):
+
     def __init__(
             self, parent, ID, title, usersModel,
             size=wx.DefaultSize, pos=wx.DefaultPosition,
             style=wx.DEFAULT_DIALOG_STYLE,
-            ):
+    ):
 
         wx.Dialog.__init__(self, parent, ID, title=title, size=size, pos=pos,
                            style=style)

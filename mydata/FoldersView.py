@@ -8,6 +8,7 @@ from AddFolderDialog import AddFolderDialog
 
 
 class FoldersView(wx.Panel):
+
     def __init__(self, parent, foldersModel):
         wx.Panel.__init__(self, parent, -1)
 
@@ -51,7 +52,7 @@ class FoldersView(wx.Panel):
                 .AppendTextColumn(self.foldersModel.GetColumnName(col),
                                   col,
                                   width=self.foldersModel
-                                      .GetDefaultColumnWidth(col),
+                                  .GetDefaultColumnWidth(col),
                                   mode=dv.DATAVIEW_CELL_INERT)
 
         # There are Prepend methods too, and also convenience methods

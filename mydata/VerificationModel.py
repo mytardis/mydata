@@ -2,7 +2,7 @@ class VerificationStatus:
     NOT_STARTED = 0
     IN_PROGRESS = 1
     # Not found on MyTardis, need to upload this file:
-    NOT_FOUND = 2 
+    NOT_FOUND = 2
     # Found on MyTardis (and verified), no need to upload this file:
     FOUND_VERIFIED = 3
     # Finished uploading to staging, waiting
@@ -16,6 +16,7 @@ class VerificationStatus:
 
 
 class VerificationModel():
+
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModel = folderModel
@@ -80,6 +81,6 @@ class VerificationModel():
             return self.sshControlPath
         else:
             return None
-        
+
     def SetSshControlPath(self, sshControlPath):
         self.sshControlPath = sshControlPath

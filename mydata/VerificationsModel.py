@@ -10,6 +10,7 @@ from logger.Logger import logger
 
 
 class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
+
     def __init__(self):
 
         self.foldersModel = None

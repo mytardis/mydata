@@ -6,11 +6,13 @@ from logger.Logger import logger
 
 
 class ReplicaModel():
+
     """
     At the time of writing, the Replica model has been removed from MyTardis
     and replaced with the DataFileObject model.  But MyTardis's API still
     returns JSON labeled as "replicas" within each DataFileResource.
     """
+
     def __init__(self, settingsModel=None, replicaJson=None):
         self.settingsModel = settingsModel
 

@@ -28,6 +28,7 @@ EVT_START_DATA_UPLOADS = wx.NewId()
 
 
 class MyDataEvents():
+
     def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
@@ -56,6 +57,7 @@ class MyDataEvents():
 
 
 class MyDataThreads():
+
     def __init__(self):
         self.threads = []
 
@@ -74,6 +76,7 @@ myDataThreads = MyDataThreads()
 
 
 class MyDataEvent(wx.PyCommandEvent):
+
     def __init__(self, id, **kwargs):
         wx.PyCommandEvent.__init__(self, MYDATA_EVENT_TYPE, id)
         self.id = id
@@ -460,6 +463,7 @@ class MyDataEvent(wx.PyCommandEvent):
                     shutdownSuccessful=True)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              shutdownForRefreshCompleteEvent)
+
                 def endBusyCursorIfRequired():
                     try:
                         wx.EndBusyCursor()

@@ -87,6 +87,7 @@ if sys.platform.startswith("win"):
 
 
 class UploaderModel():
+
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.interface = None
@@ -99,7 +100,7 @@ class UploaderModel():
         # we need to ensure that we get the correct network interface for
         # self.interface, otherwise if the active interface changes,
         # we can get errors like this: KeyError: 'RTC'
-        # when accessing things like ipv4_address[self.interface] 
+        # when accessing things like ipv4_address[self.interface]
 
         activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
         if len(activeInterfaces) == 0:

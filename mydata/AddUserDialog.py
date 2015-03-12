@@ -3,6 +3,7 @@ import re
 
 
 class AddUserDialog(wx.Dialog):
+
     def __init__(
             self, parent, ID, title, size=wx.DefaultSize,
             pos=wx.DefaultPosition,

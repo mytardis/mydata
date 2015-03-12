@@ -12,6 +12,7 @@ import threading
 
 
 class UploadsView(wx.Panel):
+
     def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, -1)
 
@@ -39,14 +40,14 @@ class UploadsView(wx.Panel):
                     .AppendTextColumn(self.uploadsModel.GetColumnName(col),
                                       col,
                                       width=self.uploadsModel
-                                          .GetDefaultColumnWidth(col),
+                                      .GetDefaultColumnWidth(col),
                                       mode=dv.DATAVIEW_CELL_INERT)
             if self.uploadsModel.columnTypes[col] == ColumnType.BITMAP:
                 column = self.uploadsDataViewControl\
                     .AppendBitmapColumn(self.uploadsModel.GetColumnName(col),
                                         col,
                                         width=self.uploadsModel
-                                            .GetDefaultColumnWidth(col),
+                                        .GetDefaultColumnWidth(col),
                                         mode=dv.DATAVIEW_CELL_INERT)
                 column.Alignment = wx.ALIGN_CENTER
                 column.Renderer.Alignment = wx.ALIGN_CENTER
@@ -55,7 +56,7 @@ class UploadsView(wx.Panel):
                     .AppendProgressColumn(self.uploadsModel.GetColumnName(col),
                                           col,
                                           width=self.uploadsModel
-                                              .GetDefaultColumnWidth(col),
+                                          .GetDefaultColumnWidth(col),
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 

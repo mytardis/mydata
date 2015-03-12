@@ -29,6 +29,7 @@ from Exceptions import DoesNotExist
 
 
 class FoldersModel(wx.dataview.PyDataViewIndexListModel):
+
     def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
@@ -366,7 +367,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             seconds['year'] = int(365.25 * seconds['day'])
             seconds['month'] = seconds['year'] / 12
             singularIgnoreIntervalUnit = \
-                self.settingsModel.GetIgnoreOldDatasetIntervalUnit().rstrip('s')
+                self.settingsModel.GetIgnoreOldDatasetIntervalUnit().rstrip(
+                    's')
             ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
 
             self.ignoreIntervalNumber = \

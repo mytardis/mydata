@@ -7,6 +7,7 @@ from logger.Logger import logger
 
 
 class GroupsModel(wx.dataview.PyDataViewIndexListModel):
+
     def __init__(self, settingsModel):
 
         self.settingsModel = settingsModel

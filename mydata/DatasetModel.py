@@ -10,6 +10,7 @@ from Exceptions import InternalServerError
 
 
 class DatasetModel():
+
     def __init__(self, settingsModel, datasetJson):
         self.settingsModel = settingsModel
         self.json = datasetJson

@@ -10,6 +10,7 @@ from Exceptions import MultipleObjectsReturned
 
 
 class DataFileModel():
+
     def __init__(self, settingsModel, dataset, dataFileJson):
         self.settingsModel = settingsModel
         self.json = dataFileJson

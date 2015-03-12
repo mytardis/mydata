@@ -45,6 +45,7 @@ from logger.Logger import logger
 
 
 class MyDataProgressDialog(wx.Frame):
+
     def __init__(self, parent, id, title, message, maxValue, userCanAbort,
                  cancelCallback=None):
         wx.Frame.__init__(self, parent, id, title,

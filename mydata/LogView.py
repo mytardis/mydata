@@ -6,6 +6,7 @@ from logger.Logger import logger
 
 
 class LogView(wx.Panel):
+
     def __init__(self, parent, settingsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 

@@ -165,7 +165,7 @@ class FolderModel():
             for fileName in sorted(files):
                 self.dataFilePaths.append(os.path.join(dirName, fileName))
                 self.dataFileDirectories.append(os.path.relpath(dirName,
-                                                absoluteFolderPath))
+                                                                absoluteFolderPath))
         for i in range(0, len(self.dataFileDirectories)):
             if self.dataFileDirectories[i] == ".":
                 self.dataFileDirectories[i] = ""

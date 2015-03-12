@@ -189,4 +189,3 @@ class InstrumentModel():
 
     def SetSettingsModel(self, settingsModel):
         self.settingsModel = settingsModel
-

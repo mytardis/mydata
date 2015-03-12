@@ -120,6 +120,7 @@ class OpenSSH():
 
 
 class KeyPair():
+
     def __init__(self, privateKeyFilePath, publicKeyFilePath):
         self.privateKeyFilePath = privateKeyFilePath
         self.publicKeyFilePath = publicKeyFilePath
@@ -667,8 +668,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
     # defaultChunkSize = 1024*1024  # FIXME: magic number
-    defaultChunkSize = 128*1024  # FIXME: magic number
-    maxChunkSize = 16*1024*1024  # FIXME: magic number
+    defaultChunkSize = 128 * 1024  # FIXME: magic number
+    maxChunkSize = 16 * 1024 * 1024  # FIXME: magic number
     chunkSize = defaultChunkSize
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
@@ -902,8 +903,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
 
     # uploadMethod == SmallFiledUploadMethod.CAT
 
-    defaultChunkSize = 128*1024  # FIXME: magic number
-    maxChunkSize = 1024*1024  # FIXME: magic number
+    defaultChunkSize = 128 * 1024  # FIXME: magic number
+    maxChunkSize = 1024 * 1024  # FIXME: magic number
     chunkSize = defaultChunkSize
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
@@ -972,8 +973,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
-    defaultChunkSize = 1024*1024  # FIXME: magic number
-    maxChunkSize = 256*1024*1024  # FIXME: magic number
+    defaultChunkSize = 1024 * 1024  # FIXME: magic number
+    maxChunkSize = 256 * 1024 * 1024  # FIXME: magic number
     chunkSize = defaultChunkSize
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:

@@ -18,7 +18,9 @@ from Exceptions import IncompatibleMyTardisVersion
 
 
 class SettingsModel():
+
     class SettingsValidation():
+
         def __init__(self, valid, message="", field="", suggestion=None,
                      datasetCount=0):
             self.valid = valid

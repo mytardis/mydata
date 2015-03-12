@@ -26,6 +26,7 @@ class ColumnType:
 
 
 class UploadsModel(wx.dataview.PyDataViewIndexListModel):
+
     def __init__(self):
 
         self.uploadsData = []
