@@ -984,6 +984,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                              "resume the upload.")
             fp.seek(bytesUploaded)
             ProgressCallback(None, bytesUploaded, fileSize)
+        elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
+            logger.debug("Setting bytesUploaded to 0, because the size of the "
+                         "partially uploaded file in MyTardis's staging area "
+                         "is not a whole number of chunks.")
+            bytesUploaded = 0
         for chunk in iter(lambda: fp.read(chunkSize), b''):
             if foldersController.IsShuttingDown() or uploadModel.Canceled():
                 logger.debug("UploadLargeFileFromWindows 1: "
@@ -1026,8 +1031,13 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             # more robust in the case of an interrupted connection.
             # On Windows, we might need to escape the ampersand with a
             # caret (^&)
+            if bytesUploaded > 0:
+                redirect = ">>"
+            else:
+                redirect = ">"
             remoteCatCommand = \
-                "cat %s >> %s" % (openSSH.DoubleQuote(remoteChunkPath),
+                "cat %s %s %s" % (openSSH.DoubleQuote(remoteChunkPath),
+                                  redirect,
                                   openSSH.DoubleQuote(remoteFilePath))
             catCommandString = \
                 "%s -i %s -c %s " \
