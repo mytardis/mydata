@@ -5,3 +5,4 @@ setup.exe
 build/
 dist/
 CommitDef.py
+*.egg
