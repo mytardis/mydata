@@ -65,10 +65,11 @@ class FoldersController():
         self.uploadsModel = uploadsModel
         self.settingsModel = settingsModel
 
-        self.shuttingDown = False
-        self.showingMessageDialog = False
-        self.canceled = False
-        self.failed = False
+        self.shuttingDown = threading.Event()
+        self.showingErrorDialog = threading.Event()
+        self.showingWarningDialog = threading.Event()
+        self.canceled = threading.Event()
+        self.failed = threading.Event()
 
         # These will get overwritten in UploadDataThread, but we need
         # to initialize them here, so that ShutDownUploadThreads()
@@ -123,16 +124,22 @@ class FoldersController():
                                self.CountCompletedUploadsAndVerifications)
 
     def Canceled(self):
-        return self.canceled
+        return self.canceled.isSet()
 
     def SetCanceled(self, canceled=True):
-        self.canceled = canceled
+        if canceled:
+            self.canceled.set()
+        else:
+            self.canceled.clear()
 
     def Failed(self):
-        return self.failed
+        return self.failed.isSet()
 
     def SetFailed(self, failed=True):
-        self.failed = failed
+        if failed:
+            self.failed.set()
+        else:
+            self.failed.clear()
 
     def Completed(self):
         return self.completed
@@ -141,16 +148,22 @@ class FoldersController():
         self.completed = completed
 
     def IsShuttingDown(self):
-        return self.shuttingDown
+        return self.shuttingDown.isSet()
 
     def SetShuttingDown(self, shuttingDown=True):
-        self.shuttingDown = shuttingDown
+        if shuttingDown:
+            self.shuttingDown.set()
+        else:
+            self.shuttingDown.clear()
 
-    def IsShowingMessageDialog(self):
-        return self.showingMessageDialog
+    def IsShowingErrorDialog(self):
+        return self.showingErrorDialog.isSet()
 
-    def SetShowingMessageDialog(self, showingMessageDialog=True):
-        self.showingMessageDialog = showingMessageDialog
+    def SetShowingErrorDialog(self, showingErrorDialog=True):
+        if showingErrorDialog:
+            self.showingErrorDialog.set()
+        else:
+            self.showingErrorDialog.clear()
 
     def UpdateStatusBar(self, event):
         if event.connectionStatus == ConnectionStatus.CONNECTED:
@@ -159,9 +172,13 @@ class FoldersController():
             self.notifyWindow.SetConnected(event.myTardisUrl, False)
 
     def ShowMessageDialog(self, event):
-        if self.IsShowingMessageDialog():
+        if self.IsShowingErrorDialog():
+            logger.warning("Refusing to show message dialog for message "
+                           "\"%s\" because we are already showing an error "
+                           "dialog." % event.message)
             return
-        self.SetShowingMessageDialog(True)
+        if event.icon == wx.ICON_ERROR:
+            self.SetShowingErrorDialog(True)
         dlg = wx.MessageDialog(None, event.message, event.title,
                                wx.OK | event.icon)
         try:
@@ -172,9 +189,8 @@ class FoldersController():
         dlg.ShowModal()
         if needToRestartBusyCursor:
             wx.BeginBusyCursor()
-        self.SetShowingMessageDialog(False)
-        if hasattr(event, "cb"):
-            event.cb()
+        if event.icon == wx.ICON_ERROR:
+            self.SetShowingErrorDialog(False)
 
     def UploadDatafile(self, event):
         """
@@ -276,18 +292,13 @@ class FoldersController():
                 "HTTP POST is generally only suitable for small " \
                 "files (up to 100 MB each)."
         if message:
-            fc.uploadMethodWarningAcknowledged = False
             logger.warning(message)
-
-            def acknowledgedUploadMethodWarning():
-                fc.uploadMethodWarningAcknowledged = True
             wx.PostEvent(
                 self.notifyWindow,
                 self.ShowMessageDialogEvent(
                     title="MyData",
                     message=message,
-                    icon=wx.ICON_WARNING,
-                    cb=acknowledgedUploadMethodWarning))
+                    icon=wx.ICON_WARNING))
             fc.uploadMethod = UploadMethod.HTTP_POST
         if fc.uploadMethod == UploadMethod.HTTP_POST and \
                 fc.numUploadWorkerThreads > 1:
