@@ -316,7 +316,8 @@ class FoldersController():
             t.start()
         try:
             fc.numVerificationsToBePerformed = 0
-            fc.finishedCountingNumVerificationsToBePerformed = False
+            fc.finishedCountingNumVerificationsToBePerformed = \
+                threading.Event()
             for row in range(0, self.foldersModel.GetRowCount()):
                 if self.IsShuttingDown():
                     return
@@ -393,7 +394,7 @@ class FoldersController():
                     return
                 if self.IsShuttingDown():
                     return
-            fc.finishedCountingNumVerificationsToBePerformed = True
+            fc.finishedCountingNumVerificationsToBePerformed.set()
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
@@ -486,13 +487,15 @@ class FoldersController():
             numFilesFoundUnverifiedFullSize + \
             numFilesFoundUnverifiedNotFullSize
 
+        numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
+
         uploadsToBePerformed = self.uploadsModel.GetRowCount()
         uploadsCompleted = self.uploadsModel.GetCompletedCount()
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
-        if numVerificationsProcessed == self.numVerificationsToBePerformed \
-                and self.finishedCountingNumVerificationsToBePerformed \
+        if numVerificationsCompleted == self.numVerificationsToBePerformed \
+                and self.finishedCountingNumVerificationsToBePerformed.isSet() \
                 and uploadsProcessed == uploadsToBePerformed:
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
@@ -845,6 +848,7 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        self.verificationModel.SetComplete()
                         return
                     except StagingHostSshPermissionDenied, e:
                         wx.PostEvent(
@@ -859,6 +863,7 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        self.verificationModel.SetComplete()
                         return
                     if bytesUploadedToStaging == \
                             int(existingDatafile.GetSize()):
@@ -883,6 +888,7 @@ class VerifyDatafileRunnable():
                                     dataFileIndex=self.dataFileIndex,
                                     dataFilePath=dataFilePath))
 
+                        self.verificationModel.SetComplete()
                         return
                     else:
                         self.verificationModel\
@@ -930,6 +936,7 @@ class VerifyDatafileRunnable():
                         folderModel=self.folderModel,
                         dataFileIndex=self.dataFileIndex,
                         dataFilePath=dataFilePath))
+        self.verificationModel.SetComplete()
 
 
 class UploadDatafileRunnable():

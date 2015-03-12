@@ -25,6 +25,7 @@ class VerificationModel():
         self.filename = self.folderModel.GetDataFileName(dataFileIndex)
         self.message = ""
         self.status = VerificationStatus.NOT_STARTED
+        self.complete = False
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -37,6 +38,12 @@ class VerificationModel():
 
     def GetStatus(self):
         return self.status
+
+    def SetComplete(self, complete=True):
+        self.complete = complete
+
+    def GetComplete(self):
+        return self.complete
 
     def SetStatus(self, status):
         self.status = status
