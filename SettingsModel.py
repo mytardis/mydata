@@ -62,8 +62,7 @@ class SettingsModel():
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
-        self.using_max_dataset_count = False
-        self.max_dataset_count = 0
+        self.max_upload_threads = 5 
 
         self.background_mode = "False"
 
@@ -91,8 +90,7 @@ class SettingsModel():
                           "contact_name", "contact_email", "mytardis_url",
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
-                          "ignore_interval_unit", "using_max_dataset_count",
-                          "max_dataset_count"]
+                          "ignore_interval_unit", "max_upload_threads"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -108,15 +106,10 @@ class SettingsModel():
                         configParser.getint(configFileSection,
                                             "ignore_interval_number")
                 if configParser.has_option(configFileSection,
-                                           "using_max_dataset_count"):
-                    self.using_max_dataset_count = \
-                        configParser.getboolean(configFileSection,
-                                                "using_max_dataset_count")
-                if configParser.has_option(configFileSection,
-                                           "max_dataset_count"):
-                    self.max_dataset_count = \
+                                           "max_upload_threads"):
+                    self.max_upload_threads = \
                         configParser.getint(configFileSection,
-                                            "max_dataset_count")
+                                            "max_upload_threads")
             except:
                 logger.error(traceback.format_exc())
 
@@ -227,6 +220,12 @@ class SettingsModel():
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
 
+    def GetMaxUploadThreads(self):
+        return self.max_upload_threads
+
+    def SetMaxUploadThreads(self, maxUploadThreads):
+        self.max_upload_threads = maxUploadThreads
+
     def RunningInBackgroundMode(self):
         return self.background_mode
 
@@ -276,8 +275,7 @@ class SettingsModel():
                       "username", "api_key", "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
-                      "ignore_interval_unit",
-                      "using_max_dataset_count", "max_dataset_count"]
+                      "ignore_interval_unit", "max_upload_threads"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -303,6 +301,7 @@ class SettingsModel():
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
+        self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.

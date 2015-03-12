@@ -185,7 +185,7 @@ class SettingsDialog(wx.Dialog):
         generalPanelSize = self.generalPanel.GetSize()
         self.settingsTabsNotebook.AddPage(self.generalPanel, "General")
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=5, cols=4,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=6, cols=4,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -285,6 +285,25 @@ class SettingsDialog(wx.Dialog):
                                     border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        maxUploadThreadsLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                        "Maximum # of upload threads:")
+        self.advancedPanelSizer.Add(maxUploadThreadsLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.maxUploadThreadsPanel = wx.Panel(self.advancedPanel)
+        self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
+
+        self.maximumUploadThreadsSpinCtrl = \
+            wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
+                        "5", min=1, max=99)
+        self.maxUploadThreadsPanelSizer.Add(self.maximumUploadThreadsSpinCtrl,
+                                            flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
+                                    flag=wx.EXPAND, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
@@ -428,6 +447,12 @@ class SettingsDialog(wx.Dialog):
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
 
+    def GetMaxUploadThreads(self):
+        return self.maximumUploadThreadsSpinCtrl.GetValue()
+
+    def SetMaxUploadThreads(self, numberOfThreads):
+        self.maximumUploadThreadsSpinCtrl.SetValue(numberOfThreads)
+
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
 
@@ -505,6 +530,7 @@ class SettingsDialog(wx.Dialog):
             self.showingSingularUnits = True
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
+        self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
 
     def OnPaste(self, event):
         textCtrl = wx.Window.FindFocus()

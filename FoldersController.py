@@ -253,8 +253,9 @@ class FoldersController():
         fc.verificationsModel.DeleteAllRows()
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
-        # FIXME: Number of verify threads should be configurable
-        fc.numVerificationWorkerThreads = 5
+        # For now, the max number of verification threads is set to be the
+        # same as the max number of upload threads.
+        fc.numVerificationWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
@@ -266,8 +267,7 @@ class FoldersController():
             t.start()
         fc.uploadDatafileRunnable = {}
         fc.uploadsQueue = Queue.Queue()
-        # FIXME: Number of upload threads should be configurable
-        fc.numUploadWorkerThreads = 5
+        fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.uploadMethod = UploadMethod.HTTP_POST
 
         settingsModel.GetUploaderModel().RequestStagingAccess()
