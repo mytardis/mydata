@@ -284,7 +284,7 @@ class MyDataEvent(wx.PyCommandEvent):
                     tempSettingsModel=tempSettingsModel)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              provideSettingsValidationResultsEvent)
-            except IncompatibleMyTardisVersion, e:
+            except IncompatibleMyTardisVersion as e:
                 logger.debug("Finished running tempSettingsModel.Validate() 3")
 
                 def endBusyCursorIfRequired():

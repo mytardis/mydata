@@ -51,12 +51,16 @@ Use this command to build the .app and collect the other needed files:
 Traditionally, this script would be named setup.py
 """
 
+import sys
+sys.path.append('mydata')
 from setuptools import setup
-import mydata.MyDataVersionNumber as MyDataVersionNumber
-import mydata.CreateCommitDef as CreateCommitDef
+import MyDataVersionNumber as MyDataVersionNumber
 import requests
 import os
 import pkgutil
+
+from CreateCommitDef import run
+run()
 
 appName = "MyData"
 

@@ -1,3 +1,4 @@
+import json
 import sys
 import requests
 import traceback
@@ -690,7 +691,7 @@ class SettingsModel():
                 return self.validation
 
             url = self.GetMyTardisUrl() + \
-                "/api/v1/user/?format=json&username=" + self.GetUsername()
+                "/api/v1/user/?format=json"  # "&username=" + self.GetUsername()
             headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
                        self.GetApiKey(),
                        "Content-Type": "application/json",
@@ -698,16 +699,24 @@ class SettingsModel():
             session = requests.Session()
             response = session.get(headers=headers, url=url)
             # Consume response content, so session will be closed.
-            content = response.text
+            users = response.json()
             status_code = response.status_code
             response.close()
             session.close()
-            if status_code < 200 or status_code >= 300:
+
+            def invalid_user():
                 message = "Your MyTardis credentials are invalid.\n\n" \
                     "Please check your Username and API Key."
                 self.validation = \
                     self.SettingsValidation(False, message, "username")
                 return self.validation
+
+            if status_code < 200 or status_code >= 300:
+                return invalid_user()
+
+            this_user = [u for u in users.get('objects', []) if u.get('email')]
+            if len(this_user) != 1:
+                return invalid_user()
 
             if self.GetFacilityName().strip() == "":
                 message = "Please enter a valid facility name."
