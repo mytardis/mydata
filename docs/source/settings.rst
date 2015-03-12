@@ -148,3 +148,9 @@ Advanced
   to use an existing data directory containing a large backlog of old data, it
   is advisable to instruct MyData to ignore old datasets so that it focus on
   uploading the recent datasets.
+
+**Max # of upload threads**
+  The maximum number of uploads to perform concurrently.  If greater than one,
+  MyData will spawn multiple scp (secure copy) processes which (for large
+  datafiles) may impact significantly on CPU usage of your system, which could
+  affect other applications running alongside MyData.  The default value is 5.
