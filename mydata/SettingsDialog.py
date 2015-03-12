@@ -17,6 +17,7 @@ from DragAndDrop import MyDataSettingsDropTarget
 
 
 class SettingsDialog(wx.Dialog):
+
     def __init__(self, parent, ID, title,
                  settingsModel,
                  size=wx.DefaultSize,
@@ -650,8 +651,8 @@ class SettingsDialog(wx.Dialog):
     def OnHelp(self, event):
         wx.BeginBusyCursor()
         import webbrowser
-        webbrowser\
-            .open("http://mydata.readthedocs.org/en/latest/settings.html")
+        webbrowser.open(
+            "http://mydata.readthedocs.org/en/latest/settings.html")
         wx.EndBusyCursor()
 
     def OnSelectFolderStructure(self, event):

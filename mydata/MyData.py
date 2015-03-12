@@ -47,6 +47,7 @@ class NotebookTabs:
 
 
 class MyDataFrame(wx.Frame):
+
     def __init__(self, parent, id, title, style, settingsModel):
         wx.Frame.__init__(self, parent, id, title, style=style)
         self.settingsModel = settingsModel
@@ -116,6 +117,7 @@ class MyDataFrame(wx.Frame):
 
 
 class MyData(wx.App):
+
     def __init__(self, name):
         self.name = name
         wx.App.__init__(self, redirect=False)
@@ -147,10 +149,6 @@ class MyData(wx.App):
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
         # parser.add_argument("--loglevel", help="set logging verbosity")
-        args, unknown = parser.parse_known_args()
-        if args.version:
-            print "MyData %s" % MyDataVersionNumber.versionNumber
-            os._exit(0)
         args, unknown = parser.parse_known_args()
         self.settingsModel.SetBackgroundMode(args.background)
 
@@ -202,8 +200,8 @@ class MyData(wx.App):
             self.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
 
             walkthroughMenuItemID = wx.NewId()
-            self.helpMenu.Append(walkthroughMenuItemID,
-                                 "Mac OS X &Walkthrough")
+            self.helpMenu.Append(
+                walkthroughMenuItemID, "Mac OS X &Walkthrough")
             self.Bind(wx.EVT_MENU, self.OnWalkthrough,
                       id=walkthroughMenuItemID)
 
@@ -245,8 +243,8 @@ class MyData(wx.App):
 
         self.foldersUsersNotebook = \
             wx.aui.AuiNotebook(self.panel,
-                               style=wx.aui.AUI_NB_TOP |
-                               wx.aui.AUI_NB_SCROLL_BUTTONS)
+                               style=wx.aui.AUI_NB_TOP
+                               | wx.aui.AUI_NB_SCROLL_BUTTONS)
         self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGING,
                   self.OnNotebookPageChanging, self.foldersUsersNotebook)
 

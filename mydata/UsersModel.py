@@ -10,6 +10,7 @@ from Exceptions import InvalidFolderStructure
 
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):
+
     def __init__(self, settingsModel):
 
         self.settingsModel = settingsModel

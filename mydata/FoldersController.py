@@ -55,6 +55,7 @@ class UploadMethod():
 
 
 class FoldersController():
+
     def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
                  verificationsModel, uploadsModel, settingsModel):
         self.notifyWindow = notifyWindow
@@ -273,9 +274,9 @@ class FoldersController():
 
         for i in range(fc.numVerificationWorkerThreads):
             t = threading.Thread(name="VerificationWorkerThread-%d"
-                                 % (i+1),
+                                 % (i + 1),
                                  target=fc.verificationWorker,
-                                 args=(i+1,))
+                                 args=(i + 1,))
             fc.verificationWorkerThreads.append(t)
             t.start()
         fc.uploadDatafileRunnable = {}
@@ -323,7 +324,7 @@ class FoldersController():
 
         fc.uploadWorkerThreads = []
         for i in range(fc.numUploadWorkerThreads):
-            t = threading.Thread(name="UploadWorkerThread-%d" % (i+1),
+            t = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
                                  target=fc.uploadWorker, args=())
             fc.uploadWorkerThreads.append(t)
             t.start()
@@ -705,8 +706,8 @@ class FoldersController():
                         ProgressCallback=None):
         md5 = hashlib.md5()
 
-        defaultChunkSize = 128*1024  # FIXME: magic number
-        maxChunkSize = 64*1024*1024  # FIXME: magic number
+        defaultChunkSize = 128 * 1024  # FIXME: magic number
+        maxChunkSize = 64 * 1024 * 1024  # FIXME: magic number
         chunkSize = defaultChunkSize
         # FIXME: magic number (approximately 50 progress bar increments)
         while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
@@ -730,6 +731,7 @@ class FoldersController():
 
 
 class VerifyDatafileRunnable():
+
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, settingsModel):
         self.foldersController = foldersController
@@ -941,6 +943,7 @@ class VerifyDatafileRunnable():
 
 
 class UploadDatafileRunnable():
+
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, uploadsModel, uploadModel, settingsModel,
                  existingUnverifiedDatafile):

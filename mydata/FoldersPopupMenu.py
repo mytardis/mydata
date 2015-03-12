@@ -2,6 +2,7 @@ import wx
 
 
 class FoldersPopupMenu(wx.Menu):
+
     def __init__(self, folderItem, openFolderCallback, deleteFolderCallback):
         wx.Menu.__init__(self)
 
@@ -14,7 +15,7 @@ class FoldersPopupMenu(wx.Menu):
         self.Bind(wx.EVT_MENU, self.OnOpenFolder, self.openFolderMenuItem)
 
         # self.deleteFolderMenuItem = wx.MenuItem(self, wx.NewId(),
-                                                # "Delete Folder")
+        # "Delete Folder")
         # self.AppendItem(self.deleteFolderMenuItem)
         # self.Bind(wx.EVT_MENU, self.OnDeleteFolder, self.deleteFolderMenuItem)
 

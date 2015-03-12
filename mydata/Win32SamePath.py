@@ -7,6 +7,7 @@ import win32file
 
 
 class Win32SamePath:
+
     def get_read_handle(self, filename):
         if os.path.isdir(filename):
             dwFlagsAndAttributes = win32file.FILE_FLAG_BACKUP_SEMANTICS

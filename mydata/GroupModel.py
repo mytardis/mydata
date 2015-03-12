@@ -7,6 +7,7 @@ from Exceptions import DoesNotExist
 
 
 class GroupModel():
+
     def __init__(self, settingsModel=None, name=None, groupJson=None):
         self.settingsModel = settingsModel
         self.id = None

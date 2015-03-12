@@ -11,15 +11,16 @@ import threading
 
 
 class VerificationsView(wx.Panel):
+
     def __init__(self, parent, verificationsModel, foldersController):
         wx.Panel.__init__(self, parent, -1)
 
         # Create a dataview control
         self.verificationsDataViewControl = dv.DataViewCtrl(self,
-                                                      style=wx.BORDER_THEME
-                                                      | dv.DV_ROW_LINES
-                                                      | dv.DV_VERT_RULES
-                                                      | dv.DV_MULTIPLE)
+                                                            style=wx.BORDER_THEME
+                                                            | dv.DV_ROW_LINES
+                                                            | dv.DV_VERT_RULES
+                                                            | dv.DV_MULTIPLE)
 
         smallFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         if smallFont.GetPointSize() > 11:
@@ -29,7 +30,8 @@ class VerificationsView(wx.Panel):
         self.verificationsModel = verificationsModel
         self.foldersController = foldersController
 
-        self.verificationsDataViewControl.AssociateModel(self.verificationsModel)
+        self.verificationsDataViewControl.AssociateModel(
+            self.verificationsModel)
 
         from VerificationsModel import ColumnType
         for col in range(0, self.verificationsModel.GetColumnCount()):
@@ -38,14 +40,14 @@ class VerificationsView(wx.Panel):
                     .AppendTextColumn(self.verificationsModel.GetColumnName(col),
                                       col,
                                       width=self.verificationsModel
-                                          .GetDefaultColumnWidth(col),
+                                      .GetDefaultColumnWidth(col),
                                       mode=dv.DATAVIEW_CELL_INERT)
             if self.verificationsModel.columnTypes[col] == ColumnType.BITMAP:
                 column = self.verificationsDataViewControl\
                     .AppendBitmapColumn(self.verificationsModel.GetColumnName(col),
                                         col,
                                         width=self.verificationsModel
-                                            .GetDefaultColumnWidth(col),
+                                        .GetDefaultColumnWidth(col),
                                         mode=dv.DATAVIEW_CELL_INERT)
                 column.Alignment = wx.ALIGN_CENTER
                 column.Renderer.Alignment = wx.ALIGN_CENTER
@@ -54,7 +56,7 @@ class VerificationsView(wx.Panel):
                     .AppendProgressColumn(self.verificationsModel.GetColumnName(col),
                                           col,
                                           width=self.verificationsModel
-                                              .GetDefaultColumnWidth(col),
+                                          .GetDefaultColumnWidth(col),
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
@@ -69,15 +71,15 @@ class VerificationsView(wx.Panel):
 
         # # Add some buttons
         # cancelSelectedVerificationsButton = \
-            # wx.Button(self, label="Cancel Selected Verification(s)")
+        # wx.Button(self, label="Cancel Selected Verification(s)")
         # self.Bind(wx.EVT_BUTTON, self.OnCancelSelectedVerifications,
-                  # cancelSelectedVerificationsButton)
- 
+        # cancelSelectedVerificationsButton)
+
         # cancelRemainingVerificationsButton = \
-            # wx.Button(self, label="Cancel All Remaining Verification(s)")
+        # wx.Button(self, label="Cancel All Remaining Verification(s)")
         # self.Bind(wx.EVT_BUTTON, self.OnCancelRemainingVerifications,
-                  # cancelRemainingVerificationsButton)
- 
+        # cancelRemainingVerificationsButton)
+
         # btnbox = wx.BoxSizer(wx.HORIZONTAL)
         # btnbox.Add(cancelSelectedVerificationsButton, 0, wx.LEFT | wx.RIGHT, 5)
         # btnbox.Add(cancelRemainingVerificationsButton, 0, wx.LEFT | wx.RIGHT, 5)

@@ -7,6 +7,7 @@ from GroupModel import GroupModel
 
 
 class GroupsView(wx.Panel):
+
     def __init__(self, parent, groupsModel):
         wx.Panel.__init__(self, parent, -1)
 

@@ -2,6 +2,7 @@ import wx
 
 
 class MyFolderDropTarget(wx.FileDropTarget):
+
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
@@ -11,6 +12,7 @@ class MyFolderDropTarget(wx.FileDropTarget):
 
 
 class MyDataSettingsDropTarget(wx.FileDropTarget):
+
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent

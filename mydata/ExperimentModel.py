@@ -12,6 +12,7 @@ from SchemaModel import SchemaModel
 
 
 class ExperimentModel():
+
     def __init__(self, settingsModel, experimentJson):
         self.settingsModel = settingsModel
         self.json = experimentJson

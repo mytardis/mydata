@@ -7,6 +7,7 @@ from UserModel import UserProfileModel
 
 
 class ObjectAclModel():
+
     def __init__(self, settingsModel=None, objectAclJson=None):
         self.settingsModel = settingsModel
         self.objectAclJson = objectAclJson
