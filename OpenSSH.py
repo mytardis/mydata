@@ -672,13 +672,12 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
         chunkSize = chunkSize * 2
-    # with open(filePath, 'rb') as fp:
     skip = 0
     if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
         ProgressCallback(None, bytesUploaded, fileSize,
                          message="Performing seek on file, so we can "
                          "resume the upload.")
-        # fp.seek(bytesUploaded)
+        # Using dd command on POSIX systems, so don't need fp.seek
         skip = bytesUploaded / chunkSize
         ProgressCallback(None, bytesUploaded, fileSize)
     else:
@@ -689,125 +688,123 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     # is missing, then we need to create a new master connection.
 
     while bytesUploaded < fileSize:
-        # for chunk in iter(lambda: fp.read(chunkSize), b''):
-            if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadFile 1: Aborting upload for "
-                             "%s" % filePath)
-                sshMasterProcess.terminate()
-                return
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadFile 1: Aborting upload for "
+                         "%s" % filePath)
+            sshMasterProcess.terminate()
+            return
 
-            # Write chunk to temporary file:
-            chunkFile = tempfile.NamedTemporaryFile(delete=False)
-            # chunkFile.write(chunk)
-            chunkFile.close()
-            chunkFilePath = chunkFile.name
-            ddCommandString = \
-                "%s bs=%d skip=%d count=1 if=%s of=%s" \
-                % (openSSH.dd,
-                   chunkSize,
-                   skip,
-                   openSSH.DoubleQuote(filePath),
-                   openSSH.DoubleQuote(chunkFilePath))
-            # logger.debug(ddCommandString)
-            ddProcess = subprocess.Popen(
-                ddCommandString,
-                shell=openSSH.preferToUseShellInSubprocess,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                startupinfo=defaultStartupInfo,
-                creationflags=defaultCreationFlags)
-            stdout, _ = ddProcess.communicate()
-            if ddProcess.returncode != 0:
-                raise Exception(stdout,
-                                ddCommandString,
-                                ddProcess.returncode)
-            lines = stdout.splitlines()
-            bytesTransferred = 0
-            for line in lines:
-                match = re.search(r"^(\d+)\s+bytes\s+transferred.*$", line)
-                if match:
-                    bytesTransferred = long(match.groups()[0])
-            skip += 1
+        # Write chunk to temporary file:
+        chunkFile = tempfile.NamedTemporaryFile(delete=False)
+        chunkFile.close()
+        chunkFilePath = chunkFile.name
+        ddCommandString = \
+            "%s bs=%d skip=%d count=1 if=%s of=%s" \
+            % (openSSH.dd,
+               chunkSize,
+               skip,
+               openSSH.DoubleQuote(filePath),
+               openSSH.DoubleQuote(chunkFilePath))
+        # logger.debug(ddCommandString)
+        ddProcess = subprocess.Popen(
+            ddCommandString,
+            shell=openSSH.preferToUseShellInSubprocess,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        stdout, _ = ddProcess.communicate()
+        if ddProcess.returncode != 0:
+            raise Exception(stdout,
+                            ddCommandString,
+                            ddProcess.returncode)
+        lines = stdout.splitlines()
+        bytesTransferred = 0
+        for line in lines:
+            match = re.search(r"^(\d+)\s+bytes\s+transferred.*$", line)
+            if match:
+                bytesTransferred = long(match.groups()[0])
+        skip += 1
 
-            scpCommandString = \
-                '%s -i %s -c %s ' \
-                '-oControlPath=%s ' \
-                '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
-                '-oStrictHostKeyChecking=no ' \
-                '%s "%s@%s:\\"%s\\""' \
-                % (openSSH.DoubleQuote(openSSH.scp),
-                   privateKeyFilePath,
-                   openSSH.cipher,
-                   openSSH.DoubleQuote(sshControlPath),
-                   chunkFilePath,
-                   username, hostname,
-                   remoteChunkPath)
-            # logger.debug(scpCommandString)
-            scpUploadChunkProcess = subprocess.Popen(
-                scpCommandString,
-                shell=openSSH.preferToUseShellInSubprocess,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                startupinfo=defaultStartupInfo,
-                creationflags=defaultCreationFlags)
-            uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
-            stdout, _ = scpUploadChunkProcess.communicate()
-            if scpUploadChunkProcess.returncode != 0:
-                raise ScpException(stdout,
-                                   scpCommandString,
-                                   scpUploadChunkProcess.returncode)
+        scpCommandString = \
+            '%s -i %s -c %s ' \
+            '-oControlPath=%s ' \
+            '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
+            '-oStrictHostKeyChecking=no ' \
+            '%s "%s@%s:\\"%s\\""' \
+            % (openSSH.DoubleQuote(openSSH.scp),
+               privateKeyFilePath,
+               openSSH.cipher,
+               openSSH.DoubleQuote(sshControlPath),
+               chunkFilePath,
+               username, hostname,
+               remoteChunkPath)
+        # logger.debug(scpCommandString)
+        scpUploadChunkProcess = subprocess.Popen(
+            scpCommandString,
+            shell=openSSH.preferToUseShellInSubprocess,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
+        stdout, _ = scpUploadChunkProcess.communicate()
+        if scpUploadChunkProcess.returncode != 0:
+            raise ScpException(stdout,
+                               scpCommandString,
+                               scpUploadChunkProcess.returncode)
 
-            try:
-                os.unlink(chunkFile.name)
-            except:
-                logger.error(traceback.format_exc())
+        try:
+            os.unlink(chunkFile.name)
+        except:
+            logger.error(traceback.format_exc())
 
-            # Append chunk to remote datafile.
-            # FIXME: Investigate whether using an ampersand to put
-            # remote cat process in the background helps to make things
-            # more robust in the case of an interrupted connection.
-            # On Windows, we might need to escape the ampersand with a
-            # caret (^&)
+        # Append chunk to remote datafile.
+        # FIXME: Investigate whether using an ampersand to put
+        # remote cat process in the background helps to make things
+        # more robust in the case of an interrupted connection.
+        # On Windows, we might need to escape the ampersand with a
+        # caret (^&)
 
-            if bytesUploaded > 0:
-                redirect = ">>"
-            else:
-                redirect = ">"
-            remoteCatCommand = \
-                "cat %s %s %s" % (openSSH.DoubleQuote(remoteChunkPath),
-                                  redirect,
-                                  openSSH.DoubleQuote(remoteFilePath))
-            catCommandString = \
-                "%s -i %s -c %s " \
-                "-oControlPath=%s " \
-                "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
-                "-oStrictHostKeyChecking=no " \
-                "%s@%s %s" \
-                % (openSSH.DoubleQuote(openSSH.ssh), privateKeyFilePath,
-                   openSSH.cipher,
-                   openSSH.DoubleQuote(sshControlPath),
-                   username, hostname,
-                   openSSH.DoubleQuote(remoteCatCommand))
-            # logger.debug(catCommandString)
-            appendChunkProcess = subprocess.Popen(
-                catCommandString,
-                shell=openSSH.preferToUseShellInSubprocess,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                startupinfo=defaultStartupInfo,
-                creationflags=defaultCreationFlags)
-            stdout, _ = appendChunkProcess.communicate()
-            if appendChunkProcess.returncode != 0:
-                raise SshException(stdout, appendChunkProcess.returncode)
+        if bytesUploaded > 0:
+            redirect = ">>"
+        else:
+            redirect = ">"
+        remoteCatCommand = \
+            "cat %s %s %s" % (openSSH.DoubleQuote(remoteChunkPath),
+                              redirect,
+                              openSSH.DoubleQuote(remoteFilePath))
+        catCommandString = \
+            "%s -i %s -c %s " \
+            "-oControlPath=%s " \
+            "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+            "-oStrictHostKeyChecking=no " \
+            "%s@%s %s" \
+            % (openSSH.DoubleQuote(openSSH.ssh), privateKeyFilePath,
+               openSSH.cipher,
+               openSSH.DoubleQuote(sshControlPath),
+               username, hostname,
+               openSSH.DoubleQuote(remoteCatCommand))
+        # logger.debug(catCommandString)
+        appendChunkProcess = subprocess.Popen(
+            catCommandString,
+            shell=openSSH.preferToUseShellInSubprocess,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        stdout, _ = appendChunkProcess.communicate()
+        if appendChunkProcess.returncode != 0:
+            raise SshException(stdout, appendChunkProcess.returncode)
 
-            bytesUploaded += bytesTransferred
-            ProgressCallback(None, bytesUploaded, fileSize)
+        bytesUploaded += bytesTransferred
+        ProgressCallback(None, bytesUploaded, fileSize)
 
-            if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadFile 2: Aborting upload for "
-                             "%s" % filePath)
-                sshMasterProcess.terminate()
-                return
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadFile 2: Aborting upload for "
+                         "%s" % filePath)
+            sshMasterProcess.terminate()
+            return
 
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % openSSH.DoubleQuote(remoteChunkPath)
