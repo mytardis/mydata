@@ -998,6 +998,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             chunkFile = tempfile.NamedTemporaryFile(delete=False)
             chunkFile.write(chunk)
             chunkFile.close()
+            bytesInChunk = len(chunk)
+            del chunk
             scpCommandString = \
                 '%s -i %s -c %s ' \
                 '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
@@ -1059,7 +1061,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             if appendChunkProcess.returncode != 0:
                 raise SshException(stdout, appendChunkProcess.returncode)
 
-            bytesUploaded += len(chunk)
+            bytesUploaded += bytesInChunk
             ProgressCallback(None, bytesUploaded, fileSize)
 
             if foldersController.IsShuttingDown() or uploadModel.Canceled():
