@@ -8,6 +8,7 @@ from Exceptions import DoesNotExist
 from Exceptions import MultipleObjectsReturned
 from UserModel import UserProfileModel
 from ObjectAclModel import ObjectAclModel
+from SchemaModel import SchemaModel
 
 
 class ExperimentModel():
@@ -74,17 +75,52 @@ class ExperimentModel():
             logger.debug(response.text)
             logger.debug("response.status_code = " + str(response.status_code))
             if response.status_code == 404:
-                message = "Couldn't retrieve experiment \"%s\" " \
+                message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
-                message += "A 404 (Not Found) error occurred while " \
-                           "attempting to retrieve the experiment.\n\n" \
-                           "Please ask your MyTardis administrator to " \
-                           "check that a User Profile record exists " \
-                           "for the \"%s\" user account." \
-                           % myTardisDefaultUsername
-                raise DoesNotExist(message, modelClass=UserProfileModel)
+                modelClassOfObjectNotFound = None
+                try:
+                    errorResponse = response.json()
+                    if errorResponse['error_message'] == \
+                            "UserProfile matching query does not exist.":
+                        modelClassOfObjectNotFound = UserProfileModel
+                    elif errorResponse['error_message'] == \
+                            "Schema matching query does not exist.":
+                        modelClassOfObjectNotFound = SchemaModel
+                    elif errorResponse['error_message'] == \
+                            "Sorry, this request could not be processed. " \
+                            "Please try again later.":
+                        raise Exception("TASTYPIE_CANNED_ERROR")
+                    message += "A 404 (Not Found) error occurred while " \
+                               "attempting to retrieve the experiment " \
+                               "record:\n\n" \
+                               "    %s\n\n" % errorResponse['error_message']
+                except:
+                    message += "A 404 (Not Found) error occurred while " \
+                               "attempting to retrieve the experiment " \
+                               "record.  This could be caused by a missing " \
+                               "UserProfile record for user \"%s\" or it " \
+                               "could be caused by a missing Schema record " \
+                               "(see http://mydata.readthedocs.org/en/" \
+                               "latest/mytardis-prerequisites.html)\n\n " \
+                               "Turning on DEBUG mode on the MyTardis " \
+                               "server could help to isolate the problem." \
+                               % myTardisDefaultUsername
+                if modelClassOfObjectNotFound == UserProfileModel:
+                    message += "Please ask your MyTardis administrator to " \
+                               "ensure that a User Profile record exists " \
+                               "for the \"%s\" user account." \
+                               % myTardisDefaultUsername
+                elif modelClassOfObjectNotFound == SchemaModel:
+                    message += "Please ask your MyTardis administrator to " \
+                               "create the experiment metadata schema " \
+                               "described in the \"MyTardis Prerequisites\" " \
+                               "section of the MyData documentation:\n\n" \
+                               "http://mydata.readthedocs.org/en/latest/" \
+                               "mytardis-prerequisites.html"
+                raise DoesNotExist(message,
+                                   modelClass=modelClassOfObjectNotFound)
             raise
         if numExperimentsFound == 0:
             if folderModel.ExperimentTitleSetManually():
