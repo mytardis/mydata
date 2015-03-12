@@ -51,9 +51,9 @@ Use this command to build the .app and collect the other needed files:
 Traditionally, this script would be named setup.py
 """
 
-from setuptools import setup, Extension
-import MyDataVersionNumber
-import CreateCommitDef
+from setuptools import setup
+import mydata.MyDataVersionNumber as MyDataVersionNumber
+import mydata.CreateCommitDef as CreateCommitDef
 import requests
 import os
 import pkgutil
@@ -71,7 +71,7 @@ for iconFilesPath in ("png-normal/icons16x16", "png-normal/icons24x24",
             resource_files.append(resource_file)
 
 mydataVersionNumberModulePath = \
-    os.path.dirname(pkgutil.get_loader("MyDataVersionNumber").filename)
+    os.path.dirname(pkgutil.get_loader("mydata.MyDataVersionNumber").filename)
 
 setup(
     options=dict(py2app=dict(
@@ -92,5 +92,5 @@ setup(
     data_files=resource_files,
     name=appName,
     setup_requires=["py2app"],
-    app=['MyData.py']
+    app=['mydata/MyData.py']
 )
