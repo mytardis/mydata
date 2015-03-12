@@ -13,6 +13,7 @@ Contents
    settings
    user-groups
    macosx-walkthrough
+   mytardis-demo-server
    license
 
 
