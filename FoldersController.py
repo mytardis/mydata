@@ -249,7 +249,7 @@ class FoldersController():
     def StartDataUploads(self):
         fc = self
         settingsModel = fc.settingsModel
-        fc.canceled = False
+        fc.canceled.clear()
         fc.verificationsModel.DeleteAllRows()
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
