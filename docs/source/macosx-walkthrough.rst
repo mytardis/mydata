@@ -28,12 +28,13 @@ application:
 The default option is to "Allow applications downloaded from: Mac App Store
 and identified developers".  Because Mac OS X v10.10 doesn't recognize MyData's
 code-signing certificate, you will need to bypass this security check for
-MyData.  To do this, right-click (or control-click) on MyData (instead of
-double-clicking with the left mouse button), and then click "Open" from the
-pop-up menu.  You should see the follow dialog which indicates that Mac OS X
-can't identify a valid code-signing certificate in the MyData app bundle, but
-it will let you open it anyway, if you click "Open" (instead of the default
-"Cancel" button) :
+MyData.
+
+Right-click (or control-click) on MyData (instead of double-clicking with the
+left mouse button), and then click "Open" from the pop-up menu.  You should see
+the follow dialog which indicates that Mac OS X can't identify a valid
+code-signing certificate in the MyData app bundle, but it will let you open it
+anyway, if you click "Open" (instead of the default "Cancel" button) :
 
   .. image:: images/MyDataFromUnidentifiedDeveloperAreYouSure.png
 
