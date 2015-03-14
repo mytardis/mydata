@@ -130,6 +130,14 @@ Advanced
     (e.g. "D:\\Data\\SmithLab\\Nikon Microscope #1\\John Smith\\Dataset1")
     will be mapped to MyTardis datasets.
 
+**Check For Missing Folders**
+  This option provides extra validation of the folder structure.  For example,
+  if you choose a folder structure of "Username / Dataset" but you don't have
+  any Dataset folders, then when this checkbox is ticked, MyData's settings
+  validation will stop and display an error as shown below.
+
+  .. image:: images/CheckForMissingFolders.png
+
 **Experiment (Dataset Grouping)**
   Defines how datasets will be grouped together into experiments in MyTardis.
   Currently, this field is automatically populated when you select a folder

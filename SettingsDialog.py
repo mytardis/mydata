@@ -185,7 +185,7 @@ class SettingsDialog(wx.Dialog):
         generalPanelSize = self.generalPanel.GetSize()
         self.settingsTabsNotebook.AddPage(self.generalPanel, "General")
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=6, cols=4,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=7, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -194,7 +194,6 @@ class SettingsDialog(wx.Dialog):
         # has 4 columns, so we'll add 4 units of blank space.  We don't
         # care about the width (so we use -1), but we choose a height of
         # 5px (plus the FlexGridSizer's default vgap).
-        self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
@@ -220,6 +219,17 @@ class SettingsDialog(wx.Dialog):
                                     flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
+
+        checkForMissingFoldersLabel = \
+            wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                          "Check for missing folders:")
+        self.advancedPanelSizer.Add(checkForMissingFoldersLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.checkForMissingFoldersCheckBox = \
+            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer\
+            .Add(self.checkForMissingFoldersCheckBox,
+                 flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
@@ -235,9 +245,7 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(self.datasetGroupingField,
                                     flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+                                                  wx.ID_ANY, "        "))
 
         self.groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                               "User Group Prefix:")
@@ -246,8 +254,6 @@ class SettingsDialog(wx.Dialog):
         self.groupPrefixField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer.Add(self.groupPrefixField,
                                     flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
@@ -285,11 +291,9 @@ class SettingsDialog(wx.Dialog):
                                     border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
 
         maxUploadThreadsLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                        "Maximum # of upload threads:")
+                                              "Maximum # of upload threads:")
         self.advancedPanelSizer.Add(maxUploadThreadsLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
@@ -304,8 +308,6 @@ class SettingsDialog(wx.Dialog):
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
                                     flag=wx.EXPAND, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
 
         self.advancedPanel.Fit()
         self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
@@ -427,6 +429,12 @@ class SettingsDialog(wx.Dialog):
     def SetGroupPrefix(self, groupPrefix):
         self.groupPrefixField.SetValue(groupPrefix)
 
+    def CheckForMissingFolders(self):
+        return self.checkForMissingFoldersCheckBox.GetValue()
+
+    def SetCheckForMissingFolders(self, checkForMissingFolders):
+        self.checkForMissingFoldersCheckBox.SetValue(checkForMissingFolders)
+
     def IgnoreOldDatasets(self):
         return self.ignoreDatasetsOlderThanCheckBox.GetValue()
 
@@ -531,6 +539,7 @@ class SettingsDialog(wx.Dialog):
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
+        self.SetCheckForMissingFolders(settingsModel.CheckForMissingFolders())
 
     def OnPaste(self, event):
         textCtrl = wx.Window.FindFocus()

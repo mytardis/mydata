@@ -62,7 +62,8 @@ class SettingsModel():
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
-        self.max_upload_threads = 5 
+        self.max_upload_threads = 5
+        self.check_for_missing_folders = False
 
         self.background_mode = "False"
 
@@ -90,7 +91,8 @@ class SettingsModel():
                           "contact_name", "contact_email", "mytardis_url",
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
-                          "ignore_interval_unit", "max_upload_threads"]
+                          "ignore_interval_unit", "max_upload_threads",
+                          "check_for_missing_folders"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -110,6 +112,11 @@ class SettingsModel():
                     self.max_upload_threads = \
                         configParser.getint(configFileSection,
                                             "max_upload_threads")
+                if configParser.has_option(configFileSection,
+                                           "check_for_missing_folders"):
+                    self.check_for_missing_folders = \
+                        configParser.getint(configFileSection,
+                                            "check_for_missing_folders")
             except:
                 logger.error(traceback.format_exc())
 
@@ -188,6 +195,12 @@ class SettingsModel():
 
     def SetFolderStructure(self, folderStructure):
         self.folder_structure = folderStructure
+
+    def CheckForMissingFolders(self):
+        return self.check_for_missing_folders
+
+    def SetCheckForMissingFolders(self, checkForMissingFolders):
+        self.check_for_missing_folders = checkForMissingFolders
 
     def GetDatasetGrouping(self):
         return self.dataset_grouping
@@ -275,7 +288,8 @@ class SettingsModel():
                       "username", "api_key", "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
-                      "ignore_interval_unit", "max_upload_threads"]
+                      "ignore_interval_unit", "max_upload_threads",
+                      "check_for_missing_folders"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -302,6 +316,7 @@ class SettingsModel():
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
+        self.SetCheckForMissingFolders(settingsDialog.CheckForMissingFolders())
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
@@ -388,9 +403,12 @@ class SettingsModel():
                 elif self.GetFolderStructure() == \
                         'User Group / Instrument / Full Name / Dataset':
                     message += "user group folders!"
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
-                return self.validation
+                if self.CheckForMissingFolders():
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(), '*', '*'))
             dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
             if len(dirsDepth2) == 0:
@@ -420,9 +438,12 @@ class SettingsModel():
                         'User Group / Instrument / Full Name / Dataset':
                     message = "Each user group folder should contain an " \
                         "instrument name folder."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
-                return self.validation
+                if self.CheckForMissingFolders():
+                    self.validation = self.SettingsValidation(False, message,
+                                                              "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
 
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -468,30 +489,46 @@ class SettingsModel():
                         'Username / "MyTardis" / Experiment / Dataset':
                     message = "Each \"MyTardis\" folder should contain at " \
                         "least one experiment folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
                 elif self.GetFolderStructure() == \
                         'Username / Experiment / Dataset':
                     message = "Each experiment folder should contain at " \
                         "least one dataset folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
                 elif self.GetFolderStructure() == \
                         'Email / Experiment / Dataset':
                     message = "Each experiment folder should contain at " \
                         "least one dataset folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
                 elif self.GetFolderStructure() == \
                         'User Group / Instrument / Full Name / Dataset':
                     message = "Each instrument folder should contain at " \
                         "least one full name (dataset group) folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
 
             if self.GetFolderStructure() == \
                     'Username / Experiment / Dataset' or \
@@ -516,16 +553,24 @@ class SettingsModel():
                         'Username / "MyTardis" / Experiment / Dataset':
                     message = "Each experiment folder should contain at " \
                         "least one dataset folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
                 elif self.GetFolderStructure() == \
                         'User Group / Instrument / Full Name / Dataset':
                     message = "Each full name (dataset group) folder " \
                         "should contain at least one dataset folder."
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
+                    if self.CheckForMissingFolders():
+                        self.validation = \
+                            self.SettingsValidation(False, message,
+                                                    "data_directory")
+                        return self.validation
+                    else:
+                        logger.warning(message)
 
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset' or \
