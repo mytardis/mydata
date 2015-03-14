@@ -115,8 +115,8 @@ class SettingsModel():
                 if configParser.has_option(configFileSection,
                                            "check_for_missing_folders"):
                     self.check_for_missing_folders = \
-                        configParser.getint(configFileSection,
-                                            "check_for_missing_folders")
+                        configParser.getboolean(configFileSection,
+                                                "check_for_missing_folders")
             except:
                 logger.error(traceback.format_exc())
 
