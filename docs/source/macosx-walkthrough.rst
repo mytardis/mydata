@@ -19,16 +19,19 @@ developer":
   .. image:: images/MyDataCantBeOpenedUnidentifiedDeveloper.png
 
 Eventually MyData for Mac OS X will be built on a more recent version of 
-Mac OS X (currently OS X 10.7.5), so this won't be a problem.  But for now,
-you should open the Security & Privacy settings from your System Preferences
-application:
+Mac OS X (currently OS X 10.7.5), so this won't be a problem.  To understand
+this error message, open the Security & Privacy settings from your
+System Preferences application:
 
   .. image:: images/MacOSXSecurityOptions.png
 
 The default option is to "Allow applications downloaded from: Mac App Store
 and identified developers".  Because Mac OS X v10.10 doesn't recognize MyData's
 code-signing certificate, you will need to bypass this security check for
-MyData.
+MyData.  Changing "Mac App Store and identified developers" to "Anywhere"
+would prevent this error, but it would also make your Mac less secure, so when
+bypassing Gatekeeper (Mac OS X's security watch-dog), it is better to do it
+one application at a time.
 
 Right-click (or control-click) on MyData (instead of double-clicking with the
 left mouse button), and then click "Open" from the pop-up menu.  You should see
