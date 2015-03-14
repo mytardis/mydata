@@ -30,7 +30,7 @@ and identified developers".  Because Mac OS X v10.10 doesn't recognize MyData's
 code-signing certificate, you will need to bypass this security check for
 MyData.  Changing "Mac App Store and identified developers" to "Anywhere"
 would prevent this error, but it would also make your Mac less secure, so when
-bypassing Gatekeeper (Mac OS X's security watch-dog), it is better to do it
+bypassing Gatekeeper (Mac OS X's security watchdog), it is better to do it
 one application at a time.
 
 Right-click (or control-click) on MyData (instead of double-clicking with the
