@@ -1,8 +1,12 @@
+
+.. _mydata-settings-dialog:
+
 Settings
 ========
 
 General
 ^^^^^^^
+
   .. image:: images/SettingsGeneral.PNG
 
 **Instrument Name**
@@ -53,8 +57,12 @@ General
 
   .. image:: images/DownloadApiKey.png
 
+
+.. _settings-dialog-advanced:
+
 Advanced
 ^^^^^^^^
+
   .. image:: images/SettingsAdvanced.PNG
 
 **Folder Structure - Username / Dataset**
