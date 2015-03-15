@@ -144,6 +144,8 @@ will be blank:
   .. image:: images/MyDataSettingsBlank.PNG
 
 
+.. _demo-configuration-download:
+
 Downloading and installing the demo configuration for MyData
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
