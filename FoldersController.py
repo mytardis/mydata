@@ -706,7 +706,7 @@ class FoldersController():
         md5 = hashlib.md5()
 
         defaultChunkSize = 128*1024  # FIXME: magic number
-        maxChunkSize = 256*1024*1024  # FIXME: magic number
+        maxChunkSize = 64*1024*1024  # FIXME: magic number
         chunkSize = defaultChunkSize
         # FIXME: magic number (approximately 50 progress bar increments)
         while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
@@ -723,6 +723,7 @@ class FoldersController():
                     return None
                 md5.update(chunk)
                 bytesProcessed += len(chunk)
+                del chunk
                 if ProgressCallback:
                     ProgressCallback(bytesProcessed)
         return md5.hexdigest()
