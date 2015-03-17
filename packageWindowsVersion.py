@@ -3,6 +3,8 @@ import sys
 import distutils.dir_util
 import shutil
 
+import CreateCommitDef
+
 if len(sys.argv) < 3:
     print "Usage: packageWindowsVersion.py <certificate.pfx> <password>"
     sys.exit(1)
