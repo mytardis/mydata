@@ -12,7 +12,8 @@ if len(sys.argv) < 3:
 code_signing_certificate = sys.argv[1]
 code_signing_certificate_password = sys.argv[2]
 
-os.system("del /Q dist\\*.*")
+if os.path.exists("dist"):
+    os.system("del /Q dist\\*.*")
 
 os.system("C:\\Python27\\python.exe .\\pyinstaller\\pyinstaller.py "
           "--icon=MyData.ico --windowed MyData.py")
