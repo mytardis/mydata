@@ -4,11 +4,12 @@
 Settings
 ========
 
-MyData's Settings Dialog can be opened by clicking on the |settings| icon on
-MyData's toolbar.  The Settings Dialog will be automatically display each time
-MyData is launched, unless MyData is being run in "background" mode, which is
-the default for the MyData shortcut installed in the "Startup" folder on
-Windows if the appropriate checkbox is ticked in MyData's Windows Setup Wizard.
+MyData's Settings dialog can be opened by clicking on the |settings| icon on
+MyData's toolbar.  The Settings dialog will be automatically displayed each
+time MyData is launched, unless MyData is run in "--background" mode
+(which is the default for the MyData shortcut installed in the "Startup"
+folder on Windows if the appropriate checkbox is ticked in MyData's setup
+wizard).
 
 .. |settings| image:: images/Settings.png
 
@@ -183,9 +184,9 @@ Advanced
 
 Locking and Unlocking MyData's Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-At the bottom of MyData's Setting Dialog is a Lock/Unlock button, whose label
-toggles between "Lock" and "Unlock" depending on whether the Settings Dialog's
-fields are editable or read-only.  When the Settings Dialog's fields are
+At the bottom of MyData's Setting dialog is a Lock/Unlock button, whose label
+toggles between "Lock" and "Unlock" depending on whether the Settings dialog's
+fields are editable or read-only.  When the Settings dialog's fields are
 editable, clicking the "Lock" button will make them read-only, preventing any
 further changes to MyData's settings until an administrator has unlocked the
 settings.  The locked status will persist after closing and relaunching MyData.
@@ -194,7 +195,7 @@ Clicking the "Lock" button displays the confirmation dialog below.
 
   .. image:: images/LockSettingsConfirmation.PNG
 
-Once MyData's settings are locked, all of the fields in the Settings Dialog
+Once MyData's settings are locked, all of the fields in the Settings dialog
 will become read-only.
 
   .. image:: images/SettingsLocked.PNG
