@@ -363,10 +363,6 @@ class MyData(wx.App):
                     try:
                         wx.CallAfter(wx.BeginBusyCursor)
                         self.foldersController.ShutDownUploadThreads()
-                        wx.PostEvent(
-                            self.frame,
-                            self.ShutdownForRefreshCompleteEvent(
-                                shutdownSuccessful=True))
 
                         def endBusyCursorIfRequired():
                             try:
