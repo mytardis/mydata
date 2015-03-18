@@ -61,15 +61,12 @@ calling "scp.exe" repeatedly will waste time reconnecting to the same MyTardis
 staging server repeatedly after only spending a fraction of a second actually
 uploading each chunk.  If the chunk size is too large, then MyData won't be
 able to display smooth progress updates.  For small datafiles on Windows,
-we could just upload the entire datafile with one call to "scp.exe", but
-attempting to pipe back progress updates to MyData from "scp.exe" processes
-spawned by multiple upload threads is prone to buffering problems.  So the best
-way to get smooth progress updates in MyData for multiple small-datafile upload
-threads on Windows seems to be to avoid using "scp.exe" altogether, and just
-open a pipe to a process running "cat >>" on the staging server and write
-chunks into the pipe.  Future versions of MyData may also support use of a
-single "scp.exe" process for each small datafile upload on Windows for users
-who don't care about upload progress bars in MyData for small datafiles.
+we just upload the entire datafile with one call to "scp.exe", and don't
+worry about displaying incremental progress in MyData's Uploads view.  This
+has recently changed (March 2015) from an alternative method for uploading
+small files on Windows (writing into a pipe running "cat >>" on the remote
+server), because it can lead to frequent "broken pipe" errors in some
+environments.
 
 
 HTTP POST
