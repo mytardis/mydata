@@ -45,6 +45,23 @@ class SettingsModel():
     def __init__(self, configPath=None):
         self.SetConfigPath(configPath)
 
+        self.background_mode = "False"
+
+        self.uploaderModel = None
+        self.uploadToStagingRequest = None
+        self.sshKeyPair = None
+
+        self.validation = self.SettingsValidation(True)
+        self.incompatibleMyTardisVersion = False
+
+        self.LoadSettings()
+
+    def LoadSettings(self, configPath=None):
+        """
+        Sets some default values for settings fields, then loads a settings
+        file,
+        e.g. C:\Users\jsmith\AppData\Local\Monash University\MyData\MyData.cfg
+        """
         self.instrument_name = ""
         self.instrument = None
         self.facility_name = ""
@@ -65,18 +82,8 @@ class SettingsModel():
         self.max_upload_threads = 5
         self.check_for_missing_folders = False
 
-        self.background_mode = "False"
+        self.locked = False
 
-        self.uploaderModel = None
-        self.uploadToStagingRequest = None
-        self.sshKeyPair = None
-
-        self.validation = self.SettingsValidation(True)
-        self.incompatibleMyTardisVersion = False
-
-        self.LoadSettings()
-
-    def LoadSettings(self, configPath=None):
         if configPath is None:
             configPath = self.GetConfigPath()
 
@@ -92,7 +99,7 @@ class SettingsModel():
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "check_for_missing_folders"]
+                          "check_for_missing_folders", "locked"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -117,6 +124,10 @@ class SettingsModel():
                     self.check_for_missing_folders = \
                         configParser.getboolean(configFileSection,
                                                 "check_for_missing_folders")
+                if configParser.has_option(configFileSection,
+                                           "locked"):
+                    self.locked = configParser.getboolean(configFileSection,
+                                                          "locked")
             except:
                 logger.error(traceback.format_exc())
 
@@ -201,6 +212,12 @@ class SettingsModel():
 
     def SetCheckForMissingFolders(self, checkForMissingFolders):
         self.check_for_missing_folders = checkForMissingFolders
+
+    def Locked(self):
+        return self.locked
+
+    def SetLocked(self, locked):
+        self.locked = locked
 
     def GetDatasetGrouping(self):
         return self.dataset_grouping
@@ -289,7 +306,7 @@ class SettingsModel():
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
-                      "check_for_missing_folders"]
+                      "check_for_missing_folders", "locked"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -317,6 +334,7 @@ class SettingsModel():
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
         self.SetCheckForMissingFolders(settingsDialog.CheckForMissingFolders())
+        self.SetLocked(settingsDialog.Locked())
 
         # self.mydataConfigPath could be None for the temporary
         # settingsModel created during SettingsDialog's validation.
