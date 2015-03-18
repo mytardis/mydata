@@ -6,6 +6,7 @@ import threading
 from datetime import datetime
 import sys
 import os
+import traceback
 
 from logger.Logger import logger
 from SettingsModel import SettingsModel
@@ -332,6 +333,13 @@ class SettingsDialog(wx.Dialog):
         self.helpButton = wx.Button(self, wx.ID_HELP, "Help")
         buttonSizer.AddButton(self.helpButton)
 
+        # We need to use one of the standard IDs recognized by
+        # StdDialogSizer:
+        self.lockOrUnlockButton = wx.Button(self, wx.ID_APPLY, "Lock")
+        buttonSizer.AddButton(self.lockOrUnlockButton)
+        self.Bind(wx.EVT_BUTTON, self.OnLockOrUnlockSettings,
+                  self.lockOrUnlockButton)
+
         self.cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
         buttonSizer.AddButton(self.cancelButton)
         buttonSizer.Realize()
@@ -461,6 +469,25 @@ class SettingsDialog(wx.Dialog):
     def SetMaxUploadThreads(self, numberOfThreads):
         self.maximumUploadThreadsSpinCtrl.SetValue(numberOfThreads)
 
+    def Locked(self):
+        return self.lockOrUnlockButton.GetLabel() == "Unlock"
+
+    def SetLocked(self, locked):
+        """
+        When SettingsDialog is first displayed, it is in the unlocked
+        state, so the button label says "Lock" (allowing the user to
+        switch to the locked state).  When MyData reads the saved
+        settings from disk, if it finds that settings were saved in
+        the locked state, it will lock (disable) all of the dialog's
+        fields.
+        """
+        if locked:
+            self.DisableFields()
+            self.lockOrUnlockButton.SetLabel("Unlock")
+        else:
+            self.EnableFields()
+            self.lockOrUnlockButton.SetLabel("Lock")
+
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
 
@@ -540,6 +567,7 @@ class SettingsDialog(wx.Dialog):
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
         self.SetCheckForMissingFolders(settingsModel.CheckForMissingFolders())
+        self.SetLocked(settingsModel.Locked())
 
     def OnPaste(self, event):
         textCtrl = wx.Window.FindFocus()
@@ -623,7 +651,8 @@ class SettingsDialog(wx.Dialog):
     def OnHelp(self, event):
         wx.BeginBusyCursor()
         import webbrowser
-        webbrowser.open("http://mydata.readthedocs.org/en/latest/settings.html")
+        webbrowser\
+            .open("http://mydata.readthedocs.org/en/latest/settings.html")
         wx.EndBusyCursor()
 
     def OnSelectFolderStructure(self, event):
@@ -648,6 +677,14 @@ class SettingsDialog(wx.Dialog):
             self.groupPrefixField.Show(True)
 
     def OnDropFiles(self, filepaths):
+        if self.Locked():
+            message = \
+                "Please unlock MyData's settings before importing " \
+                "a configuration file."
+            dlg = wx.MessageDialog(None, message, "MyData - Settings Locked",
+                                   wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            return
         self.settingsModel.SetConfigPath(filepaths[0])
         self.settingsModel.LoadSettings()
         self.UpdateFieldsFromModel(self.settingsModel)
@@ -660,3 +697,84 @@ class SettingsDialog(wx.Dialog):
         else:
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+
+    def OnLockOrUnlockSettings(self, event):
+        if self.lockOrUnlockButton.GetLabel() == "Lock":
+            message = "Once settings have been locked, only an administrator " \
+                "will be able to unlock them.\n\n" \
+                "Are you sure you want to lock MyData's settings?"
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData - Lock Settings",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+            okToLock = confirmationDialog.ShowModal()
+            if okToLock != wx.ID_YES:
+                return
+            lockingSettings = True
+            unlockingSettings = False
+            logger.debug("Locking settings.")
+            self.lockOrUnlockButton.SetLabel("Unlock")
+        else:
+            lockingSettings = False
+            unlockingSettings = True
+            logger.debug("Requesting privilege elevation and "
+                         "unlocking settings.")
+            if sys.platform.startswith("win"):
+                import win32com.shell.shell as shell
+                import win32con
+                from win32com.shell import shellcon
+                import ctypes
+                runningAsAdmin = ctypes.windll.shell32.IsUserAnAdmin()
+                params = "--version "
+
+                if not runningAsAdmin:
+                    logger.info("Attempting to run \"%s --version\" "
+                                "as an administrator." % sys.executable)
+                    try:
+                        procInfo = shell.ShellExecuteEx(
+                            nShow=win32con.SW_SHOWNORMAL,
+                            fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                            lpVerb='runas',
+                            lpFile=sys.executable,
+                            lpParameters=params)
+                        procHandle = procInfo['hProcess']
+                    except:
+                        logger.error("User privilege elevation failed.")
+                        logger.debug(traceback.format_exc())
+                        return
+            elif sys.platform.startswith("darwin"):
+                logger.info("Attempting to run "
+                            "\"echo MyData privilege elevation\" "
+                            "as an administrator.")
+                returncode = os.system("osascript -e "
+                                       "'do shell script "
+                                       "\"echo MyData privilege elevation\" "
+                                       "with administrator privileges'")
+                if returncode != 0:
+                    raise Exception("Failed to get admin privileges.")
+            self.lockOrUnlockButton.SetLabel("Lock")
+
+        self.EnableFields(unlockingSettings)
+
+    def EnableFields(self, enabled=True):
+        self.instrumentNameField.Enable(enabled)
+        self.facilityNameField.Enable(enabled)
+        self.contactNameField.Enable(enabled)
+        self.contactEmailField.Enable(enabled)
+        self.dataDirectoryField.Enable(enabled)
+        self.browseDataDirectoryButton.Enable(enabled)
+        self.myTardisUrlField.Enable(enabled)
+        self.usernameField.Enable(enabled)
+        self.apiKeyField.Enable(enabled)
+        self.folderStructureComboBox.Enable(enabled)
+        self.datasetGroupingField.Enable(enabled)
+        self.groupPrefixField.Enable(enabled)
+        self.checkForMissingFoldersCheckBox.Enable(enabled)
+        self.ignoreDatasetsOlderThanCheckBox.Enable(enabled)
+        self.ignoreDatasetsOlderThanSpinCtrl\
+            .Enable(enabled)
+        self.intervalUnitsComboBox.Enable(enabled)
+        self.maximumUploadThreadsSpinCtrl.Enable(enabled)
+        self.Update()
+
+    def DisableFields(self):
+        self.EnableFields(False)
