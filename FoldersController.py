@@ -474,19 +474,6 @@ class FoldersController():
         Check if we have finished uploads and verifications,
         and if so, call ShutDownUploadThreads
         """
-        numFilesFoundVerified = self.verificationsModel.GetFoundVerifiedCount()
-        numFilesNotFound = self.verificationsModel.GetNotFoundCount()
-        numFilesFoundUnverifiedFullSize = \
-            self.verificationsModel.GetFoundUnverifiedFullSizeCount()
-        numFilesFoundUnverifiedNotFullSize = \
-            self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
-
-        numVerificationsProcessed = \
-            numFilesFoundVerified + \
-            numFilesNotFound + \
-            numFilesFoundUnverifiedFullSize + \
-            numFilesFoundUnverifiedNotFullSize
-
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
         uploadsToBePerformed = self.uploadsModel.GetRowCount()
