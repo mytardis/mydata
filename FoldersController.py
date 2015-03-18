@@ -123,6 +123,15 @@ class FoldersController():
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
+    def Started(self):
+        if hasattr(self, "started"):
+            return self.started
+        else:
+            return False
+
+    def SetStarted(self, started=True):
+        self.started = started
+
     def Canceled(self):
         return self.canceled.isSet()
 
@@ -142,7 +151,10 @@ class FoldersController():
             self.failed.clear()
 
     def Completed(self):
-        return self.completed
+        if hasattr(self, "completed"):
+            return self.completed
+        else:
+            return False
 
     def SetCompleted(self, completed=True):
         self.completed = completed
@@ -248,6 +260,7 @@ class FoldersController():
 
     def StartDataUploads(self):
         fc = self
+        fc.SetStarted()
         settingsModel = fc.settingsModel
         fc.canceled.clear()
         fc.verificationsModel.DeleteAllRows()
