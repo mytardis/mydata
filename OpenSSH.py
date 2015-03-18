@@ -436,6 +436,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
 
     if sys.platform.startswith("win"):
         cmdAndArgs = [openSSH.DoubleQuote(openSSH.ssh),
+                      "-n",
                       "-c", openSSH.cipher,
                       "-i", openSSH.DoubleQuote(privateKeyFilePath),
                       "-oIdentitiesOnly=yes",
@@ -850,7 +851,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     remoteRemoveDatafileCommand = \
         "/bin/rm -f %s" % openSSH.DoubleQuote(remoteFilePath)
     rmCommandString = \
-        "%s -i %s -c %s " \
+        "%s -n -i %s -c %s " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (openSSH.DoubleQuote(openSSH.ssh),
@@ -909,7 +910,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         chunkSize = chunkSize * 2
     remoteCatCommand = "cat >> %s" % openSSH.DoubleQuote(remoteFilePath)
     catCommandString = \
-        "%s -i %s -c %s " \
+        "%s -n -i %s -c %s " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (openSSH.DoubleQuote(openSSH.ssh),
@@ -1042,7 +1043,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                                   redirect,
                                   openSSH.DoubleQuote(remoteFilePath))
             catCommandString = \
-                "%s -i %s -c %s " \
+                "%s -n -i %s -c %s " \
                 "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
                 "%s@%s %s" \
                 % (openSSH.DoubleQuote(openSSH.ssh),
