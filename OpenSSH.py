@@ -840,8 +840,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
                                privateKeyFilePath, hostname, remoteFilePath,
                                ProgressCallback, foldersController,
                                uploadModel,
-                               # uploadMethod=SmallFileUploadMethod.SCP):
-                               uploadMethod=SmallFileUploadMethod.CAT):
+                               uploadMethod=SmallFileUploadMethod.SCP):
+                               # uploadMethod=SmallFileUploadMethod.CAT):
     """
     Fast methods for uploading small files (less overhead from chunking).
     These methods don't support resuming interrupted uploads.
