@@ -4,6 +4,15 @@
 Settings
 ========
 
+MyData's Settings Dialog can be opened by clicking on the |settings| icon on
+MyData's toolbar.  The Settings Dialog will be automatically display each time
+MyData is launched, unless MyData is being run in "background" mode, which is
+the default for the MyData shortcut installed in the "Startup" folder on
+Windows if the appropriate checkbox is ticked in MyData's Windows Setup Wizard.
+
+.. |settings| image:: images/Settings.png
+
+
 General
 ^^^^^^^
 
@@ -170,3 +179,37 @@ Advanced
   MyData will spawn multiple scp (secure copy) processes which (for large
   datafiles) may impact significantly on CPU usage of your system, which could
   affect other applications running alongside MyData.  The default value is 5.
+
+
+Locking and Unlocking MyData's Settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+At the bottom of MyData's Setting Dialog is a Lock/Unlock button, whose label
+toggles between "Lock" and "Unlock" depending on whether the Settings Dialog's
+fields are editable or read-only.  When the Settings Dialog's fields are
+editable, clicking the "Lock" button will make them read-only, preventing any
+further changes to MyData's settings until an administrator has unlocked the
+settings.  The locked status will persist after closing and relaunching MyData.
+
+Clicking the "Lock" button displays the confirmation dialog below.
+
+  .. image:: images/LockSettingsConfirmation.PNG
+
+Once MyData's settings are locked, all of the fields in the Settings Dialog
+will become read-only.
+
+  .. image:: images/SettingsLocked.PNG
+
+Clicking on the "Unlock" button will result in a request for administrator
+privileges.
+
+  .. image:: images/UACElevation.PNG
+
+Once administrator privileges have been verified, it will be possible to modify
+MyData's settings again.
+
+N.B. This is NOT a security mechanism - it is a mechanism for preventing the
+accidental modification of settings in a production workflow.  It does not
+prevent advanced users from determining where MyData saves its last used
+configuration to disk (e.g.
+C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg) and
+updating the settings outside of MyData.
