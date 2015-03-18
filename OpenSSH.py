@@ -910,7 +910,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         chunkSize = chunkSize * 2
     remoteCatCommand = "cat >> %s" % openSSH.DoubleQuote(remoteFilePath)
     catCommandString = \
-        "%s -n -i %s -c %s " \
+        "%s -i %s -c %s " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (openSSH.DoubleQuote(openSSH.ssh),
