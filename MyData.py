@@ -118,17 +118,6 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
-        # Using wx.SingleInstanceChecker to check whether MyData is already
-        # running. A workaround for the 'Deleted stale lock file' issue with
-        # SingleInstanceChecker on Mac OS X is to lower the wx logging level.
-        # MyData doesn't use wx.Log
-        wx.Log.SetLogLevel(wx.LOG_Error)
-        self.instance = wx.SingleInstanceChecker(self.name)
-        if self.instance.IsAnotherRunning():
-            wx.MessageBox("MyData is already running!", "MyData",
-                          wx.ICON_ERROR)
-            return False
-
         logger.debug("MyData version:   " +
                      MyDataVersionNumber.versionNumber)
         logger.debug("MyData commit:  " + CommitDef.LATEST_COMMIT)
@@ -151,10 +140,31 @@ class MyData(wx.App):
 
         parser = argparse.ArgumentParser()
         parser.add_argument("-b", "--background", action="store_true",
-                            help="run non-interactively")
+                            help="Run non-interactively")
+        parser.add_argument("-v", "--version", action="store_true",
+                            help="Display MyData version and exit")
         # parser.add_argument("--loglevel", help="set logging verbosity")
         args, unknown = parser.parse_known_args()
+        if args.version:
+            print "MyData %s" % MyDataVersionNumber.versionNumber
+            os._exit(0)
+        args, unknown = parser.parse_known_args()
         self.settingsModel.SetBackgroundMode(args.background)
+
+        # Using wx.SingleInstanceChecker to check whether MyData is already
+        # running.
+        # Running MyData --version is allowed when MyData is already running,
+        # in fact this is used by calls to ShellExecuteEx to test user
+        # privilege elevation on Windows.
+        # A workaround for the 'Deleted stale lock file' issue with
+        # SingleInstanceChecker on Mac OS X is to lower the wx logging level.
+        # MyData doesn't use wx.Log
+        wx.Log.SetLogLevel(wx.LOG_Error)
+        self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
+        if self.instance.IsAnotherRunning():
+            wx.MessageBox("MyData is already running!", "MyData",
+                          wx.ICON_ERROR)
+            return False
 
         if sys.platform.startswith("darwin"):
             # On Mac OS X, adding an Edit menu seems to help with
