@@ -978,97 +978,129 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     # FIXME: magic number (approximately 50 progress bar increments)
     while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
         chunkSize = chunkSize * 2
-    with open(filePath, 'rb') as fp:
-        if bytesUploaded > 0 and (bytesUploaded % chunkSize == 0):
-            ProgressCallback(None, bytesUploaded, fileSize,
-                             message="Performing seek on file, so we can "
-                             "resume the upload.")
-            fp.seek(bytesUploaded)
-            ProgressCallback(None, bytesUploaded, fileSize)
-        elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
-            logger.debug("Setting bytesUploaded to 0, because the size of the "
-                         "partially uploaded file in MyTardis's staging area "
-                         "is not a whole number of chunks.")
-            bytesUploaded = 0
-        for chunk in iter(lambda: fp.read(chunkSize), b''):
-            if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadLargeFileFromWindows 1: "
-                             "Aborting upload for %s" % filePath)
-                return
-            # Write chunk to temporary file:
-            chunkFile = tempfile.NamedTemporaryFile(delete=False)
-            chunkFile.write(chunk)
-            chunkFile.close()
-            bytesInChunk = len(chunk)
-            del chunk
-            scpCommandString = \
-                '%s -i %s -c %s ' \
-                '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-                '%s "%s@%s:\\"%s\\""' \
-                % (openSSH.DoubleQuote(openSSH.scp),
-                   openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
-                   openSSH.cipher,
-                   openSSH.DoubleQuote(GetMsysPath(chunkFile.name)),
-                   username, hostname,
-                   remoteChunkPath)
-            logger.debug(scpCommandString)
-            scpUploadChunkProcess = subprocess.Popen(
-                scpCommandString,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                startupinfo=defaultStartupInfo,
-                creationflags=defaultCreationFlags)
-            uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
-            stdout, _ = scpUploadChunkProcess.communicate()
-            if scpUploadChunkProcess.returncode != 0:
-                raise ScpException(stdout,
-                                   scpCommandString,
-                                   scpUploadChunkProcess.returncode)
-            try:
-                os.unlink(chunkFile.name)
-            except:
-                logger.error(traceback.format_exc())
-            # Append chunk to remote datafile.
-            # FIXME: Investigate whether using an ampersand to put
-            # remote cat process in the background helps to make things
-            # more robust in the case of an interrupted connection.
-            # On Windows, we might need to escape the ampersand with a
-            # caret (^&)
-            if bytesUploaded > 0:
-                redirect = ">>"
-            else:
-                redirect = ">"
-            remoteCatCommand = \
-                "cat %s %s %s" % (openSSH.DoubleQuote(remoteChunkPath),
-                                  redirect,
-                                  openSSH.DoubleQuote(remoteFilePath))
-            catCommandString = \
-                "%s -n -i %s -c %s " \
-                "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
-                "%s@%s %s" \
-                % (openSSH.DoubleQuote(openSSH.ssh),
-                   openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
-                   openSSH.cipher,
-                   username, hostname,
-                   openSSH.DoubleQuote(remoteCatCommand))
-            # logger.debug(catCommandString)
-            appendChunkProcess = subprocess.Popen(
-                catCommandString,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                startupinfo=defaultStartupInfo,
-                creationflags=defaultCreationFlags)
-            stdout, _ = appendChunkProcess.communicate()
-            if appendChunkProcess.returncode != 0:
-                raise SshException(stdout, appendChunkProcess.returncode)
+    skip = 0
+    if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
+        ProgressCallback(None, bytesUploaded, fileSize,
+                         message="Performing seek on file, so we can "
+                         "resume the upload.")
+        # Using dd command to extract chunk, so don't need fp.seek
+        skip = bytesUploaded / chunkSize
+        ProgressCallback(None, bytesUploaded, fileSize)
+    elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
+        logger.debug("Setting bytesUploaded to 0, because the size of the "
+                     "partially uploaded file in MyTardis's staging area "
+                     "is not a whole number of chunks.")
+        bytesUploaded = 0
+    while bytesUploaded < fileSize:
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadLargeFileFromWindows 1: "
+                         "Aborting upload for %s" % filePath)
+            return
+        # Write chunk to temporary file:
+        chunkFile = tempfile.NamedTemporaryFile(delete=False)
+        chunkFile.close()
+        chunkFilePath = chunkFile.name
+        ddCommandString = \
+            "%s bs=%d skip=%d count=1 if=%s of=%s" \
+            % (openSSH.DoubleQuote(openSSH.dd),
+               chunkSize,
+               skip,
+               openSSH.DoubleQuote(GetMsysPath(filePath)),
+               openSSH.DoubleQuote(GetMsysPath(chunkFilePath)))
+        logger.debug(ddCommandString)
+        ddProcess = subprocess.Popen(
+            ddCommandString,
+            shell=openSSH.preferToUseShellInSubprocess,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        stdout, _ = ddProcess.communicate()
+        if ddProcess.returncode != 0:
+            raise Exception(stdout,
+                            ddCommandString,
+                            ddProcess.returncode)
+        lines = stdout.splitlines()
+        bytesTransferred = 0
+        for line in lines:
+            match = re.search(r"^(\d+)\s+bytes\s+.*copied.*$", line)
+            if match:
+                bytesTransferred = long(match.groups()[0])
+        skip += 1
 
-            bytesUploaded += bytesInChunk
-            ProgressCallback(None, bytesUploaded, fileSize)
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadLargeFileFromWindows 2: "
+                         "Aborting upload for %s" % filePath)
+            return
 
-            if foldersController.IsShuttingDown() or uploadModel.Canceled():
-                logger.debug("UploadLargeFileFromWindows 2: "
-                             "Aborting upload for %s" % filePath)
-                return
+        scpCommandString = \
+            '%s -i %s -c %s ' \
+            '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
+            '%s "%s@%s:\\"%s\\""' \
+            % (openSSH.DoubleQuote(openSSH.scp),
+               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+               openSSH.cipher,
+               openSSH.DoubleQuote(GetMsysPath(chunkFile.name)),
+               username, hostname,
+               remoteChunkPath)
+        logger.debug(scpCommandString)
+        scpUploadChunkProcess = subprocess.Popen(
+            scpCommandString,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
+        stdout, _ = scpUploadChunkProcess.communicate()
+        if scpUploadChunkProcess.returncode != 0:
+            raise ScpException(stdout,
+                               scpCommandString,
+                               scpUploadChunkProcess.returncode)
+        try:
+            os.unlink(chunkFile.name)
+        except:
+            logger.error(traceback.format_exc())
+        # Append chunk to remote datafile.
+        # FIXME: Investigate whether using an ampersand to put
+        # remote cat process in the background helps to make things
+        # more robust in the case of an interrupted connection.
+        # On Windows, we might need to escape the ampersand with a
+        # caret (^&)
+        if bytesUploaded > 0:
+            redirect = ">>"
+        else:
+            redirect = ">"
+        remoteCatCommand = \
+            "cat %s %s %s" % (openSSH.DoubleQuote(remoteChunkPath),
+                              redirect,
+                              openSSH.DoubleQuote(remoteFilePath))
+        catCommandString = \
+            "%s -n -i %s -c %s " \
+            "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
+            "%s@%s %s" \
+            % (openSSH.DoubleQuote(openSSH.ssh),
+               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+               openSSH.cipher,
+               username, hostname,
+               openSSH.DoubleQuote(remoteCatCommand))
+        # logger.debug(catCommandString)
+        appendChunkProcess = subprocess.Popen(
+            catCommandString,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=defaultStartupInfo,
+            creationflags=defaultCreationFlags)
+        stdout, _ = appendChunkProcess.communicate()
+        if appendChunkProcess.returncode != 0:
+            raise SshException(stdout, appendChunkProcess.returncode)
+
+        bytesUploaded += bytesTransferred
+        ProgressCallback(None, bytesUploaded, fileSize)
+
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadLargeFileFromWindows 3: "
+                         "Aborting upload for %s" % filePath)
+            return
 
 
 def GetMsysPath(path):
