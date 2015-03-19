@@ -589,9 +589,8 @@ class SettingsDialog(wx.Dialog):
         mydataConfigPath = self.settingsModel.GetConfigPath()
         if mydataConfigPath is not None:
             dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
-                                "Save MyData configuration as...",
-                                os.path.dirname(mydataConfigPath),
-                                "MyData.cfg", "*.cfg",
+                                "Save MyData configuration as...", "",
+                                "%s.cfg" % self.GetInstrumentName(), "*.cfg",
                                 wx.SAVE | wx.OVERWRITE_PROMPT)
             if dlg.ShowModal() == wx.ID_OK:
                 configPath = dlg.GetPath()

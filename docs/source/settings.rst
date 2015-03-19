@@ -214,3 +214,38 @@ prevent advanced users from determining where MyData saves its last used
 configuration to disk (e.g.
 C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg) and
 updating the settings outside of MyData.
+
+
+Saving and Loading Settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Each time you click OK on the Settings Dialog, your settings are validated, and
+then saved automatically to a location within your user home folder, which is
+OS-dependent, e.g.
+"C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+"/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
+
+The settings file is in plain-text file whose format is described here:
+https://docs.python.org/2/library/configparser.html.  An example can be
+found here:
+`MyDataDemo.cfg <https://github.com/monash-merc/mydata/releases/download/v0.2.0-beta1/MyDataDemo.cfg>`_.
+
+Any facilities with potentially malicious users may wish to consider what
+happens if a user gets hold of an API key for a facility role account, saved
+in a MyData configuration file.  The API key cannot be used in place of a
+password to log into MyTardis's web interface, but it can be used with
+MyTardis's RESTful API to gain facility manager privileges.  These privileges
+would not include deleting data, but for a technically minded user familiar
+with RESTful APIs, the API key could potentially be used to modify another
+user's data.  Facilities need to decide whether this is an acceptable risk.
+Many facilities already use shared accounts on data-collection PCs, so the
+risk of one user modifying another user's data subdirectory is already there.
+
+Settings can be saved to an arbitrary location chosen by the user by clicking
+Control-s (Windows) or Command-s (Mac OS X) from MyData's Settings dialog,
+keeping in mind the risks stated above.  A saved settings file can then be
+dragged and dropped onto MyData's settings dialog to import the settings.
+This feature is currently used primarily by MyData developers for testing
+different configurations.  It is expected that the MyData settings for each
+individual instrument PC will remain constant once the initial configuration
+is done.
+
