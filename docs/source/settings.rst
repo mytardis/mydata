@@ -227,7 +227,7 @@ OS-dependent, e.g.
 The settings file is in plain-text file whose format is described here:
 https://docs.python.org/2/library/configparser.html.  An example can be
 found here:
-`MyDataDemo.cfg <https://github.com/monash-merc/mydata/releases/download/v0.2.0-beta1/MyDataDemo.cfg>`_.
+`MyDataDemo.cfg <https://github.com/monash-merc/mydata-sample-data/releases/download/v0.1/MyDataDemo.cfg>`_.
 
 Any facilities with potentially malicious users may wish to consider what
 happens if a user gets hold of an API key for a facility role account, saved
