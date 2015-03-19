@@ -6,7 +6,7 @@ Downloading and Installing the MyTardis Demo Server
 
 * Download the MyTardis Demo Server for Windows:
 
-  + `MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe <https://github.com/monash-merc/mydata/releases/download/v0.2.0-beta1/MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe>`_
+  + `MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe <https://github.com/monash-merc/mytardis-demo-server/releases/download/v0.1/MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe>`_
 
 After downloading the MyTardis Demo Server, open the downloaded executable to
 begin the setup wizard, which shows the version of MyTardis being installed
