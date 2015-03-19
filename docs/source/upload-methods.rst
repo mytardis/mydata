@@ -28,7 +28,9 @@ Concurrent Upload Threads and Subprocesses launched by MyData
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The maximum number of upload threads can be specified in the advanced tab of
-MyData's Settings Dialog (see :ref:`settings-dialog-advanced`).
+MyData's Settings Dialog (see :ref:`settings-dialog-advanced`).  This setting
+will have no effect when using the "HTTP POST" upload method, which has a
+maximum of one concurrent upload.
 
 When using multiple upload threads, you won't see multiple "MyData" processes
 running in your process monitor / task manager, but you will see multiple
@@ -38,9 +40,9 @@ run remote commands on MyTardis's staging server to determine the size of an
 incomplete upload on MyTardis's staging server and to append an uploaded chunk
 to a partially uploaded datafile in MyTardis's staging area.
 
-On Mac OS X, while using MyData's "SCP to Staging" upload method, you may also
-notice a "dd" subprocess running for each upload.  "dd" is used to extract a
-chunk to upload from a datafile. 
+While using MyData's "SCP to Staging" upload method, you may also notice a
+"dd" subprocess running for each upload.  "dd" is used to extract a chunk to
+upload from a datafile. 
 
 On Mac OS X, in addition to the brief "ssh" processes described above,
 you may also notice some lingering "ssh" processes (one per upload thread),
@@ -49,8 +51,8 @@ http://www.openbsd.org/cgi-bin/man.cgi?query=ssh_config), which allows MyData
 to reuse an existing SSH connection for appending additional datafile chunks to
 a partial upload.
 
-Unfortunately, OpenSSH's ControlMaster/ControlPath functionality is not
-available in Windows builds of OpenSSH: http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+OpenSSH's ControlMaster/ControlPath functionality is not available in Windows
+builds of OpenSSH: http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
 So we can't use this method to reuse SSH connections for SCP-uploading
 subsequent datafile chunks on Windows.   Out of necessity, MyData creates a new
 SSH ("SCP") connection for every chunk uploaded, at least it does for large
@@ -60,13 +62,9 @@ For small datafile uploads on Windows, if the chunk size is too small, then
 calling "scp.exe" repeatedly will waste time reconnecting to the same MyTardis
 staging server repeatedly after only spending a fraction of a second actually
 uploading each chunk.  If the chunk size is too large, then MyData won't be
-able to display smooth progress updates.  For small datafiles on Windows,
-we just upload the entire datafile with one call to "scp.exe", and don't
-worry about displaying incremental progress in MyData's Uploads view.  This
-has recently changed (March 2015) from an alternative method for uploading
-small files on Windows (writing into a pipe running "cat >>" on the remote
-server), because it can lead to frequent "broken pipe" errors in some
-environments.
+able to display smooth progress updates.  For small datafiles on Windows (less
+than 10 MB), MyData upload the entire datafile with one call to "scp.exe", so
+you won't see incremental progress updates in MyData's Uploads view.
 
 
 HTTP POST
