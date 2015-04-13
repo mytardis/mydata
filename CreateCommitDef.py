@@ -16,3 +16,6 @@ def run():
     f = open('mydata/CommitDef.py', 'w')
     f.write('LATEST_COMMIT = "' + commit + '"\n')
     f.close()
+
+if __name__ == '__main__':
+    run()

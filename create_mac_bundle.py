@@ -66,9 +66,10 @@ appName = "MyData"
 
 resource_files=["MyData.icns", "favicon.ico", requests.certs.where()]
 
-for iconFilesPath in ("png-normal/icons16x16", "png-normal/icons24x24",
-                      "png-hot/icons24x24"):
-    for iconFile in os.listdir(iconFilesPath):
+for iconFilesPath in ("media/png-normal/icons16x16",
+                      "media/png-normal/icons24x24",
+                      "media/png-hot/icons24x24"):
+    for iconFile in os.listdir(os.path.join('mydata', iconFilesPath)):
         iconFilePath = os.path.join(iconFilesPath, iconFile)
         if os.path.isfile(iconFilePath):
             resource_file = (iconFilesPath, [iconFilePath])

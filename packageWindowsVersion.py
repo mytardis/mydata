@@ -24,8 +24,8 @@ os.system("C:\\Python27\\python.exe .\\pyinstaller\\pyinstaller.py "
 # problem with the Windows build.
 os.system("copy /Y favicon.ico dist\\MyData\\")
 os.system("copy /Y MyData.ico dist\\MyData\\")
-distutils.dir_util.copy_tree(r"png-normal", r"dist\MyData\png-normal")
-distutils.dir_util.copy_tree(r"png-hot", r"dist\MyData\png-hot")
+distutils.dir_util.copy_tree(r"mydata/media/png-normal", r"dist\MyData\mydata\media\png-normal")
+distutils.dir_util.copy_tree(r"mydata/media/png-hot", r"dist\MyData\mydata\media\png-hot")
 
 distutils.dir_util.copy_tree(r"openssh-5.4p1-1-msys-1.0.13",
                              r"dist\MyData\openssh-5.4p1-1-msys-1.0.13")

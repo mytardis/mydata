@@ -419,21 +419,15 @@ class MyData(wx.App):
         """
         Create a toolbar.
         """
-
         if hasattr(sys, "frozen"):
-            sysExecutableDir = os.path.dirname(sys.executable)
             if sys.platform.startswith("darwin"):
-                pngNormalPath = "png-normal"
+                module_base_dir = ''
             else:
-                pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
-            if sys.platform.startswith("darwin"):
-                pngHotPath = "png-hot"
-            else:
-                pngHotPath = os.path.join(sysExecutableDir, "png-hot")
+                module_base_dir = os.path.dirname(sys.executable)
         else:
-            myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
-            pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
-            pngHotPath = os.path.join(myDataModuleDir, "png-hot")
+            module_base_dir = os.path.dirname(os.path.realpath(__file__))
+        pngHotPath = os.path.join(module_base_dir, 'media', 'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'png-normal')
 
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
