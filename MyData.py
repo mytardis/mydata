@@ -9,7 +9,10 @@ import threading
 import argparse
 from datetime import datetime
 
-import CommitDef
+try:
+    from CommitDef import LATEST_COMMIT
+except ImportError:
+    LATEST_COMMIT = "Please run CreateCommitDef.py"
 import MyDataVersionNumber
 from FoldersView import FoldersView
 from FoldersModel import FoldersModel
@@ -120,7 +123,7 @@ class MyData(wx.App):
     def OnInit(self):
         logger.debug("MyData version:   " +
                      MyDataVersionNumber.versionNumber)
-        logger.debug("MyData commit:  " + CommitDef.LATEST_COMMIT)
+        logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
         appauthor = "Monash University"
         appdirPath = appdirs.user_data_dir(appname, appauthor)
@@ -866,7 +869,7 @@ class MyData(wx.App):
               "MyData is open source (GPL3) software available from " \
               "https://github.com/monash-merc/mydata\n\n" \
               "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
-              "Commit:  " + CommitDef.LATEST_COMMIT + "\n"
+              "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
