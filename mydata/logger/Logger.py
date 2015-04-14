@@ -27,6 +27,7 @@ class Logger():
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.myDataConfigPath = None
+        self.level = logging.DEBUG
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
             self.appRootDir = \
@@ -40,7 +41,7 @@ class Logger():
             logWindowHandler = logging.StreamHandler(stream=logTextCtrl)
         except:
             logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
-        logWindowHandler.setLevel(logging.DEBUG)
+        logWindowHandler.setLevel(self.level)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
@@ -50,9 +51,10 @@ class Logger():
 
     def ConfigureLogger(self):
         self.loggerObject = logging.getLogger(self.name)
-        self.loggerObject.setLevel(logging.DEBUG)
+        self.loggerObject.setLevel(self.level)
 
-        logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
+        self.logFormatString = \
+            "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
 
@@ -62,18 +64,34 @@ class Logger():
             stringHandler = logging.StreamHandler(stream=self.loggerOutput)
         except:
             stringHandler = logging.StreamHandler(strm=self.loggerOutput)
-        stringHandler.setLevel(logging.DEBUG)
-        stringHandler.setFormatter(logging.Formatter(logFormatString))
+        stringHandler.setLevel(self.level)
+        stringHandler.setFormatter(logging.Formatter(self.logFormatString))
         self.loggerObject.addHandler(stringHandler)
 
         # Finally, send all log messages to a log file.
-        from os.path import expanduser, join
         self.loggerFileHandler = \
-            logging.FileHandler(join(expanduser("~"), ".MyData_debug_log.txt"))
-        self.loggerFileHandler.setLevel(logging.DEBUG)
+            logging.FileHandler(os.path.join(os.path.expanduser("~"),
+                                             ".MyData_debug_log.txt"))
+        self.loggerFileHandler.setLevel(self.level)
         self.loggerFileHandler\
-            .setFormatter(logging.Formatter(logFormatString))
+            .setFormatter(logging.Formatter(self.logFormatString))
         self.loggerObject.addHandler(self.loggerFileHandler)
+
+    def SetLogFileName(self, logFileName):
+        self.loggerObject.removeHandler(self.loggerFileHandler)
+        self.loggerFileHandler = \
+            logging.FileHandler(os.path.join(os.path.expanduser("~"),
+                                             logFileName))
+        self.loggerFileHandler.setLevel(self.level)
+        self.loggerFileHandler\
+            .setFormatter(logging.Formatter(self.logFormatString))
+        self.loggerObject.addHandler(self.loggerFileHandler)
+
+    def SetLevel(self, level):
+        self.level = level
+        self.loggerObject.setLevel(self.level)
+        for handler in self.loggerObject.handlers:
+            handler.setLevel(self.level)
 
     def debug(self, message):
         frame = inspect.currentframe()
