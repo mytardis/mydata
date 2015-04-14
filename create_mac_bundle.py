@@ -70,7 +70,7 @@ for iconFilesPath in ("media/png-normal/icons16x16",
                       "media/png-normal/icons24x24",
                       "media/png-hot/icons24x24"):
     for iconFile in os.listdir(os.path.join('mydata', iconFilesPath)):
-        iconFilePath = os.path.join(iconFilesPath, iconFile)
+        iconFilePath = os.path.join('mydata', iconFilesPath, iconFile)
         if os.path.isfile(iconFilePath):
             resource_file = (iconFilesPath, [iconFilePath])
             resource_files.append(resource_file)

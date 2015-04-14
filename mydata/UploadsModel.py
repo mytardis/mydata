@@ -56,11 +56,11 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-        self.inProgressIcon = wx.Image('png-normal/icons16x16/Refresh.png',
+        self.inProgressIcon = wx.Image('media/png-normal/icons16x16/Refresh.png',
                                        wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.completedIcon = wx.Image('png-normal/icons16x16/Apply.png',
+        self.completedIcon = wx.Image('media/png-normal/icons16x16/Apply.png',
                                       wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.failedIcon = wx.Image('png-normal/icons16x16/Delete.png',
+        self.failedIcon = wx.Image('media/png-normal/icons16x16/Delete.png',
                                    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
 
     def Filter(self, searchString):

@@ -61,14 +61,14 @@ class MyDataFrame(wx.Frame):
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetStatusWidths([-1, 60])
         if hasattr(sys, "frozen"):
-            sysExecutableDir = os.path.dirname(sys.executable)
             if sys.platform.startswith("darwin"):
-                pngNormalPath = "png-normal"
+                module_base_dir = ''
             else:
-                pngNormalPath = os.path.join(sysExecutableDir, "png-normal")
+                module_base_dir = os.path.dirname(sys.executable)
         else:
-            myDataModuleDir = os.path.dirname(os.path.realpath(__file__))
-            pngNormalPath = os.path.join(myDataModuleDir, "png-normal")
+            module_base_dir = os.path.dirname(os.path.realpath(__file__))
+        pngHotPath = os.path.join(module_base_dir, 'media', 'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'png-normal')
         if sys.platform.startswith("win"):
             iconSubdir = "icons24x24"
         else:
