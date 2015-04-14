@@ -142,6 +142,10 @@ class UploaderModel():
             activeInterfaces = ["Local Area Connection"]
         elif "Local Area Connection 2" in activeInterfaces:
             activeInterfaces = ["Local Area Connection 2"]
+        elif "Ethernet" in activeInterfaces:
+            activeInterfaces = ["Ethernet"]
+        elif "Wi-Fi" in activeInterfaces:
+            activeInterfaces = ["Wi-Fi"]
 
         # For now, we're only dealing with one active network interface.
         # It is possible to have more than one active network interface,
