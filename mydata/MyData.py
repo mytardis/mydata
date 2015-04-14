@@ -233,7 +233,7 @@ class MyData(wx.App):
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
-        img = wx.Image("favicon.ico", wx.BITMAP_TYPE_ANY)
+        img = wx.Image("media/favicon.ico", wx.BITMAP_TYPE_ANY)
         bmp = wx.BitmapFromImage(img)
         icon = wx.EmptyIcon()
         icon.CopyFromBitmap(bmp)
