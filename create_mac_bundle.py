@@ -64,7 +64,8 @@ run()
 
 appName = "MyData"
 
-resource_files=["MyData.icns", "favicon.ico", requests.certs.where()]
+resource_files=["media/MyData.icns", "media/favicon.ico",
+                requests.certs.where()]
 
 for iconFilesPath in ("media/png-normal/icons16x16",
                       "media/png-normal/icons24x24",

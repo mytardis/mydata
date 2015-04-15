@@ -101,7 +101,7 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         if okToExit == wx.ID_YES:
             if not self.settingsModel.RunningInBackgroundMode():
                 os._exit(0)
-            cmd = "Exit MyData.exe"
+            cmd = "MyData.exe --version"
             if sys.platform.startswith("win"):
                 import win32com.shell.shell as shell
                 shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
