@@ -84,7 +84,16 @@ class UploadModel():
     def GetDataFileIndex(self):
         return self.dataFileIndex
 
+    def GetBufferedReader(self):
+        """
+        Only used with UploadMethod.HTTP_POST
+        """
+        return self.bufferedReader
+
     def SetBufferedReader(self, bufferedReader):
+        """
+        Only used with UploadMethod.HTTP_POST
+        """
         self.bufferedReader = bufferedReader
 
     def GetSshMasterProcess(self):
