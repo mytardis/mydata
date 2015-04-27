@@ -696,13 +696,13 @@ class SettingsModel():
                        self.GetApiKey(),
                        "Content-Type": "application/json",
                        "Accept": "application/json"}
-            session = requests.Session()
-            response = session.get(headers=headers, url=url)
-            # Consume response content, so session will be closed.
-            users = response.json()
+            response = requests.get(headers=headers, url=url)
             status_code = response.status_code
-            response.close()
-            session.close()
+            try:
+                users = response.json()
+            except:
+                users = None
+                logger.error(response.text)
 
             def invalid_user():
                 message = "Your MyTardis credentials are invalid.\n\n" \
