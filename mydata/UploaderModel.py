@@ -264,7 +264,7 @@ class UploaderModel():
         myTardisDefaultUsername = self.settingsModel.GetUsername()
         myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/uploader/?format=json" + \
+        url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&mac_address=" + urllib.quote(self.mac_address)
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
@@ -286,9 +286,9 @@ class UploaderModel():
         logger.info("Uploading uploader info to MyTardis...")
 
         if numExistingMatchingUploaderRecords > 0:
-            url = myTardisUrl + "/api/v1/uploader/%d/" % (uploader_id)
+            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % (uploader_id)
         else:
-            url = myTardisUrl + "/api/v1/uploader/"
+            url = myTardisUrl + "/api/v1/mydata_uploader/"
 
         self.os_platform = sys.platform
         self.os_system = platform.system()
@@ -380,13 +380,17 @@ class UploaderModel():
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisDefaultUsername = self.settingsModel.GetUsername()
+        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + \
-            "/api/v1/uploaderregistrationrequest/?format=json" + \
+            "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__mac_address=" + self.mac_address + \
             "&requester_key_fingerprint=" + \
             urllib.quote(keyPair.GetFingerprint())
         logger.debug(url)
-        headers = {"Content-Type": "application/json",
+        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
+                   myTardisDefaultUserApiKey,
+                   "Content-Type": "application/json",
                    "Accept": "application/json"}
         response = requests.get(headers=headers, url=url)
         if response.status_code < 200 or response.status_code >= 300:
@@ -422,8 +426,12 @@ class UploaderModel():
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        url = myTardisUrl + "/api/v1/uploaderregistrationrequest/"
-        headers = {"Content-Type": "application/json",
+        myTardisDefaultUsername = self.settingsModel.GetUsername()
+        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
+        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
+                   myTardisDefaultUserApiKey,
+                   "Content-Type": "application/json",
                    "Accept": "application/json"}
         uploaderRegistrationRequestJson = \
             {"uploader": self.responseJson['resource_uri'],
