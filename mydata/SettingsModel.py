@@ -690,8 +690,12 @@ class SettingsModel():
                 logger.error(traceback.format_exc())
                 return self.validation
 
+            """
+            Here we perform a rather arbitrary query, just to test
+            whether our MyTardis credentials work OK with the API.
+            """
             url = self.GetMyTardisUrl() + \
-                "/api/v1/user/?format=json"  # "&username=" + self.GetUsername()
+                "/api/v1/user/?format=json&limit=0"  # "&username=" + self.GetUsername()
             headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
                        self.GetApiKey(),
                        "Content-Type": "application/json",

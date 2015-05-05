@@ -115,7 +115,7 @@ class UserModel():
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/user/?format=json"  # "&username=" + username
+        url = myTardisUrl + "/api/v1/user/?format=json&limit=0"  # "&username=" + username
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
