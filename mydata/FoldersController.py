@@ -284,9 +284,20 @@ class FoldersController():
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.uploadMethod = UploadMethod.HTTP_POST
 
-        settingsModel.GetUploaderModel().RequestStagingAccess()
-        uploadToStagingRequest = settingsModel\
-            .GetUploadToStagingRequest()
+        try:
+            settingsModel.GetUploaderModel().RequestStagingAccess()
+            uploadToStagingRequest = settingsModel\
+                .GetUploadToStagingRequest()
+        except Exception, e:
+            # MyData app could be missing from MyTardis server.
+            logger.error(traceback.format_exc())
+            wx.PostEvent(
+                self.notifyWindow,
+                self.ShowMessageDialogEvent(
+                    title="MyData",
+                    message=str(e),
+                    icon=wx.ICON_ERROR))
+            return
         message = None
         if uploadToStagingRequest is None:
             message = "Couldn't determine whether uploads to " \

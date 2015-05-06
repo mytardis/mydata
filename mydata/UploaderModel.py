@@ -74,6 +74,7 @@ from Exceptions import DoesNotExist
 from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
 from Exceptions import StringTooLongForField
+from Exceptions import MissingMyDataAppOnMyTardisServer
 
 
 defaultStartupInfo = None
@@ -277,6 +278,10 @@ class UploaderModel():
         except Exception, e:
             logger.error(str(e))
             raise
+        if response.status_code == 404:
+            message = "The MyData app is missing from the MyTardis server."
+            logger.error(message)
+            raise MissingMyDataAppOnMyTardisServer(message)
         existingMatchingUploaderRecords = response.json()
         numExistingMatchingUploaderRecords = \
             existingMatchingUploaderRecords['meta']['total_count']
