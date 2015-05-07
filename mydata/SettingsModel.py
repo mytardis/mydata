@@ -19,9 +19,7 @@ from Exceptions import IncompatibleMyTardisVersion
 
 
 class SettingsModel():
-
     class SettingsValidation():
-
         def __init__(self, valid, message="", field="", suggestion=None,
                      datasetCount=0):
             self.valid = valid
@@ -45,7 +43,7 @@ class SettingsModel():
         def GetDatasetCount(self):
             return self.datasetCount
 
-    def __init__(self, configPath=None):
+    def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
         self.background_mode = "False"
@@ -87,22 +85,23 @@ class SettingsModel():
 
         self.locked = False
 
+        self.uuid = None
+
         if configPath is None:
             configPath = self.GetConfigPath()
 
-        if self.GetConfigPath() is not None and \
-                os.path.exists(self.GetConfigPath()):
-            logger.info("Reading settings from: " + self.GetConfigPath())
+        if configPath is not None and os.path.exists(configPath):
+            logger.info("Reading settings from: " + configPath)
             try:
                 configParser = ConfigParser()
-                configParser.read(self.GetConfigPath())
+                configParser.read(configPath)
                 configFileSection = "MyData"
                 fields = ["instrument_name", "facility_name", "data_directory",
                           "contact_name", "contact_email", "mytardis_url",
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "check_for_missing_folders", "locked"]
+                          "check_for_missing_folders", "locked", "uuid"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -262,6 +261,12 @@ class SettingsModel():
     def RunningInBackgroundMode(self):
         return self.background_mode
 
+    def GetUuid(self):
+        return self.uuid
+
+    def SetUuid(self, uuid):
+        self.uuid = uuid
+
     def SetBackgroundMode(self, backgroundMode):
         self.background_mode = backgroundMode
 
@@ -272,8 +277,6 @@ class SettingsModel():
         self.uploadToStagingRequest = uploadToStagingRequest
 
     def GetUploaderModel(self):
-        if self.uploaderModel is None:
-            self.uploaderModel = UploaderModel(self)
         return self.uploaderModel
 
     def SetUploaderModel(self, uploaderModel):
@@ -309,13 +312,14 @@ class SettingsModel():
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
-                      "check_for_missing_folders", "locked"]
+                      "check_for_missing_folders", "locked", "uuid"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
         logger.info("Saved settings to " + configPath)
 
-    def SaveFieldsFromDialog(self, settingsDialog, configPath=None):
+    def SaveFieldsFromDialog(self, settingsDialog, configPath=None,
+                             saveToDisk=True):
         if configPath is None:
             configPath = self.GetConfigPath()
         self.SetInstrumentName(settingsDialog.GetInstrumentName())
@@ -339,9 +343,7 @@ class SettingsModel():
         self.SetCheckForMissingFolders(settingsDialog.CheckForMissingFolders())
         self.SetLocked(settingsDialog.Locked())
 
-        # self.mydataConfigPath could be None for the temporary
-        # settingsModel created during SettingsDialog's validation.
-        if configPath is not None:
+        if saveToDisk:
             self.SaveToDisk(configPath)
 
     def Validate(self):
@@ -695,18 +697,17 @@ class SettingsModel():
             whether our MyTardis credentials work OK with the API.
             """
             url = self.GetMyTardisUrl() + \
-                "/api/v1/user/?format=json&limit=0"  # "&username=" + self.GetUsername()
+                "/api/v1/user/?format=json&username=" + self.GetUsername()
             headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
                        self.GetApiKey(),
                        "Content-Type": "application/json",
                        "Accept": "application/json"}
             response = requests.get(headers=headers, url=url)
             status_code = response.status_code
-            try:
-                users = response.json()
-            except:
-                users = None
-                logger.error(response.text)
+            # We don't care about the response content here, only the
+            # status code, but failing to read the content risks leaving
+            # a lingering open connection, so we'll close it.
+            response.close()
 
             def invalid_user():
                 message = "Your MyTardis credentials are invalid.\n\n" \
@@ -716,10 +717,6 @@ class SettingsModel():
                 return self.validation
 
             if status_code < 200 or status_code >= 300:
-                return invalid_user()
-
-            this_user = [u for u in users.get('objects', []) if u.get('email')]
-            if len(this_user) != 1:
                 return invalid_user()
 
             if self.GetFacilityName().strip() == "":
