@@ -17,7 +17,6 @@ from DragAndDrop import MyDataSettingsDropTarget
 
 
 class SettingsDialog(wx.Dialog):
-
     def __init__(self, parent, ID, title,
                  settingsModel,
                  size=wx.DefaultSize,
@@ -595,8 +594,6 @@ class SettingsDialog(wx.Dialog):
                                 wx.SAVE | wx.OVERWRITE_PROMPT)
             if dlg.ShowModal() == wx.ID_OK:
                 configPath = dlg.GetPath()
-                wx.GetApp().SetConfigPath(configPath)
-                self.settingsModel.SetConfigPath(configPath)
                 self.settingsModel\
                     .SaveFieldsFromDialog(self,
                                           configPath=configPath)
@@ -685,8 +682,7 @@ class SettingsDialog(wx.Dialog):
                                    wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             return
-        self.settingsModel.SetConfigPath(filepaths[0])
-        self.settingsModel.LoadSettings()
+        self.settingsModel.LoadSettings(configPath=filepaths[0])
         self.UpdateFieldsFromModel(self.settingsModel)
 
         folderStructure = self.folderStructureComboBox.GetValue()
