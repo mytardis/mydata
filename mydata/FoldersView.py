@@ -4,8 +4,6 @@ import wx.dataview as dv
 
 from FolderModel import FolderModel
 
-from AddFolderDialog import AddFolderDialog
-
 
 class FoldersView(wx.Panel):
 
