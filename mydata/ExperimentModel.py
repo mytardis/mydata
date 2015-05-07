@@ -38,14 +38,10 @@ class ExperimentModel():
         See also GetOrCreateExperimentForFolder
         """
         settingsModel = folderModel.GetSettingsModel()
-        createdDate = folderModel.GetCreated()
-        ownerUsername = folderModel.GetOwner().GetUsername()
-        try:
-            ownerUserId = folderModel.GetOwner().GetJson()['id']
-        except:
-            ownerUserId = None
 
-        instrumentName = settingsModel.GetInstrumentName()
+        uploaderName = settingsModel.GetUploaderModel().GetName()
+        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        userFolderName = folderModel.GetUserFolderName()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
@@ -53,15 +49,14 @@ class ExperimentModel():
 
         if folderModel.ExperimentTitleSetManually():
             expTitleEncoded = urllib2.quote(experimentTitle)
-            instrumentNameEncoded = urllib2.quote(instrumentName)
-            url = myTardisUrl + "/api/v1/experiment/?format=json" + \
-                "&instrument=" + instrumentNameEncoded + \
-                "&owner=" + ownerUsername + "&title=" + expTitleEncoded
+            url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
+                "&uploader_uuid=" + uploaderUuid + \
+                "&user_folder_name=" + userFolderName + \
+                "&title=" + expTitleEncoded
         else:
-            instrumentNameEncoded = urllib2.quote(instrumentName)
-            url = myTardisUrl + "/api/v1/experiment/?format=json" + \
-                "&instrument=" + instrumentNameEncoded + \
-                "&owner=" + ownerUsername + "&date=" + createdDate
+            url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
+                "&uploader_uuid=" + uploaderUuid + \
+                "&user_folder_name=" + userFolderName
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey}
@@ -103,8 +98,9 @@ class ExperimentModel():
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see http://mydata.readthedocs.org/en/" \
-                               "latest/mytardis-prerequisites.html)\n\n " \
+                               "(see https://github.com/wettenhj/" \
+                               "mytardis-app-mydata/blob/master/README.md)" \
+                               "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \
                                "server could help to isolate the problem." \
                                % myTardisDefaultUsername
@@ -126,33 +122,32 @@ class ExperimentModel():
         if numExperimentsFound == 0:
             if folderModel.ExperimentTitleSetManually():
                 message = "Experiment not found for '%s', %s, '%s'" \
-                    % (instrumentName, ownerUsername, experimentTitle)
+                    % (uploaderName, userFolderName, experimentTitle)
             else:
-                message = "Experiment not found for '%s', %s, %s" \
-                    % (instrumentName, ownerUsername, createdDate)
+                message = "Experiment not found for '%s', %s" \
+                    % (uploaderName, userFolderName)
             raise DoesNotExist(message, modelClass=ExperimentModel)
         if numExperimentsFound == 1:
-            logger.debug("Found existing experiment for instrument \"" +
-                         instrumentName + "\" and user " + ownerUsername +
-                         " for creation date " + createdDate)
+            logger.debug("Found existing experiment for uploader \"" +
+                         uploaderName + "\" and user folder " + userFolderName)
             return ExperimentModel(settingsModel,
                                    experimentsJson['objects'][0])
         elif numExperimentsFound > 1:
             logger.error("ERROR: Found multiple experiments matching " +
-                         "instrument name and creation date for user 'mmi':\n")
+                         "Uploader UUID for user '%s':\n" % userFolderName)
             for expJson in experimentsJson['objects']:
                 logger.error("\t" + expJson['title'])
             if folderModel.ExperimentTitleSetManually():
                 message = "Multiple experiments were found matching " \
-                          "instrument \"%s\", owner \"%s\" and title " \
+                          "uploader \"%s\", user folder \"%s\" and title " \
                           "\"%s\" for folder \"%s\"." \
-                          % (instrumentName, ownerUsername, experimentTitle,
+                          % (uploaderName, userFolderName, experimentTitle,
                              folderModel.GetFolder())
             else:
                 message = "Multiple experiments were found matching " \
-                          "instrument \"%s\", owner \"%s\" and date " \
-                          "\"%s\" for folder \"%s\"." \
-                          % (instrumentName, ownerUsername, createdDate,
+                          "uploader \"%s\" and user folder \"%s\" " \
+                          "for folder \"%s\"." \
+                          % (uploaderName, userFolderName,
                              folderModel.GetFolder())
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
@@ -162,7 +157,7 @@ class ExperimentModel():
     @staticmethod
     def CreateExperimentForFolder(folderModel):
         settingsModel = folderModel.GetSettingsModel()
-        createdDate = folderModel.GetCreated()
+        userFolderName = folderModel.GetUserFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
         try:
@@ -170,34 +165,32 @@ class ExperimentModel():
         except:
             ownerUserId = None
 
-        instrumentName = settingsModel.GetInstrumentName()
+        uploaderName = settingsModel.GetUploaderModel().GetName()
+        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
         experimentTitle = folderModel.GetExperimentTitle()
 
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
-        logger.debug("Creating experiment for instrument \"" +
-                     instrumentName + ", username " + ownerUsername +
-                     " and created date " + createdDate)
-        description = ("Instrument: %s\n\n"
-                       "Owner: %s"
-                       % (instrumentName, ownerUsername))
-        if not folderModel.ExperimentTitleSetManually():
-            description += "\n\nData collected: %s" % createdDate
+        logger.debug("Creating experiment for uploader \"" +
+                     uploaderName + ", user folder " + userFolderName)
+        description = ("Uploader: %s\n\n"
+                       "User folder name: %s"
+                       % (uploaderName, userFolderName))
         experimentJson = {
             "title": experimentTitle,
             "description": description,
             "immutable": False,
             "parameter_sets": [{
-                "schema": "http://tardis.edu.au/schemas"
-                          "/experimentInstrument",
-                "parameters": [{"name": "instrument",
-                                "value": instrumentName},
-                               {"name": "owner",
-                                "value": ownerUsername},
-                               {"name": "date",
-                                "value": createdDate}]}]}
+                "schema": "http://mytardis.org/schemas"
+                          "/mydata/defaultexperiment",
+                "parameters": [{"name": "uploader_name",
+                                "value": uploaderName},
+                               {"name": "uploader_uuid",
+                                "value": uploaderUuid},
+                               {"name": "user_folder_name",
+                                "value": userFolderName}]}]}
         headers = {"Authorization": "ApiKey " +
                    myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey,
@@ -238,10 +231,9 @@ class ExperimentModel():
                 raise DoesNotExist(message)
             raise
         if response.status_code == 201:
-            logger.debug("Succeeded in creating experiment for instrument "
-                         "\"" + instrumentName + "\" and user " +
-                         ownerUsername + " for creation date " +
-                         createdDate)
+            logger.debug("Succeeded in creating experiment for uploader "
+                         "\"%s\" and user folder \"%s\""
+                         % (uploaderName, userFolderName))
 
             # Avoid creating a duplicate ObjectACL if the user folder's
             # username matches the facility manager's username.
@@ -255,9 +247,9 @@ class ExperimentModel():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.GetGroup())
         else:
-            logger.debug("Failed to create experiment for instrument " +
-                         instrumentName + " and user " + ownerUsername +
-                         " for creation date " + createdDate)
+            logger.debug("Failed to create experiment for uploader "
+                         "\"%s\" and user folder \"%s\""
+                         % (uploaderName, userFolderName))
             logger.debug(headers)
             logger.debug(url)
             logger.debug(response.text)
@@ -300,8 +292,9 @@ class ExperimentModel():
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see http://mydata.readthedocs.org/en/" \
-                               "latest/mytardis-prerequisites.html)\n\n " \
+                               "(see https://github.com/wettenhj/" \
+                               "mytardis-app-mydata/blob/master/README.md)" \
+                               "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \
                                "server could help to isolate the problem." \
                                % myTardisDefaultUsername
