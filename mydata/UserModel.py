@@ -115,7 +115,7 @@ class UserModel():
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/user/?format=json&limit=0"  # "&username=" + username
+        url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
@@ -131,7 +131,7 @@ class UserModel():
             session.close()
             raise Exception(message)
         try:
-            users = response.json()
+            userRecordsJson = response.json()
         except:
             logger.error(traceback.format_exc())
             response.close()
@@ -139,16 +139,16 @@ class UserModel():
             raise
         response.close()
         session.close()
-        this_user = [u for u in users.get('objects', []) if u.get('email')]
-        if len(this_user) != 1:
+        numUserRecordsFound = userRecordsJson['meta']['total_count']
+
+        if numUserRecordsFound == 0:
             raise DoesNotExist(
                 message="User \"%s\" was not found in MyTardis" % username,
                 url=url, response=response)
         else:
-            this_user = this_user[0]
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,
-                             userRecordJson=this_user)
+                             userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
     def GetUserByEmail(settingsModel, email):
@@ -156,7 +156,7 @@ class UserModel():
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/user/?format=json&email=" + email
+        url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + email
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
