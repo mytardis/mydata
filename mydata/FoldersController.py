@@ -40,9 +40,6 @@ import wx
 import wx.lib.newevent
 import wx.dataview
 
-from DragAndDrop import MyFolderDropTarget
-from AddFolderDialog import AddFolderDialog
-
 
 class ConnectionStatus():
     CONNECTED = 0
@@ -79,10 +76,6 @@ class FoldersController():
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
-
-        self.lastUsedFolderType = None
-        self.folderDropTarget = MyFolderDropTarget(self)
-        self.foldersView.SetDropTarget(self.folderDropTarget)
 
         self.foldersView.Bind(wx.EVT_BUTTON, self.OnOpenFolder,
                               self.foldersView.GetOpenFolderButton())
@@ -566,61 +559,6 @@ class FoldersController():
 
         logger.debug("")
 
-    def OnDropFiles(self, filepaths):
-        if len(filepaths) == 1 and self.foldersModel.Contains(filepaths[0]):
-            message = "This folder has already been added."
-            dlg = wx.MessageDialog(None, message, "Add Folder(s)",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            return
-        allFolders = True
-        folderType = None
-        folderModelsAdded = []
-        for filepath in filepaths:
-
-            if not os.path.isdir(filepath):
-                message = filepath + " is not a folder."
-                dlg = wx.MessageDialog(None, message, "Add Folder(s)",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-                return
-            elif not self.foldersModel.Contains(filepath):
-                (location, folder) = os.path.split(filepath)
-
-                dataViewId = self.foldersModel.GetMaxDataViewId() + 1
-                if folderType is None:
-
-                    usersModel = self.usersModel
-                    addFolderDialog = \
-                        AddFolderDialog(self.notifyWindow, -1,
-                                        "Add Folder(s)", usersModel,
-                                        size=(350, 200),
-                                        style=wx.DEFAULT_DIALOG_STYLE)
-
-                    addFolderDialog.CenterOnParent()
-
-                    if addFolderDialog.ShowModal() == wx.ID_OK:
-                        folderType = addFolderDialog.GetFolderType()
-                        self.lastUsedFolderType = folderType
-                    else:
-                        return
-
-                usersModel = self.usersModel
-                owner = \
-                    usersModel.GetUserByName(addFolderDialog.GetOwnerName())
-                settingsModel = self.foldersModel.GetSettingsModel()
-                folderModel = FolderModel(dataViewId=dataViewId, folder=folder,
-                                          location=location,
-                                          folder_type=self.lastUsedFolderType,
-                                          owner=owner,
-                                          foldersModel=self.foldersModel,
-                                          usersModel=usersModel,
-                                          settingsModel=settingsModel)
-                self.foldersModel.AddRow(folderModel)
-                folderModelsAdded.append(folderModel)
-
-        self.StartDataUploads(folderModels=folderModelsAdded)
-
     def VerifyDatafiles(self, folderModel):
         if folderModel not in self.verifyDatafileRunnable:
             self.verifyDatafileRunnable[folderModel] = []
@@ -644,11 +582,6 @@ class FoldersController():
                                                    self.settingsModel))
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
-
-    def OnAddFolder(self, evt):
-        dlg = wx.DirDialog(self.notifyWindow, "Choose a directory:")
-        if dlg.ShowModal() == wx.ID_OK:
-            self.OnDropFiles([dlg.GetPath(), ])
 
     def OnDeleteFolders(self, evt):
         # Remove the selected row(s) from the model. The model will take care
