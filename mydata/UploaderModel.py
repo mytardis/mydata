@@ -66,6 +66,7 @@ import urllib
 import traceback
 from datetime import datetime
 import wx
+import uuid
 
 import MyDataVersionNumber as MyDataVersionNumber
 from logger.Logger import logger
@@ -88,11 +89,15 @@ if sys.platform.startswith("win"):
 
 
 class UploaderModel():
-
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.interface = None
         self.responseJson = None
+
+        self.uuid = self.settingsModel.GetUuid()
+        if self.uuid is None:
+            self.GenerateUuid()
+            self.settingsModel.SetUuid(self.uuid)
 
         intervalSinceLastConnectivityCheck = \
             datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
@@ -245,8 +250,6 @@ class UploaderModel():
         self.disk_usage = disk_usage.strip()
         self.data_path = self.settingsModel.GetDataDirectory()
         self.default_user = self.settingsModel.GetUsername()
-
-        self.settingsModel.SetUploaderModel(self)
 
     def _bytes2human(self, n):
         symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
@@ -566,3 +569,13 @@ class UploaderModel():
 
     def SetSettingsModel(self, settingsModel):
         self.settingsModel = settingsModel
+
+    def GenerateUuid(self):
+        self.uuid = str(uuid.uuid1())
+        logger.debug("Generated UUID: %s" % self.uuid)
+
+    def GetUuid(self):
+        return self.uuid
+
+    def GetName(self):
+        return self.name
