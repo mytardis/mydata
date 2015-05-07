@@ -424,11 +424,13 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 userFolderPath = os.path.join(dataDir, userFolderName)
                 if folderStructure == 'Username / Dataset' or \
                         folderStructure == 'Email / Dataset':
-                    self.ScanForDatasetFolders(userFolderPath, userRecord)
+                    self.ScanForDatasetFolders(userFolderPath, userRecord,
+                                               userFolderName)
                 elif folderStructure == \
                         'Username / Experiment / Dataset' or \
                         folderStructure == 'Email / Experiment / Dataset':
-                    self.ScanForExperimentFolders(userFolderPath, userRecord)
+                    self.ScanForExperimentFolders(userFolderPath, userRecord,
+                                                  userFolderName)
                 elif folderStructure == \
                         'Username / "MyTardis" / Experiment / Dataset':
                     userFolderContents = os.listdir(userFolderPath)
@@ -444,7 +446,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     myTardisFolderPath = os.path.join(userFolderPath,
                                                       myTardisFolderName)
                     self.ScanForExperimentFolders(myTardisFolderPath,
-                                                  userRecord)
+                                                  userRecord,
+                                                  userFolderName)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame()
                                  .SetStatusMessage,
@@ -475,7 +478,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     return
                 self.ScanForDatasetFolders(os.path.join(dataDir,
                                                         userFolderName),
-                                           userRecord)
+                                           userRecord, userFolderName)
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
             else:
@@ -526,7 +529,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             else:
                 wx.CallAfter(incrementProgressDialog)
 
-    def ScanForDatasetFolders(self, pathToScan, owner):
+    def ScanForDatasetFolders(self, pathToScan, owner, userFolderName):
         try:
             logger.debug("Scanning " + pathToScan +
                          " for dataset folders...")
@@ -552,7 +555,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                     FolderModel(dataViewId=dataViewId,
                                 folder=datasetFolderName,
                                 location=pathToScan,
-                                folder_type='Dataset',
+                                userFolderName=userFolderName,
                                 owner=owner,
                                 foldersModel=self,
                                 usersModel=self.usersModel,
@@ -591,7 +594,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         except:
             print traceback.format_exc()
 
-    def ScanForExperimentFolders(self, pathToScan, owner):
+    def ScanForExperimentFolders(self, pathToScan, owner, userFolderName):
         """
         Instead of looking for dataset folders as direct children of
         the username folder, this method looks for dataset folders
@@ -621,7 +624,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 folderModel = FolderModel(dataViewId=dataViewId,
                                           folder=datasetFolderName,
                                           location=expFolderPath,
-                                          folder_type='Dataset',
+                                          userFolderName=userFolderName,
                                           owner=owner,
                                           foldersModel=self,
                                           usersModel=self.usersModel,
@@ -692,14 +695,15 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                             logger.warning(message)
                             continue
                     dataViewId = self.GetMaxDataViewId() + 1
-                    folderModel = FolderModel(dataViewId=dataViewId,
-                                              folder=datasetFolderName,
-                                              location=userFolderPath,
-                                              folder_type='Dataset',
-                                              owner=owner,
-                                              foldersModel=self,
-                                              usersModel=self.usersModel,
-                                              settingsModel=self.settingsModel)
+                    folderModel = \
+                        FolderModel(dataViewId=dataViewId,
+                                    folder=datasetFolderName,
+                                    location=userFolderPath,
+                                    userFolderName=userFolderName,
+                                    owner=owner,
+                                    foldersModel=self,
+                                    usersModel=self.usersModel,
+                                    settingsModel=self.settingsModel)
                     folderModel.SetGroup(groupModel)
                     folderModel.SetCreatedDate()
                     folderModel.SetExperimentTitle("%s - %s" %
