@@ -32,6 +32,7 @@ class ObjectAclModel():
             "pluginId": "django_user",
             "entityId": str(user.GetId()),
             "content_object": experiment.GetResourceUri(),
+            "content_type": "experiment",
             "object_id": experiment.GetId(),
             "aclOwnershipType": 1,
             "isOwner": True,
