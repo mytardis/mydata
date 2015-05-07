@@ -28,7 +28,6 @@ EVT_START_DATA_UPLOADS = wx.NewId()
 
 
 class MyDataEvents():
-
     def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
@@ -255,16 +254,16 @@ class MyDataEvent(wx.PyCommandEvent):
         if event.id != EVT_SETTINGS_DIALOG_VALIDATION:
             event.Skip()
             return
-        tempSettingsModel = SettingsModel()
-        tempSettingsModel.SaveFieldsFromDialog(event.settingsDialog)
+        event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
+                                                 saveToDisk=False)
 
-        def validate(tempSettingsModel):
+        def validate(settingsModel):
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 event.settingsDialog.okButton.Disable()
-                tempSettingsModel.Validate()
+                settingsModel.Validate()
 
                 def endBusyCursorIfRequired():
                     try:
@@ -274,18 +273,17 @@ class MyDataEvent(wx.PyCommandEvent):
                             logger.error(str(e))
                             raise
                 wx.CallAfter(endBusyCursorIfRequired)
-                if tempSettingsModel.IsIncompatibleMyTardisVersion():
+                if settingsModel.IsIncompatibleMyTardisVersion():
                     event.settingsDialog.okButton.Enable()
                     return
                 provideSettingsValidationResultsEvent = MyDataEvent(
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
                     settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel,
-                    tempSettingsModel=tempSettingsModel)
+                    settingsModel=event.settingsModel)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              provideSettingsValidationResultsEvent)
             except IncompatibleMyTardisVersion as e:
-                logger.debug("Finished running tempSettingsModel.Validate() 3")
+                logger.debug("Finished running settingsModel.Validate() 3")
 
                 def endBusyCursorIfRequired():
                     try:
@@ -312,13 +310,13 @@ class MyDataEvent(wx.PyCommandEvent):
                 wx.CallAfter(showDialog, message)
             finally:
                 event.settingsDialog.okButton.Enable()
-            logger.debug("Finished running tempSettingsModel.Validate() 4")
+            logger.debug("Finished running settingsModel.Validate() 4")
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
         thread = threading.Thread(target=validate,
-                                  args=(tempSettingsModel,),
-                                  name="TempSettingsModelValidationThread")
+                                  args=(event.settingsModel,),
+                                  name="SettingsModelValidationThread")
         logger.debug("Starting thread %s" % thread.name)
         thread.start()
         logger.debug("Started thread %s" % thread.name)
@@ -327,8 +325,7 @@ class MyDataEvent(wx.PyCommandEvent):
         if event.id != EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS:
             event.Skip()
             return
-        tempSettingsModel = event.tempSettingsModel
-        settingsValidation = tempSettingsModel.GetValidation()
+        settingsValidation = event.settingsModel.GetValidation()
         if settingsValidation is not None and \
                 not settingsValidation.GetValid():
             message = settingsValidation.GetMessage()
@@ -397,17 +394,17 @@ class MyDataEvent(wx.PyCommandEvent):
                          "should remain visible.")
             return
 
-        if tempSettingsModel.IgnoreOldDatasets():
+        if event.settingsModel.IgnoreOldDatasets():
             intervalIfUsed = " (created within the past %d %s)" \
-                % (tempSettingsModel.GetIgnoreOldDatasetIntervalNumber(),
-                   tempSettingsModel.GetIgnoreOldDatasetIntervalUnit())
+                % (event.settingsModel.GetIgnoreOldDatasetIntervalNumber(),
+                   event.settingsModel.GetIgnoreOldDatasetIntervalUnit())
         else:
             intervalIfUsed = ""
         numDatasets = settingsValidation.GetDatasetCount()
         message = "Assuming a folder structure of '%s', " \
             "there %s %d %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
-            % (tempSettingsModel.GetFolderStructure(),
+            % (event.settingsModel.GetFolderStructure(),
                "are" if numDatasets != 1 else "is",
                settingsValidation.GetDatasetCount(),
                "datasets" if numDatasets != 1 else "dataset",
@@ -424,20 +421,20 @@ class MyDataEvent(wx.PyCommandEvent):
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
         try:
-            tempUploaderModel = tempSettingsModel.GetUploaderModel()
-            tempUploaderModel.SetSettingsModel(event.settingsModel)
-            event.settingsModel.SetUploaderModel(tempUploaderModel)
-            tempInstrument = tempSettingsModel.GetInstrument()
-            tempInstrument.SetSettingsModel(event.settingsModel)
+            # Now is a good time to define the MyData instances's uploader
+            # model object, which will generate a UUID if necessary.
+            # The UUID will be saved to disk along with the settings from
+            # the settings dialog.
+            uploaderModel = UploaderModel(event.settingsModel)
+            event.settingsModel.SetUploaderModel(uploaderModel)
 
             # Use the config path determined by appdirs, not the one
             # determined by a user dragging and dropping a config
             # file onto MyData's Settings dialog:
             event.settingsModel\
                 .SaveFieldsFromDialog(event.settingsDialog,
-                                      configPath=wx.GetApp().GetConfigPath())
-            event.settingsModel\
-                .SetInstrument(tempSettingsModel.GetInstrument())
+                                      configPath=wx.GetApp().GetConfigPath(),
+                                      saveToDisk=True)
             event.settingsDialog.EndModal(wx.ID_OK)
             event.settingsDialog.Show(False)
             # event.settingsDialog.Destroy()
