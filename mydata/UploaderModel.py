@@ -269,7 +269,7 @@ class UploaderModel():
         myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-            "&mac_address=" + urllib.quote(self.mac_address)
+            "&uuid=" + urllib.quote(self.uuid)
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey,
@@ -321,7 +321,8 @@ class UploaderModel():
             "machine": 64, "architecture": 64, "processor": 64, "memory": 32,
             "data_path": 64, "default_user": 64,
             "interface": 64, "mac_address": 64, "ipv4_address": 16,
-            "ipv6_address": 64, "subnet_mask": 16, "hostname": 64}
+            "ipv6_address": 64, "subnet_mask": 16, "hostname": 64,
+            "uuid": 36}
 
         for field in uploaderFieldLength:
             if len(getattr(self, field)) > uploaderFieldLength[field]:
@@ -329,7 +330,8 @@ class UploaderModel():
                                             uploaderFieldLength[field],
                                             getattr(self, field))
 
-        uploaderJson = {"name": self.name,
+        uploaderJson = {"uuid": self.uuid,
+                        "name": self.name,
                         "contact_name": self.contact_name,
                         "contact_email": self.contact_email,
 
@@ -392,7 +394,7 @@ class UploaderModel():
         myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
-            "&uploader__mac_address=" + self.mac_address + \
+            "&uploader__uuid=" + self.uuid + \
             "&requester_key_fingerprint=" + \
             urllib.quote(keyPair.GetFingerprint())
         logger.debug(url)

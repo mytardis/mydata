@@ -50,12 +50,12 @@ class ExperimentModel():
         if folderModel.ExperimentTitleSetManually():
             expTitleEncoded = urllib2.quote(experimentTitle)
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&uploader_uuid=" + uploaderUuid + \
+                "&uploader=" + uploaderUuid + \
                 "&user_folder_name=" + userFolderName + \
                 "&title=" + expTitleEncoded
         else:
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&uploader_uuid=" + uploaderUuid + \
+                "&uploader=" + uploaderUuid + \
                 "&user_folder_name=" + userFolderName
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
@@ -185,9 +185,7 @@ class ExperimentModel():
             "parameter_sets": [{
                 "schema": "http://mytardis.org/schemas"
                           "/mydata/defaultexperiment",
-                "parameters": [{"name": "uploader_name",
-                                "value": uploaderName},
-                               {"name": "uploader_uuid",
+                "parameters": [{"name": "uploader",
                                 "value": uploaderUuid},
                                {"name": "user_folder_name",
                                 "value": userFolderName}]}]}
@@ -196,7 +194,7 @@ class ExperimentModel():
                    myTardisDefaultUserApiKey,
                    "Content-Type": "application/json",
                    "Accept": "application/json"}
-        url = myTardisUrl + "/api/v1/experiment/"
+        url = myTardisUrl + "/api/v1/mydata_experiment/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(experimentJson))
         try:
