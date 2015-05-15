@@ -753,6 +753,10 @@ class MyData(wx.App):
                 # Should not be raised when running in background mode.
                 def closeProgressDialog():
                     self.progressDialog.Show(False)
+                    # wxMac seems to work better with Destroy here,
+                    # otherwise sometimes the dialog lingers.
+                    if sys.platform.startswith("darwin"):
+                        self.progressDialog.Destroy()
                 wx.CallAfter(closeProgressDialog)
 
                 def showMessageDialog():
@@ -765,6 +769,10 @@ class MyData(wx.App):
 
             def closeProgressDialog():
                 self.progressDialog.Show(False)
+                # wxMac seems to work better with Destroy here,
+                # otherwise sometimes the dialog lingers.
+                if sys.platform.startswith("darwin"):
+                    self.progressDialog.Destroy()
             wx.CallAfter(closeProgressDialog)
 
             def endBusyCursorIfRequired():
