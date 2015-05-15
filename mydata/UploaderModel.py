@@ -68,6 +68,7 @@ from datetime import datetime
 import wx
 import uuid
 
+from models.storage import StorageBox
 import MyDataVersionNumber as MyDataVersionNumber
 from logger.Logger import logger
 import OpenSSH as OpenSSH
@@ -76,6 +77,8 @@ from Exceptions import PrivateKeyDoesNotExist
 from Exceptions import NoActiveNetworkInterface
 from Exceptions import StringTooLongForField
 from Exceptions import MissingMyDataAppOnMyTardisServer
+from Exceptions import StorageBoxOptionNotFound
+from Exceptions import StorageBoxAttributeNotFound
 
 
 defaultStartupInfo = None
@@ -410,6 +413,7 @@ class UploaderModel():
             message = response.text
             response.close()
             raise Exception(message)
+        logger.debug(response.text)
         existingMatchingUploaderRecords = response.json()
         numExistingMatchingUploaderRecords = \
             existingMatchingUploaderRecords['meta']['total_count']
@@ -417,7 +421,8 @@ class UploaderModel():
             approval_json = existingMatchingUploaderRecords['objects'][0]
             logger.info("A request already exists for this uploader.")
             response.close()
-            return approval_json
+            return UploaderRegistrationRequest(
+                settingsModel=self.settingsModel, json=approval_json)
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
@@ -427,7 +432,7 @@ class UploaderModel():
 
     def RequestUploadToStagingApproval(self):
         """
-        Used to request the ability to upload via "cat >>" over SSH
+        Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
         """
         try:
@@ -455,7 +460,8 @@ class UploaderModel():
         if response.status_code >= 200 and response.status_code < 300:
             responseJson = response.json()
             response.close()
-            return responseJson
+            return UploaderRegistrationRequest(
+                settingsModel=self.settingsModel, json=responseJson)
         else:
             if response.status_code == 404:
                 response.close()
@@ -486,7 +492,7 @@ class UploaderModel():
                 uploadToStagingRequest = self.RequestUploadToStagingApproval()
                 logger.info("Generated new uploader registration request, "
                             "because private key was moved or deleted.")
-            if uploadToStagingRequest['approved']:
+            if uploadToStagingRequest.IsApproved():
                 logger.info("Uploads to staging have been approved!")
             else:
                 logger.info("Uploads to staging haven't been approved yet.")
@@ -581,3 +587,42 @@ class UploaderModel():
 
     def GetName(self):
         return self.name
+
+
+class UploaderRegistrationRequest():
+    def __init__(self, settingsModel=None, json=None):
+        self.settingsModel = settingsModel
+        self.json = json
+
+    def GetJson(self):
+        return self.json
+
+    def IsApproved(self):
+        return self.json['approved']
+
+    def GetApprovedStorageBox(self):
+        return StorageBox(storageBoxJson=self.json['approved_storage_box'])
+
+    def GetScpUsername(self):
+        storageBox = self.GetApprovedStorageBox()
+        attributes = storageBox.GetAttributes()
+        for attribute in attributes:
+            if attribute.GetKey() == "scp_username":
+                return attribute.GetValue()
+        raise StorageBoxAttributeNotFound(storageBox, "scp_username")
+
+    def GetScpHostname(self):
+        storageBox = self.GetApprovedStorageBox()
+        attributes = storageBox.GetAttributes()
+        for attribute in attributes:
+            if attribute.GetKey() == "scp_hostname":
+                return attribute.GetValue()
+        raise StorageBoxAttributeNotFound(storageBox, "scp_hostname")
+
+    def GetLocation(self):
+        storageBox = self.GetApprovedStorageBox()
+        options = storageBox.GetOptions()
+        for option in options:
+            if option.GetKey() == "location":
+                return option.GetValue()
+        raise StorageBoxOptionNotFound(storageBox, "location")
