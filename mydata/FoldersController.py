@@ -296,7 +296,7 @@ class FoldersController():
             message = "Couldn't determine whether uploads to " \
                       "staging have been approved.  " \
                       "Falling back to HTTP POST."
-        elif uploadToStagingRequest['approved']:
+        elif uploadToStagingRequest.IsApproved():
             logger.info("Uploads to staging have been approved.")
             fc.uploadMethod = UploadMethod.VIA_STAGING
         else:
@@ -764,19 +764,20 @@ class VerifyDatafileRunnable():
                 if self.foldersController.uploadMethod == \
                         UploadMethod.VIA_STAGING and \
                         uploadToStagingRequest is not None and \
-                        uploadToStagingRequest['approved'] and \
+                        uploadToStagingRequest.IsApproved() and \
                         len(replicas) > 0:
-                    username = uploadToStagingRequest['approved_username']
+                    username = uploadToStagingRequest.GetScpUsername()
                     privateKeyFilePath = self.settingsModel\
                         .GetSshKeyPair().GetPrivateKeyFilePath()
-                    hostJson = \
-                        uploadToStagingRequest['approved_staging_host']
-                    host = hostJson['host']
+                    host = uploadToStagingRequest.GetScpHostname()
+                    location = uploadToStagingRequest.GetLocation()
+                    remoteFilePath = "%s/%s" % (location.rstrip('/'),
+                                                replicas[0].GetUri())
                     bytesUploadedToStaging = 0
                     try:
                         bytesUploadedToStaging = \
                             OpenSSH.GetBytesUploadedToStaging(
-                                replicas[0].GetUri(),
+                                remoteFilePath,
                                 username, privateKeyFilePath, host,
                                 self.verificationModel)
                         logger.debug("%d bytes uploaded to staging for %s"
@@ -1108,27 +1109,35 @@ class UploadDatafileRunnable():
                                                  data=data)
                         postSuccess = response.status_code >= 200 and \
                             response.status_code < 300
+                        logger.debug(response.text)
                     if postSuccess or self.existingUnverifiedDatafile:
                         uploadToStagingRequest = self.settingsModel\
                             .GetUploadToStagingRequest()
-                        hostJson = \
-                            uploadToStagingRequest['approved_staging_host']
-                        host = hostJson['host']
-                        username = uploadToStagingRequest['approved_username']
+                        host = uploadToStagingRequest.GetScpHostname()
+                        location = uploadToStagingRequest.GetLocation()
+                        username = uploadToStagingRequest.GetScpUsername()
                         privateKeyFilePath = self.settingsModel\
                             .GetSshKeyPair().GetPrivateKeyFilePath()
                         if self.existingUnverifiedDatafile:
                             uri = self.existingUnverifiedDatafile\
                                 .GetReplicas()[0].GetUri()
+                            remoteFilePath = "%s/%s" % (location.rstrip('/'),
+                                                        uri)
                         else:
-                            uri = response.json()['replicas'][0]['uri']
+                            # DataFile creation via the MyTardis API doesn't
+                            # return JSON, but if a DataFile record is created
+                            # without specifying a storage location, then a
+                            # temporary location is returned for the client
+                            # to copy/upload the file to.
+                            temp_url = response.text
+                            remoteFilePath = temp_url
                         while True:
                             try:
                                 OpenSSH.UploadFile(dataFilePath,
                                                    dataFileSize,
                                                    username,
                                                    privateKeyFilePath,
-                                                   host, uri,
+                                                   host, remoteFilePath,
                                                    ProgressCallback,
                                                    self.foldersController,
                                                    self.uploadModel)

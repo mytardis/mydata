@@ -432,8 +432,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                               hostname, uploadOrVerificationModel):
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetMsysPath(privateKeyFilePath)
-    if not remoteFilePath.startswith('"'):
-        remoteFilePath = openSSH.DoubleQuote(remoteFilePath)
+    quotedRemoteFilePath = openSSH.DoubleQuote(remoteFilePath)
 
     if sys.platform.startswith("win"):
         cmdAndArgs = [openSSH.DoubleQuote(openSSH.ssh),
@@ -445,7 +444,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
                       hostname,
-                      openSSH.DoubleQuote("wc -c %s" % remoteFilePath)]
+                      openSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
     else:
         sshMasterProcess, sshControlPath = \
             GetSshMasterProcessAndControlPath(uploadOrVerificationModel,
@@ -465,7 +464,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-l", username,
                       "-oControlPath=%s" % openSSH.DoubleQuote(sshControlPath),
                       hostname,
-                      openSSH.DoubleQuote("wc -c %s" % remoteFilePath)]
+                      openSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
@@ -641,6 +640,32 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     sshMasterProcess, sshControlPath = \
         GetSshMasterProcessAndControlPath(uploadModel, username,
                                           privateKeyFilePath, hostname)
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = openSSH.DoubleQuote(remoteDir)
+    mkdirCmdAndArgs = \
+        [openSSH.DoubleQuote(openSSH.ssh),
+         "-i", openSSH.DoubleQuote(privateKeyFilePath),
+         "-c", openSSH.cipher,
+         "-oControlPath=%s" % openSSH.DoubleQuote(sshControlPath),
+         "-oIdentitiesOnly=yes",
+         "-oPasswordAuthentication=no",
+         "-oStrictHostKeyChecking=no",
+         "-l", username,
+         hostname,
+         openSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+    mkdirCmdString = " ".join(mkdirCmdAndArgs)
+    logger.debug(mkdirCmdString)
+    mkdirProcess = \
+        subprocess.Popen(mkdirCmdString,
+                         shell=openSSH.preferToUseShellInSubprocess,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         startupinfo=defaultStartupInfo,
+                         creationflags=defaultCreationFlags)
+    stdout, _ = mkdirProcess.communicate()
+    if mkdirProcess.returncode != 0:
+        raise SshException(stdout, mkdirProcess.returncode)
 
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % openSSH.DoubleQuote(remoteChunkPath)
@@ -842,7 +867,6 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
                                ProgressCallback, foldersController,
                                uploadModel,
                                uploadMethod=SmallFileUploadMethod.SCP):
-                               # uploadMethod=SmallFileUploadMethod.CAT):
     """
     Fast methods for uploading small files (less overhead from chunking).
     These methods don't support resuming interrupted uploads.
@@ -872,6 +896,33 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         raise SshException(stdout, removeRemoteDatafileProcess.returncode)
 
     bytesUploaded = 0
+
+    mkdirCmdAndArgs = \
+        [openSSH.DoubleQuote(openSSH.ssh),
+         "-n",
+         "-c", openSSH.cipher,
+         "-i", openSSH.DoubleQuote(privateKeyFilePath),
+         "-oIdentitiesOnly=yes",
+         "-oPasswordAuthentication=no",
+         "-oStrictHostKeyChecking=no",
+         "-l", username,
+         hostname,
+         openSSH.DoubleQuote("mkdir -p %s"
+                             % os.path.dirname(remoteFilePath))]
+    mkdirCmdString = " ".join(mkdirCmdAndArgs)
+    logger.debug(mkdirCmdString)
+    mkdirProcess = \
+        subprocess.Popen(mkdirCmdString,
+                         shell=openSSH.preferToUseShellInSubprocess,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         startupinfo=defaultStartupInfo,
+                         creationflags=defaultCreationFlags)
+    stdout, _ = mkdirProcess.communicate()
+    if mkdirProcess.returncode != 0:
+        raise SshException(stdout,
+                           mkdirCmdString,
+                           mkdirProcess.returncode)
 
     if uploadMethod == SmallFileUploadMethod.SCP:
         scpCommandString = \
@@ -968,6 +1019,34 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     So we upload the chunk to its own file on the remote server first,
     and then append the chunk onto the remote (partial) datafile.
     """
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = openSSH.DoubleQuote(remoteDir)
+    mkdirCmdAndArgs = \
+        [openSSH.DoubleQuote(openSSH.ssh),
+         "-n",
+         "-c", openSSH.cipher,
+         "-i", openSSH.DoubleQuote(privateKeyFilePath),
+         "-oIdentitiesOnly=yes",
+         "-oPasswordAuthentication=no",
+         "-oStrictHostKeyChecking=no",
+         "-l", username,
+         hostname,
+         openSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+    mkdirCmdString = " ".join(mkdirCmdAndArgs)
+    logger.debug(mkdirCmdString)
+    mkdirProcess = \
+        subprocess.Popen(mkdirCmdString,
+                         shell=openSSH.preferToUseShellInSubprocess,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         startupinfo=defaultStartupInfo,
+                         creationflags=defaultCreationFlags)
+    stdout, _ = mkdirProcess.communicate()
+    if mkdirProcess.returncode != 0:
+        raise SshException(stdout,
+                           mkdirCmdString,
+                           mkdirProcess.returncode)
 
     remoteChunkPath = remoteFilePath + ".chunk"
 
