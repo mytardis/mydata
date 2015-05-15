@@ -6,20 +6,34 @@ The purpose of this module is to help with registering MyData uploaders
 
 MyData POSTs some basic information about the PC and about the MyData
 installation to its MyTardis server.  This basic information is called an
-"uploader" record.  Once an uploader record has been created in MyTardis,
-no other users (of MyTardis's RESTful API) will be able to access the
-uploader record unless they know its MAC address, a unique string
-associated with the MyData user's network interface (Ethernet or WiFi).
-A single MyData user could create multiple uploader records from each PC
-they run MyData on, one for each network interface on each PC.
+"Uploader" record.  In previous MyData versions, a single MyData user could
+create multiple Uploader records from each PC they run MyData on, one for
+each network interface on each PC.  In the latest MyData version however,
+that the Uploader is made unique by a locally-generated UUID (instead of
+the network interface's MAC address), each MyData instance should only
+have one Uploader record in MyTardis.
 
 Initially only HTTP POST uploads are enabled in MyData, but MyData will
 request uploads via SCP to a staging area, and wait for a MyTardis
 administrator to approve the request (which requires updating the
 UploaderRegistrationRequest record created by MyData in the Djano Admin
-interface).  Below is a sample of a MyTardis administrator's notes made
-(in the approval_comments field in MyTardis's UploadRegistrationRequest
-model) when approving one of these upload requests:
+interface).
+
+When the MyTardis administrator approves the UploaderRegistrationRequest,
+they will link the request to a MyTardis StorageBox, which must have
+StorageBoxAttributes for the following keys: "scp_username", "scp_hostname".
+
+The first time a particular scp_username and scp_hostname are used, the
+MyTardis administrator needs to ensure that the "scp_username" account
+has been set up properly on the staging host.  (The staging host can
+be the same as the MyTardis server, or it can be another host which
+mounts the same storage.)
+
+Below is a sample of a MyTardis administrator's notes made when adding a
+new scp_username ("mydata") and scp_hostname ("118.138.241.33")
+to a storage box for the first time, and at the same time, adding the SSH
+public key sent in the UploaderRegistrationRequest into that user's
+authorized_keys file.
 
 Ran the following as root on the staging host (118.138.241.33) :
 
@@ -36,21 +50,23 @@ request and the MyTardis administrator approving the request were the same
 person.  Normally, the MyTardis administrator wouldn't have access to the
 MyData user's private key.
 
-Then I tested SSHing into the staging host from my MyData test machine using
-the SSH private key which MyData generated in ~/.ssh/:
-
 $ ssh -i ~/.ssh/MyData mydata@118.138.241.33
 [mydata@118.138.241.33 ~]$ groups
 mydata mytardis
-[mydata@118.138.241.33 ~]$ ls -lh /mnt/sonas/market | grep MYTARDIS
-drwx------ 403 mytardis www-data 128K Nov 12 14:33 MYTARDIS_FILE_STORE
-drwxrwx---   3 mytardis www-data  32K Nov 13 15:36 MYTARDIS_STAGING
-[mydata@118.138.241.33 ~]$ touch /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
-[mydata@118.138.241.33 ~]$ rm /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
+[mydata@118.138.241.33 ~]$ ls -lh /var/lib/mytardis | grep receiving
+drwxrws--- 8 mytardis www-data 4096 May 15 13:30 receiving
+[mydata@118.138.241.33 ~]$ touch /var/lib/mytardis/receiving/test123.txt
+[mydata@118.138.241.33 ~]$ ls -l /var/lib/mytardis/receiving/test123.txt
+-rw-rw-r-- 1 mydata www-data 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
 
-Note the permissions above - being part of the "mytardis" group on this staging
-host allows the "mydata" user to write to the MYTARDIS_STAGING directory, but
-not to the MYTARDIS_FILE_STORE directory.
+Note the permissions above - being part of the "www-data" group on this staging
+host allows the "mydata" user to write to the staging (receiving) directory, but
+not to MyTardis's permanent storage location.
+
+The 's' in the "receiving" directory's permissions (set with 'chmod g+s') is
+important.  It means that files created within that directory by the "mydata"
+user will have a default group of "www-data" (inherited from the "receiving"
+directory), instead of having a default group of "mydata".
 """
 import requests
 import json
