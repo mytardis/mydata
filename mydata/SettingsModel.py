@@ -776,10 +776,7 @@ class SettingsModel():
                            "associated with a different uploader instance "
                            "(suggesting a different MyData instance), then "
                            "we really shouldn't reuse the same instrument "
-                           "record, unless it is just a case of having "
-                           "multiple uploader instances for multiple "
-                           "MAC addresses (Ethernet and Wi-Fi) "
-                           "on the same instrument PC.")
+                           "record.")
             self.instrument = \
                 InstrumentModel.GetInstrument(self,
                                               self.GetFacility(),
