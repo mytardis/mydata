@@ -1,6 +1,9 @@
-This folder contains commercial icons from Aha-Soft, which are used in
-MyData's toolbar, and in other places within MyData's user interface.
+This folder contains a small subset of a commercial icon set from Aha-Soft.
+These icons are used in MyData's toolbar, and in other places within MyData's
+user interface.
+
 If you wish to use the icons outside of MyData, please contact Aha-Soft.
+
 
 Professional Toolbar Icons
 

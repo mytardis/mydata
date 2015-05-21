@@ -3,6 +3,10 @@ License
 
 MyData's source code is licensed under GPL v3 (see below).
 
+MyData distributions include some commercial icons which are only intended
+to be used within MyData, i.e. they not covered by the GPL v3 license.
+See: https://github.com/monash-merc/mydata/tree/master/mydata/media/Aha-Soft
+
 ::
 
   GNU GENERAL PUBLIC LICENSE
