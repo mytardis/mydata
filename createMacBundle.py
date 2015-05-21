@@ -51,31 +51,35 @@ Use this command to build the .app and collect the other needed files:
 Traditionally, this script would be named setup.py
 """
 
-from setuptools import setup, Extension
-import MyDataVersionNumber
-import CreateCommitDef
+import sys
+sys.path.append('mydata')
+from setuptools import setup
+import MyDataVersionNumber as MyDataVersionNumber
 import requests
 import os
 import pkgutil
 
+from CreateCommitDef import run
+run()
+
 appName = "MyData"
 
-resource_files=["MyData.icns", "favicon.ico", requests.certs.where()]
+resource_files=["mydata/media/MyData.icns",
+                ("media", ["mydata/media/favicon.ico"]),
+                requests.certs.where()]
 
-for iconFilesPath in ("png-normal/icons16x16", "png-normal/icons24x24",
-                      "png-hot/icons24x24"):
-    for iconFile in os.listdir(iconFilesPath):
-        iconFilePath = os.path.join(iconFilesPath, iconFile)
+for iconFilesPath in ("media/png-normal/icons16x16",
+                      "media/png-normal/icons24x24",
+                      "media/png-hot/icons24x24"):
+    for iconFile in os.listdir(os.path.join('mydata', iconFilesPath)):
+        iconFilePath = os.path.join('mydata', iconFilesPath, iconFile)
         if os.path.isfile(iconFilePath):
             resource_file = (iconFilesPath, [iconFilePath])
             resource_files.append(resource_file)
 
-mydataVersionNumberModulePath = \
-    os.path.dirname(pkgutil.get_loader("MyDataVersionNumber").filename)
-
 setup(
     options=dict(py2app=dict(
-        arch='i386',
+        arch='x86_64',
         plist=dict(
             CFBundleDevelopmentRegion="English",
             CFBundleDisplayName=appName,
@@ -85,12 +89,12 @@ setup(
             CFBundleName=appName,
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + MyDataVersionNumber.versionNumber,
-            LSArchitecturePriority=["i386"]
+            LSArchitecturePriority=["x86_64"]
             )
         )
     ),
     data_files=resource_files,
     name=appName,
     setup_requires=["py2app"],
-    app=['MyData.py']
+    app=['mydata/MyData.py']
 )
