@@ -66,11 +66,12 @@ appName = "MyData"
 
 resource_files=["mydata/media/MyData.icns",
                 ("media", ["mydata/media/favicon.ico"]),
+                ("media/Aha-Soft", ["mydata/media/Aha-Soft/LICENSE.txt"]),
                 requests.certs.where()]
 
-for iconFilesPath in ("media/png-normal/icons16x16",
-                      "media/png-normal/icons24x24",
-                      "media/png-hot/icons24x24"):
+for iconFilesPath in ("media/Aha-Soft/png-normal/icons16x16",
+                      "media/Aha-Soft/png-normal/icons24x24",
+                      "media/Aha-Soft/png-hot/icons24x24"):
     for iconFile in os.listdir(os.path.join('mydata', iconFilesPath)):
         iconFilePath = os.path.join('mydata', iconFilesPath, iconFile)
         if os.path.isfile(iconFilePath):

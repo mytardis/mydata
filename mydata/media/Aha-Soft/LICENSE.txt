@@ -1,0 +1,16 @@
+This folder contains commercial icons from Aha-Soft, which are used in
+MyData's toolbar, and in other places within MyData's user interface.
+If you wish to use the icons outside of MyData, please contact Aha-Soft.
+
+Professional Toolbar Icons
+
+Copyright © 2000-2013 Aha-Soft. All rights reserved.
+
+Product page:
+http://www.toolbar-icons.com/stock-icons/professional-toolbar-icons.htm
+
+Support page: http://www.aha-soft.com/support.htm
+
+All icon files are provided 'as is'. Aha-Soft cannot be held
+liable for any negative issues that may occur as a result of
+using the icons.

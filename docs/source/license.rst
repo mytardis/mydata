@@ -1,6 +1,8 @@
 License
 =======
 
+MyData's source code is licensed under GPL v3 (see below).
+
 ::
 
   GNU GENERAL PUBLIC LICENSE

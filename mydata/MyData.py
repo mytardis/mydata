@@ -67,8 +67,8 @@ class MyDataFrame(wx.Frame):
                 module_base_dir = os.path.dirname(sys.executable)
         else:
             module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'png-normal')
+        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-normal')
         if sys.platform.startswith("win"):
             iconSubdir = "icons24x24"
         else:
@@ -426,8 +426,8 @@ class MyData(wx.App):
                 module_base_dir = os.path.dirname(sys.executable)
         else:
             module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'png-normal')
+        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-normal')
 
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
