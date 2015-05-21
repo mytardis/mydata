@@ -8,6 +8,7 @@ import traceback
 import threading
 import argparse
 from datetime import datetime
+import logging
 
 try:
     from CommitDef import LATEST_COMMIT
@@ -148,8 +149,20 @@ class MyData(wx.App):
                             help="Run non-interactively")
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
-        # parser.add_argument("--loglevel", help="set logging verbosity")
+        parser.add_argument("-l", "--loglevel", help="set logging verbosity")
         args, unknown = parser.parse_known_args()
+        if args.version:
+            print "MyData %s" % MyDataVersionNumber.versionNumber
+            os._exit(0)
+        if args.loglevel:
+            if args.loglevel == "DEBUG":
+                logger.SetLevel(logging.DEBUG)
+            elif args.loglevel == "INFO":
+                logger.SetLevel(logging.INFO)
+            elif args.loglevel == "WARN":
+                logger.SetLevel(logging.WARN)
+            elif args.loglevel == "ERROR":
+                logger.SetLevel(logging.ERROR)
         self.settingsModel.SetBackgroundMode(args.background)
 
         # Using wx.SingleInstanceChecker to check whether MyData is already
