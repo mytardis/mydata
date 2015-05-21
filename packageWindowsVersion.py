@@ -26,8 +26,7 @@ if not os.path.exists("dist/MyData/media"):
     os.mkdir("dist/MyData/media")
 os.system("copy /Y mydata\\media\\favicon.ico dist\\MyData\\media\\")
 os.system("copy /Y mydata\\media\\MyData.ico dist\\MyData\\media\\")
-distutils.dir_util.copy_tree(r"mydata/media/png-normal", r"dist\MyData\media\png-normal")
-distutils.dir_util.copy_tree(r"mydata/media/png-hot", r"dist\MyData\media\png-hot")
+distutils.dir_util.copy_tree(r"mydata/media/Aha-Soft", r"dist\MyData\media\Aha-Soft")
 
 distutils.dir_util.copy_tree(r"openssh-5.4p1-1-msys-1.0.13",
                              r"dist\MyData\openssh-5.4p1-1-msys-1.0.13")
