@@ -33,6 +33,8 @@ from Exceptions import InternalServerError
 from Exceptions import StagingHostRefusedSshConnection
 from Exceptions import StagingHostSshPermissionDenied
 from Exceptions import ScpException
+from Exceptions import IncompatibleMyTardisVersion
+from Exceptions import StorageBoxAttributeNotFound
 
 from logger.Logger import logger
 
@@ -65,6 +67,7 @@ class FoldersController():
 
         self.shuttingDown = threading.Event()
         self.showingErrorDialog = threading.Event()
+        self.lastErrorMessage = None
         self.showingWarningDialog = threading.Event()
         self.canceled = threading.Event()
         self.failed = threading.Event()
@@ -171,6 +174,16 @@ class FoldersController():
         else:
             self.showingErrorDialog.clear()
 
+    def GetLastErrorMessage(self):
+        return self.lastErrorMessage
+
+    def SetLastErrorMessage(self, message):
+        if not hasattr(self, "threadingLock"):
+            self.threadingLock = threading.Lock()
+        self.threadingLock.acquire()
+        self.lastErrorMessage = message
+        self.threadingLock.release()
+
     def UpdateStatusBar(self, event):
         if event.connectionStatus == ConnectionStatus.CONNECTED:
             self.notifyWindow.SetConnected(event.myTardisUrl, True)
@@ -183,6 +196,19 @@ class FoldersController():
                            "\"%s\" because we are already showing an error "
                            "dialog." % event.message)
             return
+        elif event.message == self.GetLastErrorMessage():
+            # Sometimes multiple threads can encounter the same exception
+            # at around the same time.  The first thread's exception leads
+            # to a modal error dialog, which blocks the events queue, so
+            # the next thread's (identical) show message dialog event doesn't
+            # get caught until after the first message dialog has been closed.
+            # In this case, the above check (to prevent two error dialogs
+            # from appearing at the same time) doesn't help.
+            logger.warning("Refusing to show message dialog for message "
+                           "\"%s\" because we already showed an error "
+                           "dialog with the same message." % event.message)
+            return
+        self.SetLastErrorMessage(event.message)
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(True)
         dlg = wx.MessageDialog(None, event.message, event.title,
@@ -766,7 +792,38 @@ class VerifyDatafileRunnable():
                         uploadToStagingRequest is not None and \
                         uploadToStagingRequest.IsApproved() and \
                         len(replicas) > 0:
-                    username = uploadToStagingRequest.GetScpUsername()
+                    try:
+                        username = uploadToStagingRequest.GetScpUsername()
+                    except IncompatibleMyTardisVersion, e:
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController.ShutdownUploadsEvent(
+                                failed=True))
+                        message = str(e)
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController
+                                .ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=message,
+                                    icon=wx.ICON_ERROR))
+                        self.verificationModel.SetComplete()
+                        return
+                    except StorageBoxAttributeNotFound, e:
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController.ShutdownUploadsEvent(
+                                failed=True))
+                        message = str(e)
+                        wx.PostEvent(
+                            self.foldersController.notifyWindow,
+                            self.foldersController
+                                .ShowMessageDialogEvent(
+                                    title="MyData",
+                                    message=message,
+                                    icon=wx.ICON_ERROR))
+                        self.verificationModel.SetComplete()
+                        return
                     privateKeyFilePath = self.settingsModel\
                         .GetSshKeyPair().GetPrivateKeyFilePath()
                     host = uploadToStagingRequest.GetScpHostname()
@@ -1288,6 +1345,34 @@ class UploadDatafileRunnable():
                     return
                 else:
                     raise
+            except IncompatibleMyTardisVersion, e:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.ShutdownUploadsEvent(
+                        failed=True))
+                message = str(e)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                        .ShowMessageDialogEvent(
+                            title="MyData",
+                            message=message,
+                            icon=wx.ICON_ERROR))
+                return
+            except StorageBoxAttributeNotFound, e:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.ShutdownUploadsEvent(
+                        failed=True))
+                message = str(e)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                        .ShowMessageDialogEvent(
+                            title="MyData",
+                            message=message,
+                            icon=wx.ICON_ERROR))
+                return
         except urllib2.HTTPError, e:
             logger.error("url: " + url)
             logger.error(traceback.format_exc())
