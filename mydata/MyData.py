@@ -14,29 +14,28 @@ try:
     from CommitDef import LATEST_COMMIT
 except ImportError:
     LATEST_COMMIT = "Please run CreateCommitDef.py"
-import MyDataVersionNumber
-from FoldersView import FoldersView
-from FoldersModel import FoldersModel
-from FoldersController import FoldersController
-from UsersView import UsersView
-from UsersModel import UsersModel
-# from GroupsView import GroupsView
-from GroupsModel import GroupsModel
-from VerificationsView import VerificationsView
-from VerificationsModel import VerificationsModel
-from UploadsView import UploadsView
-from UploadsModel import UploadsModel
-from UploaderModel import UploaderModel
-from LogView import LogView
-from SettingsModel import SettingsModel
-from SettingsDialog import SettingsDialog
-from Exceptions import NoActiveNetworkInterface
-from Exceptions import InvalidFolderStructure
-from EnhancedStatusBar import EnhancedStatusBar
+from version import VERSION
+from views.folders import FoldersView
+from dataviewmodels.folders import FoldersModel
+from controllers.folders import FoldersController
+from views.users import UsersView
+from dataviewmodels.users import UsersModel
+from dataviewmodels.groups import GroupsModel
+from views.verifications import VerificationsView
+from dataviewmodels.verifications import VerificationsModel
+from views.uploads import UploadsView
+from dataviewmodels.uploads import UploadsModel
+from models.uploader import UploaderModel
+from views.log import LogView
+from models.settings import SettingsModel
+from views.settings import SettingsDialog
+from utils.exceptions import NoActiveNetworkInterface
+from utils.exceptions import InvalidFolderStructure
+from views.statusbar import EnhancedStatusBar
 from logger.Logger import logger
-from MyDataTaskBarIcon import MyDataTaskBarIcon
-from MyDataProgressDialog import MyDataProgressDialog
-import MyDataEvents as mde
+from views.taskbaricon import MyDataTaskBarIcon
+from views.progress import MyDataProgressDialog
+import events as mde
 
 
 class NotebookTabs:
@@ -48,7 +47,6 @@ class NotebookTabs:
 
 
 class MyDataFrame(wx.Frame):
-
     def __init__(self, parent, id, title, style, settingsModel):
         wx.Frame.__init__(self, parent, id, title, style=style)
         self.settingsModel = settingsModel
@@ -68,8 +66,10 @@ class MyDataFrame(wx.Frame):
                 module_base_dir = os.path.dirname(sys.executable)
         else:
             module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-normal')
+        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
+                                  'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
+                                     'png-normal')
         if sys.platform.startswith("win"):
             iconSubdir = "icons24x24"
         else:
@@ -118,14 +118,12 @@ class MyDataFrame(wx.Frame):
 
 
 class MyData(wx.App):
-
     def __init__(self, name):
         self.name = name
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
-        logger.debug("MyData version:   " +
-                     MyDataVersionNumber.versionNumber)
+        logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
         appauthor = "Monash University"
@@ -152,7 +150,7 @@ class MyData(wx.App):
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
         args, unknown = parser.parse_known_args()
         if args.version:
-            print "MyData %s" % MyDataVersionNumber.versionNumber
+            print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
             os._exit(0)
         if args.loglevel:
             if args.loglevel == "DEBUG":
@@ -439,8 +437,10 @@ class MyData(wx.App):
                 module_base_dir = os.path.dirname(sys.executable)
         else:
             module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft', 'png-normal')
+        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
+                                  'png-hot')
+        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
+                                     'png-normal')
 
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
@@ -881,7 +881,7 @@ class MyData(wx.App):
               "(Monash University, Australia)\n\n" \
               "MyData is open source (GPL3) software available from " \
               "https://github.com/monash-merc/mydata\n\n" \
-              "Version:   " + MyDataVersionNumber.versionNumber + "\n" \
+              "Version:   " + VERSION + "\n" \
               "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)

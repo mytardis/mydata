@@ -1,2 +1,2 @@
-import MyDataVersionNumber
-__version__ = MyDataVersionNumber.versionNumber
+from version import VERSION
+__version__ = VERSION
