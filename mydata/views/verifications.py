@@ -4,10 +4,10 @@ import threading
 import wx
 import wx.dataview as dv
 
-from dataviewmodels.verifications import VerificationsModel
-from dataviewmodels.verifications import ColumnType
-from models.verification import VerificationModel
-from logger.Logger import logger
+from mydata.dataviewmodels.verifications import VerificationsModel
+from mydata.dataviewmodels.verifications import ColumnType
+from mydata.models.verification import VerificationModel
+from mydata.logging import logger
 
 
 class VerificationsView(wx.Panel):

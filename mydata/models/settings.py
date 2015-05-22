@@ -8,14 +8,14 @@ from ConfigParser import ConfigParser
 from validate_email import validate_email
 from datetime import datetime
 
-from logger.Logger import logger
-from models.user import UserModel
-from models.facility import FacilityModel
-from models.instrument import InstrumentModel
-from models.uploader import UploaderModel
-from utils.exceptions import DuplicateKey
-from utils.exceptions import Unauthorized
-from utils.exceptions import IncompatibleMyTardisVersion
+from mydata.logging import logger
+from mydata.models.user import UserModel
+from mydata.models.facility import FacilityModel
+from mydata.models.instrument import InstrumentModel
+from mydata.models.uploader import UploaderModel
+from mydata.utils.exceptions import DuplicateKey
+from mydata.utils.exceptions import Unauthorized
+from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 
 class SettingsModel():

@@ -2,9 +2,9 @@ import requests
 import json
 import urllib
 
-from logger.Logger import logger
+from mydata.logging import logger
 from .user import UserProfileModel
-from utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import DoesNotExist
 
 
 class ObjectAclModel():

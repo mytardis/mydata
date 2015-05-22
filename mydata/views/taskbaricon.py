@@ -3,6 +3,9 @@ import os
 import sys
 import webbrowser
 
+from mydata.media import MyDataIcons
+from mydata.media import IconStyle
+
 
 class MyDataTaskBarIcon(wx.TaskBarIcon):
     def __init__(self, frame, settingsModel):
@@ -11,9 +14,7 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         self.frame = frame
         self.settingsModel = settingsModel
 
-        # img = wx.Image("icon_048.png", wx.BITMAP_TYPE_ANY)
-        img = wx.Image("media/favicon.ico", wx.BITMAP_TYPE_ANY)
-        bmp = wx.BitmapFromImage(img)
+        bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
         self.icon = wx.EmptyIcon()
         self.icon.CopyFromBitmap(bmp)
 

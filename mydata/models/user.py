@@ -3,9 +3,9 @@ import json
 import traceback
 
 from .group import GroupModel
-from utils.exceptions import IncompatibleMyTardisVersion
-from utils.exceptions import DoesNotExist
-from logger.Logger import logger
+from mydata.utils.exceptions import IncompatibleMyTardisVersion
+from mydata.utils.exceptions import DoesNotExist
+from mydata.logging import logger
 
 
 class UserModel():

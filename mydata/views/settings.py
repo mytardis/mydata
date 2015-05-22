@@ -8,11 +8,11 @@ import sys
 import os
 import traceback
 
-from logger.Logger import logger
-from models.settings import SettingsModel
-from utils.exceptions import DuplicateKey
-from utils.exceptions import IncompatibleMyTardisVersion
-import events as mde
+from mydata.logging import logger
+from mydata.models.settings import SettingsModel
+from mydata.utils.exceptions import DuplicateKey
+from mydata.utils.exceptions import IncompatibleMyTardisVersion
+import mydata.events as mde
 
 
 class SettingsDropTarget(wx.FileDropTarget):

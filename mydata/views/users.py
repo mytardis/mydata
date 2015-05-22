@@ -1,8 +1,8 @@
 import wx
 import wx.dataview as dv
 
-from dataviewmodels.users import UsersModel
-from models.user import UserModel
+from mydata.dataviewmodels.users import UsersModel
+from mydata.models.user import UserModel
 
 
 class UsersView(wx.Panel):

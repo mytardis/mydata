@@ -2,11 +2,11 @@ import wx.dataview
 import os
 import threading
 
-from models.user import UserModel
-from models.group import GroupModel
-from logger.Logger import logger
-from utils.exceptions import DoesNotExist
-from utils.exceptions import InvalidFolderStructure
+from mydata.models.user import UserModel
+from mydata.models.group import GroupModel
+from mydata.logging import logger
+from mydata.utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import InvalidFolderStructure
 
 
 class UsersModel(wx.dataview.PyDataViewIndexListModel):

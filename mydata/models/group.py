@@ -2,8 +2,8 @@ import requests
 import json
 import urllib
 
-from logger.Logger import logger
-from utils.exceptions import DoesNotExist
+from mydata.logging import logger
+from mydata.utils.exceptions import DoesNotExist
 
 
 class GroupModel():

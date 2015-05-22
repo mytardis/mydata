@@ -2,7 +2,7 @@ import requests
 import json
 import urllib
 
-from logger.Logger import logger
+from mydata.logging import logger
 
 
 class ReplicaModel():

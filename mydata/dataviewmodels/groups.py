@@ -2,8 +2,8 @@ import wx.dataview
 import os
 import threading
 
-from models.group import GroupModel
-from logger.Logger import logger
+from mydata.models.group import GroupModel
+from mydata.logging import logger
 
 
 class GroupsModel(wx.dataview.PyDataViewIndexListModel):

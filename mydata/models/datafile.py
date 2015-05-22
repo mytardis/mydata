@@ -2,11 +2,11 @@ import requests
 import json
 import urllib
 
-from logger.Logger import logger
+from mydata.logging import logger
 from .dataset import DatasetModel
 from .replica import ReplicaModel
-from utils.exceptions import DoesNotExist
-from utils.exceptions import MultipleObjectsReturned
+from mydata.utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import MultipleObjectsReturned
 
 
 class DataFileModel():

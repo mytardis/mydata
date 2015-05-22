@@ -4,11 +4,11 @@ import wx.dataview as dv
 import traceback
 import threading
 
-from dataviewmodels.uploads import UploadsModel
-from dataviewmodels.uploads import ColumnType
-from models.upload import UploadModel
+from mydata.dataviewmodels.uploads import UploadsModel
+from mydata.dataviewmodels.uploads import ColumnType
+from mydata.models.upload import UploadModel
 
-from logger.Logger import logger
+from mydata.logging import logger
 
 
 class UploadsView(wx.Panel):
