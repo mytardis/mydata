@@ -74,6 +74,8 @@ MyData's "HTTP POST" upload method uses the "Via multipart form POST" method
 of MyTardis's RESTful API.  For more details, see: 
 https://mytardis.readthedocs.org/en/latest/api.html#via-multipart-form-post
 
+.. _scp-to-staging:
+
 SCP to Staging
 ^^^^^^^^^^^^^^
 
