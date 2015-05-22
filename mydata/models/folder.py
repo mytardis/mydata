@@ -6,7 +6,7 @@ from datetime import datetime
 import traceback
 
 from .dataset import DatasetModel
-from logger.Logger import logger
+from mydata.logging import logger
 
 
 class FolderModel():

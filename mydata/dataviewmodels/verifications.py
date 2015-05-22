@@ -5,10 +5,10 @@ import os
 import threading
 import traceback
 
-from models.verification import VerificationModel
-from models.verification import VerificationStatus
-from dataviewmodels.uploads import ColumnType
-from logger.Logger import logger
+from mydata.models.verification import VerificationModel
+from mydata.models.verification import VerificationStatus
+from mydata.dataviewmodels.uploads import ColumnType
+from mydata.logging import logger
 
 
 class VerificationsModel(wx.dataview.PyDataViewIndexListModel):

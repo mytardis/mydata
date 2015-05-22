@@ -2,9 +2,11 @@ import wx.dataview
 import threading
 import traceback
 
-from models.upload import UploadModel
-from models.upload import UploadStatus
-from logger.Logger import logger
+from mydata.models.upload import UploadModel
+from mydata.models.upload import UploadStatus
+from mydata.logging import logger
+from mydata.media import MyDataIcons
+from mydata.media import IconStyle
 
 # This model class provides the data to the view when it is asked for.
 # Since it is a list-only model (no hierachical data) then it is able
@@ -26,9 +28,7 @@ class ColumnType:
 
 
 class UploadsModel(wx.dataview.PyDataViewIndexListModel):
-
     def __init__(self):
-
         self.uploadsData = []
 
         wx.dataview.PyDataViewIndexListModel.__init__(self,
@@ -56,12 +56,9 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-        self.inProgressIcon = wx.Image('media/Aha-Soft/png-normal/icons16x16/Refresh.png',
-                                       wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.completedIcon = wx.Image('media/Aha-Soft/png-normal/icons16x16/Apply.png',
-                                      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.failedIcon = wx.Image('media/Aha-Soft/png-normal/icons16x16/Delete.png',
-                                   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.inProgressIcon = MyDataIcons.GetIcon("Refresh", size="16x16")
+        self.completedIcon = MyDataIcons.GetIcon("Apply", size="16x16")
+        self.failedIcon = MyDataIcons.GetIcon("Delete", size="16x16")
 
     def Filter(self, searchString):
         self.searchString = searchString

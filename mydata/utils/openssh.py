@@ -25,13 +25,13 @@ from datetime import datetime
 import errno
 import getpass
 
-from logger.Logger import logger
-from utils.exceptions import SshException
-from utils.exceptions import ScpException
-from utils.exceptions import StagingHostRefusedSshConnection
-from utils.exceptions import StagingHostSshPermissionDenied
-from utils.exceptions import PrivateKeyDoesNotExist
-from models.upload import HumanReadableSizeString
+from mydata.logging import logger
+from mydata.utils.exceptions import SshException
+from mydata.utils.exceptions import ScpException
+from mydata.utils.exceptions import StagingHostRefusedSshConnection
+from mydata.utils.exceptions import StagingHostSshPermissionDenied
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.models.upload import HumanReadableSizeString
 
 
 defaultStartupInfo = None

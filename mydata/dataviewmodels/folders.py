@@ -6,13 +6,13 @@ import sys
 import traceback
 from datetime import datetime
 
-from models.folder import FolderModel
-from models.user import UserModel
-from models.group import GroupModel
-from models.experiment import ExperimentModel
-from logger.Logger import logger
-from utils.exceptions import InvalidFolderStructure
-from utils.exceptions import DoesNotExist
+from mydata.models.folder import FolderModel
+from mydata.models.user import UserModel
+from mydata.models.group import GroupModel
+from mydata.models.experiment import ExperimentModel
+from mydata.logging import logger
+from mydata.utils.exceptions import InvalidFolderStructure
+from mydata.utils.exceptions import DoesNotExist
 
 
 # This model class provides the data to the view when it is asked for.

@@ -1,7 +1,7 @@
 import wx
 import sys
 
-from logger.Logger import logger
+from mydata.logging import logger
 
 
 class LogView(wx.Panel):

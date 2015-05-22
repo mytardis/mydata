@@ -15,28 +15,28 @@ import subprocess
 import hashlib
 import poster
 
-import utils.openssh as OpenSSH
+import mydata.utils.openssh as OpenSSH
 
-from models.experiment import ExperimentModel
-from models.dataset import DatasetModel
-from models.user import UserModel
-from models.verification import VerificationModel
-from models.verification import VerificationStatus
-from models.upload import UploadModel
-from models.upload import UploadStatus
-from models.folder import FolderModel
-from models.datafile import DataFileModel
-from utils.exceptions import DoesNotExist
-from utils.exceptions import MultipleObjectsReturned
-from utils.exceptions import Unauthorized
-from utils.exceptions import InternalServerError
-from utils.exceptions import StagingHostRefusedSshConnection
-from utils.exceptions import StagingHostSshPermissionDenied
-from utils.exceptions import ScpException
-from utils.exceptions import IncompatibleMyTardisVersion
-from utils.exceptions import StorageBoxAttributeNotFound
+from mydata.models.experiment import ExperimentModel
+from mydata.models.dataset import DatasetModel
+from mydata.models.user import UserModel
+from mydata.models.verification import VerificationModel
+from mydata.models.verification import VerificationStatus
+from mydata.models.upload import UploadModel
+from mydata.models.upload import UploadStatus
+from mydata.models.folder import FolderModel
+from mydata.models.datafile import DataFileModel
+from mydata.utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import MultipleObjectsReturned
+from mydata.utils.exceptions import Unauthorized
+from mydata.utils.exceptions import InternalServerError
+from mydata.utils.exceptions import StagingHostRefusedSshConnection
+from mydata.utils.exceptions import StagingHostSshPermissionDenied
+from mydata.utils.exceptions import ScpException
+from mydata.utils.exceptions import IncompatibleMyTardisVersion
+from mydata.utils.exceptions import StorageBoxAttributeNotFound
 
-from logger.Logger import logger
+from mydata.logging import logger
 
 import wx
 import wx.lib.newevent

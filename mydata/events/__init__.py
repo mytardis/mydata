@@ -5,12 +5,12 @@ from datetime import datetime
 import traceback
 import sys
 
-from models.settings import SettingsModel
-from models.uploader import UploaderModel
-from utils.exceptions import NoActiveNetworkInterface
-from utils.exceptions import IncompatibleMyTardisVersion
-from utils.exceptions import DuplicateKey
-from logger.Logger import logger
+from mydata.models.settings import SettingsModel
+from mydata.models.uploader import UploaderModel
+from mydata.utils.exceptions import NoActiveNetworkInterface
+from mydata.utils.exceptions import IncompatibleMyTardisVersion
+from mydata.utils.exceptions import DuplicateKey
+from mydata.logging import logger
 
 MYDATA_EVENT_TYPE = wx.NewEventType()
 MYDATA_EVENT_BINDER = wx.PyEventBinder(MYDATA_EVENT_TYPE, 1)

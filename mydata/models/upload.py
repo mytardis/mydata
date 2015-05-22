@@ -4,7 +4,7 @@ import signal
 import traceback
 import psutil
 
-from logger.Logger import logger
+from mydata.logging import logger
 
 
 class UploadStatus:

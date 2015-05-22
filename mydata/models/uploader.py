@@ -84,17 +84,17 @@ from datetime import datetime
 import wx
 import uuid
 
-from models.storage import StorageBox
-import mydata  # for __version__
-from logger.Logger import logger
-import utils.openssh as OpenSSH
-from utils.exceptions import DoesNotExist
-from utils.exceptions import PrivateKeyDoesNotExist
-from utils.exceptions import NoActiveNetworkInterface
-from utils.exceptions import StringTooLongForField
-from utils.exceptions import MissingMyDataAppOnMyTardisServer
-from utils.exceptions import StorageBoxOptionNotFound
-from utils.exceptions import StorageBoxAttributeNotFound
+from mydata.version import VERSION
+from mydata.models.storage import StorageBox
+from mydata.logging import logger
+import mydata.utils.openssh as OpenSSH
+from mydata.utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.utils.exceptions import NoActiveNetworkInterface
+from mydata.utils.exceptions import StringTooLongForField
+from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
+from mydata.utils.exceptions import StorageBoxOptionNotFound
+from mydata.utils.exceptions import StorageBoxAttributeNotFound
 
 
 defaultStartupInfo = None
@@ -236,7 +236,7 @@ class UploaderModel():
         self.contact_email = self.settingsModel.GetContactEmail()
 
         self.user_agent_name = "MyData"
-        self.user_agent_version = mydata.__version__
+        self.user_agent_version = VERSION
         self.user_agent_install_location = ""
 
         if hasattr(sys, 'frozen'):

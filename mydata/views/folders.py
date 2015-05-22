@@ -1,7 +1,7 @@
 import wx
 import wx.dataview as dv
 
-from models.folder import FolderModel
+from mydata.models.folder import FolderModel
 
 
 class FoldersView(wx.Panel):

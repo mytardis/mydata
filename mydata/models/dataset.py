@@ -4,9 +4,9 @@ import requests
 import json
 import traceback
 
-from logger.Logger import logger
-from utils.exceptions import Unauthorized
-from utils.exceptions import InternalServerError
+from mydata.logging import logger
+from mydata.utils.exceptions import Unauthorized
+from mydata.utils.exceptions import InternalServerError
 
 
 class DatasetModel():

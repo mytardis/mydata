@@ -2,9 +2,9 @@ import requests
 import json
 import urllib
 
-from logger.Logger import logger
+from mydata.logging import logger
 from .facility import FacilityModel
-from utils.exceptions import Unauthorized
+from mydata.utils.exceptions import Unauthorized
 
 
 class InstrumentModel():

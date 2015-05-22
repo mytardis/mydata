@@ -8,34 +8,45 @@ import traceback
 import threading
 import argparse
 from datetime import datetime
-import logging
+try:
+    import logging
+except:
+    # If MyData.py is run directly from the "mydata" directory, instead
+    # of running run.py from its parent directory, then Python will try
+    # to import MyData's logging/__init__.py module here, instead of
+    # Python's built-in logging module.
+    print "Running MyData.py directly is no longer supported."
+    print "Please use run.py in MyData.py's parent directory instead."
+    os._exit(1)
 
 try:
     from CommitDef import LATEST_COMMIT
 except ImportError:
     LATEST_COMMIT = "Please run CreateCommitDef.py"
-from version import VERSION
-from views.folders import FoldersView
-from dataviewmodels.folders import FoldersModel
-from controllers.folders import FoldersController
-from views.users import UsersView
-from dataviewmodels.users import UsersModel
-from dataviewmodels.groups import GroupsModel
-from views.verifications import VerificationsView
-from dataviewmodels.verifications import VerificationsModel
-from views.uploads import UploadsView
-from dataviewmodels.uploads import UploadsModel
+from mydata.version import VERSION
+from mydata.views.folders import FoldersView
+from mydata.dataviewmodels.folders import FoldersModel
+from mydata.controllers.folders import FoldersController
+from mydata.views.users import UsersView
+from mydata.dataviewmodels.users import UsersModel
+from mydata.dataviewmodels.groups import GroupsModel
+from mydata.views.verifications import VerificationsView
+from mydata.dataviewmodels.verifications import VerificationsModel
+from mydata.views.uploads import UploadsView
+from mydata.dataviewmodels.uploads import UploadsModel
 from models.uploader import UploaderModel
-from views.log import LogView
+from mydata.views.log import LogView
 from models.settings import SettingsModel
-from views.settings import SettingsDialog
-from utils.exceptions import NoActiveNetworkInterface
-from utils.exceptions import InvalidFolderStructure
-from views.statusbar import EnhancedStatusBar
-from logger.Logger import logger
-from views.taskbaricon import MyDataTaskBarIcon
-from views.progress import MyDataProgressDialog
-import events as mde
+from mydata.views.settings import SettingsDialog
+from mydata.utils.exceptions import NoActiveNetworkInterface
+from mydata.utils.exceptions import InvalidFolderStructure
+from mydata.views.statusbar import EnhancedStatusBar
+from mydata.logging import logger
+from mydata.views.taskbaricon import MyDataTaskBarIcon
+from mydata.views.progress import MyDataProgressDialog
+import mydata.events as mde
+from mydata.media import MyDataIcons
+from mydata.media import IconStyle
 
 
 class NotebookTabs:
@@ -59,28 +70,8 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetFieldsCount(2)
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetStatusWidths([-1, 60])
-        if hasattr(sys, "frozen"):
-            if sys.platform.startswith("darwin"):
-                module_base_dir = ''
-            else:
-                module_base_dir = os.path.dirname(sys.executable)
-        else:
-            module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
-                                  'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
-                                     'png-normal')
-        if sys.platform.startswith("win"):
-            iconSubdir = "icons24x24"
-        else:
-            iconSubdir = "icons16x16"
-        self.connectedBitmap = \
-            wx.Image(os.path.join(pngNormalPath, iconSubdir, "Connect.png"),
-                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        self.disconnectedBitmap = \
-            wx.Image(os.path.join(pngNormalPath,
-                                  iconSubdir, "Disconnect.png"),
-                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        self.connectedBitmap = MyDataIcons.GetIcon("Connect")
+        self.disconnectedBitmap = MyDataIcons.GetIcon("Disconnect")
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
@@ -244,8 +235,7 @@ class MyData(wx.App):
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
-        img = wx.Image("media/favicon.ico", wx.BITMAP_TYPE_ANY)
-        bmp = wx.BitmapFromImage(img)
+        bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
         icon = wx.EmptyIcon()
         icon.CopyFromBitmap(bmp)
         self.frame.SetIcon(icon)
@@ -430,33 +420,17 @@ class MyData(wx.App):
         """
         Create a toolbar.
         """
-        if hasattr(sys, "frozen"):
-            if sys.platform.startswith("darwin"):
-                module_base_dir = ''
-            else:
-                module_base_dir = os.path.dirname(sys.executable)
-        else:
-            module_base_dir = os.path.dirname(os.path.realpath(__file__))
-        pngHotPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
-                                  'png-hot')
-        pngNormalPath = os.path.join(module_base_dir, 'media', 'Aha-Soft',
-                                     'png-normal')
-
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
 
-        openIcon = wx.Image(os.path.join(pngNormalPath,
-                                         "icons24x24", "Open folder.png"),
-                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        openIcon = MyDataIcons.GetIcon("Open folder", size="24x24")
         openTool = self.toolbar.AddSimpleTool(wx.ID_ANY, openIcon, "Open",
                                               "Open folder")
         self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
 
         self.toolbar.AddSeparator()
 
-        refreshIcon = wx.Image(os.path.join(pngNormalPath,
-                                            "icons24x24", "Refresh.png"),
-                               wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        refreshIcon = MyDataIcons.GetIcon("Refresh", size="24x24")
         self.refreshTool = self.toolbar.AddSimpleTool(wx.ID_REFRESH,
                                                       refreshIcon,
                                                       "Refresh", "")
@@ -466,37 +440,30 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        settingsIcon = wx.Image(os.path.join(pngHotPath,
-                                             "icons24x24", "Settings.png"),
-                                wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
         self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settingsIcon,
                                                        "Settings", "")
         self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
-        internetIcon = \
-            wx.Image(os.path.join(pngNormalPath,
-                                  "icons24x24", "Internet explorer.png"),
-                     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        internetIcon = MyDataIcons.GetIcon("Internet explorer", size="24x24")
         self.myTardisTool = self.toolbar.AddSimpleTool(wx.ID_ANY, internetIcon,
                                                        "MyTardis", "")
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
-        aboutIcon = wx.Image(os.path.join(pngHotPath,
-                                          "icons24x24", "About.png"),
-                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        aboutIcon = MyDataIcons.GetIcon("About", size="24x24",
+                                        style=IconStyle.HOT)
         self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, aboutIcon,
                                                     "About MyData", "")
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
-        helpIcon = wx.Image(os.path.join(pngHotPath,
-                                         "icons24x24", "Help.png"),
-                            wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        helpIcon = MyDataIcons.GetIcon("Help", size="24x24",
+                                       style=IconStyle.HOT)
         self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, helpIcon,
                                                    "MyData User Guide", "")
         self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
@@ -925,4 +892,4 @@ def main(argv):
     app.MainLoop()
 
 if __name__ == "__main__":
-    main(sys.argv)
+    print "Please use run.py in MyData.py's parent directory instead."
