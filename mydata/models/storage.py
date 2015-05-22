@@ -3,9 +3,9 @@ import json
 import urllib
 
 from logger.Logger import logger
-from Exceptions import DoesNotExist
-from Exceptions import MultipleObjectsReturned
-from Exceptions import IncompatibleMyTardisVersion
+from utils.exceptions import DoesNotExist
+from utils.exceptions import MultipleObjectsReturned
+from utils.exceptions import IncompatibleMyTardisVersion
 
 
 class StorageBox():
