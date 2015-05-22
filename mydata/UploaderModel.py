@@ -306,6 +306,7 @@ class UploaderModel():
             raise
         if response.status_code == 404:
             message = "The MyData app is missing from the MyTardis server."
+            logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
         existingMatchingUploaderRecords = response.json()
