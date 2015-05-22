@@ -54,13 +54,10 @@ Traditionally, this script would be named setup.py
 import sys
 sys.path.append('mydata')
 from setuptools import setup
-import MyDataVersionNumber as MyDataVersionNumber
+from mydata import __version__ as VERSION
 import requests
 import os
 import pkgutil
-
-from CreateCommitDef import run
-run()
 
 appName = "MyData"
 
@@ -89,7 +86,7 @@ setup(
             CFBundleIdentifier="org.mytardis.MyData",
             CFBundleName=appName,
             CFBundlePackageType="APPL",
-            CFBundleVersion="Version " + MyDataVersionNumber.versionNumber,
+            CFBundleVersion="Version " + VERSION,
             LSArchitecturePriority=["x86_64"]
             )
         )
@@ -97,5 +94,5 @@ setup(
     data_files=resource_files,
     name=appName,
     setup_requires=["py2app"],
-    app=['mydata/MyData.py']
+    app=['run.py']
 )
