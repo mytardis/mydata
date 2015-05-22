@@ -5,6 +5,7 @@ import urllib
 from logger.Logger import logger
 from Exceptions import DoesNotExist
 from Exceptions import MultipleObjectsReturned
+from Exceptions import IncompatibleMyTardisVersion
 
 
 class StorageBox():
@@ -23,9 +24,15 @@ class StorageBox():
             for key in storageBoxJson:
                 if hasattr(self, key):
                     self.__dict__[key] = storageBoxJson[key]
+            if 'options' not in storageBoxJson:
+                message = "Couldn't access storage box options from MyTardis API."
+                raise IncompatibleMyTardisVersion(message)
             self.options = []
             for optionJson in storageBoxJson['options']:
                 self.options.append(StorageBoxOption(optionJson=optionJson))
+            if 'attributes' not in storageBoxJson:
+                message = "Couldn't access storage box attributes from MyTardis API."
+                raise IncompatibleMyTardisVersion(message)
             self.attributes = []
             for attrJson in storageBoxJson['attributes']:
                 self.attributes.append(StorageBoxAttribute(attrJson=attrJson))
