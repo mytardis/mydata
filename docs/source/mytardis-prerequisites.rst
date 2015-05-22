@@ -1,22 +1,8 @@
 MyTardis Prerequisites
 ======================
 
-MyData was originally developed against a fork of MyTardis's "develop" branch:
-https://github.com/wettenhj/mytardis/tree/mydata.
-
-Work is currently underway to move some of the functionality from the "mydata"
-MyTardis branch into a separate "mydata" MyTardis app
-(https://github.com/wettenhj/mytardis-app-mydata), merge some of it into
-MyTardis's "develop" branch, and abandon its implementation of staging
-uploads once it is confirmed that MyData can use MyTardis's new receiving
-storage boxes: https://github.com/mytardis/mytardis/pull/414/commits
-
-This will allow MyData's "develop" branch (which will soon become MyData v0.3)
-to be used with MyTardis's "develop" branch (which may soon be tagged as v3.7).
-Then the "mydata" branch of MyTardis in https://github.com/wettenhj/ will be
-abandoned.
-
-Instructions for installing the "mydata" MyTardis app can be found here:
+MyData requires the "mydata" MyTardis app to be installed on the MyTardis server.
+This app, and its installation instructions can be found here:
 https://github.com/wettenhj/mytardis-app-mydata/blob/master/README.md
 
 MyData stores metadata for each experiment it creates, including a reference
@@ -36,3 +22,14 @@ running:
   python mytardis.py loaddata tardis/apps/mydata/fixtures/default_experiment_schema.json
 
 after installing the "mytardis-app-mydata" MyTardis app in "tardis/apps/mydata".
+
+MyData requires the use of a "receiving" storage box (also know as a "staging" storage box)
+in MyTardis, which serves as a temporary location for uploaded files.  MyTardis will
+automatically create a storage box if a client like MyData attempts to perform staging
+uploads via the API.  To enable uploads via staging (using SCP) in MyData, which are
+recommended over HTTP POST uploads, it is necessary to add the "scp_username" and
+"scp_hostname" attributes to the storage box, as illustrated below.
+
+  .. image:: images/StorageBoxAttributes.png 
+
+For more information on uploads via staging, see see :ref:`scp-to-staging`.
