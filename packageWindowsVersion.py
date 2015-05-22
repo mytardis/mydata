@@ -3,8 +3,6 @@ import sys
 import distutils.dir_util
 import shutil
 
-import CreateCommitDef
-
 if len(sys.argv) < 3:
     print "Usage: packageWindowsVersion.py <certificate.pfx> <password>"
     sys.exit(1)
@@ -16,7 +14,7 @@ if os.path.exists("dist"):
     os.system("del /Q dist\\*.*")
 
 os.system("C:\\Python27\\python.exe .\\pyinstaller\\pyinstaller.py "
-          "--icon=mydata\\media\\MyData.ico --windowed mydata/MyData.py")
+          "--name=MyData --icon=mydata\\media\\MyData.ico --windowed run.py")
 
 # favicon.ico and MyData.ico are really the same thing - favicon.ico
 # is the original from the MyTardis repository, and MyData.ico is the

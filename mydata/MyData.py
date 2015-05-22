@@ -19,11 +19,8 @@ except:
     print "Please use run.py in MyData.py's parent directory instead."
     os._exit(1)
 
-try:
-    from CommitDef import LATEST_COMMIT
-except ImportError:
-    LATEST_COMMIT = "Please run CreateCommitDef.py"
-from mydata.version import VERSION
+from mydata import __version__ as VERSION
+from mydata import LATEST_COMMIT
 from mydata.views.folders import FoldersView
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.controllers.folders import FoldersController

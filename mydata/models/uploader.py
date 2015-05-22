@@ -84,7 +84,7 @@ from datetime import datetime
 import wx
 import uuid
 
-from mydata.version import VERSION
+from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
 from mydata.logging import logger
 import mydata.utils.openssh as OpenSSH
