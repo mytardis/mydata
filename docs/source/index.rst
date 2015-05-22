@@ -14,7 +14,7 @@ Contents
    upload-methods
    user-groups
    macosx-walkthrough
-   mydata-tutorial-with-mytardis-demo-server
+   mydata-tutorial
    license
 
 

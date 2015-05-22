@@ -1,55 +1,28 @@
-MyData Tutorial, using the MyTardis Demo Server
-===============================================
+MyData Tutorial
+===============
 
-Downloading and Installing the MyTardis Demo Server
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Recent Changes
+^^^^^^^^^^^^^^
 
-* Download the MyTardis Demo Server for Windows:
+Previous versions of this tutorial used a MyTardis demo server which provided
+an easy way to install a local MyTardis test server running an appropriate
+version of MyTardis for MyData.  Now that MyData is compatible with MyTardis's
+official "develop" branch, it is no longer necessary to provide easy ways to
+install the unofficial fork of MyTardis which was previously used with MyData.
 
-  + `MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe <https://github.com/monash-merc/mytardis-demo-server/releases/download/v0.1/MyTardisDemoServer_d82f585c35c187cac0110adc13d29ff1a963dab2.exe>`_
+It is still possible to run through this tutorial with a local MyTardis test
+server.  Testing MyData's staging uploads is best done with a real remote
+MyTardis server.  But the majority of MyData's functionality (as described
+below) can be tested against a local MyTardis test server.
 
-After downloading the MyTardis Demo Server, open the downloaded executable to
-begin the setup wizard, which shows the version of MyTardis being installed
-(from the https://github.com/wettenhj/mytardis/tree/mydata branch):
+Installing MyTardis and running a local test server is beyond the scope of
+this tutorial.  For more information, see https://github.com/mytardis/mytardis/blob/develop/build.sh and ask for help if needed.
 
-  .. image:: images/MyTardisDemoServerSetupWizardPage1.PNG
+For anyone wishing to work through this tutorial interactively, it will be
+assumed that you know how to set up a MyTardis test server, accessible at
+http://127.0.0.1:8000/
 
-The default installation location is C:\\MyTardisDemoServer:
-
-  .. image:: images/MyTardisDemoServerSetupWizardPage2.PNG
-
-
-Launching the MyTardis Demo Server
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-After installing the MyTardis Demo Server (which could takes 5-10 minutes),
-start the MyTardis server by clicking the "MyTardis Demo Server" shortcut in
-the Start Menu (or in the Start Screen if you don't have a Start Menu):
-
-  .. image:: images/MyTardisDemoServerStartMenu.PNG
-
-The MyTardis Demo Server will display a Command Prompt window starting in the
-installed directory (defaulting to C:\\MyTardisDemoServer), and then navigating
-into the specific MyTardis version directory (e.g.
-C:\\MyTardisDemoServer\\d82f585c35c187cac0110adc13d29ff1a963dab2) and then
-running the demo server (using "python mytardis.py runserver").  The MyTardis
-Demo Server bundles its own version of Python and puts it in the PATH before
-any other Python version you may have installed while running this Command
-Prompt window (see C:\\MyTardisDemoServer\\MyTardisDemoServer.bat).
-
-  .. image:: images/MyTardisDemoServerStarting.PNG
-
-
-Accessing the MyTardis Demo Server in your web browser
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Once the MyTardis Demo Server has started, you can access its web interface
-by navigating to the following address:  http://127.0.0.1:8000/ in your web
-browser (Google Chrome is a good choice).
-
-  .. image:: images/MyTardisDemoServerChrome.PNG
-
-
-Logging into the MyTardis Demo Server as a MyTardis administrator
+Logging into the MyTardis Test Server as a MyTardis administrator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Click the "Log In" button in the upper right corner, and log in with username
@@ -59,7 +32,7 @@ Click the "Log In" button in the upper right corner, and log in with username
 
 **Accessing MyTardis's Django Admin Interface**
 
-The "mytardis" account in this demo server is a super administrator, i.e. it
+The "mytardis" account in this test server is a super administrator, i.e. it
 can do anything, including accessing MyTardis's Django Admin interface from
 the menu item shown below.
 
@@ -75,7 +48,7 @@ any way to recover them!
 **Facilities Registered in MyTardis**
 
 From the Django Admin interface, click on "Facilities" to see what facilities
-are available in this Demo Server.  There is only one facility, named
+are available in this Test Server.  There is only one facility, named
 "Test Facility".
 
   .. image:: images/MyTardisDemoServerFacilities.PNG
@@ -101,7 +74,7 @@ named "Test Facility Managers".
   .. image:: images/MyTardisDemoServerTestFacilityUserAccount.PNG
 
 
-Logging into the MyTardis Demo Server as a MyTardis facility manager
+Logging into the MyTardis Test Server as a MyTardis facility manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Log out of the Django Admin interface, and then return to the original URL
@@ -210,7 +183,7 @@ MyData's Users View
 MyData's Users view (below) displays the result of MyData's attempt to map the
 user folder names ("testuser1" and "testuser2") to MyTardis user accounts.  In
 this case, both user folder names have been successfully mapped to user
-accounts on our MyTardis Demo Server, but no email address has been recorded
+accounts on our MyTardis Test Server, but no email address has been recorded
 for either account in MyTardis.  Many queries MyData performs against MyTardis
 will only work if the MyTardis account you entered in MyData's settings dialog
 ("testfacility") has sufficient permissions assigned to it, as shown on the
@@ -249,7 +222,7 @@ in your web browser to see the datafiles in MyTardis's Facility Overview
 (below).  You should be logged into MyTardis as the "testfacility" account
 (username "testfacility", password "testfacility").
 
-For the demo server, we are using the `CELERY_ALWAYS_EAGER <http://celery.readthedocs.org/en/latest/configuration.html#celery-always-eager>`_ setting
+For the test server, we are using the `CELERY_ALWAYS_EAGER <http://celery.readthedocs.org/en/latest/configuration.html#celery-always-eager>`_ setting
 which means that datafiles will be verified immediately, instead of as a
 background task.  This explains why the number of verified datafiles below
 is always equal to the total number of datafiles for each dataset.  In the
