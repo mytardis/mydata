@@ -42,4 +42,4 @@
 #
 # Enquiries: help@massive.org.au
 
-versionNumber = "0.2.1"
+versionNumber = "0.3.0"
