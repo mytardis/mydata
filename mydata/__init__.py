@@ -13,7 +13,7 @@ try:
         with open(".git/logs/HEAD") as gitlog:
             for line in gitlog:
                 pass
-        LATEST_COMMIT = line.split(" ")[0]
+        LATEST_COMMIT = line.split(" ")[1]
         with open("mydata/commitdef.py", 'w') as commitdef: 
             commitdef.write('LATEST_COMMIT = "%s"\n' % LATEST_COMMIT)
 except:
