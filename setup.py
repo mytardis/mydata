@@ -34,8 +34,12 @@ for icon_files_path in ("media/Aha-Soft/png-normal/icons16x16",
             resourceFile = (icon_files_path, [icon_file_path])
             resourceFiles.append(resourceFile)
 
+install_requires = ['wxPython', 'appdirs', 'lxml', 'poster', 'psutil',
+                    'requests', 'validate_email']
+setup_requires = install_requires
+
 if sys.platform.startswith("darwin"):
-    setupRequires = ["py2app"]
+    setup_requires.append("py2app")
     options = dict(py2app=dict(
         arch="x86_64",
         plist=dict(
@@ -53,7 +57,6 @@ if sys.platform.startswith("darwin"):
     )
 else:
     options = []
-    setupRequires = []
 
 
 class CustomBuildCommand(build):
@@ -320,7 +323,8 @@ setup(name=app_name,
           'bdist': CustomBdistCommand,
           'install': CustomInstallCommand,
       },
-      setup_requires=setupRequires,
+      setup_requires=setup_requires,
+      install_requires=install_requires,
       app=["run.py"],  # Used by py2app
       scripts=["run.py"],
       long_description="GUI for uploading data to MyTardis",
