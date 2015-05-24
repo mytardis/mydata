@@ -85,7 +85,12 @@ class CustomBdistCommand(bdist):
             os.system("rm -fr dist/*")
             self.run_command("py2app")
 
-            print "\nCreating MyData_v%s.dmg...\n" % mydata.__version__
+            INCLUDE_APPLICATIONS_SYMBOLIC_LINK = True
+            ATTEMPT_TO_SET_ICON_SIZE_IN_DMG = True
+            ATTEMPT_TO_LAY_OUT_ICONS_ON_DMG = True
+            ATTEMPT_TO_SET_BACKGROUND_IMAGE = True
+
+            print "\nSigning dist/MyData.app...\n"
 
             # This assumes that you only have one Developer ID Application
             # certificate in your key chain.  You need to have a private key
@@ -104,11 +109,6 @@ class CustomBdistCommand(bdist):
                 sign = True
             except:
                 sign = False
-
-            INCLUDE_APPLICATIONS_SYMBOLIC_LINK = True
-            ATTEMPT_TO_SET_ICON_SIZE_IN_DMG = True
-            ATTEMPT_TO_LAY_OUT_ICONS_ON_DMG = True
-            ATTEMPT_TO_SET_BACKGROUND_IMAGE = True
 
             # Digitally sign application:
             cmd = "CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents" \
@@ -131,46 +131,53 @@ class CustomBdistCommand(bdist):
                     "dist/MyData.app/"
                 print cmd
 
-                # Build DMG (disk image) :
+            print "\nCreating MyData_v%s.dmg...\n" % mydata.__version__
 
-                source = os.path.join(os.getcwd(), 'dist')
-                title = "%s v%s" % (app_name, mydata.__version__)
-                size = "160000"
-                final_dmg_name = "%s_v%s" % (app_name, mydata.__version__)
+            # Build DMG (disk image) :
 
-                temp_dmg_file = \
-                    tempfile.NamedTemporaryFile(prefix=final_dmg_name+"_",
-                                                suffix=".dmg", delete=True)
-                temp_dmg_filename = temp_dmg_file.name
-                temp_dmg_file.close()
+            source = os.path.join(os.getcwd(), 'dist')
+            title = "%s v%s" % (app_name, mydata.__version__)
+            size = "160000"
+            final_dmg_name = "%s_v%s" % (app_name, mydata.__version__)
 
-                dmg_background_picture_filename = "dmgBackgroundMacOSX.png"
-
-                cmd = 'hdiutil create -srcfolder "%s" -volname "%s" ' \
-                    '-fs HFS+ -fsargs ' \
-                    '"-c c=64,a=16,e=16" -format UDRW -size %sk "%s"' \
-                    % (source, title, size, temp_dmg_filename)
+            if os.path.exists("/Volumes/%s" % title):
+                cmd = "hdiutil unmount \"/Volumes/%s\"" % title
                 print cmd
                 os.system(cmd)
 
-                cmd = "hdiutil attach -readwrite -noverify -noautoopen " \
-                    "\"%s\" | egrep '^/dev/' | sed 1q | awk '{print $1}'" \
-                    % (temp_dmg_filename)
-                print cmd
-                device = commands.getoutput(cmd)
+            temp_dmg_file = \
+                tempfile.NamedTemporaryFile(prefix=final_dmg_name+"_",
+                                            suffix=".dmg", delete=True)
+            temp_dmg_filename = temp_dmg_file.name
+            temp_dmg_file.close()
 
-                cmd = 'sleep 2'
-                print cmd
-                os.system(cmd)
+            dmg_background_picture_filename = "dmgBackgroundMacOSX.png"
 
-                cmd = 'mkdir "/Volumes/%s/.background/"' % (title)
-                print cmd
-                os.system(cmd)
+            cmd = 'hdiutil create -srcfolder "%s" -volname "%s" ' \
+                '-fs HFS+ -fsargs ' \
+                '"-c c=64,a=16,e=16" -format UDRW -size %sk "%s"' \
+                % (source, title, size, temp_dmg_filename)
+            print cmd
+            os.system(cmd)
 
-                cmd = 'cp mydata/media/%s "/Volumes/%s/.background/"' \
-                    % (dmg_background_picture_filename, title)
-                print cmd
-                os.system(cmd)
+            cmd = "hdiutil attach -readwrite -noverify -noautoopen " \
+                "\"%s\" | egrep '^/dev/' | sed 1q | awk '{print $1}'" \
+                % (temp_dmg_filename)
+            print cmd
+            device = commands.getoutput(cmd)
+
+            cmd = 'sleep 2'
+            print cmd
+            os.system(cmd)
+
+            cmd = 'mkdir "/Volumes/%s/.background/"' % (title)
+            print cmd
+            os.system(cmd)
+
+            cmd = 'cp mydata/media/%s "/Volumes/%s/.background/"' \
+                % (dmg_background_picture_filename, title)
+            print cmd
+            os.system(cmd)
 
             if INCLUDE_APPLICATIONS_SYMBOLIC_LINK:
                 cmd = 'ln -s /Applications/ "/Volumes/' + title + \
@@ -256,12 +263,12 @@ tell application "Finder"
             print cmd
             os.system(cmd)
 
-            cmd = 'rm -f "' + final_dmg_name + '.dmg"'
+            cmd = 'rm -f "dist/' + final_dmg_name + '.dmg"'
             print cmd
             os.system(cmd)
 
             cmd = 'hdiutil convert "%s" -format UDZO -imagekey zlib-level=9 ' \
-                '-o "%s.dmg"' % (temp_dmg_filename, final_dmg_name)
+                '-o "dist/%s.dmg"' % (temp_dmg_filename, final_dmg_name)
             print cmd
             os.system(cmd)
 
@@ -269,8 +276,8 @@ tell application "Finder"
             print cmd
             os.system(cmd)
 
-            cmd = 'ls -lh "%s.dmg"' % (final_dmg_name)
-            print cmd
+            cmd = 'ls -lh "dist/%s.dmg"' % (final_dmg_name)
+            print "\n" + cmd
             os.system(cmd)
         else:
             print "Custom bdist command."
@@ -288,12 +295,12 @@ class CustomInstallCommand(install):
         if sys.platform.startswith("win"):
             print "\nOpening MyData_v%s.exe...\n" % mydata.__version__
         elif sys.platform.startswith("darwin"):
-            print "\nOpening MyData_v%s.dmg...\n" % mydata.__version__
+            print "\nOpening dist/MyData_v%s.dmg...\n" % mydata.__version__
             dmg_filename = "%s_v%s.dmg" % (app_name, mydata.__version__)
-            cmd = 'open "%s"' % dmg_filename
+            cmd = 'open "dist/%s"' % dmg_filename
             os.system(cmd)
             print "Drag MyData.app into the Applications folder to complete " \
-                "the installation."
+                "the installation.\n"
         else:
             print "Custom install command."
 
