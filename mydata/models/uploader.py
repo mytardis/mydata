@@ -560,7 +560,15 @@ class UploaderModel():
                             interfaceType == "Dedicated":
                         activeInterfaces.append(interface)
         elif sys.platform.startswith("darwin"):
-            proc = subprocess.Popen(["route", "get", "default"],
+            # Was using "route get default" here, but for VPN, that can
+            # return "utun0" which doesn't have a corresponding MAC address,
+            # and there may be other missing network-related fields in the
+            # ifconfig entry for "utun0".  For now, we will instead find
+            # the physical network device which is active, but in future
+            # we can relax the requirement of needing the MAC address etc.
+            # because we are now using a UUID as our Uploader record's
+            # unique identifier instead of a MAC address.
+            proc = subprocess.Popen(["ifconfig"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     startupinfo=defaultStartupInfo,
@@ -569,11 +577,14 @@ class UploaderModel():
             if proc.returncode != 0:
                 raise Exception(stdout)
 
+            currentInterface = None
             for line in stdout.split("\n"):
-                m = re.match(r"^\s*interface:\s+(\S+)\s*$", line)
+                m = re.match(r"^(\S+): flags=.*", line)
                 if m:
-                    interface = m.groups()[0].strip()
-                    activeInterfaces.append(interface)
+                    currentInterface = m.groups()[0].strip()
+                m = re.match(r"^\s+status: active", line)
+                if m and currentInterface:
+                    activeInterfaces.append(currentInterface)
         elif sys.platform.startswith("linux"):
             proc = subprocess.Popen(["route"],
                                     stdout=subprocess.PIPE,
