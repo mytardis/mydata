@@ -5,18 +5,36 @@ import pkgutil
 import tempfile
 import commands
 import subprocess
+import shutil
 
 from setuptools import setup
 from distutils.command.build import build
 from distutils.command.bdist import bdist
 from distutils.command.install import install
+import distutils.dir_util
 
 import mydata
 
 app_name = "MyData"
 package_name = "mydata"
 
-if sys.platform.startswith("darwin"):
+if sys.platform.startswith("win"):
+    # On Windows, we require the code-signing certificate filename (or path)
+    # to be specified and the password associated with the certificate.
+    if len(sys.argv) == 4:
+        whether_to_sign = True
+        certificate_path = sys.argv[2]
+        certificate_password = sys.argv[3]
+        del sys.argv[2:4]
+    elif len(sys.argv) == 3 and sys.argv[2] == 'unsigned':
+        whether_to_sign = False
+        del sys.argv[2:3]
+    else:
+        print "\nUsage: python setup.py [build|bdist|install] " \
+            "<cert.pfx> <cert_passwd>"
+        print "       python setup.py [build|bdist|install] unsigned\n"
+        sys.exit(1)
+elif sys.platform.startswith("darwin"):
     if len(sys.argv) >= 2 and sys.argv[1] == "build":
         sys.argv[1] = "py2app"
 
@@ -36,10 +54,9 @@ for icon_files_path in ("media/Aha-Soft/png-normal/icons16x16",
 
 install_requires = ['wxPython', 'appdirs', 'lxml', 'poster', 'psutil',
                     'requests', 'validate_email']
-setup_requires = install_requires
 
 if sys.platform.startswith("darwin"):
-    setup_requires.append("py2app")
+    setup_requires = ["py2app"]
     options = dict(py2app=dict(
         arch="x86_64",
         plist=dict(
@@ -56,7 +73,8 @@ if sys.platform.startswith("darwin"):
         )
     )
 else:
-    options = []
+    setup_requires = []
+    options = {}
 
 
 class CustomBuildCommand(build):
@@ -66,7 +84,104 @@ class CustomBuildCommand(build):
     """
     def run(self):
         # build.run(self)
-        if sys.platform.startswith("darwin"):
+        if sys.platform.startswith("win"):
+            # The forward slashes and backslashes below should work in
+            # both a DOS environment and a Unix-like environment (e.g. MSYS)
+            # running on Windows.  Some commands are particularly sensitive
+            # to this, so please test in both DOS and MSYS if/when changing
+            # the slashes.
+            if os.path.exists("dist"):
+                os.system(r"DEL /Q dist\*.*")
+
+            os.system(r"C:\Python27\python.exe "
+                      r".\pyinstaller\pyinstaller.py "
+                      r"--name=MyData --icon=mydata\media\MyData.ico "
+                      r"--windowed run.py")
+            # favicon.ico and MyData.ico are really the same thing. favicon.ico
+            # is the original from the MyTardis repository, and MyData.ico is
+            # the result of converting it to PNG and then back to ICO, which
+            # fixed a # problem with the Windows build.
+            if not os.path.exists("dist/MyData/media"):
+                os.makedirs("dist/MyData/media")
+            os.system(r"COPY /Y mydata\media\favicon.ico "
+                      r"dist\MyData\media")
+            os.system(r"COPY /Y mydata\media\MyData.ico "
+                      r"dist\MyData\media")
+            distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
+                                         "dist/MyData/media/Aha-Soft")
+
+            distutils.dir_util\
+                .copy_tree("openssh-5.4p1-1-msys-1.0.13",
+                           "dist/MyData/openssh-5.4p1-1-msys-1.0.13")
+            msysHomeDir = "dist/MyData/openssh-5.4p1-1-msys-1.0.13/home"
+            for subdir in os.listdir(msysHomeDir):
+                subdirpath = os.path.join(msysHomeDir, subdir)
+                if os.path.isdir(subdirpath):
+                    shutil.rmtree(subdirpath)
+
+            os.system(r"COPY /Y GPL.txt dist\MyData")
+
+            cacert = requests.certs.where()
+            os.system(r"COPY /Y %s dist\MyData" % cacert)
+
+            if whether_to_sign:
+                sign_exe_cmd = 'signtool sign -f "%s" -p "%s" %s' \
+                    % (certificate_path, certificate_password,
+                       r" dist\MyData\*.exe")
+                os.system(sign_exe_cmd)
+                sign_dll_cmd = 'signtool sign -f "%s" -p "%s" %s' \
+                    % (certificate_path, certificate_password,
+                       r" dist\MyData\*.dll")
+                os.system(sign_dll_cmd)
+            innosetup_script = """
+;MyData InnoSetup script
+;Change OutputDir to suit your build environment
+
+#define MyDataAppName "MyData"
+#define MyDataAppExeName "MyData.exe"
+
+[Setup]
+AppName={#MyDataAppName}
+AppVersion=<version>
+DefaultDirName={pf}\{#MyDataAppName}
+DefaultGroupName={#MyDataAppName}
+UninstallDisplayIcon={app}\{#MyDataAppExeName}
+Compression=lzma2
+SolidCompression=yes
+OutputDir=.
+
+[Files]
+Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
+
+[Tasks]
+Name: "StartMenuEntry" ; Description: "Start MyData when Windows starts" ; GroupDescription: "Windows Startup";
+
+[Dirs]
+Name: "{pf}\{#MyDataAppName}\openssh-5.4p1-1-msys-1.0.13\home"; Permissions: "users-modify"
+
+[Icons]
+Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
+Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
+;Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
+Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry; Parameters: "--background"
+            """.replace("<version>", mydata.__version__)
+            with open("dist/MyData.iss", 'w') as innosetup_script_file:
+                innosetup_script_file.write(innosetup_script)
+            if os.path.exists(r"C:\Program Files (x86)\Inno Setup 5"
+                              r"\ISCC.exe"):
+                cmd = r'CALL "C:\Program Files (x86)\Inno Setup 5\ISCC.exe" ' \
+                    r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
+                    % mydata.__version__
+            else:
+                cmd = r'CALL "C:\Program Files\Inno Setup 5\ISCC.exe" ' \
+                    r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
+                    % mydata.__version__
+            os.system(cmd)
+            if whether_to_sign:
+                os.system('signtool sign -f "%s" -p "%s" dist\MyData_v%s.exe'
+                          % (certificate_path, certificate_password,
+                             mydata.__version__))
+        elif sys.platform.startswith("darwin"):
             print "\nCreating dist/MyData.app using py2app...\n"
             os.system("rm -fr build/*")
             os.system("rm -fr dist/*")
@@ -76,8 +191,8 @@ class CustomBuildCommand(build):
 
 class CustomBdistCommand(bdist):
     """
-    On Windows, create setup.exe (installation wizard)
-    On Mac OS X, created MyData_vX.Y.Z.dmg
+    On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
+    On Mac OS X, create dist/MyData_vX.Y.Z.dmg
     """
     def run(self):
         # bdist.run(self)
@@ -109,9 +224,9 @@ class CustomBdistCommand(bdist):
             try:
                 certificateName = certificateLine.split(": ", 1)[1]
                 print "certificateName: " + certificateName
-                sign = True
+                whether_to_sign = True
             except:
-                sign = False
+                whether_to_sign = False
 
             # Digitally sign application:
             cmd = "CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents" \
@@ -121,7 +236,7 @@ class CustomBdistCommand(bdist):
             os.environ['CODESIGN_ALLOCATE'] = \
                 "/Applications/Xcode.app/Contents/Developer/Platforms" \
                 "/iPhoneOS.platform/Developer/usr/bin/codesign_allocate"
-            if sign:
+            if whether_to_sign:
                 cmd = "codesign --deep --force -i org.mytardis.MyData " \
                     "--sign \"%s\" " \
                     "--verbose=4 dist/MyData.app" % certificateName
@@ -308,35 +423,37 @@ class CustomInstallCommand(install):
             print "Custom install command."
 
 
-setup(name=app_name,
-      version=mydata.__version__,
-      description="GUI for uploading data to MyTardis",
-      author="James Wettenhall",
-      author_email="James.Wettenhall@monash.edu",
-      license="GNU GPLv3",
-      url="http://mydata.readthedocs.org/",
-      options=options,
-      packages=[package_name],
-      data_files=resourceFiles,
-      cmdclass={
-          'build': CustomBuildCommand,
-          'bdist': CustomBdistCommand,
-          'install': CustomInstallCommand,
-      },
-      setup_requires=setup_requires,
-      install_requires=install_requires,
-      app=["run.py"],  # Used by py2app
-      scripts=["run.py"],
-      long_description="GUI for uploading data to MyTardis",
-      classifiers=[
-          "Development Status :: 4 - Beta",
-          "Intended Audience :: End Users/Desktop",
-          "Intended Audience :: Science/Research",
-          "Intended Audience :: Developers",
-          "License :: GNU General Public License (GPL)",
-          "Operating System :: Microsoft :: Windows",
-          "Operating System :: MacOS :: MacOS X",
-          "Programming Language :: Python",
-          "Topic :: Database :: Front-Ends",
-          "Topic :: System :: Archiving",
-      ])
+setup_args = dict(name=app_name,
+                  version=mydata.__version__,
+                  description="GUI for uploading data to MyTardis",
+                  author="James Wettenhall",
+                  author_email="James.Wettenhall@monash.edu",
+                  license="GNU GPLv3",
+                  url="http://mydata.readthedocs.org/",
+                  options=options,
+                  packages=[package_name],
+                  data_files=resourceFiles,
+                  cmdclass={
+                      'build': CustomBuildCommand,
+                      'bdist': CustomBdistCommand,
+                      'install': CustomInstallCommand,
+                  },
+                  setup_requires=setup_requires,
+                  install_requires=install_requires,
+                  scripts=["run.py"],
+                  long_description="GUI for uploading data to MyTardis",
+                  classifiers=[
+                      "Development Status :: 4 - Beta",
+                      "Intended Audience :: End Users/Desktop",
+                      "Intended Audience :: Science/Research",
+                      "Intended Audience :: Developers",
+                      "License :: GNU General Public License (GPL)",
+                      "Operating System :: Microsoft :: Windows",
+                      "Operating System :: MacOS :: MacOS X",
+                      "Programming Language :: Python",
+                      "Topic :: Database :: Front-Ends",
+                      "Topic :: System :: Archiving",
+                  ])
+if sys.platform.startswith("darwin"):
+    setup_args['app'] = ["run.py"]  # Used by py2app
+setup(**setup_args)
