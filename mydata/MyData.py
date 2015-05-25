@@ -241,8 +241,8 @@ class MyData(wx.App):
 
         self.foldersUsersNotebook = \
             wx.aui.AuiNotebook(self.panel,
-                               style=wx.aui.AUI_NB_TOP
-                               | wx.aui.AUI_NB_SCROLL_BUTTONS)
+                               style=wx.aui.AUI_NB_TOP |
+                               wx.aui.AUI_NB_SCROLL_BUTTONS)
         self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGING,
                   self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
@@ -764,11 +764,17 @@ class MyData(wx.App):
                 wx.CallAfter(endBusyCursorIfRequired)
                 return
 
-            startDataUploadsEvent = \
-                mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
-                                foldersController=self.foldersController)
-            logger.debug("Posting startDataUploadsEvent")
-            wx.PostEvent(wx.GetApp().GetMainFrame(), startDataUploadsEvent)
+            if self.usersModel.GetNumUserOrGroupFolders() > 0:
+                startDataUploadsEvent = \
+                    mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
+                                    foldersController=self.foldersController)
+                logger.debug("Posting startDataUploadsEvent")
+                wx.PostEvent(wx.GetApp().GetMainFrame(),
+                             startDataUploadsEvent)
+            else:
+                message = "No user/group folders to upload from."
+                logger.debug(message)
+                self.frame.SetStatusMessage(message)
 
             wx.CallAfter(endBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"
