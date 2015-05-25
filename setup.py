@@ -124,6 +124,8 @@ class CustomBuildCommand(build):
             cacert = requests.certs.where()
             os.system(r"COPY /Y %s dist\MyData" % cacert)
 
+            thismodule = sys.modules[__name__]
+            whether_to_sign = thismodule.whether_to_sign
             if whether_to_sign:
                 sign_exe_cmd = 'signtool sign -f "%s" -p "%s" %s' \
                     % (certificate_path, certificate_password,
@@ -133,6 +135,24 @@ class CustomBuildCommand(build):
                     % (certificate_path, certificate_password,
                        r" dist\MyData\*.dll")
                 os.system(sign_dll_cmd)
+        elif sys.platform.startswith("darwin"):
+            print "\nCreating dist/MyData.app using py2app...\n"
+            os.system("rm -fr build/*")
+            os.system("rm -fr dist/*")
+        else:
+            print "Custom build command."
+
+
+class CustomBdistCommand(bdist):
+    """
+    On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
+    On Mac OS X, create dist/MyData_vX.Y.Z.dmg
+    """
+    def run(self):
+        # bdist.run(self)
+        if sys.platform.startswith("win"):
+            self.run_command("build")
+            print "Building binary distributable for Windows..."
             innosetup_script = """
 ;MyData InnoSetup script
 ;Change OutputDir to suit your build environment
@@ -177,28 +197,12 @@ Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}";
                     r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
                     % mydata.__version__
             os.system(cmd)
+            thismodule = sys.modules[__name__]
+            whether_to_sign = thismodule.whether_to_sign
             if whether_to_sign:
                 os.system('signtool sign -f "%s" -p "%s" dist\MyData_v%s.exe'
                           % (certificate_path, certificate_password,
                              mydata.__version__))
-        elif sys.platform.startswith("darwin"):
-            print "\nCreating dist/MyData.app using py2app...\n"
-            os.system("rm -fr build/*")
-            os.system("rm -fr dist/*")
-        else:
-            print "Custom build command."
-
-
-class CustomBdistCommand(bdist):
-    """
-    On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
-    On Mac OS X, create dist/MyData_vX.Y.Z.dmg
-    """
-    def run(self):
-        # bdist.run(self)
-        if sys.platform.startswith("win"):
-            self.run_command("build")
-            print "Building binary distributable for Windows..."
         elif sys.platform.startswith("darwin"):
             os.system("rm -fr dist/*")
             self.run_command("py2app")
@@ -411,7 +415,10 @@ class CustomInstallCommand(install):
         # install.run(self)
         self.run_command("bdist")
         if sys.platform.startswith("win"):
-            print "\nOpening MyData_v%s.exe...\n" % mydata.__version__
+            print "\nLaunching MyData_v%s.exe...\n" % mydata.__version__
+            installer_filename = "%s_v%s.exe" % (app_name, mydata.__version__)
+            cmd = 'dist\%s' % installer_filename
+            os.system(cmd)
         elif sys.platform.startswith("darwin"):
             print "\nOpening dist/MyData_v%s.dmg...\n" % mydata.__version__
             dmg_filename = "%s_v%s.dmg" % (app_name, mydata.__version__)
