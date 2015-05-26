@@ -4,16 +4,19 @@
 # /var/www/cgi-bin/mydata_log_drop.py
 # on cvl.massive.org.au
 
-import cgi, os
-import cgitb; cgitb.enable()
+import os
+import cgi
+import cgitb
 import string
 import tempfile
 import subprocess
 
-MAX_LOG_DIRECTORY_SIZE  = 100 # size of log directory in Mb
-LOG_DIRECTORY           = '/opt/mydata_debug_logs/'
+cgitb.enable()
 
-MAX_NR_BYTES_LOG        = 50*1048576 # 50Mb
+MAX_LOG_DIRECTORY_SIZE = 100  # size of log directory in Mb
+LOG_DIRECTORY = '/opt/mydata_debug_logs/'
+
+MAX_NR_BYTES_LOG = 50*1048576  # 50Mb
 
 
 def free_root_space():
@@ -27,6 +30,7 @@ def free_root_space():
 
     return int(stdout.split('\n')[1].split('MB')[2]) > \
         1.5 * MAX_LOG_DIRECTORY_SIZE
+
 
 def free_space():
     proc = subprocess.Popen('du -B MB ' + LOG_DIRECTORY,
@@ -56,7 +60,8 @@ if 'logfile' in form:
 
         while True:
             blob = logfile.file.read(BYTES_PER_READ)
-            if not blob: break
+            if not blob:
+                break
             bytes_read += BYTES_PER_READ
 
             if bytes_read >= MAX_NR_BYTES_LOG:
@@ -67,10 +72,10 @@ if 'logfile' in form:
                 out.write(blob)
         out.close()
 
-print """
-Content-Type: text/html
+print "Content-Type: text/html\r\n\r\n"
 
+print """
 <html><body>
 <p>%s</p>
 </body></html>
-""" % ('boo',)
+""" % ('Hello from mydata_log_drop.py',)
