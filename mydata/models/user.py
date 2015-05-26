@@ -1,6 +1,7 @@
 import requests
 import json
 import traceback
+import urllib2
 
 from .group import GroupModel
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
@@ -156,7 +157,8 @@ class UserModel():
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + email
+        url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
+            urllib2.quote(email)
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
@@ -167,6 +169,7 @@ class UserModel():
             session.close()
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
+            logger.debug(url)
             message = response.text
             response.close()
             session.close()
