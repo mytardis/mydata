@@ -897,6 +897,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
 
     bytesUploaded = 0
 
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = openSSH.DoubleQuote(remoteDir)
     mkdirCmdAndArgs = \
         [openSSH.DoubleQuote(openSSH.ssh),
          "-n",
@@ -907,8 +909,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
          "-oStrictHostKeyChecking=no",
          "-l", username,
          hostname,
-         openSSH.DoubleQuote("mkdir -p %s"
-                             % os.path.dirname(remoteFilePath))]
+         openSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
     mkdirCmdString = " ".join(mkdirCmdAndArgs)
     logger.debug(mkdirCmdString)
     mkdirProcess = \
