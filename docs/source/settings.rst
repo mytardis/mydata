@@ -84,6 +84,11 @@ Advanced
     to the "Experiment (Dataset Grouping)" field below.
 
 **Folder Structure - Email / Dataset**
+    This folder structure works best when email addresses are unique per
+    user in MyTardis.  There is no constraint requiring email addresses to be
+    unique in MyTardis, but if MyTardis is using an external authentication
+    provider (e.g. LDAP), there may be a requirement in the authentication
+    provider making email addresses unique.
     Folders immediately inside the main data directory
     (e.g. "D:\\Data\\John.Smith@example.com") are assumed to be email
     addresses which can be used to match MyTardis user accounts.  If you wish
@@ -104,6 +109,11 @@ Advanced
     mapped to MyTardis datasets.
 
 **Folder Structure - Email / Experiment / Dataset**
+    This folder structure works best when email addresses are unique per
+    user in MyTardis.  There is no constraint requiring email addresses to be
+    unique in MyTardis, but if MyTardis is using an external authentication
+    provider (e.g. LDAP), there may be a requirement in the authentication
+    provider making email addresses unique.
     Folders immediately inside the main data directory
     (e.g. "D:\\Data\\John.Smith@example.com") are assumed to be email
     addresses which can be used to match MyTardis user accounts.  If you wish
