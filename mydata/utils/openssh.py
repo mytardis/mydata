@@ -920,9 +920,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
                          creationflags=defaultCreationFlags)
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
-        raise SshException(stdout,
-                           mkdirCmdString,
-                           mkdirProcess.returncode)
+        raise SshException(stdout, mkdirProcess.returncode)
 
     if uploadMethod == SmallFileUploadMethod.SCP:
         scpCommandString = \
@@ -1044,9 +1042,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                          creationflags=defaultCreationFlags)
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
-        raise SshException(stdout,
-                           mkdirCmdString,
-                           mkdirProcess.returncode)
+        raise SshException(stdout, mkdirProcess.returncode)
 
     remoteChunkPath = remoteFilePath + ".chunk"
 
