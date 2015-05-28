@@ -927,7 +927,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         scpCommandString = \
             '%s -i %s -c %s ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-            '%s "%s@%s:\\"%s\\""' \
+            '%s "%s@%s:\\"%s/\\""' \
             % (openSSH.DoubleQuote(openSSH.scp),
                openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
                openSSH.cipher,
