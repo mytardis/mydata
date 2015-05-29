@@ -8,7 +8,7 @@ import sys
 import os
 import traceback
 
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.models.settings import SettingsModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import IncompatibleMyTardisVersion

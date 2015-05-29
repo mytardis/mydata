@@ -10,7 +10,7 @@ from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
 from mydata.models.group import GroupModel
 from mydata.models.experiment import ExperimentModel
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 

@@ -6,7 +6,7 @@ import urllib2
 from .group import GroupModel
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DoesNotExist
-from mydata.logging import logger
+from mydata.logs import logger
 
 
 class UserModel():

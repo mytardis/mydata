@@ -8,7 +8,7 @@ from ConfigParser import ConfigParser
 from validate_email import validate_email
 from datetime import datetime
 
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.models.user import UserModel
 from mydata.models.facility import FacilityModel
 from mydata.models.instrument import InstrumentModel

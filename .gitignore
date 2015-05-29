@@ -4,5 +4,5 @@
 setup.exe
 build/
 dist/
-CommitDef.py
+commitdef.py
 *.egg

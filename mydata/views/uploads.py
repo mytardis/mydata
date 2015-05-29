@@ -8,7 +8,7 @@ from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.models.upload import UploadModel
 
-from mydata.logging import logger
+from mydata.logs import logger
 
 
 class UploadsView(wx.Panel):

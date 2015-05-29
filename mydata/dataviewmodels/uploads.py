@@ -4,7 +4,7 @@ import traceback
 
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 
