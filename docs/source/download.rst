@@ -3,8 +3,8 @@ Download
 
 Current Version
 ^^^^^^^^^^^^^^^
-* Download MyData for Windows: `MyData_v0.3.0.exe <https://github.com/monash-merc/mydata/releases/download/v0.3.0/MyData_v0.3.0.exe>`_
-* Download MyData for Mac OS X: `MyData.v0.3.0.dmg <https://github.com/monash-merc/mydata/releases/download/v0.3.0/MyData_v0.3.0.dmg>`_
+* Download MyData for Windows: `MyData_v0.3.0-alpha1.exe <https://github.com/monash-merc/mydata/releases/download/v0.3.0-alpha1/MyData_v0.3.0-alpha1.exe>`_
+* Download MyData for Mac OS X: `MyData.v0.3.0-alpha1.dmg <https://github.com/monash-merc/mydata/releases/download/v0.3.0-alpha1/MyData_v0.3.0-alpha1.dmg>`_
 
 Previous Version
 ^^^^^^^^^^^^^^^^
