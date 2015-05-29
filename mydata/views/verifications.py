@@ -7,7 +7,7 @@ import wx.dataview as dv
 from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.dataviewmodels.verifications import ColumnType
 from mydata.models.verification import VerificationModel
-from mydata.logging import logger
+from mydata.logs import logger
 
 
 class VerificationsView(wx.Panel):

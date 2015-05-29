@@ -86,7 +86,7 @@ import uuid
 
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
-from mydata.logging import logger
+from mydata.logs import logger
 import mydata.utils.openssh as OpenSSH
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import PrivateKeyDoesNotExist

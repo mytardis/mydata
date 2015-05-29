@@ -2,7 +2,7 @@ import requests
 import json
 import urllib
 
-from mydata.logging import logger
+from mydata.logs import logger
 from .user import UserProfileModel
 from mydata.utils.exceptions import DoesNotExist
 

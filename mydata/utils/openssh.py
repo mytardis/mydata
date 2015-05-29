@@ -25,7 +25,7 @@ from datetime import datetime
 import errno
 import getpass
 
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import StagingHostRefusedSshConnection

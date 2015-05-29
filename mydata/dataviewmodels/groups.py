@@ -3,7 +3,7 @@ import os
 import threading
 
 from mydata.models.group import GroupModel
-from mydata.logging import logger
+from mydata.logs import logger
 
 
 class GroupsModel(wx.dataview.PyDataViewIndexListModel):

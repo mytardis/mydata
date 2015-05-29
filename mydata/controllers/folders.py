@@ -36,7 +36,7 @@ from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 
-from mydata.logging import logger
+from mydata.logs import logger
 
 import wx
 import wx.lib.newevent

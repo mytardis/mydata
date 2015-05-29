@@ -2,7 +2,7 @@ import requests
 import json
 import urllib2
 
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import MultipleObjectsReturned

@@ -8,16 +8,7 @@ import traceback
 import threading
 import argparse
 from datetime import datetime
-try:
-    import logging
-except:
-    # If MyData.py is run directly from the "mydata" directory, instead
-    # of running run.py from its parent directory, then Python will try
-    # to import MyData's logging/__init__.py module here, instead of
-    # Python's built-in logging module.
-    print "Running MyData.py directly is no longer supported."
-    print "Please use run.py in MyData.py's parent directory instead."
-    os._exit(1)
+import logging
 
 from mydata import __version__ as VERSION
 from mydata import LATEST_COMMIT
@@ -38,7 +29,7 @@ from mydata.views.settings import SettingsDialog
 from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.views.statusbar import EnhancedStatusBar
-from mydata.logging import logger
+from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
 from mydata.views.progress import MyDataProgressDialog
 import mydata.events as mde
