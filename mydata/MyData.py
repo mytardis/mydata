@@ -115,6 +115,20 @@ class MyData(wx.App):
         self.lastNetworkConnectivityCheckSuccess = False
         self.activeNetworkInterface = None
 
+        if hasattr(sys, "frozen"):
+            if sys.platform.startswith("darwin"):
+                # When frozen with Py2App, the default working directory
+                # will be /Applications/MyData.app/Contents/Resources/
+                # and setup.py will copy requests's cacert.pem into that
+                # directory.
+                certPath = os.path.realpath('.')
+            else:
+                # On Windows, setup.py will install requests's cacert.pem
+                # in the same directory as MyData.exe.
+                certPath = os.path.dirname(sys.executable)
+            os.environ['REQUESTS_CA_BUNDLE'] = \
+                os.path.join(certPath, 'cacert.pem')
+
         # MyData.cfg stores settings in INI format, readable by ConfigParser
         self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
         logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
