@@ -45,13 +45,19 @@ running:
 
 after installing the "mytardis-app-mydata" MyTardis app in "tardis/apps/mydata".
 
-MyData requires the use of a "receiving" storage box (also know as a "staging" storage box)
-in MyTardis, which serves as a temporary location for uploaded files.  MyTardis will
-automatically create a storage box if a client like MyData attempts to perform staging
-uploads via the API.  To enable uploads via staging (using SCP) in MyData, which are
-recommended over HTTP POST uploads, it is necessary to add the "scp_username" and
-"scp_hostname" attributes to the storage box, as illustrated below.
+MyData requires the use of a "receiving" storage box (also know as a "staging"
+storage box) in MyTardis, which serves as a temporary location for uploaded
+files.  MyTardis will automatically create a storage box if a client like
+MyData attempts to perform staging uploads via the API.  To enable uploads via
+staging (using SCP) in MyData, which are recommended over HTTP POST uploads, it is necessary to add the "scp_username" and "scp_hostname" attributes to the
+storage box, as illustrated below.
 
   .. image:: images/StorageBoxAttributes.png 
+
+DEFAULT_RECEIVING_DIR in tardis/settings.py should be set to match the location
+option of the "staging" (or "receiving") storage box, e.g.
+"/var/lib/mytardis/receiving".  Similarly, DEFAULT_STORAGE_BASE_DIR in
+tardis/settings.py should be set to match the location option of the "master"
+storage box, which is called "default" above.
 
 For more information on uploads via staging, see see :ref:`scp-to-staging`.
