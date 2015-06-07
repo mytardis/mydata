@@ -153,13 +153,16 @@ key which MyData generated in ~/.ssh/:
   mydata mytardis
   [mydata@118.138.241.33 ~]$ ls -lh /mnt/sonas/market | grep MYTARDIS
   drwx------ 403 mytardis www-data 128K Nov 12 14:33 MYTARDIS_FILE_STORE
-  drwxrwx---   3 mytardis www-data  32K Nov 13 15:36 MYTARDIS_STAGING
+  drwxrws---   3 mytardis www-data  32K Nov 13 15:36 MYTARDIS_STAGING
   [mydata@118.138.241.33 ~]$ touch /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
   [mydata@118.138.241.33 ~]$ rm /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
 
-Note the permissions above - being part of the "mytardis" group on this staging
+Note the permissions above - being part of the "www-data" group on this staging
 host allows the "mydata" user to write to the MYTARDIS_STAGING directory, but
-not to the MYTARDIS_FILE_STORE directory.
+not to the MYTARDIS_FILE_STORE directory.  The 's' in the "MYTARDIS_STAGING"
+directory permission ensures that all subdirectories created by the "mydata"
+user will inherit the MYTARDIS_STAGING directory's group ("www-data"), instead
+of the mydata user's default group ("mydata").
   
 Once uploads to staging have been approved, MyData can manage multiple uploads
 at once (5 by default):
