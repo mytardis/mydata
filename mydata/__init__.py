@@ -2,7 +2,7 @@
 mydata/__init__.py
 """
 
-__version__ = "0.3.0-alpha1"
+__version__ = "0.3.0-beta1"
 
 import sys
 
