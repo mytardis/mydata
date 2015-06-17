@@ -92,8 +92,8 @@ for the "Test Facility" facility.
 Obtaining the demo data
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Download `MyTardisDemoData.zip <https://github.com/monash-merc/mydata-sample-data/releases/download/v0.1/MyTardisDemoData.zip>`_ in extract it in "C:\\" to create
-the "C:\\MyTardisDemoUsers" folder shown below:
+Download `MyTardisDemoData.zip <https://github.com/monash-merc/mydata-sample-data/releases/download/v0.1/MyTardisDemoData.zip>`_ and extract it in "C:\\" to
+create the "C:\\MyTardisDemoUsers" folder shown below:
 
   .. image:: images/MyDataDemoDataWindowsExplorer.PNG
 
