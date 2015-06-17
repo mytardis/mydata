@@ -136,6 +136,15 @@ Ran the following as root on the staging host (118.138.241.33) :
   $ chmod 600 /home/mydata/.ssh/authorized_keys
   $ usermod -a -G www-data mydata
 
+The MyData client will need to create subdirectories within the MyTardis
+staging area, and it will need to be able to write within those subdirectories.
+The "mytardis" web user should have read access to the staging data, but the
+"mydata" user should not have write access to the permanent storage location.
+One way to implement this is to set ownership of the staging directory to
+"mytardis:www-data", use the "setgid" bit (chmod g+s) on the staging directory
+so that subdirectories inherit the "www-data" group, and set "umask 0007" in
+the mydata user's ~/.bashrc.
+
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
 person.  Normally, the MyTardis administrator wouldn't have access to the
