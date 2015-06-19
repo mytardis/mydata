@@ -992,7 +992,11 @@ class UploadDatafileRunnable():
             myTardisUrl = self.settingsModel.GetMyTardisUrl()
             myTardisUsername = self.settingsModel.GetUsername()
             myTardisApiKey = self.settingsModel.GetApiKey()
-            url = myTardisUrl + "/api/v1/dataset_file/"
+            if self.foldersController.uploadMethod == \
+                    UploadMethod.VIA_STAGING:
+                url = myTardisUrl + "/api/v1/mydata_dataset_file/"
+            else:
+                url = myTardisUrl + "/api/v1/dataset_file/"
             headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                        myTardisApiKey}
 
@@ -1221,6 +1225,11 @@ class UploadDatafileRunnable():
                         bytesUploaded = self.uploadModel.GetBytesUploaded()
                         if bytesUploaded == dataFileSize:
                             uploadSuccess = True
+                            if not self.existingUnverifiedDatafile:
+                                location = response.headers['location']
+                                datafileId = location.split("/")[-2]
+                                DataFileModel.Verify(self.settingsModel,
+                                                     datafileId)
                         else:
                             raise Exception(
                                 "Only %d of %d bytes were uploaded for %s"
