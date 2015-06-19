@@ -106,14 +106,6 @@ class PrivateKeyDoesNotExist(Exception):
         super(PrivateKeyDoesNotExist, self).__init__(message)
 
 
-class StringTooLongForField(Exception):
-    def __init__(self, model, field, maxLength, value):
-        message = "'%s' is too long for field '%s' in '%s' model.\n" \
-            "The maximum length allowed is %d\n" \
-            % (value, field, model, maxLength)
-        super(StringTooLongForField, self).__init__(message)
-
-
 class InvalidFolderStructure(Exception):
     def __init__(self, message):
         super(InvalidFolderStructure, self).__init__(message)

@@ -91,7 +91,6 @@ import mydata.utils.openssh as OpenSSH
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.utils.exceptions import NoActiveNetworkInterface
-from mydata.utils.exceptions import StringTooLongForField
 from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
 from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
@@ -334,24 +333,6 @@ class UploaderModel():
         self.cpus = psutil.cpu_count()
 
         self.hostname = platform.node()
-
-        uploaderFieldLength = {
-            "name": 64, "contact_name": 64, "contact_email": 64,
-            "user_agent_name": 64, "user_agent_version": 32,
-            "user_agent_install_location": 128,
-            "os_platform": 64, "os_system": 64, "os_release": 32,
-            "os_version": 128, "os_username": 64,
-            "machine": 64, "architecture": 64, "processor": 64, "memory": 32,
-            "data_path": 64, "default_user": 64,
-            "interface": 64, "mac_address": 64, "ipv4_address": 16,
-            "ipv6_address": 64, "subnet_mask": 16, "hostname": 64,
-            "uuid": 36}
-
-        for field in uploaderFieldLength:
-            if len(getattr(self, field)) > uploaderFieldLength[field]:
-                raise StringTooLongForField("Uploader", field,
-                                            uploaderFieldLength[field],
-                                            getattr(self, field))
 
         uploaderJson = {"uuid": self.uuid,
                         "name": self.name,
