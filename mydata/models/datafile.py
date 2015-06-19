@@ -10,7 +10,6 @@ from mydata.utils.exceptions import MultipleObjectsReturned
 
 
 class DataFileModel():
-
     def __init__(self, settingsModel, dataset, dataFileJson):
         self.settingsModel = settingsModel
         self.json = dataFileJson
@@ -120,3 +119,24 @@ class DataFileModel():
                 settingsModel=settingsModel,
                 dataset=dataset,
                 dataFileJson=dataFilesJson['objects'][0])
+
+    @staticmethod
+    def Verify(settingsModel, datafileId):
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+        url = myTardisUrl + "/api/v1/dataset_file/%s/verify" % datafileId
+        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
+                   myTardisApiKey}
+        response = requests.get(url=url, headers=headers)
+        if response.status_code < 200 or response.status_code >= 300:
+            logger.error("Failed to verify datafile id \"%s\" "
+                         % datafileId)
+            logger.error(response.text)
+            return False
+        # Returning True doesn't mean that the file has been verified.
+        # It just means that the MyTardis API has accepted our verification
+        # request without raising an error.  The verification is asynchronous
+        # so it might not happen immediately if there is congestion in the
+        # Celery queue.
+        return True
