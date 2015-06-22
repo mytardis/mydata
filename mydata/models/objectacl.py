@@ -4,6 +4,7 @@ import urllib
 
 from mydata.logs import logger
 from .user import UserProfileModel
+from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import DoesNotExist
 
 
@@ -32,7 +33,8 @@ class ObjectAclModel():
         objectAclJson = {
             "pluginId": "django_user",
             "entityId": str(user.GetId()),
-            "content_object": experiment.GetResourceUri().replace("mydata_",""),
+            "content_object": experiment.GetResourceUri().replace("mydata_",
+                                                                  ""),
             "content_type": "experiment",
             "object_id": experiment.GetId(),
             "aclOwnershipType": 1,
@@ -96,7 +98,8 @@ class ObjectAclModel():
         objectAclJson = {
             "pluginId": "django_group",
             "entityId": str(group.GetId()),
-            "content_object": experiment.GetResourceUri().replace("mydata_",""),
+            "content_object": experiment.GetResourceUri().replace("mydata_",
+                                                                  ""),
             "object_id": experiment.GetId(),
             "aclOwnershipType": 1,
             "isOwner": True,
