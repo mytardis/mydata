@@ -442,6 +442,16 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
+        stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24")
+        self.stopTool = self.toolbar.AddSimpleTool(wx.ID_STOP,
+                                                      stopIcon,
+                                                      "Stop", "")
+        self.toolbar.EnableTool(wx.ID_STOP, True)
+        self.Bind(wx.EVT_TOOL, self.OnStop, self.stopTool,
+                  self.stopTool.GetId())
+
+        self.toolbar.AddSeparator()
+
         settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
         self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settingsIcon,
                                                        "Settings", "")
@@ -790,6 +800,9 @@ class MyData(wx.App):
         logger.debug("OnRefresh: Starting scanDataDirs thread.")
         thread.start()
         logger.debug("OnRefresh: Started scanDataDirs thread.")
+
+    def OnStop(self, event):
+        self.uploadsView.OnCancelRemainingUploads(event)
 
     def OnOpen(self, event):
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
