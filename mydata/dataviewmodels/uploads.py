@@ -376,6 +376,11 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                     wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def CancelRemaining(self):
+        app = wx.GetApp()
+        if threading.current_thread().name == "MainThread":
+            app.toolbar.EnableTool(app.stopTool.GetId(), False)
+        else:
+            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), False)
         rowsToDelete = []
         for row in range(0, self.GetRowCount()):
             if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \
@@ -389,7 +394,10 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
             self.uploadsData[row].Cancel()
             del self.uploadsData[row]
             del self.uud[row]
-        wx.CallAfter(self.RowsDeleted, rowsToDelete)
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsToDelete)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsToDelete)
 
         self.fud = list()
         self.filtered = False

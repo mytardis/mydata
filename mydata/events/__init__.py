@@ -187,8 +187,8 @@ class MyDataEvent(wx.PyCommandEvent):
                     datetime.now() - \
                     wx.GetApp().GetLastNetworkConnectivityCheckTime()
                 # FIXME: Magic number of 30 seconds below:
-                if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
-                        not wx.GetApp()\
+                if intervalSinceLastConnectivityCheck.total_seconds() >= 30 \
+                        or not wx.GetApp()\
                         .GetLastNetworkConnectivityCheckSuccess():
                     checkConnectivityEvent = \
                         MyDataEvent(EVT_CHECK_CONNECTIVITY,
@@ -522,7 +522,10 @@ class MyDataEvent(wx.PyCommandEvent):
             logger.debug("startDataUploadsWorker")
             wx.CallAfter(wx.BeginBusyCursor)
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                         "Starting data uploads...")
+                         "Checking for data files on MyTardis and uploading "
+                         "if necessary...")
+            app = wx.GetApp()
+            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
             event.foldersController.StartDataUploads()
 
             def endBusyCursorIfRequired():

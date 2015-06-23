@@ -39,7 +39,7 @@ class Icons():
         self.iconsCache = {}
 
     def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
-                size=None):
+                size=None, extension=None):
         if not size:
             size = self.defaultIconSize
         cacheKey = '%s-%s-%s' % (name, IconStyle.STRINGS[style], size)
@@ -47,6 +47,8 @@ class Icons():
             iconStyleFolderName = "png-normal"
         elif style == IconStyle.HOT:
             iconStyleFolderName = "png-hot"
+        elif style == IconStyle.DISABLED:
+            iconStyleFolderName = "png-disabled"
         else:
             raise Exception("Unsupported icon style was requested: %s"
                             % IconStyle.STRINGS[style])
@@ -59,8 +61,11 @@ class Icons():
                                           iconSubdir, "%s.png" % name),
                              wx.BITMAP_TYPE_PNG).ConvertToBitmap()
             else:
+                if not extension:
+                    extension = "ico"
                 self.iconsCache[cacheKey] = \
-                    wx.Image(os.path.join(self.mediaPath, "%s.ico" % name),
+                    wx.Image(os.path.join(self.mediaPath,
+                                          "%s.%s" % (name, extension)),
                              wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         return self.iconsCache[cacheKey]
 
