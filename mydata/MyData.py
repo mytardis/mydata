@@ -89,11 +89,9 @@ class MyDataFrame(wx.Frame):
         if connected:
             if sys.platform.startswith("win"):
                 self.statusbar.SetStatusConnectionIcon(self.connectedBitmap)
-            self.SetStatusMessage("Connected to " + myTardisUrl)
         else:
             if sys.platform.startswith("win"):
                 self.statusbar.SetStatusConnectionIcon(self.disconnectedBitmap)
-            self.SetStatusMessage("Not connected to " + myTardisUrl)
 
 
 class MyData(wx.App):
@@ -442,11 +440,17 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24")
+        stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
+                                       style=IconStyle.NORMAL)
         self.stopTool = self.toolbar.AddSimpleTool(wx.ID_STOP,
-                                                      stopIcon,
-                                                      "Stop", "")
-        self.toolbar.EnableTool(wx.ID_STOP, True)
+                                                   stopIcon,
+                                                   "Stop", "")
+        disabledStopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
+                                               style=IconStyle.DISABLED)
+        self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
+                                           disabledStopIcon)
+        self.toolbar.EnableTool(self.stopTool.GetId(), False)
+
         self.Bind(wx.EVT_TOOL, self.OnStop, self.stopTool,
                   self.stopTool.GetId())
 

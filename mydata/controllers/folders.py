@@ -538,7 +538,9 @@ class FoldersController():
         if self.IsShuttingDown():
             return
         self.SetShuttingDown(True)
-        logger.debug("Shutting down uploads threads...")
+        message = "Shutting down uploads threads..."
+        logger.info(message)
+        wx.GetApp().GetMainFrame().SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
             self.SetFailed()
             self.uploadsModel.CancelRemaining()
@@ -566,14 +568,18 @@ class FoldersController():
         self.uploadDatafileRunnable = {}
 
         if self.Failed():
-            logger.info("Data scan and uploads failed.")
+            message = "Data scans and uploads failed."
         elif self.Canceled():
-            logger.info("Data scan and uploads were canceled.")
+            message = "Data scan and uploads were canceled."
         elif self.Completed():
-            logger.info("Data scan and uploads completed successfully.")
+            message = "Data scan and uploads completed successfully."
         else:
-            logger.info("Data scan and uploads appear to have "
-                        "completed successfully.")
+            message = "Data scan and uploads appear to have " \
+                "completed successfully."
+        logger.info(message)
+        wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        app = wx.GetApp()
+        app.toolbar.EnableTool(app.stopTool.GetId(), False)
 
         self.notifyWindow.SetOnRefreshRunning(False)
         self.SetShuttingDown(False)
