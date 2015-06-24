@@ -714,3 +714,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             raise
         except:
             logger.error(traceback.format_exc())
+
+    def GetTotalNumFiles(self):
+        total = 0
+        for folderModel in self.foldersData:
+            total += folderModel.GetNumFiles()
+        return total
