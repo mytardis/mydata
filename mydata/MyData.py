@@ -694,6 +694,14 @@ class MyData(wx.App):
         logger.debug("OnRefresh: Creating progress dialog.")
 
         def cancelCallback():
+            def closeProgressDialog():
+                self.progressDialog.Show(False)
+                # wxMac seems to work better with Destroy here,
+                # otherwise sometimes the dialog lingers.
+                if sys.platform.startswith("darwin"):
+                    self.progressDialog.Destroy()
+                    self.progressDialog = None
+            wx.CallAfter(closeProgressDialog)
             def shutDownUploadThreads():
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
@@ -711,28 +719,25 @@ class MyData(wx.App):
                     logger.error(traceback.format_exc())
             thread = threading.Thread(target=shutDownUploadThreads)
             thread.start()
+        if "Group" in self.settingsModel.GetFolderStructure():
+            userOrGroup = "user group"
+        else:
+            userOrGroup = "user"
         self.progressDialog = \
-            MyDataProgressDialog(
-                self.frame,
-                wx.ID_ANY,
-                "",
-                "Scanning folders in " +
-                self.settingsModel.GetDataDirectory(),
+            MyDataProgressDialog(self.frame, wx.ID_ANY, "",
+                "Scanning %s folders..." % userOrGroup,
                 self.usersModel.GetNumUserOrGroupFolders(),
                 userCanAbort=True, cancelCallback=cancelCallback)
 
         self.numUserFoldersScanned = 0
-        self.keepGoing = True
 
         def incrementProgressDialog():
             self.numUserFoldersScanned = self.numUserFoldersScanned + 1
-            message = "Scanned %d of %d folders in %s" % (
+            message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),
-                self.settingsModel.GetDataDirectory())
-            self.keepGoing = \
-                self.progressDialog.Update(self.numUserFoldersScanned,
-                                           message)
+                userOrGroup)
+            self.progressDialog.Update(self.numUserFoldersScanned, message)
 
         # SECTION 4: Start FoldersModel.Refresh(),
         # followed by FoldersController.StartDataUploads().
