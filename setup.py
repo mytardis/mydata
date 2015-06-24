@@ -45,6 +45,8 @@ resourceFiles = ["mydata/media/MyData.icns",
 
 for icon_files_path in ("media/Aha-Soft/png-normal/icons16x16",
                         "media/Aha-Soft/png-normal/icons24x24",
+                        "media/Aha-Soft/png-disabled/icons16x16",
+                        "media/Aha-Soft/png-disabled/icons24x24",
                         "media/Aha-Soft/png-hot/icons24x24"):
     for icon_file in os.listdir(os.path.join(package_name, icon_files_path)):
         icon_file_path = os.path.join(package_name, icon_files_path, icon_file)
