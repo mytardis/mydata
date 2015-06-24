@@ -208,7 +208,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         return self.defaultColumnWidths[col]
 
     def GetFolderPath(self, row):
-        import os
         return os.path.join(self.foldersData[row].GetLocation(),
                             self.foldersData[row].GetFolder())
 
@@ -305,14 +304,8 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 return
 
     def Contains(self, path):
-        import os
-        from Win32SamePath import Win32SamePath
-        win32SamePath = Win32SamePath()
-        dir1 = path
         for row in range(0, self.GetCount()):
-
-            dir2 = self.GetFolderPath(row)
-            if win32SamePath.paths_are_equal(dir1, dir2):
+            if path == self.GetFolderPath(row):
                 return True
         return False
 
