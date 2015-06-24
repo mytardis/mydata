@@ -10,7 +10,6 @@ from mydata.logs import logger
 
 
 class FolderModel():
-
     def __init__(self, dataViewId, folder, location, userFolderName,
                  owner, foldersModel, usersModel, settingsModel):
         self.dataViewId = dataViewId
@@ -164,8 +163,8 @@ class FolderModel():
         for dirName, _, files in os.walk(absoluteFolderPath):
             for fileName in sorted(files):
                 self.dataFilePaths.append(os.path.join(dirName, fileName))
-                self.dataFileDirectories.append(os.path.relpath(dirName,
-                                                                absoluteFolderPath))
+                self.dataFileDirectories\
+                    .append(os.path.relpath(dirName, absoluteFolderPath))
         for i in range(0, len(self.dataFileDirectories)):
             if self.dataFileDirectories[i] == ".":
                 self.dataFileDirectories[i] = ""
