@@ -49,8 +49,8 @@ class MyDataProgressDialog(wx.Frame):
     def __init__(self, parent, id, title, message, maxValue, userCanAbort,
                  cancelCallback=None):
         wx.Frame.__init__(self, parent, id, title,
-                          style=wx.DEFAULT_DIALOG_STYLE
-                          | wx.FRAME_FLOAT_ON_PARENT)
+                          style=wx.DEFAULT_DIALOG_STYLE |
+                          wx.FRAME_FLOAT_ON_PARENT)
 
         self.userRequestedAbort = False
         self.cancelCallback = cancelCallback
