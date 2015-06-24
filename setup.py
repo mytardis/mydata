@@ -233,13 +233,6 @@ Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}";
                 whether_to_sign = False
 
             # Digitally sign application:
-            cmd = "CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents" \
-                "/Developer/Platforms/iPhoneOS.platform/Developer" \
-                "/usr/bin/codesign_allocate"
-            print cmd
-            os.environ['CODESIGN_ALLOCATE'] = \
-                "/Applications/Xcode.app/Contents/Developer/Platforms" \
-                "/iPhoneOS.platform/Developer/usr/bin/codesign_allocate"
             if whether_to_sign:
                 cmd = "codesign --deep --force -i org.mytardis.MyData " \
                     "--sign \"%s\" " \
