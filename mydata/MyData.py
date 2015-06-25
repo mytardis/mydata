@@ -100,6 +100,7 @@ class MyData(wx.App):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
+        self.SetAppName("MyData")
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
@@ -702,6 +703,7 @@ class MyData(wx.App):
                     self.progressDialog.Destroy()
                     self.progressDialog = None
             wx.CallAfter(closeProgressDialog)
+
             def shutDownUploadThreads():
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
@@ -723,8 +725,8 @@ class MyData(wx.App):
             userOrGroup = "user group"
         else:
             userOrGroup = "user"
-        self.progressDialog = \
-            MyDataProgressDialog(self.frame, wx.ID_ANY, "",
+        self.progressDialog = MyDataProgressDialog(
+                self.frame, wx.ID_ANY, "",
                 "Scanning %s folders..." % userOrGroup,
                 self.usersModel.GetNumUserOrGroupFolders(),
                 userCanAbort=True, cancelCallback=cancelCallback)
