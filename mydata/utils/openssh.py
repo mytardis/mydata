@@ -1073,25 +1073,25 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             logger.debug("UploadLargeFileFromWindows 1: "
                          "Aborting upload for %s" % filePath)
             return
-        # We'll write a chunk to temporary file.
+        # We'll write a chunk to a temporary file.
         # chunkSize (e.g. 256 MB) is for SCP uploads
         # smallChunkSize (e.g. 8 MB) is for extracting a large chunk
         # from a datafile a little bit at a time (not wasting memory).
-        with open(filePath, 'rb') as datafile,
-                tempfile.NamedTemporaryFile(delete=False) as chunkFile:
-            datafile.seek(skip * chunkSize)
-            bytesTransferred = 0
-            smallChunkSize = chunkSize
-            count = 1
-            while (smallChunkSize > 8 * 1024 * 1024) and \
-                    (smallChunkSize % 2 == 0) and count < 32:
-                smallChunkSize /= 2
-                count *= 2
-            for i in range(count):
-                smallChunk = datafile.read(smallChunkSize)
-                chunkFile.write(smallChunk)
-                bytesTransferred += len(smallChunk)
-                del smallChunk
+        with open(filePath, 'rb') as datafile:
+            with tempfile.NamedTemporaryFile(delete=False) as chunkFile:
+                datafile.seek(skip * chunkSize)
+                bytesTransferred = 0
+                smallChunkSize = chunkSize
+                count = 1
+                while (smallChunkSize > 8 * 1024 * 1024) and \
+                        (smallChunkSize % 2 == 0) and count < 32:
+                    smallChunkSize /= 2
+                    count *= 2
+                for i in range(count):
+                    smallChunk = datafile.read(smallChunkSize)
+                    chunkFile.write(smallChunk)
+                    bytesTransferred += len(smallChunk)
+                    del smallChunk
         skip += 1
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
