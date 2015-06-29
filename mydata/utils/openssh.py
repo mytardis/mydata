@@ -1073,36 +1073,25 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             logger.debug("UploadLargeFileFromWindows 1: "
                          "Aborting upload for %s" % filePath)
             return
-        # Write chunk to temporary file:
-        chunkFile = tempfile.NamedTemporaryFile(delete=False)
-        chunkFile.close()
-        chunkFilePath = chunkFile.name
-        ddCommandString = \
-            "%s bs=%d skip=%d count=1 if=%s of=%s" \
-            % (openSSH.DoubleQuote(openSSH.dd),
-               chunkSize,
-               skip,
-               openSSH.DoubleQuote(GetMsysPath(filePath)),
-               openSSH.DoubleQuote(GetMsysPath(chunkFilePath)))
-        logger.debug(ddCommandString)
-        ddProcess = subprocess.Popen(
-            ddCommandString,
-            shell=openSSH.preferToUseShellInSubprocess,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=defaultStartupInfo,
-            creationflags=defaultCreationFlags)
-        stdout, _ = ddProcess.communicate()
-        if ddProcess.returncode != 0:
-            raise Exception(stdout,
-                            ddCommandString,
-                            ddProcess.returncode)
-        lines = stdout.splitlines()
-        bytesTransferred = 0
-        for line in lines:
-            match = re.search(r"^(\d+)\s+bytes\s+.*copied.*$", line)
-            if match:
-                bytesTransferred = long(match.groups()[0])
+        # We'll write a chunk to temporary file.
+        # chunkSize (e.g. 256 MB) is for SCP uploads
+        # smallChunkSize (e.g. 8 MB) is for extracting a large chunk
+        # from a datafile a little bit at a time (not wasting memory).
+        with open(filePath, 'rb') as datafile,
+                tempfile.NamedTemporaryFile(delete=False) as chunkFile:
+            datafile.seek(skip * chunkSize)
+            bytesTransferred = 0
+            smallChunkSize = chunkSize
+            count = 1
+            while (smallChunkSize > 8 * 1024 * 1024) and \
+                    (smallChunkSize % 2 == 0) and count < 32:
+                smallChunkSize /= 2
+                count *= 2
+            for i in range(count):
+                smallChunk = datafile.read(smallChunkSize)
+                chunkFile.write(smallChunk)
+                bytesTransferred += len(smallChunk)
+                del smallChunk
         skip += 1
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
