@@ -102,11 +102,14 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
         if okToExit == wx.ID_YES:
             if not self.settingsModel.RunningInBackgroundMode():
                 os._exit(0)
-            cmd = "MyData.exe --version"
             if sys.platform.startswith("win"):
                 import win32com.shell.shell as shell
+                if hasattr(sys, "frozen"):
+                    cmd = "MyData.exe"
+                else:
+                    cmd = "Python.exe"
                 shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
-                                     lpParameters="")
+                                     lpParameters="--version")
             elif sys.platform.startswith("darwin"):
                 returncode = os.system("osascript -e "
                                        "'do shell script "
