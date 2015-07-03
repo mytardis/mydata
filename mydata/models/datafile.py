@@ -125,7 +125,7 @@ class DataFileModel():
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
-        url = myTardisUrl + "/api/v1/dataset_file/%s/verify" % datafileId
+        url = myTardisUrl + "/api/v1/dataset_file/%s/verify/" % datafileId
         headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
                    myTardisApiKey}
         response = requests.get(url=url, headers=headers)
