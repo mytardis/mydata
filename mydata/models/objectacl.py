@@ -100,6 +100,7 @@ class ObjectAclModel():
             "entityId": str(group.GetId()),
             "content_object": experiment.GetResourceUri().replace("mydata_",
                                                                   ""),
+            "content_type": "experiment",
             "object_id": experiment.GetId(),
             "aclOwnershipType": 1,
             "isOwner": True,
