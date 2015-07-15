@@ -813,6 +813,11 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        if not sys.platform.startswith('win'):
+                            sshMasterProcess = \
+                                self.verificationModel.GetSshMasterProcess()
+                            if sshMasterProcess:
+                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     except StorageBoxAttributeNotFound, e:
@@ -828,6 +833,11 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        if not sys.platform.startswith('win'):
+                            sshMasterProcess = \
+                                self.verificationModel.GetSshMasterProcess()
+                            if sshMasterProcess:
+                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     privateKeyFilePath = self.settingsModel\
@@ -859,6 +869,11 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        if not sys.platform.startswith('win'):
+                            sshMasterProcess = \
+                                self.verificationModel.GetSshMasterProcess()
+                            if sshMasterProcess:
+                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     except StagingHostSshPermissionDenied, e:
@@ -874,6 +889,11 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
+                        if not sys.platform.startswith('win'):
+                            sshMasterProcess = \
+                                self.verificationModel.GetSshMasterProcess()
+                            if sshMasterProcess:
+                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     if bytesUploadedToStaging == \
@@ -899,6 +919,11 @@ class VerifyDatafileRunnable():
                                     dataFileIndex=self.dataFileIndex,
                                     dataFilePath=dataFilePath))
 
+                        if not sys.platform.startswith('win'):
+                            sshMasterProcess = \
+                                self.verificationModel.GetSshMasterProcess()
+                            if sshMasterProcess:
+                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     else:
@@ -940,6 +965,11 @@ class VerifyDatafileRunnable():
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
                 self.foldersModel.FolderStatusUpdated(self.folderModel)
+                if not sys.platform.startswith('win'):
+                    sshMasterProcess = \
+                        self.verificationModel.GetSshMasterProcess()
+                    if sshMasterProcess:
+                        sshMasterProcess.terminate()
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.FoundVerifiedDatafileEvent(
