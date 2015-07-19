@@ -53,13 +53,13 @@ class ExperimentModel():
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid + \
                 "&user_folder_name=" + userFolderName + \
-                "&group_folder_name=" + str(groupFolderName) + \
                 "&title=" + expTitleEncoded
         else:
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid + \
-                "&user_folder_name=" + userFolderName + \
-                "&group_folder_name=" + str(groupFolderName)
+                "&user_folder_name=" + urllib2.quote(userFolderName)
+        if groupFolderName:
+            url += "&group_folder_name=" + urllib2.quote(groupFolderName)
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey}
