@@ -10,8 +10,9 @@ from mydata.logs import logger
 
 
 class FolderModel():
-    def __init__(self, dataViewId, folder, location, userFolderName,
-                 owner, foldersModel, usersModel, settingsModel):
+    def __init__(self, dataViewId, folder, location,
+                 userFolderName, groupFolderName, owner,
+                 foldersModel, usersModel, settingsModel):
         self.dataViewId = dataViewId
         self.folder = folder
         self.location = location
@@ -36,6 +37,7 @@ class FolderModel():
         self.experimentTitleSetManually = False
         self.status = "0 of %d files uploaded" % (self.numFiles,)
         self.userFolderName = userFolderName
+        self.groupFolderName = groupFolderName
         self.owner = owner
         self.foldersModel = foldersModel
         self.usersModel = usersModel
@@ -114,6 +116,9 @@ class FolderModel():
 
     def GetUserFolderName(self):
         return self.userFolderName
+
+    def GetGroupFolderName(self):
+        return self.groupFolderName
 
     def GetOwnerId(self):
         return self.owner.GetId()

@@ -549,6 +549,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                 folder=datasetFolderName,
                                 location=pathToScan,
                                 userFolderName=userFolderName,
+                                groupFolderName=None,
                                 owner=owner,
                                 foldersModel=self,
                                 usersModel=self.usersModel,
@@ -618,6 +619,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                           folder=datasetFolderName,
                                           location=expFolderPath,
                                           userFolderName=userFolderName,
+                                          groupFolderName=None,
                                           owner=owner,
                                           foldersModel=self,
                                           usersModel=self.usersModel,
@@ -691,12 +693,14 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                    self.ignoreIntervalUnit)
                             logger.warning(message)
                             continue
+                    groupFolderName = os.path.basename(groupFolderPath)
                     dataViewId = self.GetMaxDataViewId() + 1
                     folderModel = \
                         FolderModel(dataViewId=dataViewId,
                                     folder=datasetFolderName,
                                     location=userFolderPath,
                                     userFolderName=userFolderName,
+                                    groupFolderName=groupFolderName,
                                     owner=owner,
                                     foldersModel=self,
                                     usersModel=self.usersModel,

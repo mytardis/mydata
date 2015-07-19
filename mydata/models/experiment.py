@@ -42,6 +42,7 @@ class ExperimentModel():
         uploaderName = settingsModel.GetUploaderModel().GetName()
         uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
         userFolderName = folderModel.GetUserFolderName()
+        groupFolderName = folderModel.GetGroupFolderName()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
@@ -52,11 +53,13 @@ class ExperimentModel():
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid + \
                 "&user_folder_name=" + userFolderName + \
+                "&group_folder_name=" + str(groupFolderName) + \
                 "&title=" + expTitleEncoded
         else:
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid + \
-                "&user_folder_name=" + userFolderName
+                "&user_folder_name=" + userFolderName + \
+                "&group_folder_name=" + str(groupFolderName)
 
         headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey}
@@ -66,10 +69,11 @@ class ExperimentModel():
         try:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']
-        except:
             logger.debug(url)
-            logger.debug(response.text)
-            logger.debug("response.status_code = " + str(response.status_code))
+        except:
+            logger.error(url)
+            logger.error(response.text)
+            logger.error("response.status_code = " + str(response.status_code))
             if response.status_code == 404:
                 message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
@@ -126,28 +130,40 @@ class ExperimentModel():
             else:
                 message = "Experiment not found for '%s', %s" \
                     % (uploaderName, userFolderName)
+            if groupFolderName:
+                message += ", '%s'" % groupFolderName
             raise DoesNotExist(message, modelClass=ExperimentModel)
         if numExperimentsFound == 1:
-            logger.debug("Found existing experiment for uploader \"" +
-                         uploaderName + "\" and user folder " + userFolderName)
+            message = "Found existing experiment for uploader \"" + \
+                uploaderName + "\" and user folder " + userFolderName
+            if groupFolderName:
+                message += " and group folder " + groupFolderName
+            logger.debug(message)
             return ExperimentModel(settingsModel,
                                    experimentsJson['objects'][0])
         elif numExperimentsFound > 1:
-            logger.error("ERROR: Found multiple experiments matching " +
-                         "Uploader UUID for user '%s':\n" % userFolderName)
+            message = "ERROR: Found multiple experiments matching " + \
+                "Uploader UUID for user '%s'" % userFolderName
+            if groupFolderName:
+                message += " and group '%s'" % groupFolderName
+            logger.error(message)
             for expJson in experimentsJson['objects']:
                 logger.error("\t" + expJson['title'])
+            groupFolderString = ""
+            if groupFolderName:
+                groupFolderString = ", and group folder \"%s\"" \
+                    % groupFolderName
             if folderModel.ExperimentTitleSetManually():
                 message = "Multiple experiments were found matching " \
-                          "uploader \"%s\", user folder \"%s\" and title " \
+                          "uploader \"%s\", user folder \"%s\"%s and title " \
                           "\"%s\" for folder \"%s\"." \
-                          % (uploaderName, userFolderName, experimentTitle,
-                             folderModel.GetFolder())
+                          % (uploaderName, userFolderName, groupFolderString,
+                             experimentTitle, folderModel.GetFolder())
             else:
                 message = "Multiple experiments were found matching " \
-                          "uploader \"%s\" and user folder \"%s\" " \
+                          "uploader \"%s\" and user folder \"%s\"%s " \
                           "for folder \"%s\"." \
-                          % (uploaderName, userFolderName,
+                          % (uploaderName, userFolderName, groupFolderString,
                              folderModel.GetFolder())
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
@@ -158,6 +174,7 @@ class ExperimentModel():
     def CreateExperimentForFolder(folderModel):
         settingsModel = folderModel.GetSettingsModel()
         userFolderName = folderModel.GetUserFolderName()
+        groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
         try:
@@ -173,11 +190,16 @@ class ExperimentModel():
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
-        logger.debug("Creating experiment for uploader \"" +
-                     uploaderName + ", user folder " + userFolderName)
-        description = ("Uploader: %s\n\n"
+        message = "Creating experiment for uploader \"" + \
+            uploaderName + ", user folder " + userFolderName
+        if groupFolderName:
+            message += ", group folder : " + groupFolderName
+        logger.info(message)
+        description = ("Uploader: %s\n"
                        "User folder name: %s"
                        % (uploaderName, userFolderName))
+        if groupFolderName:
+            description += "\nGroup folder name: %s" % groupFolderName
         experimentJson = {
             "title": experimentTitle,
             "description": description,
@@ -189,6 +211,9 @@ class ExperimentModel():
                                 "value": uploaderUuid},
                                {"name": "user_folder_name",
                                 "value": userFolderName}]}]}
+        if groupFolderName:
+            experimentJson["parameter_sets"]["parameters"].append(
+                {"name": "group_folder_name", "value": groupFolderName})
         headers = {"Authorization": "ApiKey " +
                    myTardisDefaultUsername + ":" +
                    myTardisDefaultUserApiKey,
@@ -201,10 +226,11 @@ class ExperimentModel():
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
                                                 createdExperimentJson)
-        except:
             logger.debug(url)
-            logger.debug(response.text)
-            logger.debug("response.status_code = " +
+        except:
+            logger.error(url)
+            logger.error(response.text)
+            logger.error("response.status_code = " +
                          str(response.status_code))
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
@@ -229,9 +255,12 @@ class ExperimentModel():
                 raise DoesNotExist(message)
             raise
         if response.status_code == 201:
-            logger.debug("Succeeded in creating experiment for uploader "
-                         "\"%s\" and user folder \"%s\""
-                         % (uploaderName, userFolderName))
+            message = "Succeeded in creating experiment for uploader " \
+                "\"%s\" and user folder \"%s\"" \
+                % (uploaderName, userFolderName)
+            if groupFolderName:
+                message += " and group folder \"%s\"" % groupFolderName
+            logger.debug(message)
 
             # Avoid creating a duplicate ObjectACL if the user folder's
             # username matches the facility manager's username.
@@ -245,13 +274,16 @@ class ExperimentModel():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.GetGroup())
         else:
-            logger.debug("Failed to create experiment for uploader "
-                         "\"%s\" and user folder \"%s\""
-                         % (uploaderName, userFolderName))
-            logger.debug(headers)
-            logger.debug(url)
-            logger.debug(response.text)
-            logger.debug("response.status_code = " +
+            message = "Failed to create experiment for uploader " \
+                "\"%s\" and user folder \"%s\"" \
+                % (uploaderName, userFolderName)
+            if groupFolderName:
+                message += " and group folder \"%s\"" % groupFolderName
+            logger.error(message)
+            logger.error(headers)
+            logger.error(url)
+            logger.error(response.text)
+            logger.error("response.status_code = " +
                          str(response.status_code))
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
