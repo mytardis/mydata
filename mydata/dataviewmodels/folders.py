@@ -627,6 +627,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 self.AddRow(folderModel)
 
     def ImportGroupFolders(self, groupFolderPath, groupModel):
+        """
+        Scan folders within a user group folder,
+        e.g. D:\Data\Smith-Lab\
+        """
         try:
             logger.debug("Scanning " + groupFolderPath +
                          " for instrument folders...")
@@ -650,12 +654,18 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                        self.settingsModel.GetInstrumentName(),
                        groupFolderPath)
                 logger.warning(message)
-                # raise InvalidFolderStructure(message=message)
 
             instrumentFolderPath = os.path.join(groupFolderPath,
                                                 instrumentFolders[0])
 
-            defaultOwner = self.settingsModel.GetDefaultOwner()
+            # For the User Group / Instrument / Researcher's Name / Dataset
+            # folder structure, the default owner in MyTardis will always
+            # by the user listed in MyData's settings dialog.  An additional
+            # ObjectACL will be created in MyTardis to grant access to the
+            # User Group.  The researcher's name in this folder structure is
+            # used to determine the default experiment name, but it is not
+            # used to determine access control.
+            owner = self.settingsModel.GetDefaultOwner()
 
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")
@@ -663,12 +673,6 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             for userFolderName in userFolders:
                 userFolderPath = os.path.join(instrumentFolderPath,
                                               userFolderName)
-                owner = defaultOwner
-                try:
-                    owner = UserModel.GetUserByUsername(self.settingsModel,
-                                                        userFolderName)
-                except DoesNotExist:
-                    owner = defaultOwner
                 logger.debug("Scanning " + userFolderPath +
                              " for dataset folders...")
                 datasetFolders = os.walk(userFolderPath).next()[1]
