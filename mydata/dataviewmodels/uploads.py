@@ -269,6 +269,24 @@ class UploadsModel(wx.dataview.PyDataViewIndexListModel):
                 return True
         return False
 
+    def DeleteAllRows(self):
+        rowsDeleted = []
+        for row in reversed(range(0, self.GetCount())):
+            del self.uploadsData[row]
+            rowsDeleted.append(row)
+
+        # notify the view(s) using this model that it has been removed
+        if threading.current_thread().name == "MainThread":
+            self.RowsDeleted(rowsDeleted)
+        else:
+            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+
+        self.uud = list()
+        self.fud = list()
+        self.filtered = False
+        self.searchString = ""
+        self.maxDataViewId = 0
+
     def GetMaxDataViewIdFromExistingRows(self):
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
