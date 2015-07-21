@@ -580,6 +580,10 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     if foldersController.IsShuttingDown() or uploadModel.Canceled():
         logger.debug("UploadFile 1: Aborting upload for "
                      "%s" % filePath)
+        if sys.platform.startswith("darwin"):
+            sshMasterProcess = uploadModel.GetSshMasterProcess()
+            if sshMasterProcess:
+                sshMasterProcess.terminate()
         return
     if bytesUploaded == fileSize:
         logger.debug("UploadFile returning because file \"%s\" has already "
@@ -716,7 +720,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
 
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadFile 1: Aborting upload for "
+            logger.debug("UploadFileFromPosixSystem 1: Aborting upload for "
                          "%s" % filePath)
             sshMasterProcess.terminate()
             return
@@ -828,7 +832,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         ProgressCallback(None, bytesUploaded, fileSize)
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadFile 2: Aborting upload for "
+            logger.debug("UploadFileFromPosixSystem 2: Aborting upload for "
                          "%s" % filePath)
             sshMasterProcess.terminate()
             return
