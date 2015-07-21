@@ -1,3 +1,6 @@
+from mydata.models.upload import PidIsRunning
+
+
 class VerificationStatus:
     NOT_STARTED = 0
     IN_PROGRESS = 1
@@ -84,3 +87,8 @@ class VerificationModel():
 
     def SetSshControlPath(self, sshControlPath):
         self.sshControlPath = sshControlPath
+
+    def CleanUp(self):
+        sshMasterProcess = self.GetSshMasterProcess()
+        if sshMasterProcess and PidIsRunning(sshMasterProcess.pid):
+            sshMasterProcess.terminate()

@@ -560,6 +560,8 @@ class FoldersController():
             t.join()
         logger.debug("Shutting down FoldersController verification "
                      "worker threads.")
+        if self.Failed() or self.Canceled():
+            self.verificationsModel.CleanUp()
         for i in range(self.numVerificationWorkerThreads):
             self.verificationsQueue.put(None)
         for t in self.verificationWorkerThreads:
@@ -571,11 +573,11 @@ class FoldersController():
         if self.Failed():
             message = "Data scans and uploads failed."
         elif self.Canceled():
-            message = "Data scan and uploads were canceled."
+            message = "Data scans and uploads were canceled."
         elif self.Completed():
-            message = "Data scan and uploads completed successfully."
+            message = "Data scans and uploads completed successfully."
         else:
-            message = "Data scan and uploads appear to have " \
+            message = "Data scans and uploads appear to have " \
                 "completed successfully."
         logger.info(message)
         wx.GetApp().GetMainFrame().SetStatusMessage(message)
