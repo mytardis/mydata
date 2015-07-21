@@ -212,7 +212,7 @@ class ExperimentModel():
                                {"name": "user_folder_name",
                                 "value": userFolderName}]}]}
         if groupFolderName:
-            experimentJson["parameter_sets"]["parameters"].append(
+            experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
         headers = {"Authorization": "ApiKey " +
                    myTardisDefaultUsername + ":" +
