@@ -496,27 +496,23 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                               groupName)
             except DoesNotExist:
                 groupRecord = None
-            if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
-                return
-            if groupRecord is not None:
-                groupRecord.SetDataViewId(groupsDataViewId)
-                self.groupsModel.AddRow(groupRecord)
-                self.ImportGroupFolders(os.path.join(dataDir,
-                                                     groupFolderName),
-                                        groupRecord)
-                if shouldAbort():
-                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
-                    return
-            else:
                 message = "Didn't find a MyTardis user group record for " \
                     "folder \"%s\" in %s" % (groupFolderName,
                                              dataDir)
                 logger.warning(message)
-                if not self.settingsModel.RunningInBackgroundMode():
-                    raise InvalidFolderStructure(message)
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
+            groupRecord.SetDataViewId(groupsDataViewId)
+            self.groupsModel.AddRow(groupRecord)
+            self.ImportGroupFolders(os.path.join(dataDir,
+                                                 groupFolderName),
+                                    groupRecord)
+            if shouldAbort():
+                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                             "Data uploads canceled")
+                return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
             else:
