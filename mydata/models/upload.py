@@ -166,22 +166,6 @@ class UploadModel():
             sshMasterProcess = self.GetSshMasterProcess()
             if sshMasterProcess and PidIsRunning(sshMasterProcess.pid):
                 sshMasterProcess.terminate()
-                # Check if the process has really
-                # terminated and force kill if not.
-                try:
-                    pid = self.GetSshMasterProcess().pid
-                    # See if this throws psutil.NoSuchProcess:
-                    p = psutil.Process(int(pid))
-                    if sys.platform.startswith("win"):
-                        os.kill(pid, signal.CTRL_C_EVENT)
-                    else:
-                        os.kill(pid, signal.SIGKILL)
-                    logger.debug("Force killed SCP upload process for %s"
-                                 % self.GetRelativePathToUpload())
-                except psutil.NoSuchProcess:
-                    logger.debug("SCP upload process for %s was terminated "
-                                 "gracefully."
-                                 % self.GetRelativePathToUpload())
         except:
             logger.error(traceback.format_exc())
 
