@@ -504,8 +504,9 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data uploads canceled")
                 return
-            groupRecord.SetDataViewId(groupsDataViewId)
-            self.groupsModel.AddRow(groupRecord)
+            if groupRecord:
+                groupRecord.SetDataViewId(groupsDataViewId)
+                self.groupsModel.AddRow(groupRecord)
             self.ImportGroupFolders(os.path.join(dataDir,
                                                  groupFolderName),
                                     groupRecord)
