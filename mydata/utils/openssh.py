@@ -418,11 +418,47 @@ def GetSshMasterProcessAndControlPath(uploadOrVerificationModel, username,
                openSSH.DoubleQuote(sshControlPath),
                username, hostname)
         logger.debug(sshMasterProcessCommandString)
-        sshMasterProcess = subprocess.Popen(
+        proc = subprocess.Popen(
             sshMasterProcessCommandString,
             shell=openSSH.preferToUseShellInSubprocess,
             startupinfo=defaultStartupInfo,
             creationflags=defaultCreationFlags)
+
+        class SshMasterProcess():
+            def __init__(self, proc, openSSH, sshControlPath,
+                         username, hostname,
+                         defaultStartupInfo, defaultCreationFlags):
+                self.proc = proc
+                self.openSSH = openSSH
+                self.sshControlPath = sshControlPath
+                self.username = username
+                self.hostname = hostname
+                self.defaultStartupInfo = defaultStartupInfo
+                self.defaultCreationFlags = defaultCreationFlags
+                self.pid = proc.pid
+
+            def terminate(self):
+                logger.debug("Terminating SSH ControlMaster subprocess...")
+                exitSshMasterProcessCommandString = \
+                    "%s -oControlPath=%s -O exit " \
+                    "%s@%s" \
+                    % (self.openSSH.DoubleQuote(self.openSSH.ssh),
+                       self.openSSH.DoubleQuote(self.sshControlPath),
+                       self.username, self.hostname)
+                logger.debug(exitSshMasterProcessCommandString)
+                proc = subprocess.Popen(
+                    exitSshMasterProcessCommandString,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    shell=self.openSSH.preferToUseShellInSubprocess,
+                    startupinfo=self.defaultStartupInfo,
+                    creationflags=self.defaultCreationFlags)
+                proc.communicate()
+                logger.debug("Terminated SSH ControlMaster subprocess.")
+
+        sshMasterProcess = SshMasterProcess(proc, openSSH, sshControlPath,
+                                            username, hostname,
+                                            defaultStartupInfo, defaultCreationFlags)
         uploadOrVerificationModel.SetSshMasterProcess(sshMasterProcess)
 
     return (sshMasterProcess, sshControlPath)
