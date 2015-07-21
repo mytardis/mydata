@@ -284,6 +284,7 @@ class FoldersController():
         settingsModel = fc.settingsModel
         fc.canceled.clear()
         fc.verificationsModel.DeleteAllRows()
+        fc.uploadsModel.DeleteAllRows()
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
         # For now, the max number of verification threads is set to be the
