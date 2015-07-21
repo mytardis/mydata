@@ -538,7 +538,7 @@ class FoldersController():
         if self.IsShuttingDown():
             return
         self.SetShuttingDown(True)
-        message = "Shutting down uploads threads..."
+        message = "Shutting down upload threads..."
         logger.info(message)
         wx.GetApp().GetMainFrame().SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
