@@ -15,7 +15,9 @@ import subprocess
 import hashlib
 import poster
 
-import mydata.utils.openssh as OpenSSH
+from mydata.utils.openssh import GetBytesUploadedToStaging
+from mydata.utils.openssh import UploadFile
+from mydata.utils.openssh import openSSH
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -560,8 +562,6 @@ class FoldersController():
             t.join()
         logger.debug("Shutting down FoldersController verification "
                      "worker threads.")
-        if self.Failed() or self.Canceled():
-            self.verificationsModel.CleanUp()
         for i in range(self.numVerificationWorkerThreads):
             self.verificationsQueue.put(None)
         for t in self.verificationWorkerThreads:
@@ -569,6 +569,12 @@ class FoldersController():
 
         self.verifyDatafileRunnable = {}
         self.uploadDatafileRunnable = {}
+
+        if sys.platform == 'darwin':
+            sshControlMasterPool = \
+                openSSH.GetSshControlMasterPool(createIfMissing=False)
+            if sshControlMasterPool:
+                sshControlMasterPool.ShutDown()
 
         if self.Failed():
             message = "Data scans and uploads failed."
@@ -816,11 +822,6 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
-                        if not sys.platform.startswith('win'):
-                            sshMasterProcess = \
-                                self.verificationModel.GetSshMasterProcess()
-                            if sshMasterProcess:
-                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     except StorageBoxAttributeNotFound, e:
@@ -836,11 +837,6 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
-                        if not sys.platform.startswith('win'):
-                            sshMasterProcess = \
-                                self.verificationModel.GetSshMasterProcess()
-                            if sshMasterProcess:
-                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     privateKeyFilePath = self.settingsModel\
@@ -852,7 +848,7 @@ class VerifyDatafileRunnable():
                     bytesUploadedToStaging = 0
                     try:
                         bytesUploadedToStaging = \
-                            OpenSSH.GetBytesUploadedToStaging(
+                            GetBytesUploadedToStaging(
                                 remoteFilePath,
                                 username, privateKeyFilePath, host,
                                 self.verificationModel)
@@ -872,11 +868,6 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
-                        if not sys.platform.startswith('win'):
-                            sshMasterProcess = \
-                                self.verificationModel.GetSshMasterProcess()
-                            if sshMasterProcess:
-                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     except StagingHostSshPermissionDenied, e:
@@ -892,11 +883,6 @@ class VerifyDatafileRunnable():
                                     title="MyData",
                                     message=message,
                                     icon=wx.ICON_ERROR))
-                        if not sys.platform.startswith('win'):
-                            sshMasterProcess = \
-                                self.verificationModel.GetSshMasterProcess()
-                            if sshMasterProcess:
-                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     if bytesUploadedToStaging == \
@@ -921,12 +907,6 @@ class VerifyDatafileRunnable():
                                     folderModel=self.folderModel,
                                     dataFileIndex=self.dataFileIndex,
                                     dataFilePath=dataFilePath))
-
-                        if not sys.platform.startswith('win'):
-                            sshMasterProcess = \
-                                self.verificationModel.GetSshMasterProcess()
-                            if sshMasterProcess:
-                                sshMasterProcess.terminate()
                         self.verificationModel.SetComplete()
                         return
                     else:
@@ -968,11 +948,6 @@ class VerifyDatafileRunnable():
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
                 self.foldersModel.FolderStatusUpdated(self.folderModel)
-                if not sys.platform.startswith('win'):
-                    sshMasterProcess = \
-                        self.verificationModel.GetSshMasterProcess()
-                    if sshMasterProcess:
-                        sshMasterProcess.terminate()
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.FoundVerifiedDatafileEvent(
@@ -1233,14 +1208,14 @@ class UploadDatafileRunnable():
                             remoteFilePath = temp_url
                         while True:
                             try:
-                                OpenSSH.UploadFile(dataFilePath,
-                                                   dataFileSize,
-                                                   username,
-                                                   privateKeyFilePath,
-                                                   host, remoteFilePath,
-                                                   ProgressCallback,
-                                                   self.foldersController,
-                                                   self.uploadModel)
+                                UploadFile(dataFilePath,
+                                           dataFileSize,
+                                           username,
+                                           privateKeyFilePath,
+                                           host, remoteFilePath,
+                                           ProgressCallback,
+                                           self.foldersController,
+                                           self.uploadModel)
                             except IOError, e:
                                 if self.uploadModel.GetRetries() < \
                                         self.uploadModel.GetMaxRetries():
