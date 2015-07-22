@@ -5,6 +5,8 @@ import traceback
 import psutil
 
 from mydata.logs import logger
+from mydata.utils import PidIsRunning
+from mydata.utils import HumanReadableSizeString
 
 
 class UploadStatus:
@@ -98,26 +100,6 @@ class UploadModel():
         """
         self.bufferedReader = bufferedReader
 
-    def GetSshMasterProcess(self):
-        if hasattr(self, "sshMasterProcess"):
-            return self.sshMasterProcess
-        else:
-            # return None
-            return self.verificationModel.GetSshMasterProcess()
-
-    def SetSshMasterProcess(self, sshMasterProcess):
-        self.sshMasterProcess = sshMasterProcess
-
-    def GetSshControlPath(self):
-        if hasattr(self, "sshControlPath"):
-            return self.sshControlPath
-        else:
-            # return None
-            return self.verificationModel.GetSshControlPath()
-
-    def SetSshControlPath(self, sshControlPath):
-        self.sshControlPath = sshControlPath
-
     def GetScpUploadProcess(self):
         if hasattr(self, "scpUploadProcess"):
             return self.scpUploadProcess
@@ -162,10 +144,6 @@ class UploadModel():
                     logger.debug("SCP upload process for %s was terminated "
                                  "gracefully."
                                  % self.GetRelativePathToUpload())
-
-            sshMasterProcess = self.GetSshMasterProcess()
-            if sshMasterProcess and PidIsRunning(sshMasterProcess.pid):
-                sshMasterProcess.terminate()
         except:
             logger.error(traceback.format_exc())
 
@@ -190,23 +168,3 @@ class UploadModel():
 
     def GetMaxRetries(self):
         return 5  # FIXME: Magic number
-
-
-def HumanReadableSizeString(num):
-    for x in ['bytes', 'KB', 'MB', 'GB']:
-        if num < 1024.0 and num > -1024.0:
-            return "%3.0f %s" % (num, x)
-        num /= 1024.0
-    return "%3.0f %s" % (num, 'TB')
-
-
-def PidIsRunning(pid):
-    try:
-        p = psutil.Process(int(pid))
-        if p.status == psutil.STATUS_DEAD:
-            return False
-        if p.status == psutil.STATUS_ZOMBIE:
-            return False
-        return True  # Assume other status are valid
-    except psutil.NoSuchProcess:
-        return False
