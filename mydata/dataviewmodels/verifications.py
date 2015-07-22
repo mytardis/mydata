@@ -211,11 +211,6 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         else:
             wx.CallAfter(self.RowsDeleted, rows)
 
-    def CleanUp(self):
-        for row in reversed(range(0, self.GetCount())):
-            verificationModel = self.verificationsData[row]
-            verificationModel.CleanUp()
-
     def DeleteAllRows(self):
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
