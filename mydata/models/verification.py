@@ -1,6 +1,3 @@
-from mydata.models.upload import PidIsRunning
-
-
 class VerificationStatus:
     NOT_STARTED = 0
     IN_PROGRESS = 1
@@ -69,26 +66,3 @@ class VerificationModel():
 
     def GetDataFileIndex(self):
         return self.dataFileIndex
-
-    def GetSshMasterProcess(self):
-        if hasattr(self, "sshMasterProcess"):
-            return self.sshMasterProcess
-        else:
-            return None
-
-    def SetSshMasterProcess(self, sshMasterProcess):
-        self.sshMasterProcess = sshMasterProcess
-
-    def GetSshControlPath(self):
-        if hasattr(self, "sshControlPath"):
-            return self.sshControlPath
-        else:
-            return None
-
-    def SetSshControlPath(self, sshControlPath):
-        self.sshControlPath = sshControlPath
-
-    def CleanUp(self):
-        sshMasterProcess = self.GetSshMasterProcess()
-        if sshMasterProcess and PidIsRunning(sshMasterProcess.pid):
-            sshMasterProcess.terminate()
