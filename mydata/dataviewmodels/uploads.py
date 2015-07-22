@@ -8,18 +8,6 @@ from mydata.logs import logger
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 
-# This model class provides the data to the view when it is asked for.
-# Since it is a list-only model (no hierachical data) then it is able
-# to be referenced by row rather than by item object, so in this way
-# it is easier to comprehend and use than other model types.  In this
-# example we also provide a Compare function to assist with sorting of
-# items in our model.  Notice that the data items in the data model
-# object don't ever change position due to a sort or column
-# reordering.  The view manages all of that and maps view rows and
-# columns to the model's rows and columns as needed.
-#
-# Our data is stored in a list of UploadModel objects.
-
 
 class ColumnType:
     TEXT = 0
