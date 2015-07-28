@@ -619,9 +619,8 @@ class MyData(wx.App):
                              % threading.current_thread().name)
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
-                    self.uploaderModel = self.settingsModel.GetUploaderModel()
                     activeNetworkInterfaces = \
-                        self.uploaderModel.GetActiveNetworkInterfaces()
+                        UploaderModel.GetActiveNetworkInterfaces()
                     if len(activeNetworkInterfaces) == 0:
                         message = "No active network interfaces." \
                             "\n\n" \
