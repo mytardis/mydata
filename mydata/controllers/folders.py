@@ -729,15 +729,18 @@ class VerifyDatafileRunnable():
         return self.dataFileIndex
 
     def run(self):
+        logger.debug("VerifyDatafileRunnable 1")
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileDirectory = \
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         verificationsModel = self.foldersController.verificationsModel
         fc = self.foldersController
+        logger.debug("VerifyDatafileRunnable 2")
         if not hasattr(fc, "verificationsThreadingLock"):
             fc.verificationsThreadingLock = threading.Lock()
         fc.verificationsThreadingLock.acquire()
+        logger.debug("VerifyDatafileRunnable 3")
         verificationDataViewId = verificationsModel.GetMaxDataViewId() + 1
         self.verificationModel = \
             VerificationModel(dataViewId=verificationDataViewId,
@@ -745,6 +748,7 @@ class VerifyDatafileRunnable():
                               dataFileIndex=self.dataFileIndex)
         verificationsModel.AddRow(self.verificationModel)
         fc.verificationsThreadingLock.release()
+        logger.debug("VerifyDatafileRunnable 4")
         self.verificationModel.SetMessage("Looking for matching file on "
                                           "MyTardis server...")
         self.verificationModel.SetStatus(VerificationStatus.IN_PROGRESS)
@@ -752,11 +756,13 @@ class VerifyDatafileRunnable():
 
         existingDatafile = None
         try:
+            logger.debug("VerifyDatafileRunnable 5")
             existingDatafile = DataFileModel.GetDataFile(
                 settingsModel=self.settingsModel,
                 dataset=self.folderModel.GetDatasetModel(),
                 filename=dataFileName,
                 directory=dataFileDirectory)
+            logger.debug("VerifyDatafileRunnable 6")
             self.verificationModel.SetMessage("Found datafile on "
                                               "MyTardis server.")
             self.verificationModel.SetStatus(VerificationStatus.FOUND_VERIFIED)
@@ -847,6 +853,7 @@ class VerifyDatafileRunnable():
                                                 replicas[0].GetUri())
                     bytesUploadedToStaging = 0
                     try:
+                        logger.debug("VerifyDatafileRunnable 7")
                         bytesUploadedToStaging = \
                             GetBytesUploadedToStaging(
                                 remoteFilePath,
@@ -855,6 +862,7 @@ class VerifyDatafileRunnable():
                         logger.debug("%d bytes uploaded to staging for %s"
                                      % (bytesUploadedToStaging,
                                         replicas[0].GetUri()))
+                        logger.debug("VerifyDatafileRunnable 8")
                     except StagingHostRefusedSshConnection, e:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
