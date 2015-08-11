@@ -432,7 +432,14 @@ class SettingsModel():
                     return self.validation
                 else:
                     logger.warning(message)
-            filesDepth2 = glob(os.path.join(self.GetDataDirectory(), '*', '*'))
+            if self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*',
+                                                self.GetInstrumentName()))
+            else:
+                filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*', '*'))
             dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
             if len(dirsDepth2) == 0:
                 if self.GetFolderStructure() == 'Username / Dataset':
@@ -504,8 +511,15 @@ class SettingsModel():
                 else:
                     datasetCount = len(dirsDepth2)
 
-            filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*'))
+            if self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*',
+                                                self.GetInstrumentName(),
+                                                '*'))
+            else:
+                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*', '*', '*'))
             dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
             if len(dirsDepth3) == 0:
                 if self.GetFolderStructure() == \
@@ -568,8 +582,15 @@ class SettingsModel():
                 else:
                     datasetCount = len(dirsDepth3)
 
-            filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*', '*'))
+            if self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*',
+                                                self.GetInstrumentName(),
+                                                '*', '*'))
+            else:
+                filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
+                                                '*', '*', '*', '*'))
             dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
             if len(dirsDepth4) == 0:
                 if self.GetFolderStructure() == \
