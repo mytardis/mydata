@@ -87,38 +87,12 @@ class DataFileModel():
 
     @staticmethod
     def GetDataFile(settingsModel, dataset, filename, directory):
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
-        url = myTardisUrl + "/api/v1/dataset_file/?format=json" + \
-            "&dataset__id=" + str(dataset.GetId()) + \
-            "&filename=" + urllib.quote(filename) + \
-            "&directory=" + urllib.quote(directory)
-        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
-                   myTardisApiKey}
-        response = requests.get(url=url, headers=headers)
-        if response.status_code < 200 or response.status_code >= 300:
-            logger.debug("Failed to look up datafile \"%s\" "
-                         "in dataset \"%s\"."
-                         % (filename, dataset.GetDescription()))
-            logger.debug(response.text)
-            return None
-        dataFilesJson = response.json()
-        numDataFilesFound = dataFilesJson['meta']['total_count']
-        if numDataFilesFound == 0:
-            raise DoesNotExist(
-                message="Datafile \"%s\" was not found in MyTardis" % filename,
-                url=url, response=response)
-        elif numDataFilesFound > 1:
-            raise MultipleObjectsReturned(
-                message="Multiple datafiles matching %s were found in MyTardis"
-                % filename,
-                url=url, response=response)
-        else:
-            return DataFileModel(
-                settingsModel=settingsModel,
-                dataset=dataset,
-                dataFileJson=dataFilesJson['objects'][0])
+        for datafile in dataset.GetDataFiles():
+            if datafile.filename == filename and \
+                    datafile.directory == directory:
+                return datafile
+        raise DoesNotExist(
+            message="Datafile \"%s\" was not found in MyTardis" % filename)
 
     @staticmethod
     def Verify(settingsModel, datafileId):
