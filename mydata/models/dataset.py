@@ -108,7 +108,9 @@ class DatasetModel():
                         message += "Please ask your MyTardis administrator " \
                                    "to check the permissions of the \"%s\" " \
                                    "user account." % myTardisDefaultUsername
+                        self.getDatasetFilesThreadingLock.release()
                         raise Unauthorized(message)
+                    self.getDatasetFilesThreadingLock.release()
                     raise Exception(response.text)
             finally:
                 self.getDatasetFilesThreadingLock.release()
