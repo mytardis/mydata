@@ -83,6 +83,7 @@ import traceback
 from datetime import datetime
 import wx
 import uuid
+import threading
 
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
@@ -474,34 +475,46 @@ class UploaderModel():
             raise Exception(message)
 
     def RequestStagingAccess(self):
-        try:
+        """
+        This could be called from multiple threads simultaneously,
+        so it requires locking.
+        """
+        if not hasattr(self, "requestStagingAccessThreadingLock"):
+            self.requestStagingAccessThreadingLock = threading.Lock()
+        if self.requestStagingAccessThreadingLock.acquire(False):
             try:
-                self.UploadUploaderInfo()
+                try:
+                    self.UploadUploaderInfo()
+                except:
+                    print traceback.format_exc()
+                    logger.error(traceback.format_exc())
+                    raise
+                uploadToStagingRequest = None
+                try:
+                    uploadToStagingRequest = \
+                        self.ExistingUploadToStagingRequest()
+                except DoesNotExist:
+                    uploadToStagingRequest = \
+                        self.RequestUploadToStagingApproval()
+                    logger.info("Uploader registration request created.")
+                except PrivateKeyDoesNotExist:
+                    logger.info("Generating new uploader registration request, "
+                                "because private key was moved or deleted.")
+                    uploadToStagingRequest = \
+                        self.RequestUploadToStagingApproval()
+                    logger.info("Generated new uploader registration request, "
+                                "because private key was moved or deleted.")
+                if uploadToStagingRequest.IsApproved():
+                    logger.info("Uploads to staging have been approved!")
+                else:
+                    logger.info("Uploads to staging haven't been approved yet.")
+                self.settingsModel\
+                    .SetUploadToStagingRequest(uploadToStagingRequest)
             except:
-                print traceback.format_exc()
                 logger.error(traceback.format_exc())
                 raise
-            uploadToStagingRequest = None
-            try:
-                uploadToStagingRequest = self.ExistingUploadToStagingRequest()
-            except DoesNotExist:
-                uploadToStagingRequest = self.RequestUploadToStagingApproval()
-                logger.info("Uploader registration request created.")
-            except PrivateKeyDoesNotExist:
-                logger.info("Generating new uploader registration request, "
-                            "because private key was moved or deleted.")
-                uploadToStagingRequest = self.RequestUploadToStagingApproval()
-                logger.info("Generated new uploader registration request, "
-                            "because private key was moved or deleted.")
-            if uploadToStagingRequest.IsApproved():
-                logger.info("Uploads to staging have been approved!")
-            else:
-                logger.info("Uploads to staging haven't been approved yet.")
-            self.settingsModel\
-                .SetUploadToStagingRequest(uploadToStagingRequest)
-        except:
-            logger.error(traceback.format_exc())
-            raise
+            finally:
+                self.requestStagingAccessThreadingLock.release()
 
     @staticmethod
     def GetActiveNetworkInterfaces():
