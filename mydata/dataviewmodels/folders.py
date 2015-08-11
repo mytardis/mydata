@@ -638,24 +638,25 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
             if len(instrumentFolders) > 1:
                 message = "Multiple instrument folders found in %s" \
                     % groupFolderPath
-                logger.error(message)
-                raise InvalidFolderStructure(message=message)
+                logger.warning(message)
             elif len(instrumentFolders) == 0:
                 message = "No instrument folder was found in %s" \
                     % groupFolderPath
-                logger.error(message)
-                raise InvalidFolderStructure(message=message)
-            elif instrumentFolders[0] != \
-                    self.settingsModel.GetInstrumentName():
-                message = "Instrument folder name \"%s\" doesn't match " \
-                    "instrument name \"%s\" in MyData Settings in \"%s\"." \
-                    % (instrumentFolders[0],
-                       self.settingsModel.GetInstrumentName(),
-                       groupFolderPath)
                 logger.warning(message)
+                return
 
-            instrumentFolderPath = os.path.join(groupFolderPath,
-                                                instrumentFolders[0])
+            # Rather than using any folder we happen to find at this level,
+            # we will use the instrument name specified in MyData's Settings
+            # dialog.  That way, we can run MyData on a collection of data
+            # from multiple instruments, and just select one instrument at
+            # a time.
+            instrumentFolderPath = \
+                os.path.join(groupFolderPath,
+                             self.settingsModel.GetInstrumentName())
+
+            if not os.path.exists(instrumentFolderPath):
+                logger.warning("Path %s doesn't exist." % instrumentFolderPath)
+                return
 
             # For the User Group / Instrument / Researcher's Name / Dataset
             # folder structure, the default owner in MyTardis will always
