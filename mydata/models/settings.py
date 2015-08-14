@@ -7,6 +7,7 @@ from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
 from datetime import datetime
+import threading
 
 from mydata.logs import logger
 from mydata.models.user import UserModel
@@ -277,6 +278,18 @@ class SettingsModel():
         self.uploadToStagingRequest = uploadToStagingRequest
 
     def GetUploaderModel(self):
+        if not self.uploaderModel:
+            """
+            This could be called from multiple threads simultaneously,
+            so it requires locking.
+            """
+            if not hasattr(self, "createUploaderThreadingLock"):
+                self.createUploaderThreadingLock = threading.Lock()
+            if self.createUploaderThreadingLock.acquire():
+                try:
+                    self.uploaderModel = UploaderModel(self)
+                finally:
+                    self.createUploaderThreadingLock.release()
         return self.uploaderModel
 
     def SetUploaderModel(self, uploaderModel):
