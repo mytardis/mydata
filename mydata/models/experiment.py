@@ -174,6 +174,8 @@ class ExperimentModel():
     def CreateExperimentForFolder(folderModel):
         settingsModel = folderModel.GetSettingsModel()
         userFolderName = folderModel.GetUserFolderName()
+        hostname = settingsModel.GetUploaderModel().GetHostname()
+        location = folderModel.GetLocation()
         groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
@@ -196,8 +198,9 @@ class ExperimentModel():
             message += ", group folder : " + groupFolderName
         logger.info(message)
         description = ("Uploader: %s\n"
-                       "User folder name: %s"
-                       % (uploaderName, userFolderName))
+                       "User folder name: %s\n"
+                       "Uploaded from: %s:%s"
+                       % (uploaderName, userFolderName, hostname, location))
         if groupFolderName:
             description += "\nGroup folder name: %s" % groupFolderName
         experimentJson = {
