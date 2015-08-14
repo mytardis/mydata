@@ -265,6 +265,9 @@ class ExperimentModel():
                 message += " and group folder \"%s\"" % groupFolderName
             logger.debug(message)
 
+            facilityManagers = settingsModel.GetFacility().GetManagerGroup()
+            ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
+                                                    facilityManagers)
             # Avoid creating a duplicate ObjectACL if the user folder's
             # username matches the facility manager's username.
             # Don't attempt to create an ObjectACL record for an
@@ -273,7 +276,9 @@ class ExperimentModel():
                     ownerUserId is not None:
                 ObjectAclModel.ShareExperimentWithUser(createdExperiment,
                                                        owner)
-            if folderModel.GetGroup() is not None:
+            if folderModel.GetGroup() is not None and \
+                    folderModel.GetGroup().GetId() != \
+                    facilityManagers.GetGroup().GetId():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.GetGroup())
         else:
