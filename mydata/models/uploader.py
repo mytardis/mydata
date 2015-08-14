@@ -613,6 +613,9 @@ class UploaderModel():
     def GetName(self):
         return self.name
 
+    def GetHostname(self):
+        return self.hostname
+
 
 class UploaderRegistrationRequest():
     def __init__(self, settingsModel=None, json=None):
