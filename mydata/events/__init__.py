@@ -262,12 +262,21 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
+                if sys.platform.startswith("win"):
+                    """
+                    BeginBusyCursor should update the cursor on everything,
+                    but it doesn't always work on Windows.
+                    """
+                    busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
+                    wx.CallAfter(event.settingsDialog.SetCursor, busyCursor)
                 event.settingsDialog.okButton.Disable()
                 settingsModel.Validate()
 
                 def endBusyCursorIfRequired():
                     try:
                         wx.EndBusyCursor()
+                        arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+                        event.settingsDialog.SetCursor(arrowCursor)
                     except wx._core.PyAssertionError, e:
                         if "no matching wxBeginBusyCursor()" not in str(e):
                             logger.error(str(e))
