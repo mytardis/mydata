@@ -22,14 +22,14 @@ from mydata.utils.exceptions import IncompatibleMyTardisVersion
 class SettingsModel():
     class SettingsValidation():
         def __init__(self, valid, message="", field="", suggestion=None,
-                     datasetCount=0):
+                     datasetCount=-1):
             self.valid = valid
             self.message = message
             self.field = field
             self.suggestion = suggestion
             self.datasetCount = datasetCount
 
-        def GetValid(self):
+        def IsValid(self):
             return self.valid
 
         def GetMessage(self):
@@ -82,7 +82,7 @@ class SettingsModel():
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
         self.max_upload_threads = 5
-        self.check_for_missing_folders = False
+        self.validate_folder_structure = True
 
         self.locked = False
 
@@ -102,7 +102,7 @@ class SettingsModel():
                           "username", "api_key", "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "check_for_missing_folders", "locked", "uuid"]
+                          "validate_folder_structure", "locked", "uuid"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -123,10 +123,10 @@ class SettingsModel():
                         configParser.getint(configFileSection,
                                             "max_upload_threads")
                 if configParser.has_option(configFileSection,
-                                           "check_for_missing_folders"):
-                    self.check_for_missing_folders = \
+                                           "validate_folder_structure"):
+                    self.validate_folder_structure = \
                         configParser.getboolean(configFileSection,
-                                                "check_for_missing_folders")
+                                                "validate_folder_structure")
                 if configParser.has_option(configFileSection,
                                            "locked"):
                     self.locked = configParser.getboolean(configFileSection,
@@ -210,11 +210,14 @@ class SettingsModel():
     def SetFolderStructure(self, folderStructure):
         self.folder_structure = folderStructure
 
-    def CheckForMissingFolders(self):
-        return self.check_for_missing_folders
+    def AlertUserAboutMissingFolders(self):
+        return False
 
-    def SetCheckForMissingFolders(self, checkForMissingFolders):
-        self.check_for_missing_folders = checkForMissingFolders
+    def ValidateFolderStructure(self):
+        return self.validate_folder_structure
+
+    def SetValidateFolderStructure(self, validateFolderStructure):
+        self.validate_folder_structure = validateFolderStructure
 
     def Locked(self):
         return self.locked
@@ -325,7 +328,7 @@ class SettingsModel():
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
-                      "check_for_missing_folders", "locked", "uuid"]
+                      "validate_folder_structure", "locked", "uuid"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -353,14 +356,15 @@ class SettingsModel():
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
-        self.SetCheckForMissingFolders(settingsDialog.CheckForMissingFolders())
+        self.SetValidateFolderStructure(
+            settingsDialog.ValidateFolderStructure())
         self.SetLocked(settingsDialog.Locked())
 
         if saveToDisk:
             self.SaveToDisk(configPath)
 
     def Validate(self):
-        datasetCount = 0
+        datasetCount = -1
         try:
             if self.GetInstrumentName().strip() == "":
                 message = "Please enter a valid instrument name."
@@ -418,231 +422,12 @@ class SettingsModel():
                 self.validation = self.SettingsValidation(False, message,
                                                           "data_directory")
                 return self.validation
-            filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
-            if len(dirsDepth1) == 0:
-                message = "The data directory: \"%s\" doesn't contain any " \
-                    % self.GetDataDirectory()
-                if self.GetFolderStructure() == 'Username / Dataset':
-                    message += "user folders!"
-                elif self.GetFolderStructure() == \
-                        'Username / Experiment / Dataset':
-                    message += "user folders!"
-                elif self.GetFolderStructure() == 'Email / Dataset':
-                    message += "email folders!"
-                elif self.GetFolderStructure() == \
-                        'Email / Experiment / Dataset':
-                    message += "email folders!"
-                elif self.GetFolderStructure() == \
-                        'Username / "MyTardis" / Experiment / Dataset':
-                    message += "user folders!"
-                elif self.GetFolderStructure() == \
-                        'User Group / Instrument / Full Name / Dataset':
-                    message += "user group folders!"
-                if self.CheckForMissingFolders():
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
+
+            if self.ValidateFolderStructure():
+                self.validation = self.PerformFolderStructureValidation()
+                if not self.validation.IsValid():
                     return self.validation
-                else:
-                    logger.warning(message)
-            if self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*',
-                                                self.GetInstrumentName()))
-            else:
-                filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*', '*'))
-            dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
-            if len(dirsDepth2) == 0:
-                if self.GetFolderStructure() == 'Username / Dataset':
-                    message = "The data directory: \"%s\" should contain " \
-                        "dataset folders within user folders." % \
-                        self.GetDataDirectory()
-                elif self.GetFolderStructure() == 'Email / Dataset':
-                    message = "The data directory: \"%s\" should contain " \
-                        "dataset folders within email folders." % \
-                        self.GetDataDirectory()
-                elif self.GetFolderStructure() == \
-                        'Username / Experiment / Dataset':
-                    message = "The data directory: \"%s\" should contain " \
-                        "experiment folders within user folders." % \
-                        self.GetDataDirectory()
-                elif self.GetFolderStructure() == \
-                        'Email / Experiment / Dataset':
-                    message = "The data directory: \"%s\" should contain " \
-                        "experiment folders within email folders." % \
-                        self.GetDataDirectory()
-                elif self.GetFolderStructure() == \
-                        'Username / "MyTardis" / Experiment / Dataset':
-                    message = "Each user folder should contain a " \
-                        "\"MyTardis\" folder."
-                elif self.GetFolderStructure() == \
-                        'User Group / Instrument / Full Name / Dataset':
-                    message = "Each user group folder should contain an " \
-                        "instrument name folder."
-                if self.CheckForMissingFolders():
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
-
-            if self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                for folderName in dirsDepth2:
-                    folderName = os.path.basename(folderName)
-                    if folderName.lower() != 'mytardis':
-                        message = "A folder name of \"%s\" was found where " \
-                            "a \"MyTardis\" folder was expected." \
-                            % folderName
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-
-            seconds = {}
-            seconds['day'] = 24 * 60 * 60
-            seconds['week'] = 7 * seconds['day']
-            seconds['year'] = int(365.25 * seconds['day'])
-            seconds['month'] = seconds['year'] / 12
-            singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
-            ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
-            ignoreIntervalSeconds = \
-                self.ignore_interval_number * ignoreIntervalUnitSeconds
-
-            if self.GetFolderStructure() == 'Username / Dataset' or \
-                    self.GetFolderStructure() == 'Email / Dataset':
-                if self.IgnoreOldDatasets():
-                    datasetCount = 0
-                    for folder in dirsDepth2:
-                        ctimestamp = os.path.getctime(folder)
-                        ctime = datetime.fromtimestamp(ctimestamp)
-                        age = datetime.now() - ctime
-                        if age.total_seconds() <= ignoreIntervalSeconds:
-                            datasetCount += 1
-                else:
-                    datasetCount = len(dirsDepth2)
-
-            if self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*',
-                                                self.GetInstrumentName(),
-                                                '*'))
-            else:
-                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*', '*', '*'))
-            dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
-            if len(dirsDepth3) == 0:
-                if self.GetFolderStructure() == \
-                        'Username / "MyTardis" / Experiment / Dataset':
-                    message = "Each \"MyTardis\" folder should contain at " \
-                        "least one experiment folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-                elif self.GetFolderStructure() == \
-                        'Username / Experiment / Dataset':
-                    message = "Each experiment folder should contain at " \
-                        "least one dataset folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-                elif self.GetFolderStructure() == \
-                        'Email / Experiment / Dataset':
-                    message = "Each experiment folder should contain at " \
-                        "least one dataset folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-                elif self.GetFolderStructure() == \
-                        'User Group / Instrument / Full Name / Dataset':
-                    message = "Each instrument folder should contain at " \
-                        "least one full name (dataset group) folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-
-            if self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset' or \
-                    self.GetFolderStructure() == \
-                    'Email / Experiment / Dataset':
-                if self.IgnoreOldDatasets():
-                    datasetCount = 0
-                    for folder in dirsDepth3:
-                        ctimestamp = os.path.getctime(folder)
-                        ctime = datetime.fromtimestamp(ctimestamp)
-                        age = datetime.now() - ctime
-                        if age.total_seconds() <= ignoreIntervalSeconds:
-                            datasetCount += 1
-                else:
-                    datasetCount = len(dirsDepth3)
-
-            if self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*',
-                                                self.GetInstrumentName(),
-                                                '*', '*'))
-            else:
-                filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                                '*', '*', '*', '*'))
-            dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
-            if len(dirsDepth4) == 0:
-                if self.GetFolderStructure() == \
-                        'Username / "MyTardis" / Experiment / Dataset':
-                    message = "Each experiment folder should contain at " \
-                        "least one dataset folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-                elif self.GetFolderStructure() == \
-                        'User Group / Instrument / Full Name / Dataset':
-                    message = "Each full name (dataset group) folder " \
-                        "should contain at least one dataset folder."
-                    if self.CheckForMissingFolders():
-                        self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
-                        return self.validation
-                    else:
-                        logger.warning(message)
-
-            if self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset' or \
-                    self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                if self.IgnoreOldDatasets():
-                    datasetCount = 0
-                    for folder in dirsDepth4:
-                        ctimestamp = os.path.getctime(folder)
-                        ctime = datetime.fromtimestamp(ctimestamp)
-                        age = datetime.now() - ctime
-                        if age.total_seconds() <= ignoreIntervalSeconds:
-                            datasetCount += 1
-                else:
-                    datasetCount = len(dirsDepth4)
+                datasetCount = self.validation.GetDatasetCount()
 
             try:
                 session = requests.Session()
@@ -862,6 +647,240 @@ class SettingsModel():
         self.validation = self.SettingsValidation(True,
                                                   datasetCount=datasetCount)
         return self.validation
+
+    def PerformFolderStructureValidation(self):
+        datasetCount = -1
+        filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
+        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        if len(dirsDepth1) == 0:
+            message = "The data directory: \"%s\" doesn't contain any " \
+                % self.GetDataDirectory()
+            if self.GetFolderStructure() == 'Username / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                message += "email folders!"
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message += "email folders!"
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message += "user group folders!"
+            if self.AlertUserAboutMissingFolders():
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
+            else:
+                logger.warning(message)
+        if self.GetFolderStructure() == \
+                'User Group / Instrument / Full Name / Dataset':
+            filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*',
+                                            self.GetInstrumentName()))
+        else:
+            filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*', '*'))
+        dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
+        if len(dirsDepth2) == 0:
+            if self.GetFolderStructure() == 'Username / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within user folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within email folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within user folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within email folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each user folder should contain a " \
+                    "\"MyTardis\" folder."
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each user group folder should contain an " \
+                    "instrument name folder."
+            if self.AlertUserAboutMissingFolders():
+                self.validation = self.SettingsValidation(False, message,
+                                                          "data_directory")
+                return self.validation
+            else:
+                logger.warning(message)
+
+        if self.GetFolderStructure() == \
+                'Username / "MyTardis" / Experiment / Dataset':
+            for folderName in dirsDepth2:
+                folderName = os.path.basename(folderName)
+                if folderName.lower() != 'mytardis':
+                    message = "A folder name of \"%s\" was found where " \
+                        "a \"MyTardis\" folder was expected." \
+                        % folderName
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+
+        seconds = {}
+        seconds['day'] = 24 * 60 * 60
+        seconds['week'] = 7 * seconds['day']
+        seconds['year'] = int(365.25 * seconds['day'])
+        seconds['month'] = seconds['year'] / 12
+        singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
+        ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
+        ignoreIntervalSeconds = \
+            self.ignore_interval_number * ignoreIntervalUnitSeconds
+
+        if self.GetFolderStructure() == 'Username / Dataset' or \
+                self.GetFolderStructure() == 'Email / Dataset':
+            if self.IgnoreOldDatasets():
+                datasetCount = 0
+                for folder in dirsDepth2:
+                    ctimestamp = os.path.getctime(folder)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() <= ignoreIntervalSeconds:
+                        datasetCount += 1
+            else:
+                datasetCount = len(dirsDepth2)
+
+        if self.GetFolderStructure() == \
+                'User Group / Instrument / Full Name / Dataset':
+            filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*',
+                                            self.GetInstrumentName(),
+                                            '*'))
+        else:
+            filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*', '*', '*'))
+        dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
+        if len(dirsDepth3) == 0:
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each \"MyTardis\" folder should contain at " \
+                    "least one experiment folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each instrument folder should contain at " \
+                    "least one full name (dataset group) folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+
+        if self.GetFolderStructure() == \
+                'Username / Experiment / Dataset' or \
+                self.GetFolderStructure() == \
+                'Email / Experiment / Dataset':
+            if self.IgnoreOldDatasets():
+                datasetCount = 0
+                for folder in dirsDepth3:
+                    ctimestamp = os.path.getctime(folder)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() <= ignoreIntervalSeconds:
+                        datasetCount += 1
+            else:
+                datasetCount = len(dirsDepth3)
+
+        if self.GetFolderStructure() == \
+                'User Group / Instrument / Full Name / Dataset':
+            filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*',
+                                            self.GetInstrumentName(),
+                                            '*', '*'))
+        else:
+            filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
+                                            '*', '*', '*', '*'))
+        dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
+        if len(dirsDepth4) == 0:
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each full name (dataset group) folder " \
+                    "should contain at least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        self.SettingsValidation(False, message,
+                                                "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+
+        if self.GetFolderStructure() == \
+                'Username / "MyTardis" / Experiment / Dataset' or \
+                self.GetFolderStructure() == \
+                'User Group / Instrument / Full Name / Dataset':
+            if self.IgnoreOldDatasets():
+                datasetCount = 0
+                for folder in dirsDepth4:
+                    ctimestamp = os.path.getctime(folder)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() <= ignoreIntervalSeconds:
+                        datasetCount += 1
+            else:
+                datasetCount = len(dirsDepth4)
+
+        logger.debug("SettingsModel folder structure validation succeeded!")
+        self.validation = self.SettingsValidation(True,
+                                                  datasetCount=datasetCount)
+        return self.validation
+        # End PerformFolderStructureValidation
 
     def RequiredFieldIsBlank(self):
         return self.GetInstrumentName() == "" or \

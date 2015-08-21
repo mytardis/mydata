@@ -336,7 +336,7 @@ class MyDataEvent(wx.PyCommandEvent):
             return
         settingsValidation = event.settingsModel.GetValidation()
         if settingsValidation is not None and \
-                not settingsValidation.GetValid():
+                not settingsValidation.IsValid():
             message = settingsValidation.GetMessage()
             logger.error(message)
 
@@ -410,22 +410,23 @@ class MyDataEvent(wx.PyCommandEvent):
         else:
             intervalIfUsed = ""
         numDatasets = settingsValidation.GetDatasetCount()
-        message = "Assuming a folder structure of '%s', " \
-            "there %s %d %s in \"%s\"%s.\n\n" \
-            "Do you want to continue?" \
-            % (event.settingsModel.GetFolderStructure(),
-               "are" if numDatasets != 1 else "is",
-               settingsValidation.GetDatasetCount(),
-               "datasets" if numDatasets != 1 else "dataset",
-               event.settingsDialog.GetDataDirectory(),
-               intervalIfUsed)
-        if not event.settingsModel.RunningInBackgroundMode():
-            confirmationDialog = \
-                wx.MessageDialog(None, message, "MyData",
-                                 wx.YES | wx.NO | wx.ICON_QUESTION)
-            okToContinue = confirmationDialog.ShowModal()
-            if okToContinue != wx.ID_YES:
-                return
+        if numDatasets != -1:
+            message = "Assuming a folder structure of '%s', " \
+                "there %s %d %s in \"%s\"%s.\n\n" \
+                "Do you want to continue?" \
+                % (event.settingsModel.GetFolderStructure(),
+                   "are" if numDatasets != 1 else "is",
+                   settingsValidation.GetDatasetCount(),
+                   "datasets" if numDatasets != 1 else "dataset",
+                   event.settingsDialog.GetDataDirectory(),
+                   intervalIfUsed)
+            if not event.settingsModel.RunningInBackgroundMode():
+                confirmationDialog = \
+                    wx.MessageDialog(None, message, "MyData",
+                                     wx.YES | wx.NO | wx.ICON_QUESTION)
+                okToContinue = confirmationDialog.ShowModal()
+                if okToContinue != wx.ID_YES:
+                    return
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
