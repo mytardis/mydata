@@ -31,7 +31,6 @@ from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.views.statusbar import EnhancedStatusBar
 from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
-from mydata.views.progress import MyDataProgressDialog
 import mydata.events as mde
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
@@ -691,18 +690,7 @@ class MyData(wx.App):
         else:
             self.foldersView.ShowGroupColumn(False)
 
-        logger.debug("OnRefresh: Creating progress dialog.")
-
         def cancelCallback():
-            def closeProgressDialog():
-                self.progressDialog.Show(False)
-                # wxMac seems to work better with Destroy here,
-                # otherwise sometimes the dialog lingers.
-                if sys.platform.startswith("darwin"):
-                    self.progressDialog.Destroy()
-                    self.progressDialog = None
-            wx.CallAfter(closeProgressDialog)
-
             def shutDownUploadThreads():
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
@@ -724,21 +712,17 @@ class MyData(wx.App):
             userOrGroup = "user group"
         else:
             userOrGroup = "user"
-        self.progressDialog = MyDataProgressDialog(
-                self.frame, wx.ID_ANY, "",
-                "Scanning %s folders..." % userOrGroup,
-                self.usersModel.GetNumUserOrGroupFolders(),
-                userCanAbort=True, cancelCallback=cancelCallback)
 
         self.numUserFoldersScanned = 0
+        self.shouldAbort = False
 
-        def incrementProgressDialog():
+        def writeProgressUpdateToStatusBar():
             self.numUserFoldersScanned = self.numUserFoldersScanned + 1
             message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),
                 userOrGroup)
-            self.progressDialog.Update(self.numUserFoldersScanned, message)
+            self.frame.SetStatusMessage(message)
 
         # SECTION 4: Start FoldersModel.Refresh(),
         # followed by FoldersController.StartDataUploads().
@@ -749,18 +733,10 @@ class MyData(wx.App):
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
             try:
-                self.foldersModel.Refresh(incrementProgressDialog,
-                                          self.progressDialog.ShouldAbort)
+                self.foldersModel.Refresh(writeProgressUpdateToStatusBar,
+                                          self.ShouldAbort)
             except InvalidFolderStructure, ifs:
                 # Should not be raised when running in background mode.
-                def closeProgressDialog():
-                    self.progressDialog.Show(False)
-                    # wxMac seems to work better with Destroy here,
-                    # otherwise sometimes the dialog lingers.
-                    if sys.platform.startswith("darwin"):
-                        self.progressDialog.Destroy()
-                wx.CallAfter(closeProgressDialog)
-
                 def showMessageDialog():
                     dlg = wx.MessageDialog(None, str(ifs), "MyData",
                                            wx.OK | wx.ICON_ERROR)
@@ -768,14 +744,6 @@ class MyData(wx.App):
                 wx.CallAfter(showMessageDialog)
                 self.frame.SetStatusMessage(str(ifs))
                 return
-
-            def closeProgressDialog():
-                self.progressDialog.Show(False)
-                # wxMac seems to work better with Destroy here,
-                # otherwise sometimes the dialog lingers.
-                if sys.platform.startswith("darwin"):
-                    self.progressDialog.Destroy()
-            wx.CallAfter(closeProgressDialog)
 
             def endBusyCursorIfRequired():
                 try:
@@ -785,7 +753,7 @@ class MyData(wx.App):
                         logger.error(str(e))
                         raise
 
-            if self.progressDialog.ShouldAbort():
+            if self.ShouldAbort():
                 wx.CallAfter(endBusyCursorIfRequired)
                 return
 
@@ -812,7 +780,11 @@ class MyData(wx.App):
         logger.debug("OnRefresh: Started scanDataDirs thread.")
 
     def OnStop(self, event):
+        self.shouldAbort = True
         self.uploadsView.OnCancelRemainingUploads(event)
+
+    def ShouldAbort(self):
+        return self.shouldAbort
 
     def OnOpen(self, event):
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
