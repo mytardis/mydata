@@ -230,15 +230,15 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
-        checkForMissingFoldersLabel = \
+        validateFolderStructureLabel = \
             wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                          "Check for missing folders:")
-        self.advancedPanelSizer.Add(checkForMissingFoldersLabel,
+                          "Validate folder structure:")
+        self.advancedPanelSizer.Add(validateFolderStructureLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.checkForMissingFoldersCheckBox = \
+        self.validateFolderStructureCheckBox = \
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer\
-            .Add(self.checkForMissingFoldersCheckBox,
+            .Add(self.validateFolderStructureCheckBox,
                  flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
@@ -446,11 +446,11 @@ class SettingsDialog(wx.Dialog):
     def SetGroupPrefix(self, groupPrefix):
         self.groupPrefixField.SetValue(groupPrefix)
 
-    def CheckForMissingFolders(self):
-        return self.checkForMissingFoldersCheckBox.GetValue()
+    def ValidateFolderStructure(self):
+        return self.validateFolderStructureCheckBox.GetValue()
 
-    def SetCheckForMissingFolders(self, checkForMissingFolders):
-        self.checkForMissingFoldersCheckBox.SetValue(checkForMissingFolders)
+    def SetValidateFolderStructure(self, validateFolderStructure):
+        self.validateFolderStructureCheckBox.SetValue(validateFolderStructure)
 
     def IgnoreOldDatasets(self):
         return self.ignoreDatasetsOlderThanCheckBox.GetValue()
@@ -575,7 +575,8 @@ class SettingsDialog(wx.Dialog):
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
-        self.SetCheckForMissingFolders(settingsModel.CheckForMissingFolders())
+        self.SetValidateFolderStructure(
+            settingsModel.ValidateFolderStructure())
         self.SetLocked(settingsModel.Locked())
 
     def OnPaste(self, event):
@@ -705,8 +706,8 @@ class SettingsDialog(wx.Dialog):
 
     def OnLockOrUnlockSettings(self, event):
         if self.lockOrUnlockButton.GetLabel() == "Lock":
-            message = "Once settings have been locked, only an administrator " \
-                "will be able to unlock them.\n\n" \
+            message = "Once settings have been locked, only an " \
+                "administrator will be able to unlock them.\n\n" \
                 "Are you sure you want to lock MyData's settings?"
             confirmationDialog = \
                 wx.MessageDialog(None, message, "MyData - Lock Settings",
@@ -773,7 +774,7 @@ class SettingsDialog(wx.Dialog):
         self.folderStructureComboBox.Enable(enabled)
         self.datasetGroupingField.Enable(enabled)
         self.groupPrefixField.Enable(enabled)
-        self.checkForMissingFoldersCheckBox.Enable(enabled)
+        self.validateFolderStructureCheckBox.Enable(enabled)
         self.ignoreDatasetsOlderThanCheckBox.Enable(enabled)
         self.ignoreDatasetsOlderThanSpinCtrl\
             .Enable(enabled)
