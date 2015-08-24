@@ -1,7 +1,7 @@
 MyTardis Prerequisites
 ======================
 
-For MyData v0.3.3 you should use the "MyData_v0.3.2" tag of MyTardis, i.e.
+For MyData v0.3.4 you should use the "MyData_v0.3.2" tag of MyTardis, i.e.
 
 ::
 
@@ -15,7 +15,7 @@ MyData requires the "mydata" MyTardis app to be installed on the MyTardis server
 This app, and its installation instructions can be found here:
 https://github.com/wettenhj/mytardis-app-mydata/blob/master/README.md
 
-For MyData v0.3.3, you should use the "MyData_v0.3.2" tag of
+For MyData v0.3.4, you should use the "MyData_v0.3.2" tag of
 "mytardis-app-mydata", i.e.
 
 ::
