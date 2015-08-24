@@ -133,14 +133,14 @@ class InstrumentModel():
                 instrumentJson=instrumentJson)
 
     @staticmethod
-    def GetMyInstruments(settingsModel, userModel):
+    def GetMyInstruments(settingsModel):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
         instruments = []
 
-        myFacilities = FacilityModel.GetMyFacilities(settingsModel, userModel)
+        myFacilities = FacilityModel.GetMyFacilities(settingsModel)
 
         for facility in myFacilities:
             url = myTardisUrl + "/api/v1/instrument/?format=json" + \
