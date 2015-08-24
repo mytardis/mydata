@@ -84,33 +84,29 @@ class FacilityModel():
                 facilityJson=facilitiesJson['objects'][0])
 
     @staticmethod
-    def GetMyFacilities(settingsModel, userModel):
+    def GetMyFacilities(settingsModel):
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
         facilities = []
 
-        groups = userModel.GetGroups()
-
-        for group in groups:
-            url = myTardisUrl + "/api/v1/facility/?format=json" + \
-                "&manager_group__id=" + str(group.GetId())
-            headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
-                       myTardisApiKey}
-            session = requests.Session()
-            response = session.get(url=url, headers=headers)
-            if response.status_code != 200:
-                message = response.text
-                response.close()
-                session.close()
-                raise Exception(message)
+        url = myTardisUrl + "/api/v1/facility/?format=json"
+        headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
+                   myTardisApiKey}
+        session = requests.Session()
+        response = session.get(url=url, headers=headers)
+        if response.status_code != 200:
+            message = response.text
             response.close()
             session.close()
-            facilitiesJson = response.json()
-            for facilityJson in facilitiesJson['objects']:
-                facilities.append(FacilityModel(
-                    settingsModel=settingsModel,
-                    facilityJson=facilityJson))
+            raise Exception(message)
+        response.close()
+        session.close()
+        facilitiesJson = response.json()
+        for facilityJson in facilitiesJson['objects']:
+            facilities.append(FacilityModel(
+                settingsModel=settingsModel,
+                facilityJson=facilityJson))
 
         return facilities

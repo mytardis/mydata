@@ -543,8 +543,7 @@ class SettingsModel():
                 suggestion = None
                 try:
                     defaultUserModel = self.GetDefaultOwner()
-                    facilities = FacilityModel\
-                        .GetMyFacilities(self, defaultUserModel)
+                    facilities = FacilityModel.GetMyFacilities(self)
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
                     self.validation = self.SettingsValidation(False, message,
@@ -556,8 +555,7 @@ class SettingsModel():
                                                               "facility_name")
                     return self.validation
             defaultUserModel = self.GetDefaultOwner()
-            facilities = FacilityModel.GetMyFacilities(self,
-                                                       defaultUserModel)
+            facilities = FacilityModel.GetMyFacilities(self)
             for f in facilities:
                 if self.GetFacilityName() == f.GetName():
                     self.facility = f
@@ -898,7 +896,7 @@ class SettingsModel():
     def RenameInstrument(self, facilityName,
                          oldInstrumentName, newInstrumentName):
         defaultUserModel = self.GetDefaultOwner()
-        facilities = FacilityModel.GetMyFacilities(self, defaultUserModel)
+        facilities = FacilityModel.GetMyFacilities(self)
         facility = None
         for f in facilities:
             if facilityName == f.GetName():
