@@ -343,7 +343,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 else:
                     wx.CallAfter(self.RowValueChanged, row, col)
 
-    def Refresh(self, incrementProgressDialog, shouldAbort):
+    def ScanFolders(self, incrementProgressDialog, shouldAbort):
         if self.GetCount() > 0:
             self.DeleteAllRows()
         if self.usersModel.GetCount() > 0:
@@ -370,7 +370,7 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                 self.settingsModel.GetIgnoreOldDatasetIntervalUnit()
             self.ignoreIntervalSeconds = \
                 self.ignoreIntervalNumber * ignoreIntervalUnitSeconds
-        logger.debug("FoldersModel.Refresh(): Scanning " + dataDir + "...")
+        logger.debug("FoldersModel.ScanFolders(): Scanning " + dataDir + "...")
         if folderStructure.startswith("Username") or \
                 folderStructure.startswith("Email"):
             self.ScanForUserFolders(incrementProgressDialog, shouldAbort)

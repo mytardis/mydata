@@ -536,6 +536,7 @@ class MyDataEvent(wx.PyCommandEvent):
                          "if necessary...")
             app = wx.GetApp()
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
+            wx.GetApp().SetPerformingLookupsAndUploads(True)
             event.foldersController.StartDataUploads()
 
             def endBusyCursorIfRequired():
