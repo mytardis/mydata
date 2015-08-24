@@ -368,7 +368,7 @@ class FoldersController():
             for row in range(0, self.foldersModel.GetRowCount()):
                 if self.IsShuttingDown():
                     return
-                folderModel = self.foldersModel.foldersData[row]
+                folderModel = self.foldersModel.GetFolderRecord(row)
                 fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
                 logger.debug(
                     "UploadDataThread: Starting verifications "
