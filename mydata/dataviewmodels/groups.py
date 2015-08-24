@@ -23,9 +23,9 @@ class GroupsModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Name")
-        self.columnKeys = ("dataViewId", "name")
-        self.defaultColumnWidths = (40, 400)
+        self.columnNames = ("Id", "Short Name", "Full Name")
+        self.columnKeys = ("dataViewId", "shortName", "name")
+	self.defaultColumnWidths = (40, 200, 400)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the

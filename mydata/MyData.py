@@ -17,6 +17,7 @@ from mydata.dataviewmodels.folders import FoldersModel
 from mydata.controllers.folders import FoldersController
 from mydata.views.users import UsersView
 from mydata.dataviewmodels.users import UsersModel
+from mydata.views.groups import GroupsView
 from mydata.dataviewmodels.groups import GroupsModel
 from mydata.views.verifications import VerificationsView
 from mydata.dataviewmodels.verifications import VerificationsModel
@@ -42,6 +43,7 @@ class NotebookTabs:
     GROUPS = 2
     VERIFICATIONS = 3
     UPLOADS = 4
+    LOG = 5
 
 
 class MyDataFrame(wx.Frame):
@@ -258,9 +260,9 @@ class MyData(wx.App):
                                    usersModel=self.usersModel)
         self.foldersUsersNotebook.AddPage(self.usersView, "Users")
 
-        # self.groupsView = GroupsView(self.foldersUsersNotebook,
-        #                              groupsModel=self.groupsModel)
-        # self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
+        self.groupsView = GroupsView(self.foldersUsersNotebook,
+                                     groupsModel=self.groupsModel)
+        self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
 
         self.verificationsView = \
             VerificationsView(self.foldersUsersNotebook,
@@ -676,8 +678,26 @@ class MyData(wx.App):
 
         if "Group" in self.settingsModel.GetFolderStructure():
             self.foldersView.ShowGroupColumn(True)
+	    for pageIndex in \
+                    reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
+                self.foldersUsersNotebook.RemovePage(pageIndex)
+            self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
+            self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
+            self.foldersUsersNotebook.AddPage(self.verificationsView,
+			                      "Verifications")
+            self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+            self.foldersUsersNotebook.AddPage(self.logView, "Log")
         else:
             self.foldersView.ShowGroupColumn(False)
+	    for pageIndex in \
+                    reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
+                self.foldersUsersNotebook.RemovePage(pageIndex)
+            self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
+            self.foldersUsersNotebook.AddPage(self.usersView, "Users")
+            self.foldersUsersNotebook.AddPage(self.verificationsView,
+			                      "Verifications")
+            self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+            self.foldersUsersNotebook.AddPage(self.logView, "Log")
 
         def cancelCallback():
             def shutDownUploadThreads():
