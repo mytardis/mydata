@@ -19,31 +19,32 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 
+class SettingsValidation():
+    def __init__(self, valid, message="", field="", suggestion=None,
+                 datasetCount=-1):
+        self.valid = valid
+        self.message = message
+        self.field = field
+        self.suggestion = suggestion
+        self.datasetCount = datasetCount
+
+    def IsValid(self):
+        return self.valid
+
+    def GetMessage(self):
+        return self.message
+
+    def GetField(self):
+        return self.field
+
+    def GetSuggestion(self):
+        return self.suggestion
+
+    def GetDatasetCount(self):
+        return self.datasetCount
+
+
 class SettingsModel():
-    class SettingsValidation():
-        def __init__(self, valid, message="", field="", suggestion=None,
-                     datasetCount=-1):
-            self.valid = valid
-            self.message = message
-            self.field = field
-            self.suggestion = suggestion
-            self.datasetCount = datasetCount
-
-        def IsValid(self):
-            return self.valid
-
-        def GetMessage(self):
-            return self.message
-
-        def GetField(self):
-            return self.field
-
-        def GetSuggestion(self):
-            return self.suggestion
-
-        def GetDatasetCount(self):
-            return self.datasetCount
-
     def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
@@ -53,7 +54,7 @@ class SettingsModel():
         self.uploadToStagingRequest = None
         self.sshKeyPair = None
 
-        self.validation = self.SettingsValidation(True)
+        self.validation = SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
 
         self.LoadSettings()
@@ -368,34 +369,34 @@ class SettingsModel():
         try:
             if self.GetInstrumentName().strip() == "":
                 message = "Please enter a valid instrument name."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "instrument_name")
+                self.validation = SettingsValidation(False, message,
+                                                     "instrument_name")
                 return self.validation
             if self.GetDataDirectory().strip() == "":
                 message = "Please enter a valid data directory."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
                 return self.validation
             if self.GetMyTardisUrl().strip() == "":
                 message = "Please enter a valid MyTardis URL, " \
                     "beginning with \"http://\" or \"https://\"."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "mytardis_url")
+                self.validation = SettingsValidation(False, message,
+                                                     "mytardis_url")
                 return self.validation
             if self.GetContactName().strip() == "":
                 message = "Please enter a valid contact name."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "contact_name")
+                self.validation = SettingsValidation(False, message,
+                                                     "contact_name")
                 return self.validation
             if self.GetContactEmail().strip() == "":
                 message = "Please enter a valid contact email."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "contact_email")
+                self.validation = SettingsValidation(False, message,
+                                                     "contact_email")
                 return self.validation
             if self.GetUsername().strip() == "":
                 message = "Please enter a MyTardis username."
-                self.validation = self.SettingsValidation(False, message,
-                                                          "username")
+                self.validation = SettingsValidation(False, message,
+                                                     "username")
                 return self.validation
             if self.GetApiKey().strip() == "":
                 message = "Please enter your MyTardis API key.\n\n" \
@@ -413,14 +414,14 @@ class SettingsModel():
                     "Copy the <API key> (after the colon) to your clipboard, " \
                     "and paste it into MyData's \"MyTardis API Key\" field." \
                     % self.GetUsername().strip()
-                self.validation = self.SettingsValidation(False, message,
-                                                          "api_key")
+                self.validation = SettingsValidation(False, message,
+                                                     "api_key")
                 return self.validation
             if not os.path.exists(self.GetDataDirectory()):
                 message = "The data directory: \"%s\" doesn't exist!" % \
                     self.GetDataDirectory()
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
                 return self.validation
 
             if self.ValidateFolderStructure():
@@ -452,9 +453,9 @@ class SettingsModel():
                         message += "Received HTTP status code %d" \
                             % status_code
                         suggestion = None
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "mytardis_url",
-                                                              suggestion)
+                    self.validation = SettingsValidation(False, message,
+                                                         "mytardis_url",
+                                                         suggestion)
                     return self.validation
                 elif history:
                     message = "MyData attempted to access MyTardis at " \
@@ -487,9 +488,9 @@ class SettingsModel():
                         "If you suspect this, please contact your MyTardis " \
                         "administrator immediately."
                     suggestion = None
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "mytardis_url",
-                                                              suggestion)
+                    self.validation = SettingsValidation(False, message,
+                                                         "mytardis_url",
+                                                         suggestion)
                     return self.validation
             except:
                 if not self.GetMyTardisUrl().startswith("http"):
@@ -505,9 +506,9 @@ class SettingsModel():
                     for excOnly in excOnlyList:
                         message += excOnly
                     suggestion = None
-                self.validation = self.SettingsValidation(False, message,
-                                                          "mytardis_url",
-                                                          suggestion)
+                self.validation = SettingsValidation(False, message,
+                                                     "mytardis_url",
+                                                     suggestion)
                 logger.error(traceback.format_exc())
                 return self.validation
 
@@ -532,7 +533,7 @@ class SettingsModel():
                 message = "Your MyTardis credentials are invalid.\n\n" \
                     "Please check your Username and API Key."
                 self.validation = \
-                    self.SettingsValidation(False, message, "username")
+                    SettingsValidation(False, message, "username")
                 return self.validation
 
             if status_code < 200 or status_code >= 300:
@@ -546,13 +547,13 @@ class SettingsModel():
                     facilities = FacilityModel.GetMyFacilities(self)
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "facility_name")
+                    self.validation = SettingsValidation(False, message,
+                                                         "facility_name")
                     return self.validation
                 except:
                     logger.error(traceback.format_exc())
-                    self.validation = self.SettingsValidation(False, message,
-                                                              "facility_name")
+                    self.validation = SettingsValidation(False, message,
+                                                         "facility_name")
                     return self.validation
             defaultUserModel = self.GetDefaultOwner()
             facilities = FacilityModel.GetMyFacilities(self)
@@ -580,9 +581,9 @@ class SettingsModel():
                 suggestion = None
                 if len(facilities) == 1:
                     suggestion = facilities[0].GetName()
-                self.validation = self.SettingsValidation(False, message,
-                                                          "facility_name",
-                                                          suggestion)
+                self.validation = SettingsValidation(False, message,
+                                                     "facility_name",
+                                                     suggestion)
                 return self.validation
 
             logger.warning("For now, we are assuming that if we find an "
@@ -609,15 +610,14 @@ class SettingsModel():
                 except Unauthorized, e:
                     message = str(e)
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "instrument_name")
+                        SettingsValidation(False, message, "instrument_name")
                     return self.validation
                 logger.info("self.instrument = " + str(self.instrument))
             logger.debug("Validating email address.")
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
                 self.validation = \
-                    self.SettingsValidation(False, message, "contact_email")
+                    SettingsValidation(False, message, "contact_email")
                 return self.validation
             logger.debug("Done validating email address.")
             if self.GetFolderStructure().startswith('Email'):
@@ -628,8 +628,8 @@ class SettingsModel():
                         message = "Folder name \"%s\" in \"%s\" is not a " \
                             "valid email address." % (folderName, dataDir)
                         self.validation = \
-                            self.SettingsValidation(False, message,
-                                                    "data_directory")
+                            SettingsValidation(False, message,
+                                               "data_directory")
                         return self.validation
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
@@ -638,12 +638,11 @@ class SettingsModel():
         except:
             message = traceback.format_exc()
             logger.error(message)
-            self.validation = self.SettingsValidation(False, message, "")
+            self.validation = SettingsValidation(False, message, "")
             return self.validation
 
         logger.debug("SettingsModel validation succeeded!")
-        self.validation = self.SettingsValidation(True,
-                                                  datasetCount=datasetCount)
+        self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
 
     def PerformFolderStructureValidation(self):
@@ -670,8 +669,8 @@ class SettingsModel():
                     'User Group / Instrument / Full Name / Dataset':
                 message += "user group folders!"
             if self.AlertUserAboutMissingFolders():
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
                 return self.validation
             else:
                 logger.warning(message)
@@ -712,8 +711,8 @@ class SettingsModel():
                 message = "Each user group folder should contain an " \
                     "instrument name folder."
             if self.AlertUserAboutMissingFolders():
-                self.validation = self.SettingsValidation(False, message,
-                                                          "data_directory")
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
                 return self.validation
             else:
                 logger.warning(message)
@@ -727,8 +726,7 @@ class SettingsModel():
                         "a \"MyTardis\" folder was expected." \
                         % folderName
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
 
         seconds = {}
@@ -771,8 +769,7 @@ class SettingsModel():
                     "least one experiment folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -782,8 +779,7 @@ class SettingsModel():
                     "least one dataset folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -793,8 +789,7 @@ class SettingsModel():
                     "least one dataset folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -804,8 +799,7 @@ class SettingsModel():
                     "least one full name (dataset group) folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -842,8 +836,7 @@ class SettingsModel():
                     "least one dataset folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -853,8 +846,7 @@ class SettingsModel():
                     "should contain at least one dataset folder."
                 if self.AlertUserAboutMissingFolders():
                     self.validation = \
-                        self.SettingsValidation(False, message,
-                                                "data_directory")
+                        SettingsValidation(False, message, "data_directory")
                     return self.validation
                 else:
                     logger.warning(message)
@@ -875,8 +867,7 @@ class SettingsModel():
                 datasetCount = len(dirsDepth4)
 
         logger.debug("SettingsModel folder structure validation succeeded!")
-        self.validation = self.SettingsValidation(True,
-                                                  datasetCount=datasetCount)
+        self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
         # End PerformFolderStructureValidation
 
