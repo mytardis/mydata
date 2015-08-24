@@ -4,7 +4,7 @@ macholib==1.7
 modulegraph==0.12
 poster==0.8.1
 psutil==2.2.1
-py2app==0.9
+# py2app==0.9
 requests==2.5.3
 validate-email==1.2
 wsgiref==0.1.2
