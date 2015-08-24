@@ -295,8 +295,7 @@ class FoldersController():
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
-            t = threading.Thread(name="VerificationWorkerThread-%d"
-                                 % (i + 1),
+            t = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
                                  target=fc.verificationWorker,
                                  args=(i + 1,))
             fc.verificationWorkerThreads.append(t)
