@@ -589,8 +589,7 @@ class FoldersController():
         wx.GetApp().GetMainFrame().SetStatusMessage(message)
         app = wx.GetApp()
         app.toolbar.EnableTool(app.stopTool.GetId(), False)
-
-        self.notifyWindow.SetOnRefreshRunning(False)
+        wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
 
         try:

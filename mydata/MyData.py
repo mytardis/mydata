@@ -62,12 +62,6 @@ class MyDataFrame(wx.Frame):
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
-    def OnRefreshIsRunning(self):
-        return wx.GetApp().OnRefreshIsRunning()
-
-    def SetOnRefreshRunning(self, onRefreshRunning):
-        wx.GetApp().SetOnRefreshRunning(onRefreshRunning)
-
     def SetStatusMessage(self, msg):
         self.statusbar.SetStatusMessage(msg)
 
@@ -226,8 +220,6 @@ class MyData(wx.App):
             self.frame.SetMenuBar(self.menuBar)
         self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
 
-        self.onRefreshRunning = False
-
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
 
         wx.EVT_TASKBAR_LEFT_UP(self.taskBarIcon, self.OnTaskBarLeftClick)
@@ -303,6 +295,9 @@ class MyData(wx.App):
         self.SetTopWindow(self.frame)
 
         self.frame.Show(True)
+
+        self.scanningFolders = threading.Event()
+        self.performingLookupsAndUploads = threading.Event()
 
         event = None
         if self.settingsModel.RequiredFieldIsBlank():
@@ -519,12 +514,6 @@ class MyData(wx.App):
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
             self.uploadsModel.Filter(event.GetString())
 
-    def OnRefreshIsRunning(self):
-        return self.onRefreshRunning
-
-    def SetOnRefreshRunning(self, onRefreshRunning):
-        self.onRefreshRunning = onRefreshRunning
-
     def OnRefresh(self, event, needToValidateSettings=True):
         shutdownForRefreshAlreadyComplete = False
         if event is None:
@@ -567,7 +556,8 @@ class MyData(wx.App):
 
         # Shutting down existing data scan and upload processes:
 
-        if self.OnRefreshIsRunning() and not shutdownForRefreshAlreadyComplete:
+        if (self.ScanningFolders() or self.PerformingLookupsAndUploads()) \
+                and not shutdownForRefreshAlreadyComplete:
             message = \
                 "Shutting down existing data scan and upload processes..."
             logger.debug(message)
@@ -584,7 +574,6 @@ class MyData(wx.App):
         self.frame.SetConnected(self.settingsModel.GetMyTardisUrl(),
                                 False)
         self.foldersController.SetShuttingDown(False)
-        self.SetOnRefreshRunning(True)
 
         self.searchCtrl.SetValue("")
 
@@ -724,7 +713,7 @@ class MyData(wx.App):
                 userOrGroup)
             self.frame.SetStatusMessage(message)
 
-        # SECTION 4: Start FoldersModel.Refresh(),
+        # SECTION 4: Start FoldersModel.ScanFolders(),
         # followed by FoldersController.StartDataUploads().
 
         def scanDataDirs():
@@ -733,8 +722,10 @@ class MyData(wx.App):
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
             try:
-                self.foldersModel.Refresh(writeProgressUpdateToStatusBar,
-                                          self.ShouldAbort)
+                self.SetScanningFolders(True)
+                self.foldersModel.ScanFolders(writeProgressUpdateToStatusBar,
+                                              self.ShouldAbort)
+                self.SetScanningFolders(False)
             except InvalidFolderStructure, ifs:
                 # Should not be raised when running in background mode.
                 def showMessageDialog():
@@ -888,6 +879,24 @@ class MyData(wx.App):
 
     def SetConfigPath(self, configPath):
         self.configPath = configPath
+
+    def ScanningFolders(self):
+        self.scanningFolders = threading.Event()
+
+    def SetScanningFolders(self, value):
+        if value:
+            self.scanningFolders.set()
+        else:
+            self.scanningFolders.clear()
+
+    def PerformingLookupsAndUploads(self):
+        return self.performingLookupsAndUploads.isSet()
+
+    def SetPerformingLookupsAndUploads(self, value):
+        if value:
+            self.performingLookupsAndUploads.set()
+        else:
+            self.performingLookupsAndUploads.clear()
 
 
 def main(argv):
