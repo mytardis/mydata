@@ -76,6 +76,24 @@ class SettingsModel():
         self.username = ""
         self.api_key = ""
 
+        self.schedule_type = "Manually"
+        self.monday_checked = False
+        self.tuesday_checked = False
+        self.wednesday_checked = False
+        self.thursday_checked = False
+        self.friday_checked = False
+        self.saturday_checked = False
+        self.sunday_checked = False
+        self.scheduled_date = \
+            datetime.date(datetime.now())
+        self.scheduled_time = \
+            datetime.time(datetime.now().replace(microsecond=0))
+        self.timer_minutes = 180
+        self.timer_from_time = \
+            datetime.time(datetime.strptime("00:00", "%H:%M"))
+        self.timer_to_time = \
+            datetime.time(datetime.strptime("23:59", "%H:%M"))
+
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
@@ -100,7 +118,13 @@ class SettingsModel():
                 configFileSection = "MyData"
                 fields = ["instrument_name", "facility_name", "data_directory",
                           "contact_name", "contact_email", "mytardis_url",
-                          "username", "api_key", "folder_structure",
+                          "username", "api_key",
+                          "schedule_type", "monday_checked", "tuesday_checked",
+                          "wednesday_checked", "thursday_checked",
+                          "friday_checked", "saturday_checked",
+                          "sunday_checked", "scheduled_date", "scheduled_time",
+                          "timer_minutes", "timer_from_time", "timer_to_time",
+                          "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
                           "validate_folder_structure", "locked", "uuid"]
@@ -132,6 +156,53 @@ class SettingsModel():
                                            "locked"):
                     self.locked = configParser.getboolean(configFileSection,
                                                           "locked")
+                if configParser.has_option(configFileSection,
+                                           "scheduled_date"):
+                    datestring = configParser.get(configFileSection,
+                                                  "scheduled_date")
+                    self.scheduled_date = datetime.strptime(datestring,
+                                                            "%Y-%m-%d")
+                if configParser.has_option(configFileSection,
+                                           "scheduled_time"):
+                    timestring = configParser.get(configFileSection,
+                                                  "scheduled_time")
+                    self.scheduled_time = datetime.strptime(timestring,
+                                                            "%H:%M:%S")
+                    self.scheduled_time = datetime.time(self.scheduled_time)
+                if self.scheduled_date < datetime.date(datetime.now()):
+                    self.scheduled_date = datetime.date(datetime.now())
+                    self.scheduled_time = \
+                        datetime.time(datetime.now().replace(microsecond=0))
+                if self.scheduled_date == datetime.date(datetime.now()) and \
+                        self.scheduled_time < datetime.time(datetime.now()):
+                    self.scheduled_time = \
+                        datetime.time(datetime.now().replace(microsecond=0))
+                if configParser.has_option(configFileSection,
+                                           "timer_minutes"):
+                    self.timer_minutes = \
+                        configParser.getint(configFileSection,
+                                            "timer_minutes")
+                if configParser.has_option(configFileSection,
+                                           "timer_from_time"):
+                    timestring = configParser.get(configFileSection,
+                                                  "timer_from_time")
+                    self.timer_from_time = datetime.strptime(timestring,
+                                                            "%H:%M:%S")
+                    self.timer_from_time = datetime.time(self.timer_from_time)
+                if configParser.has_option(configFileSection,
+                                           "timer_to_time"):
+                    timestring = configParser.get(configFileSection,
+                                                  "timer_to_time")
+                    self.timer_to_time = datetime.strptime(timestring,
+                                                            "%H:%M:%S")
+                    self.timer_to_time = datetime.time(self.timer_to_time)
+                for day in ["monday_checked", "tuesday_checked",
+                            "wednesday_checked", "thursday_checked",
+                            "friday_checked", "saturday_checked",
+                            "sunday_checked"]:
+                    if configParser.has_option(configFileSection, day):
+                        self.__dict__[day] = \
+                            configParser.getboolean(configFileSection, day)
             except:
                 logger.error(traceback.format_exc())
 
@@ -204,6 +275,84 @@ class SettingsModel():
 
     def SetApiKey(self, apiKey):
         self.api_key = apiKey
+
+    def GetScheduleType(self):
+        return self.schedule_type
+
+    def SetScheduleType(self, scheduleType):
+        self.schedule_type = scheduleType
+
+    def IsMondayChecked(self):
+        return self.monday_checked
+
+    def SetMondayChecked(self, checked):
+        self.monday_checked = checked
+
+    def IsTuesdayChecked(self):
+        return self.tuesday_checked
+
+    def SetTuesdayChecked(self, checked):
+        self.tuesday_checked = checked
+
+    def IsWednesdayChecked(self):
+        return self.wednesday_checked
+
+    def SetWednesdayChecked(self, checked):
+        self.wednesday_checked = checked
+
+    def IsThursdayChecked(self):
+        return self.thursday_checked
+
+    def SetThursdayChecked(self, checked):
+        self.thursday_checked = checked
+
+    def IsFridayChecked(self):
+        return self.friday_checked
+
+    def SetFridayChecked(self, checked):
+        self.friday_checked = checked
+
+    def IsSaturdayChecked(self):
+        return self.saturday_checked
+
+    def SetSaturdayChecked(self, checked):
+        self.saturday_checked = checked
+
+    def IsSundayChecked(self):
+        return self.sunday_checked
+
+    def SetSundayChecked(self, checked):
+        self.sunday_checked = checked
+
+    def GetScheduledDate(self):
+        return self.scheduled_date
+
+    def SetScheduledDate(self, scheduledDate):
+        self.scheduled_date = scheduledDate
+
+    def GetScheduledTime(self):
+        return self.scheduled_time
+
+    def SetScheduledTime(self, scheduledTime):
+        self.scheduled_time = scheduledTime
+
+    def GetTimerMinutes(self):
+        return self.timer_minutes
+
+    def SetTimerMinutes(self, timerMinutes):
+        self.timer_minutes = timerMinutes
+
+    def GetTimerFromTime(self):
+        return self.timer_from_time
+
+    def SetTimerFromTime(self, timerFromTime):
+        self.timer_from_time = timerFromTime
+
+    def GetTimerToTime(self):
+        return self.timer_to_time
+
+    def SetTimerToTime(self, timerToTime):
+        self.timer_to_time = timerToTime
 
     def GetFolderStructure(self):
         return self.folder_structure
@@ -325,7 +474,13 @@ class SettingsModel():
             configParser.add_section("MyData")
             fields = ["instrument_name", "facility_name", "data_directory",
                       "contact_name", "contact_email", "mytardis_url",
-                      "username", "api_key", "folder_structure",
+                      "username", "api_key",
+                      "schedule_type", "monday_checked", "tuesday_checked",
+                      "wednesday_checked", "thursday_checked",
+                      "friday_checked", "saturday_checked",
+                      "sunday_checked", "scheduled_date", "scheduled_time",
+                      "timer_minutes", "timer_from_time", "timer_to_time",
+                      "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
@@ -347,6 +502,20 @@ class SettingsModel():
         self.SetDataDirectory(settingsDialog.GetDataDirectory())
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
+
+        self.SetScheduleType(settingsDialog.GetScheduleType())
+        self.SetMondayChecked(settingsDialog.IsMondayChecked())
+        self.SetTuesdayChecked(settingsDialog.IsTuesdayChecked())
+        self.SetWednesdayChecked(settingsDialog.IsWednesdayChecked())
+        self.SetThursdayChecked(settingsDialog.IsThursdayChecked())
+        self.SetFridayChecked(settingsDialog.IsFridayChecked())
+        self.SetSaturdayChecked(settingsDialog.IsSaturdayChecked())
+        self.SetSundayChecked(settingsDialog.IsSundayChecked())
+        self.SetScheduledDate(settingsDialog.GetScheduledDate())
+        self.SetScheduledTime(settingsDialog.GetScheduledTime())
+        self.SetTimerMinutes(settingsDialog.GetTimerMinutes())
+        self.SetTimerFromTime(settingsDialog.GetTimerFromTime())
+        self.SetTimerToTime(settingsDialog.GetTimerToTime())
 
         self.SetFolderStructure(settingsDialog.GetFolderStructure())
         self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
