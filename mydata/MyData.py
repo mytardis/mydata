@@ -743,6 +743,7 @@ class MyData(wx.App):
                          "Scanning data folders...")
             try:
                 self.SetScanningFolders(True)
+                self.toolbar.EnableTool(self.stopTool.GetId(), True)
                 self.foldersModel.ScanFolders(writeProgressUpdateToStatusBar,
                                               self.ShouldAbort)
                 self.SetScanningFolders(False)
