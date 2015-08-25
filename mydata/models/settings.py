@@ -160,8 +160,9 @@ class SettingsModel():
                                            "scheduled_date"):
                     datestring = configParser.get(configFileSection,
                                                   "scheduled_date")
-                    self.scheduled_date = datetime.strptime(datestring,
-                                                            "%Y-%m-%d")
+                    self.scheduled_date = \
+                        datetime.date(datetime.strptime(datestring,
+                                                        "%Y-%m-%d"))
                 if configParser.has_option(configFileSection,
                                            "scheduled_time"):
                     timestring = configParser.get(configFileSection,
