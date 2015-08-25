@@ -707,7 +707,7 @@ class SettingsDialog(wx.Dialog):
     def GetScheduledTime(self):
         wxDateTime = self.timeCtrl.GetValue(as_wxDateTime=True)
         timeString = wxDateTime.FormatTime()
-        return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
 
     def SetScheduledTime(self, time):
         timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
@@ -725,7 +725,7 @@ class SettingsDialog(wx.Dialog):
     def GetTimerFromTime(self):
         wxDateTime = self.fromTimeCtrl.GetValue(as_wxDateTime=True)
         timeString = wxDateTime.FormatTime()
-        return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
 
     def SetTimerFromTime(self, time):
         timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
@@ -736,7 +736,7 @@ class SettingsDialog(wx.Dialog):
     def GetTimerToTime(self):
         wxDateTime = self.toTimeCtrl.GetValue(as_wxDateTime=True)
         timeString = wxDateTime.FormatTime()
-        return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
 
     def SetTimerToTime(self, time):
         timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
