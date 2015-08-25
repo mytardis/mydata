@@ -1,5 +1,6 @@
 altgraph==0.12
 appdirs==1.4.0
+apscheduler==2.1.2
 macholib==1.7
 modulegraph==0.12
 poster==0.8.1
