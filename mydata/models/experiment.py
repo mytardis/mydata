@@ -50,10 +50,11 @@ class ExperimentModel():
 
         if folderModel.ExperimentTitleSetManually():
             expTitleEncoded = urllib2.quote(experimentTitle)
+            folderStructureEncoded = urllib2.quote(settingsModel.GetFolderStructure())
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&uploader=" + uploaderUuid + \
-                "&user_folder_name=" + userFolderName + \
-                "&title=" + expTitleEncoded
+                "&title=" + expTitleEncoded + \
+                "&folder_structure=" + folderStructureEncoded + \
+                "&user_folder_name=" + userFolderName
         else:
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid + \
