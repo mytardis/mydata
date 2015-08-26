@@ -1,7 +1,7 @@
 MyTardis Prerequisites
 ======================
 
-For MyData v0.3.4 you should use the "MyData_v0.3.2" tag of MyTardis, i.e.
+For MyData v0.3.4 you can use the "MyData_v0.3.2" (*) tag of MyTardis, i.e.
 
 ::
 
@@ -11,11 +11,17 @@ For MyData v0.3.4 you should use the "MyData_v0.3.2" tag of MyTardis, i.e.
     $ git describe --tags
     MyData_v0.3.2
 
+(*) At the time of writing, the most recent MyTardis version (the HEAD of
+the develop branch, which is currently fe8c233de16ee1747d7f364ecb5b0dc45397f6b8)
+is thought to be perfectly compatible with the latest MyData version, but for
+users who want an explicit MyTardis tag to run MyData against, they can use
+the one provided above.
+
 MyData requires the "mydata" MyTardis app to be installed on the MyTardis server.
 This app, and its installation instructions can be found here:
 https://github.com/wettenhj/mytardis-app-mydata/blob/master/README.md
 
-For MyData v0.3.4, you should use the "MyData_v0.3.2" tag of
+For MyData v0.3.4, you should use the HEAD of the master branch of
 "mytardis-app-mydata", i.e.
 
 ::
@@ -23,9 +29,9 @@ For MyData v0.3.4, you should use the "MyData_v0.3.2" tag of
     $ cd tardis/apps/
     $ git clone https://github.com/wettenhj/mytardis-app-mydata mydata
     $ cd mydata
-    $ git checkout -b MyData_v0.3.2 MyData_v0.3.2
-    $ git describe --tags
-    MyData_v0.3.2
+
+At the time of writing, the HEAD of the master branch of "mytardis-app-mydata"
+is 5326581d4b34cfc56fb2da6514556547e7b47328.
 
 MyData stores metadata for each experiment it creates, including a reference
 to the MyData instance (uploader) which created the experiment, and the name
