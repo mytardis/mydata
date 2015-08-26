@@ -137,18 +137,13 @@ class FolderModel():
         self.created = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
-        self.SetExperimentTitle()
 
     def GetExperimentTitle(self):
         return self.experimentTitle
 
-    def SetExperimentTitle(self, experimentTitle=None):
-        if experimentTitle is not None:
-            self.experimentTitle = experimentTitle
-            self.experimentTitleSetManually = True
-        else:
-            self.experimentTitle = \
-                self.settingsModel.GetInstrumentName() + " " + self.created
+    def SetExperimentTitle(self, title):
+        self.experimentTitle = title
+        self.experimentTitleSetManually = True
 
     def ExperimentTitleSetManually(self):
         return self.experimentTitleSetManually
