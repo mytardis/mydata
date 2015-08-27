@@ -54,8 +54,8 @@ class GroupsModel(wx.dataview.PyDataViewIndexListModel):
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fud = self.filteredGroupsData[filteredRow]
-            if q in fud.GetName().lower():
+            fgd = self.filteredGroupsData[filteredRow]
+            if q in fgd.GetName().lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -64,18 +64,18 @@ class GroupsModel(wx.dataview.PyDataViewIndexListModel):
                 ascending = True
                 while row < self.GetRowCount() and \
                         self.CompareGroupRecords(self.groupsData[row],
-                                                 fud, col, ascending) < 0:
+                                                 fgd, col, ascending) < 0:
                     row = row + 1
 
                 if row == self.GetRowCount():
-                    self.groupsData.append(fud)
+                    self.groupsData.append(fgd)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowAppended()
                     else:
                         wx.CallAfter(self.RowAppended)
                 else:
-                    self.groupsData.insert(row, fud)
+                    self.groupsData.insert(row, fgd)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowInserted(row)
