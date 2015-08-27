@@ -7,6 +7,7 @@ import appdirs
 import traceback
 import threading
 import argparse
+from datetime import timedelta
 from datetime import datetime
 import logging
 
@@ -23,6 +24,8 @@ from mydata.views.verifications import VerificationsView
 from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.views.uploads import UploadsView
 from mydata.dataviewmodels.uploads import UploadsModel
+from mydata.views.tasks import TasksView
+from mydata.dataviewmodels.tasks import TasksModel
 from models.uploader import UploaderModel
 from mydata.views.log import LogView
 from models.settings import SettingsModel
@@ -214,6 +217,17 @@ class MyData(wx.App):
         self.usersModel.SetFoldersModel(self.foldersModel)
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
+        self.tasksModel = TasksModel(self.settingsModel)
+        from mydata.models.task import TaskModel
+
+        def jobFunc(text):
+            print text
+        jobArgs = ["Hello from scheduled task!"]
+        jobDesc = "Say Hello"
+        startTime = datetime.now() + timedelta(seconds=5)
+        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc, startTime)
+        self.tasksModel.AddRow(task)
 
         self.frame = MyDataFrame(None, -1, self.name,
                                  style=wx.DEFAULT_FRAME_STYLE,
@@ -276,6 +290,10 @@ class MyData(wx.App):
                         uploadsModel=self.uploadsModel,
                         foldersController=self.foldersController)
         self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+
+        self.tasksView = TasksView(self.foldersUsersNotebook,
+                                   tasksModel=self.tasksModel)
+        self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
 
         self.logView = LogView(self.foldersUsersNotebook, self.settingsModel)
         self.foldersUsersNotebook.AddPage(self.logView, "Log")
@@ -678,24 +696,24 @@ class MyData(wx.App):
 
         if "Group" in self.settingsModel.GetFolderStructure():
             self.foldersView.ShowGroupColumn(True)
-	    for pageIndex in \
+            for pageIndex in \
                     reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
                 self.foldersUsersNotebook.RemovePage(pageIndex)
             self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
             self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
             self.foldersUsersNotebook.AddPage(self.verificationsView,
-			                      "Verifications")
+                                              "Verifications")
             self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
             self.foldersUsersNotebook.AddPage(self.logView, "Log")
         else:
             self.foldersView.ShowGroupColumn(False)
-	    for pageIndex in \
+            for pageIndex in \
                     reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
                 self.foldersUsersNotebook.RemovePage(pageIndex)
             self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
             self.foldersUsersNotebook.AddPage(self.usersView, "Users")
             self.foldersUsersNotebook.AddPage(self.verificationsView,
-			                      "Verifications")
+                                              "Verifications")
             self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
             self.foldersUsersNotebook.AddPage(self.logView, "Log")
 
