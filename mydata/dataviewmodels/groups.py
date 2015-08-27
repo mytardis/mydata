@@ -211,14 +211,6 @@ class GroupsModel(wx.dataview.PyDataViewIndexListModel):
         self.searchString = ""
         self.maxDataViewId = 0
 
-    def Contains(self, name, email):
-        for row in range(0, self.GetCount()):
-            if self.groupsData[row].GetName().strip() == name:
-                return True
-            if self.groupsData[row].GetEmail().strip() == email:
-                return True
-        return False
-
     def GetGroupById(self, id):
         for row in range(0, self.GetRowCount()):
             if self.unfilteredGroupsData[row].GetId() == id:
