@@ -76,7 +76,7 @@ class SettingsModel():
         self.username = ""
         self.api_key = ""
 
-        self.schedule_type = "Manually"
+        self.schedule_type = "Immediately"
         self.monday_checked = False
         self.tuesday_checked = False
         self.wednesday_checked = False
@@ -188,14 +188,14 @@ class SettingsModel():
                     timestring = configParser.get(configFileSection,
                                                   "timer_from_time")
                     self.timer_from_time = datetime.strptime(timestring,
-                                                            "%H:%M:%S")
+                                                             "%H:%M:%S")
                     self.timer_from_time = datetime.time(self.timer_from_time)
                 if configParser.has_option(configFileSection,
                                            "timer_to_time"):
                     timestring = configParser.get(configFileSection,
                                                   "timer_to_time")
                     self.timer_to_time = datetime.strptime(timestring,
-                                                            "%H:%M:%S")
+                                                           "%H:%M:%S")
                     self.timer_to_time = datetime.time(self.timer_to_time)
                 for day in ["monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
@@ -581,8 +581,8 @@ class SettingsModel():
                     "Notepad (or a suitable text editor).  Its content "\
                     "will appear as follows:\n\n" \
                     "    ApiKey <username>:<API key>\n\n" \
-                    "Copy the <API key> (after the colon) to your clipboard, " \
-                    "and paste it into MyData's \"MyTardis API Key\" field." \
+                    "Copy the <API key> (after the colon) to your clipboard," \
+                    " and paste it into MyData's \"MyTardis API Key\" field." \
                     % self.GetUsername().strip()
                 self.validation = SettingsValidation(False, message,
                                                      "api_key")

@@ -10,6 +10,7 @@ import argparse
 from datetime import timedelta
 from datetime import datetime
 import logging
+import time
 
 from mydata import __version__ as VERSION
 from mydata import LATEST_COMMIT
@@ -26,6 +27,7 @@ from mydata.views.uploads import UploadsView
 from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.views.tasks import TasksView
 from mydata.dataviewmodels.tasks import TasksModel
+from mydata.models.task import TaskModel
 from models.uploader import UploaderModel
 from mydata.views.log import LogView
 from models.settings import SettingsModel
@@ -218,16 +220,6 @@ class MyData(wx.App):
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
         self.tasksModel = TasksModel(self.settingsModel)
-        from mydata.models.task import TaskModel
-
-        def jobFunc(text):
-            print text
-        jobArgs = ["Hello from scheduled task!"]
-        jobDesc = "Say Hello"
-        startTime = datetime.now() + timedelta(seconds=5)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc, startTime)
-        self.tasksModel.AddRow(task)
 
         self.frame = MyDataFrame(None, -1, self.name,
                                  style=wx.DEFAULT_FRAME_STYLE,
@@ -704,6 +696,7 @@ class MyData(wx.App):
             self.foldersUsersNotebook.AddPage(self.verificationsView,
                                               "Verifications")
             self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+            self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
             self.foldersUsersNotebook.AddPage(self.logView, "Log")
         else:
             self.foldersView.ShowGroupColumn(False)
@@ -715,6 +708,7 @@ class MyData(wx.App):
             self.foldersUsersNotebook.AddPage(self.verificationsView,
                                               "Verifications")
             self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+            self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
             self.foldersUsersNotebook.AddPage(self.logView, "Log")
 
         def cancelCallback():
@@ -843,7 +837,54 @@ class MyData(wx.App):
                 self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-            self.OnRefresh(event, needToValidateSettings=False)
+            scheduleType = self.settingsModel.GetScheduleType()
+            if scheduleType == "Immediately":
+                self.OnRefresh(event, needToValidateSettings=False)
+            elif scheduleType == "Manually":
+                # Wait for use to manually click Refresh on MyData's toolbar.
+                pass
+            elif scheduleType == "Once":
+
+                def jobFunc(self, event, needToValidateSettings):
+                    self.OnRefresh(event, needToValidateSettings)
+                    while not self.ScanningFolders():
+                        time.sleep(0.01)
+                    while self.ScanningFolders() or \
+                            self.PerformingLookupsAndUploads():
+                        time.sleep(0.01)
+
+                jobArgs = [self, event, False]
+                jobDesc = "Scan folders and upload datafiles"
+                startTime = \
+                    datetime.combine(self.settingsModel.GetScheduledDate(),
+                                     self.settingsModel.GetScheduledTime())
+                if startTime < datetime.now():
+                    delta = datetime.now() - startTime
+                    if delta.seconds < 100:
+                        startTime = datetime.now() + timedelta(seconds=5)
+                    else:
+                        wx.MessageBox("Scheduled time is in the past.",
+                                      "MyData", wx.ICON_ERROR)
+                        return
+                self.frame.SetStatusMessage(
+                    "Folder scans and uploads are scheduled "
+                    "to run at %s on %s" %
+                    (startTime.strftime("%I:%M %p"),
+                     startTime.strftime("%e/%m/%Y")))
+                taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+                task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                                 startTime)
+                try:
+                    self.tasksModel.AddRow(task)
+                except ValueError, ve:
+                    wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                    return
+            elif scheduleType == "Daily":
+                print "Daily scheduling has not been implemented yet."
+            elif scheduleType == "Weekly":
+                print "Weekly scheduling has not been implemented yet."
+            elif scheduleType == "Timer":
+                print "Timer scheduling has not been implemented yet."
 
     def OnMyTardis(self, event):
         try:
@@ -920,7 +961,7 @@ class MyData(wx.App):
         self.configPath = configPath
 
     def ScanningFolders(self):
-        self.scanningFolders = threading.Event()
+        return self.scanningFolders.isSet()
 
     def SetScanningFolders(self, value):
         if value:
