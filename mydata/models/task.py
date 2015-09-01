@@ -14,6 +14,9 @@ class TaskModel():
         self.startTime = startTime
         self.finishTime = None
 
+    def GetDataViewId(self):
+        return self.dataViewId
+
     def GetJobFunc(self):
         return self.jobFunc
 
