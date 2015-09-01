@@ -1,8 +1,10 @@
 import wx.dataview
 import threading
 from datetime import datetime
+from datetime import timedelta
 from apscheduler.scheduler import Scheduler
 
+from mydata.models.task import TaskModel
 from mydata.logs import logger
 
 
@@ -24,9 +26,11 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
 
-        self.columnNames = ("Id", "Job", "Start Time", "Finish Time")
-        self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime")
-        self.defaultColumnWidths = (40, 300, 200, 200)
+        self.columnNames = ("Id", "Job", "Start Time", "Finish Time",
+                            "Interval (minutes)")
+        self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
+                           "intervalMinutes")
+        self.defaultColumnWidths = (40, 300, 200, 200, 100)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -248,6 +252,25 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                 tasksModel.RowValueChanged(row, col)
             else:
                 wx.CallAfter(tasksModel.RowValueChanged, row, col)
+            intervalMinutes = taskModel.GetIntervalMinutes()
+            if intervalMinutes:
+                newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
+                newStartTime = taskModel.GetStartTime() + \
+                    timedelta(minutes=intervalMinutes)
+                newTaskModel = TaskModel(newTaskDataViewId,
+                                         taskModel.GetJobFunc(),
+                                         taskModel.GetJobArgs(),
+                                         taskModel.GetJobDesc(),
+                                         newStartTime,
+                                         intervalMinutes)
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
+                             "The \"%s\" task is scheduled "
+                             "to run at %s on %s (recurring every %d minutes)"
+                             % (taskModel.GetJobDesc(),
+                                newStartTime.strftime("%I:%M:%S %p"),
+                                newStartTime.strftime("%e/%m/%Y"),
+                                intervalMinutes))
+                tasksModel.AddRow(newTaskModel)
 
         row = len(self.tasksData) - 1
         col = self.columnKeys.index("finishTime")

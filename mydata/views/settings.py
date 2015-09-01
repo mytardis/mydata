@@ -201,8 +201,8 @@ class SettingsDialog(wx.Dialog):
 
         # Schedule tab
 
-        print "TO DO: Implement scheduling functionality configured " \
-            "by these fields."
+        print "TO DO: Finish implementing and testing scheduling " \
+            "functionality specified by these fields."
 
         self.innerSchedulePanel = wx.Panel(self.schedulePanel)
         self.innerSchedulePanelSizer = wx.BoxSizer(wx.VERTICAL)

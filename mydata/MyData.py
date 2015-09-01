@@ -847,6 +847,9 @@ class MyData(wx.App):
 
                 def jobFunc(self, event, needToValidateSettings):
                     self.OnRefresh(event, needToValidateSettings)
+                    # Sleep this thread until the job is really
+                    # finished, so we can determine the job's
+                    # finish time.
                     while not self.ScanningFolders():
                         time.sleep(0.01)
                     while self.ScanningFolders() or \
@@ -854,7 +857,7 @@ class MyData(wx.App):
                         time.sleep(0.01)
 
                 jobArgs = [self, event, False]
-                jobDesc = "Scan folders and upload datafiles"
+                jobDesc = "scan folders and upload datafiles"
                 startTime = \
                     datetime.combine(self.settingsModel.GetScheduledDate(),
                                      self.settingsModel.GetScheduledTime())
@@ -867,9 +870,10 @@ class MyData(wx.App):
                                       "MyData", wx.ICON_ERROR)
                         return
                 self.frame.SetStatusMessage(
-                    "Folder scans and uploads are scheduled "
+                    "The \"%s\" task is scheduled "
                     "to run at %s on %s" %
-                    (startTime.strftime("%I:%M %p"),
+                    (jobDesc,
+                     startTime.strftime("%I:%M:%S %p"),
                      startTime.strftime("%e/%m/%Y")))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
@@ -884,7 +888,36 @@ class MyData(wx.App):
             elif scheduleType == "Weekly":
                 print "Weekly scheduling has not been implemented yet."
             elif scheduleType == "Timer":
-                print "Timer scheduling has not been implemented yet."
+
+                def jobFunc(self, event, needToValidateSettings):
+                    self.OnRefresh(event, needToValidateSettings)
+                    # Sleep this thread until the job is really
+                    # finished, so we can determine the job's
+                    # finish time.
+                    while not self.ScanningFolders():
+                        time.sleep(0.01)
+                    while self.ScanningFolders() or \
+                            self.PerformingLookupsAndUploads():
+                        time.sleep(0.01)
+
+                jobArgs = [self, event, False]
+                jobDesc = "scan folders and upload datafiles"
+                intervalMinutes = self.settingsModel.GetTimerMinutes()
+                startTime = datetime.now() + timedelta(seconds=5)
+                self.frame.SetStatusMessage(
+                    "The \"%s\" task is scheduled "
+                    "to run at %s on %s (recurring every %d minutes)" %
+                    (jobDesc,
+                     startTime.strftime("%I:%M %p"),
+                     startTime.strftime("%e/%m/%Y"), intervalMinutes))
+                taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+                task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                                 startTime, intervalMinutes)
+                try:
+                    self.tasksModel.AddRow(task)
+                except ValueError, ve:
+                    wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                    return
 
     def OnMyTardis(self, event):
         try:

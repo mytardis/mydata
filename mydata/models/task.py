@@ -6,13 +6,15 @@ class TaskModel():
     A task can be a folder scan, datafile lookup and upload,
     or it could be a notification POSTed to MyTardis administrators.
     """
-    def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime):
+    def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime,
+                 intervalMinutes=None):
         self.dataViewId = dataViewId
         self.jobFunc = jobFunc
         self.jobArgs = jobArgs
         self.jobDesc = jobDesc
         self.startTime = startTime
         self.finishTime = None
+        self.intervalMinutes = intervalMinutes
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -31,6 +33,9 @@ class TaskModel():
 
     def GetFinishTime(self):
         return self.finishTime
+
+    def GetIntervalMinutes(self):
+        return self.intervalMinutes
 
     def SetFinishTime(self, finishTime):
         self.finishTime = finishTime
