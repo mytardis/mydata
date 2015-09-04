@@ -15,6 +15,7 @@ class TaskModel():
         self.startTime = startTime
         self.finishTime = None
         self.intervalMinutes = intervalMinutes
+        self.callLater = None
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -31,14 +32,20 @@ class TaskModel():
     def GetStartTime(self):
         return self.startTime
 
-    def GetFinishTime(self):
-        return self.finishTime
-
     def GetIntervalMinutes(self):
         return self.intervalMinutes
 
+    def GetFinishTime(self):
+        return self.finishTime
+
     def SetFinishTime(self, finishTime):
         self.finishTime = finishTime
+
+    def GetCallLater(self):
+        return self.callLater
+
+    def SetCallLater(self, callLater):
+        self.callLater = callLater
 
     def GetValueForKey(self, key):
         if self.__dict__[key]:

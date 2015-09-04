@@ -290,8 +290,17 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                 "is in the past."
                                 % taskModel.GetDataViewId())
         args = [taskModel, self, row, col]
-        wx.CallAfter(wx.CallLater, millis, jobFunc, *args)
+
+        def scheduleTask():
+            callLater = wx.CallLater(millis, jobFunc, *args)
+            taskModel.SetCallLater(callLater)
+
+        wx.CallAfter(scheduleTask)
 
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()
         self.Filter(self.searchString)
+
+    def Shutdown(self):
+        for task in tasksData:
+            task.GetCallLater().Stop()
