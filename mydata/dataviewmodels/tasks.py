@@ -266,7 +266,8 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              intervalMinutes)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
-                                 "to run at %s on %s (recurring every %d minutes)"
+                                 "to run at %s on %s "
+                                 "(recurring every %d minutes)"
                                  % (taskModel.GetJobDesc(),
                                     newStartTime.strftime("%I:%M:%S %p"),
                                     newStartTime.strftime("%e/%m/%Y"),
@@ -279,9 +280,6 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
 
         row = len(self.tasksData) - 1
         col = self.columnKeys.index("finishTime")
-        # wx.CallAfter(self.GetScheduler().add_date_job,
-                     # jobFunc, taskModel.GetStartTime(),
-                     # [taskModel, self, row, col])
         delta = taskModel.GetStartTime() - datetime.now()
         millis = delta.total_seconds() * 1000
         args = [taskModel, self, row, col]
