@@ -282,24 +282,16 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         col = self.columnKeys.index("finishTime")
         delta = taskModel.GetStartTime() - datetime.now()
         millis = delta.total_seconds() * 1000
+        if millis < 0:
+            if millis > -1000:
+                millis = 1
+            else:
+                raise Exception("Scheduled time for task ID %d "
+                                "is in the past."
+                                % taskModel.GetDataViewId())
         args = [taskModel, self, row, col]
         wx.CallAfter(wx.CallLater, millis, jobFunc, *args)
 
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()
         self.Filter(self.searchString)
-
-"""
-    def GetScheduler(self):
-        if not hasattr(self, 'scheduler'):
-            # Start the scheduler
-            logger.info("Starting scheduler.")
-            self.scheduler = Scheduler()
-            self.scheduler.start()
-            logger.info("Started scheduler.")
-        return self.scheduler
-
-    def ShutDown(self, wait=True):
-        if hasattr(self, 'scheduler'):
-            self.scheduler.shutdown(wait=wait)
-"""
