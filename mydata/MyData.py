@@ -872,8 +872,8 @@ class MyData(wx.App):
                                      self.settingsModel.GetScheduledTime())
                 if startTime < datetime.now():
                     delta = datetime.now() - startTime
-                    if delta.seconds < 100:
-                        startTime = datetime.now() + timedelta(seconds=1)
+                    if delta.total_seconds() < 100:
+                        startTime = datetime.now()
                     else:
                         wx.MessageBox("Scheduled time is in the past.",
                                       "MyData", wx.ICON_ERROR)
@@ -913,7 +913,7 @@ class MyData(wx.App):
                 jobArgs = [self, event, False]
                 jobDesc = "scan folders and upload datafiles"
                 intervalMinutes = self.settingsModel.GetTimerMinutes()
-                startTime = datetime.now() + timedelta(seconds=1)
+                startTime = datetime.now()
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
                     "to run at %s on %s (recurring every %d minutes)" %
