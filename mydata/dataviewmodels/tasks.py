@@ -1,8 +1,8 @@
-import wx.dataview
+import sys
 import threading
 from datetime import datetime
 from datetime import timedelta
-from apscheduler.scheduler import Scheduler
+import wx.dataview
 
 from mydata.models.task import TaskModel
 from mydata.logs import logger
@@ -11,10 +11,6 @@ from mydata.logs import logger
 class TasksModel(wx.dataview.PyDataViewIndexListModel):
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
-
-        # Start the scheduler
-        self.scheduler = Scheduler()
-        self.scheduler.start()
 
         self.tasksData = list()
 
@@ -244,44 +240,68 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
     def AddRow(self, taskModel):
         self.Filter("")
         self.tasksData.append(taskModel)
-
-        def jobFunc(taskModel, tasksModel, row, col):
-            taskModel.GetJobFunc()(*taskModel.GetJobArgs())
-            taskModel.SetFinishTime(datetime.now())
-            if threading.current_thread().name == "MainThread":
-                tasksModel.RowValueChanged(row, col)
-            else:
-                wx.CallAfter(tasksModel.RowValueChanged, row, col)
-            intervalMinutes = taskModel.GetIntervalMinutes()
-            if intervalMinutes:
-                newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
-                newStartTime = taskModel.GetStartTime() + \
-                    timedelta(minutes=intervalMinutes)
-                newTaskModel = TaskModel(newTaskDataViewId,
-                                         taskModel.GetJobFunc(),
-                                         taskModel.GetJobArgs(),
-                                         taskModel.GetJobDesc(),
-                                         newStartTime,
-                                         intervalMinutes)
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "The \"%s\" task is scheduled "
-                             "to run at %s on %s (recurring every %d minutes)"
-                             % (taskModel.GetJobDesc(),
-                                newStartTime.strftime("%I:%M:%S %p"),
-                                newStartTime.strftime("%e/%m/%Y"),
-                                intervalMinutes))
-                tasksModel.AddRow(newTaskModel)
-
-        row = len(self.tasksData) - 1
-        col = self.columnKeys.index("finishTime")
-        self.scheduler.add_date_job(jobFunc, taskModel.GetStartTime(),
-                                    [taskModel, self, row, col])
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
         else:
             wx.CallAfter(self.RowAppended)
 
+        def jobFunc(taskModel, tasksModel, row, col):
+
+            def taskJobFunc():
+                assert callable(taskModel.GetJobFunc())
+                taskModel.GetJobFunc()(*taskModel.GetJobArgs())
+                taskModel.SetFinishTime(datetime.now())
+                wx.CallAfter(tasksModel.RowValueChanged, row, col)
+                intervalMinutes = taskModel.GetIntervalMinutes()
+                if intervalMinutes:
+                    newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
+                    newStartTime = taskModel.GetStartTime() + \
+                        timedelta(minutes=intervalMinutes)
+                    newTaskModel = TaskModel(newTaskDataViewId,
+                                             taskModel.GetJobFunc(),
+                                             taskModel.GetJobArgs(),
+                                             taskModel.GetJobDesc(),
+                                             newStartTime,
+                                             intervalMinutes)
+                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
+                                 "The \"%s\" task is scheduled "
+                                 "to run at %s on %s (recurring every %d minutes)"
+                                 % (taskModel.GetJobDesc(),
+                                    newStartTime.strftime("%I:%M:%S %p"),
+                                    newStartTime.strftime("%e/%m/%Y"),
+                                    intervalMinutes))
+                    tasksModel.AddRow(newTaskModel)
+
+            thread = threading.Thread(target=taskJobFunc)
+            logger.debug("Starting task %s" % taskModel.GetJobDesc())
+            thread.start()
+
+        row = len(self.tasksData) - 1
+        col = self.columnKeys.index("finishTime")
+        # wx.CallAfter(self.GetScheduler().add_date_job,
+                     # jobFunc, taskModel.GetStartTime(),
+                     # [taskModel, self, row, col])
+        delta = taskModel.GetStartTime() - datetime.now()
+        millis = delta.total_seconds() * 1000
+        args = [taskModel, self, row, col]
+        wx.CallAfter(wx.CallLater, millis, jobFunc, *args)
+
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()
         self.Filter(self.searchString)
+
+"""
+    def GetScheduler(self):
+        if not hasattr(self, 'scheduler'):
+            # Start the scheduler
+            logger.info("Starting scheduler.")
+            self.scheduler = Scheduler()
+            self.scheduler.start()
+            logger.info("Started scheduler.")
+        return self.scheduler
+
+    def ShutDown(self, wait=True):
+        if hasattr(self, 'scheduler'):
+            self.scheduler.shutdown(wait=wait)
+"""
