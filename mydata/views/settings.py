@@ -5,6 +5,7 @@ import re
 import requests
 import threading
 from datetime import datetime
+from datetime import timedelta
 import sys
 import os
 import traceback
@@ -17,7 +18,6 @@ import mydata.events as mde
 
 
 class SettingsDropTarget(wx.FileDropTarget):
-
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
@@ -227,52 +227,6 @@ class SettingsDialog(wx.Dialog):
         self.innerSchedulePanelSizer.Add(self.scheduleTypePanel)
         self.innerSchedulePanelSizer.AddSpacer(10)
 
-        self.daysOfTheWeekPanel = wx.Panel(self.innerSchedulePanel, wx.ID_ANY)
-        self.dateTimeGroupBox = wx.StaticBox(self.daysOfTheWeekPanel,
-                                             wx.ID_ANY,
-                                             label="Days of the week")
-        # self.dateTimeGroupBox.SetFont(self.smallFont)
-        self.daysOfTheWeekGroupBoxSizer = \
-            wx.StaticBoxSizer(self.dateTimeGroupBox, wx.VERTICAL)
-        self.daysOfTheWeekPanel.SetSizer(self.daysOfTheWeekGroupBoxSizer)
-        self.innerDaysOfTheWeekPanel = wx.Panel(self.daysOfTheWeekPanel,
-                                                wx.ID_ANY)
-        self.innerDaysOfTheWeekPanelSizer = wx.FlexGridSizer(rows=2, cols=5,
-                                                             hgap=10, vgap=10)
-        self.innerDaysOfTheWeekPanel\
-            .SetSizer(self.innerDaysOfTheWeekPanelSizer)
-
-        self.mondayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                          label="Monday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.mondayCheckBox)
-        self.tuesdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                           label="Tuesday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.tuesdayCheckBox)
-        self.wednesdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                             label="Wednesday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.wednesdayCheckBox)
-        self.thursdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                            label="Thursday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.thursdayCheckBox)
-        self.fridayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                          label="Friday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.fridayCheckBox)
-        self.saturdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                            label="Saturday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.saturdayCheckBox)
-        self.sundayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
-                                          label="Sunday")
-        self.innerDaysOfTheWeekPanelSizer.Add(self.sundayCheckBox)
-
-        self.innerDaysOfTheWeekPanel\
-            .SetSizerAndFit(self.innerDaysOfTheWeekPanelSizer)
-        self.daysOfTheWeekGroupBoxSizer.Add(self.innerDaysOfTheWeekPanel,
-                                            flag=wx.EXPAND)
-        self.daysOfTheWeekPanel.SetSizerAndFit(self.daysOfTheWeekGroupBoxSizer)
-        self.innerSchedulePanelSizer.Add(self.daysOfTheWeekPanel,
-                                         flag=wx.EXPAND)
-        self.innerSchedulePanelSizer.AddSpacer(10)
-
         self.dateTimePanel = wx.Panel(self.innerSchedulePanel, wx.ID_ANY)
         self.innerSchedulePanelSizer.Add(self.dateTimePanel, flag=wx.EXPAND)
         self.dateTimeGroupBox = wx.StaticBox(self.dateTimePanel, wx.ID_ANY,
@@ -286,17 +240,28 @@ class SettingsDialog(wx.Dialog):
                                                         hgap=10, vgap=10)
         self.innerDateTimePanel.SetSizer(self.innerDateTimePanelSizer)
 
-        self.innerDateTimePanel.SetSizerAndFit(self.innerDateTimePanelSizer)
+        self.innerDateTimePanel.Fit()
         self.dateTimeGroupBoxSizer.Add(self.innerDateTimePanel, flag=wx.EXPAND)
-        self.dateTimePanel.SetSizerAndFit(self.dateTimeGroupBoxSizer)
+        self.dateTimePanel.Fit()
         self.datePanel = wx.Panel(self.innerDateTimePanel, wx.ID_ANY)
         self.datePanelSizer = wx.BoxSizer(wx.VERTICAL)
         self.dateLabel = wx.StaticText(self.datePanel, label="Date")
         self.datePanelSizer.Add(self.dateLabel)
         # self.dateLabel.SetFont(self.smallFont)
-        self.dateCtrl = wx.DatePickerCtrl(self.datePanel, size=(120, -1),
-                                          style=wx.DP_DROPDOWN)
-        self.datePanelSizer.Add(self.dateCtrl)
+        self.dateEntryPanel = wx.Panel(self.datePanel, wx.ID_ANY)
+        self.dateEntryPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.dateCtrl = wx.lib.masked.Ctrl(self.dateEntryPanel,
+                                           autoformat='EUDATEDDMMYYYY/',
+                                           size=(120, -1))
+        self.dateEntryPanelSizer.Add(self.dateCtrl)
+        height = self.dateCtrl.GetSize().height
+        self.dateSpin = wx.SpinButton(self.dateEntryPanel, wx.ID_ANY,
+                                      size=(-1, height), style=wx.SP_VERTICAL)
+        self.Bind(wx.EVT_SPIN_UP, self.OnIncrementDate, self.dateSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementDate, self.dateSpin)
+        self.dateEntryPanelSizer.Add(self.dateSpin)
+        self.dateEntryPanel.SetSizerAndFit(self.dateEntryPanelSizer)
+        self.datePanelSizer.Add(self.dateEntryPanel)
         self.datePanel.SetSizerAndFit(self.datePanelSizer)
         self.innerDateTimePanelSizer.Add(self.datePanel)
 
@@ -383,11 +348,11 @@ class SettingsDialog(wx.Dialog):
                                                  size=(120, -1))
         self.toTimeEntryPanelSizer.Add(self.toTimeCtrl)
         height = self.toTimeCtrl.GetSize().height
-        self.fromTimeSpin = wx.SpinButton(self.toTimeEntryPanel, wx.ID_ANY,
-                                          size=(-1, height),
-                                          style=wx.SP_VERTICAL)
-        self.toTimeCtrl.BindSpinButton(self.fromTimeSpin)
-        self.toTimeEntryPanelSizer.Add(self.fromTimeSpin)
+        self.toTimeSpin = wx.SpinButton(self.toTimeEntryPanel, wx.ID_ANY,
+                                        size=(-1, height),
+                                        style=wx.SP_VERTICAL)
+        self.toTimeCtrl.BindSpinButton(self.toTimeSpin)
+        self.toTimeEntryPanelSizer.Add(self.toTimeSpin)
         self.toTimeEntryPanel.SetSizerAndFit(self.toTimeEntryPanelSizer)
         self.toPanelSizer.Add(self.toTimeEntryPanel)
         self.toPanel.SetSizerAndFit(self.toPanelSizer)
@@ -397,6 +362,54 @@ class SettingsDialog(wx.Dialog):
 
         self.innerDateTimePanel.SetSizerAndFit(self.innerDateTimePanelSizer)
         self.dateTimePanel.SetSizerAndFit(self.dateTimeGroupBoxSizer)
+
+        self.innerSchedulePanelSizer.AddSpacer(10)
+
+        self.daysOfTheWeekPanel = wx.Panel(self.innerSchedulePanel, wx.ID_ANY)
+        self.daysOfTheWeekGroupBox = wx.StaticBox(self.daysOfTheWeekPanel,
+                                                  wx.ID_ANY,
+                                                  label="Days of the week")
+        # self.daysOfTheWeekGroupBox.SetFont(self.smallFont)
+        self.daysOfTheWeekGroupBoxSizer = \
+            wx.StaticBoxSizer(self.daysOfTheWeekGroupBox, wx.VERTICAL)
+        self.daysOfTheWeekPanel.SetSizer(self.daysOfTheWeekGroupBoxSizer)
+        self.innerDaysOfTheWeekPanel = wx.Panel(self.daysOfTheWeekPanel,
+                                                wx.ID_ANY)
+        self.innerDaysOfTheWeekPanelSizer = wx.FlexGridSizer(rows=2, cols=5,
+                                                             hgap=10, vgap=10)
+        self.innerDaysOfTheWeekPanel\
+            .SetSizer(self.innerDaysOfTheWeekPanelSizer)
+
+        self.mondayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                          label="Monday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.mondayCheckBox)
+        self.tuesdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                           label="Tuesday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.tuesdayCheckBox)
+        self.wednesdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                             label="Wednesday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.wednesdayCheckBox)
+        self.thursdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                            label="Thursday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.thursdayCheckBox)
+        self.fridayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                          label="Friday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.fridayCheckBox)
+        self.saturdayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                            label="Saturday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.saturdayCheckBox)
+        self.sundayCheckBox = wx.CheckBox(self.innerDaysOfTheWeekPanel,
+                                          label="Sunday")
+        self.innerDaysOfTheWeekPanelSizer.Add(self.sundayCheckBox)
+
+        self.innerDaysOfTheWeekPanel\
+            .SetSizerAndFit(self.innerDaysOfTheWeekPanelSizer)
+        self.daysOfTheWeekGroupBoxSizer.Add(self.innerDaysOfTheWeekPanel,
+                                            flag=wx.EXPAND)
+        self.daysOfTheWeekPanel.SetSizerAndFit(self.daysOfTheWeekGroupBoxSizer)
+        self.innerSchedulePanelSizer.Add(self.daysOfTheWeekPanel,
+                                         flag=wx.EXPAND)
+        self.innerSchedulePanelSizer.AddSpacer(10)
 
         self.innerSchedulePanel.SetSizerAndFit(self.innerSchedulePanelSizer)
 
@@ -693,17 +706,11 @@ class SettingsDialog(wx.Dialog):
         self.sundayCheckBox.SetValue(checked)
 
     def GetScheduledDate(self):
-        wxDate = self.dateCtrl.GetValue()
-        if wxDate.IsValid():
-            ymd = map(int, wxDate.FormatISODate().split('-'))
-            return datetime.date(datetime(*ymd))
-        else:
-            return None
+        return datetime.date(datetime.strptime(self.dateCtrl.GetValue(),
+                                               "%d/%m/%Y"))
 
     def SetScheduledDate(self, date):
-        timeTuple = date.timetuple()
-        dmy = (timeTuple[2], timeTuple[1]-1, timeTuple[0])
-        self.dateCtrl.SetValue(wx.DateTimeFromDMY(*dmy))
+        self.dateCtrl.SetValue(date.strftime('%d/%m/%Y'))
 
     def GetScheduledTime(self):
         wxDateTime = self.timeCtrl.GetValue(as_wxDateTime=True)
@@ -1130,11 +1137,15 @@ class SettingsDialog(wx.Dialog):
         self.saturdayCheckBox.Enable(False)
         self.sundayCheckBox.Enable(False)
         self.dateCtrl.Enable(False)
+        self.dateSpin.Enable(False)
         self.timeCtrl.Enable(False)
         self.timeSpin.Enable(False)
         self.timerNumCtrl.Enable(False)
+        self.timerSpin.Enable(False)
         self.fromTimeCtrl.Enable(False)
+        self.fromTimeSpin.Enable(False)
         self.toTimeCtrl.Enable(False)
+        self.toTimeSpin.Enable(False)
         if enabled:
             self.OnScheduleTypeChange(None)
 
@@ -1167,12 +1178,27 @@ class SettingsDialog(wx.Dialog):
         self.saturdayCheckBox.Enable(enableDaysOfWeekCheckBoxes)
         self.sundayCheckBox.Enable(enableDaysOfWeekCheckBoxes)
         enableDate = (scheduleType == "Once")
+        self.dateLabel.Enable(enableDate)
+        self.dateSpin.Enable(enableDate)
         self.dateCtrl.Enable(enableDate)
         enableTime = (scheduleType == "Once" or scheduleType == "Daily" or
                       scheduleType == "Weekly")
+        self.timeLabel.Enable(enableTime)
         self.timeCtrl.Enable(enableTime)
         self.timeSpin.Enable(enableTime)
         enableTimer = (scheduleType == "Timer")
+        self.timerLabel.Enable(enableTimer)
         self.timerNumCtrl.Enable(enableTimer)
+        self.timerSpin.Enable(enableTimer)
+        self.fromLabel.Enable(enableTimer)
         self.fromTimeCtrl.Enable(enableTimer)
+        self.fromTimeSpin.Enable(enableTimer)
+        self.toLabel.Enable(enableTimer)
         self.toTimeCtrl.Enable(enableTimer)
+        self.toTimeSpin.Enable(enableTimer)
+
+    def OnIncrementDate(self, event):
+        self.SetScheduledDate(self.GetScheduledDate() + timedelta(days=1))
+
+    def OnDecrementDate(self, event):
+        self.SetScheduledDate(self.GetScheduledDate() - timedelta(days=1))
