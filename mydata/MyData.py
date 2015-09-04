@@ -385,8 +385,7 @@ class MyData(wx.App):
             okToExit = confirmationDialog.ShowModal()
             if okToExit == wx.ID_YES:
                 def shutDownDataScansAndUploads():
-                    logger.debug("Starting run() method for thread %s"
-                                 % threading.current_thread().name)
+                    logger.debug("Starting shutDownDataScansAndUploads...")
                     try:
                         wx.CallAfter(wx.BeginBusyCursor)
                         self.foldersController.ShutDownUploadThreads()
@@ -400,10 +399,16 @@ class MyData(wx.App):
                                     logger.error(str(e))
                                     raise
                         wx.CallAfter(endBusyCursorIfRequired)
+                        self.tasksModel.ShutDown(wait=False)
                         os._exit(0)
                     except:
-                        logger.debug(traceback.format_exc())
-                        os._exit(1)
+                        try:
+                            logger.debug(traceback.format_exc())
+                            self.tasksModel.ShutDown(wait=False)
+                            os._exit(1)
+                        except:
+                            logger.debug(traceback.format_exc())
+                            os._exit(1)
                     logger.debug("Finishing run() method for thread %s"
                                  % threading.current_thread().name)
 
@@ -837,24 +842,29 @@ class MyData(wx.App):
                 self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
+            logger.debug("Getting schedule type from settings dialog.")
             scheduleType = self.settingsModel.GetScheduleType()
             if scheduleType == "Immediately":
+                logger.debug("Schedule type is Immediately.")
                 self.OnRefresh(event, needToValidateSettings=False)
             elif scheduleType == "Manually":
-                # Wait for use to manually click Refresh on MyData's toolbar.
+                logger.debug("Schedule type is Manually.")
+                # Wait for user to manually click Refresh on MyData's toolbar.
                 pass
             elif scheduleType == "Once":
+                logger.debug("Schedule type is Once.")
 
                 def jobFunc(self, event, needToValidateSettings):
+                    self.toolbar.EnableTool(self.stopTool.GetId(), True)
+                    logger.info("jobFunc 1")
                     self.OnRefresh(event, needToValidateSettings)
+                    logger.info("jobFunc 2")
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
                     # finish time.
-                    while not self.ScanningFolders():
+                    while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
                         time.sleep(0.01)
-                    while self.ScanningFolders() or \
-                            self.PerformingLookupsAndUploads():
-                        time.sleep(0.01)
+                    logger.info("Not scanning folders and not performing lookups and uploads.")
 
                 jobArgs = [self, event, False]
                 jobDesc = "scan folders and upload datafiles"
@@ -864,7 +874,7 @@ class MyData(wx.App):
                 if startTime < datetime.now():
                     delta = datetime.now() - startTime
                     if delta.seconds < 100:
-                        startTime = datetime.now() + timedelta(seconds=5)
+                        startTime = datetime.now() + timedelta(seconds=1)
                     else:
                         wx.MessageBox("Scheduled time is in the past.",
                                       "MyData", wx.ICON_ERROR)
@@ -884,31 +894,38 @@ class MyData(wx.App):
                     wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
                     return
             elif scheduleType == "Daily":
+                logger.debug("Schedule type is Daily.")
                 print "Daily scheduling has not been implemented yet."
             elif scheduleType == "Weekly":
+                logger.debug("Schedule type is Weekly.")
                 print "Weekly scheduling has not been implemented yet."
             elif scheduleType == "Timer":
+                logger.debug("Schedule type is Timer.")
 
                 def jobFunc(self, event, needToValidateSettings):
+                    self.toolbar.EnableTool(self.stopTool.GetId(), True)
                     self.OnRefresh(event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
                     # finish time.
-                    while not self.ScanningFolders():
+                    # while not self.ScanningFolders():
+                        # time.sleep(0.01)
+                    # while self.ScanningFolders() or \
+                            # self.PerformingLookupsAndUploads():
+                        # time.sleep(0.01)
+                    while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
                         time.sleep(0.01)
-                    while self.ScanningFolders() or \
-                            self.PerformingLookupsAndUploads():
-                        time.sleep(0.01)
+                    logger.info("Not scanning folders and not performing lookups and uploads.")
 
                 jobArgs = [self, event, False]
                 jobDesc = "scan folders and upload datafiles"
                 intervalMinutes = self.settingsModel.GetTimerMinutes()
-                startTime = datetime.now() + timedelta(seconds=5)
+                startTime = datetime.now() + timedelta(seconds=1)
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
                     "to run at %s on %s (recurring every %d minutes)" %
                     (jobDesc,
-                     startTime.strftime("%I:%M %p"),
+                        startTime.strftime("%I:%M:%S %p"),
                      startTime.strftime("%e/%m/%Y"), intervalMinutes))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
@@ -918,6 +935,7 @@ class MyData(wx.App):
                 except ValueError, ve:
                     wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
                     return
+            logger.debug("Finished processing schedule type.")
 
     def OnMyTardis(self, event):
         try:
