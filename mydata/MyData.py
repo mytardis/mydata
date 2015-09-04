@@ -399,12 +399,12 @@ class MyData(wx.App):
                                     logger.error(str(e))
                                     raise
                         wx.CallAfter(endBusyCursorIfRequired)
-                        self.tasksModel.ShutDown(wait=False)
+                        self.tasksModel.ShutDown()
                         os._exit(0)
                     except:
                         try:
                             logger.debug(traceback.format_exc())
-                            self.tasksModel.ShutDown(wait=False)
+                            self.tasksModel.ShutDown()
                             os._exit(1)
                         except:
                             logger.debug(traceback.format_exc())
