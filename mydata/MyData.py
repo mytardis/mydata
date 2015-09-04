@@ -864,7 +864,6 @@ class MyData(wx.App):
                     # finish time.
                     while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
                         time.sleep(0.01)
-                    logger.info("Not scanning folders and not performing lookups and uploads.")
 
                 jobArgs = [self, event, False]
                 jobDesc = "scan folders and upload datafiles"
@@ -908,14 +907,8 @@ class MyData(wx.App):
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
                     # finish time.
-                    # while not self.ScanningFolders():
-                        # time.sleep(0.01)
-                    # while self.ScanningFolders() or \
-                            # self.PerformingLookupsAndUploads():
-                        # time.sleep(0.01)
                     while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
                         time.sleep(0.01)
-                    logger.info("Not scanning folders and not performing lookups and uploads.")
 
                 jobArgs = [self, event, False]
                 jobDesc = "scan folders and upload datafiles"
