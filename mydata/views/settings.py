@@ -330,7 +330,8 @@ class SettingsDialog(wx.Dialog):
         self.fromTimeSpin = wx.SpinButton(self.fromTimeEntryPanel, wx.ID_ANY,
                                           size=(-1, height),
                                           style=wx.SP_VERTICAL)
-        self.fromTimeCtrl.BindSpinButton(self.fromTimeSpin)
+        self.Bind(wx.EVT_SPIN_UP, self.OnIncrementFromTime, self.fromTimeSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime, self.fromTimeSpin)
         self.fromTimeEntryPanelSizer.Add(self.fromTimeSpin)
         self.fromTimeEntryPanel.SetSizerAndFit(self.fromTimeEntryPanelSizer)
         self.fromPanelSizer.Add(self.fromTimeEntryPanel)
@@ -353,7 +354,8 @@ class SettingsDialog(wx.Dialog):
         self.toTimeSpin = wx.SpinButton(self.toTimeEntryPanel, wx.ID_ANY,
                                         size=(-1, height),
                                         style=wx.SP_VERTICAL)
-        self.toTimeCtrl.BindSpinButton(self.toTimeSpin)
+        self.Bind(wx.EVT_SPIN_UP, self.OnIncrementToTime, self.toTimeSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementToTime, self.toTimeSpin)
         self.toTimeEntryPanelSizer.Add(self.toTimeSpin)
         self.toTimeEntryPanel.SetSizerAndFit(self.toTimeEntryPanelSizer)
         self.toPanelSizer.Add(self.toTimeEntryPanel)
@@ -729,32 +731,18 @@ class SettingsDialog(wx.Dialog):
         self.timerSpin.SetValue(minutes)
 
     def GetTimerFromTime(self):
-        wxDateTime = self.fromTimeCtrl.GetValue(as_wxDateTime=True)
-        timeString = wxDateTime.FormatTime()
-        try:
-            return datetime.time(datetime.strptime(timeString, "%I:%M:%S %p"))
-        except:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        timeString = self.fromTimeCtrl.GetValue()
+        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
 
     def SetTimerFromTime(self, time):
-        timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
-        wxDateTime = wx.DateTime()
-        wxDateTime.ParseTime(timeString)
-        self.fromTimeCtrl.SetValue(wxDateTime)
+        self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
 
     def GetTimerToTime(self):
-        wxDateTime = self.toTimeCtrl.GetValue(as_wxDateTime=True)
-        timeString = wxDateTime.FormatTime()
-        try:
-            return datetime.time(datetime.strptime(timeString, "%I:%M:%S %p"))
-        except:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        timeString = self.toTimeCtrl.GetValue()
+        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
 
     def SetTimerToTime(self, time):
-        timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
-        wxDateTime = wx.DateTime()
-        wxDateTime.ParseTime(timeString)
-        self.toTimeCtrl.SetValue(wxDateTime)
+        self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
 
     def GetFolderStructure(self):
         return self.folderStructureComboBox.GetValue()
@@ -1211,6 +1199,18 @@ class SettingsDialog(wx.Dialog):
 
     def OnDecrementTime(self, event):
         self.SetScheduledTime(addMinutes(self.GetScheduledTime(), -1))
+
+    def OnIncrementFromTime(self, event):
+        self.SetTimerFromTime(addMinutes(self.GetTimerFromTime(), 1))
+
+    def OnDecrementFromTime(self, event):
+        self.SetTimerFromTime(addMinutes(self.GetTimerFromTime(), -1))
+
+    def OnIncrementToTime(self, event):
+        self.SetTimerToTime(addMinutes(self.GetTimerToTime(), 1))
+
+    def OnDecrementToTime(self, event):
+        self.SetTimerToTime(addMinutes(self.GetTimerToTime(), -1))
 
 
 def addMinutes(tm, minutes):
