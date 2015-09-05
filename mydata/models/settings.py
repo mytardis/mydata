@@ -90,9 +90,9 @@ class SettingsModel():
             datetime.time(datetime.now().replace(microsecond=0))
         self.timer_minutes = 180
         self.timer_from_time = \
-            datetime.time(datetime.strptime("00:00", "%H:%M"))
+            datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
         self.timer_to_time = \
-            datetime.time(datetime.strptime("23:59", "%H:%M"))
+            datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
 
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
