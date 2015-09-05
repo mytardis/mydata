@@ -9,6 +9,7 @@ from datetime import timedelta
 import sys
 import os
 import traceback
+import time
 
 from mydata.logs import logger
 from mydata.models.settings import SettingsModel
@@ -279,7 +280,8 @@ class SettingsDialog(wx.Dialog):
         height = self.timeCtrl.GetSize().height
         self.timeSpin = wx.SpinButton(self.timeEntryPanel, wx.ID_ANY,
                                       size=(-1, height), style=wx.SP_VERTICAL)
-        self.timeCtrl.BindSpinButton(self.timeSpin)
+        self.Bind(wx.EVT_SPIN_UP, self.OnIncrementTime, self.timeSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementTime, self.timeSpin)
         self.timeEntryPanelSizer.Add(self.timeSpin)
         self.timeEntryPanel.SetSizerAndFit(self.timeEntryPanelSizer)
         self.timePanelSizer.Add(self.timeEntryPanel)
@@ -713,18 +715,11 @@ class SettingsDialog(wx.Dialog):
         self.dateCtrl.SetValue(date.strftime('%d/%m/%Y'))
 
     def GetScheduledTime(self):
-        wxDateTime = self.timeCtrl.GetValue(as_wxDateTime=True)
-        timeString = wxDateTime.FormatTime()
-        try:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
-        except ValueError:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
+        timeString = self.timeCtrl.GetValue()
+        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
 
     def SetScheduledTime(self, time):
-        timeString = "%d:%d:%d" % (time.hour, time.minute, time.second)
-        wxDateTime = wx.DateTime()
-        wxDateTime.ParseTime(timeString)
-        self.timeCtrl.SetValue(wxDateTime)
+        self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
 
     def GetTimerMinutes(self):
         return self.timerNumCtrl.GetValue()
@@ -737,7 +732,7 @@ class SettingsDialog(wx.Dialog):
         wxDateTime = self.fromTimeCtrl.GetValue(as_wxDateTime=True)
         timeString = wxDateTime.FormatTime()
         try:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
+            return datetime.time(datetime.strptime(timeString, "%I:%M:%S %p"))
         except:
             return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
 
@@ -751,7 +746,7 @@ class SettingsDialog(wx.Dialog):
         wxDateTime = self.toTimeCtrl.GetValue(as_wxDateTime=True)
         timeString = wxDateTime.FormatTime()
         try:
-            return datetime.time(datetime.strptime(timeString, "%H:%M:%S %p"))
+            return datetime.time(datetime.strptime(timeString, "%I:%M:%S %p"))
         except:
             return datetime.time(datetime.strptime(timeString, "%H:%M:%S"))
 
@@ -1210,3 +1205,15 @@ class SettingsDialog(wx.Dialog):
 
     def OnDecrementDate(self, event):
         self.SetScheduledDate(self.GetScheduledDate() - timedelta(days=1))
+
+    def OnIncrementTime(self, event):
+        self.SetScheduledTime(addMinutes(self.GetScheduledTime(), 1))
+
+    def OnDecrementTime(self, event):
+        self.SetScheduledTime(addMinutes(self.GetScheduledTime(), -1))
+
+
+def addMinutes(tm, minutes):
+    fulldate = datetime(100, 1, 1, tm.hour, tm.minute, tm.second)
+    fulldate = fulldate + timedelta(minutes=minutes)
+    return fulldate.time()
