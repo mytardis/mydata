@@ -143,7 +143,7 @@ class MyData(wx.App):
         args, unknown = parser.parse_known_args()
         if args.version:
             print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
-            os._exit(0)
+            sys.exit(0)
         if args.loglevel:
             if args.loglevel == "DEBUG":
                 logger.SetLevel(logging.DEBUG)
@@ -400,7 +400,7 @@ class MyData(wx.App):
                                     raise
                         wx.CallAfter(endBusyCursorIfRequired)
                         self.tasksModel.ShutDown()
-                        os._exit(0)
+                        sys.exit(0)
                     except:
                         try:
                             logger.debug(traceback.format_exc())
