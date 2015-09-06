@@ -7,6 +7,7 @@ from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
 from datetime import datetime
+from datetime import timedelta
 import threading
 
 from mydata.logs import logger
@@ -87,7 +88,8 @@ class SettingsModel():
         self.scheduled_date = \
             datetime.date(datetime.now())
         self.scheduled_time = \
-            datetime.time(datetime.now().replace(microsecond=0))
+            datetime.time(datetime.now().replace(microsecond=0) +
+            timedelta(minutes=1))
         self.timer_minutes = 180
         self.timer_from_time = \
             datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
@@ -177,7 +179,8 @@ class SettingsModel():
                 if self.scheduled_date == datetime.date(datetime.now()) and \
                         self.scheduled_time < datetime.time(datetime.now()):
                     self.scheduled_time = \
-                        datetime.time(datetime.now().replace(microsecond=0))
+                        datetime.time(datetime.now().replace(microsecond=0) +
+                        timedelta(minutes=1))
                 if configParser.has_option(configFileSection,
                                            "timer_minutes"):
                     self.timer_minutes = \
