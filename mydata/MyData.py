@@ -831,6 +831,8 @@ class MyData(wx.App):
 
                 def jobFunc(self, event, needToValidateSettings):
                     wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
+                    while not self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
                     wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
@@ -851,12 +853,12 @@ class MyData(wx.App):
                         wx.MessageBox("Scheduled time is in the past.",
                                       "MyData", wx.ICON_ERROR)
                         return
+                timeString = startTime.strftime("%I:%M %p")
+                dateString = \
+                    "{d.day}/{d.month}/{d.year}".format(d=startTime)
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
-                    "to run at %s on %s" %
-                    (jobDesc,
-                     startTime.strftime("%I:%M:%S %p"),
-                     startTime.strftime("%e/%m/%Y")))
+                    "to run at %s on %s" % (jobDesc, timeString, dateString))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
                                  startTime)
@@ -876,6 +878,8 @@ class MyData(wx.App):
 
                 def jobFunc(self, event, needToValidateSettings):
                     wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
+                    while not self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
                     wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
@@ -887,12 +891,13 @@ class MyData(wx.App):
                 jobDesc = "scan folders and upload datafiles"
                 intervalMinutes = self.settingsModel.GetTimerMinutes()
                 startTime = datetime.now()
+                timeString = startTime.strftime("%I:%M:%S %p")
+                dateString = \
+                    "{d.day}/{d.month}/{d.year}".format(d=startTime)
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
                     "to run at %s on %s (recurring every %d minutes)" %
-                    (jobDesc,
-                        startTime.strftime("%I:%M:%S %p"),
-                     startTime.strftime("%e/%m/%Y"), intervalMinutes))
+                    (jobDesc, timeString, dateString, intervalMinutes))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
                                  startTime, intervalMinutes)

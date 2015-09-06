@@ -96,7 +96,9 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         if value is None:
             return ""
         elif columnKey in ("startTime", "finishTime"):
-            return value.strftime("%Y-%m-%d %H:%M:%S")
+            timeString = value.strftime("%I:%M:%S %p")
+            dateString = "{d.day}/{d.month}/{d.year}".format(d=value)
+            return value.strftime("%s on %s" % (timeString, dateString))
         return str(value)
 
     def GetValuesForColname(self, colname):
@@ -264,14 +266,15 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              taskModel.GetJobDesc(),
                                              newStartTime,
                                              intervalMinutes)
+                    timeString = newStartTime.strftime("%I:%M:%S %p")
+                    dateString = \
+                        "{d.day}/{d.month}/{d.year}".format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
                                  "(recurring every %d minutes)"
                                  % (taskModel.GetJobDesc(),
-                                    newStartTime.strftime("%I:%M:%S %p"),
-                                    newStartTime.strftime("%e/%m/%Y"),
-                                    intervalMinutes))
+                                    timeString, dateString, intervalMinutes))
                     tasksModel.AddRow(newTaskModel)
 
             thread = threading.Thread(target=taskJobFunc)
