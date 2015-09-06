@@ -691,31 +691,6 @@ class MyData(wx.App):
             self.OnSettings(event)
             return
 
-        if "Group" in self.settingsModel.GetFolderStructure():
-            self.foldersView.ShowGroupColumn(True)
-            for pageIndex in \
-                    reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
-                self.foldersUsersNotebook.RemovePage(pageIndex)
-            self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
-            self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
-            self.foldersUsersNotebook.AddPage(self.verificationsView,
-                                              "Verifications")
-            self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
-            self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
-            self.foldersUsersNotebook.AddPage(self.logView, "Log")
-        else:
-            self.foldersView.ShowGroupColumn(False)
-            for pageIndex in \
-                    reversed(xrange(self.foldersUsersNotebook.GetPageCount())):
-                self.foldersUsersNotebook.RemovePage(pageIndex)
-            self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
-            self.foldersUsersNotebook.AddPage(self.usersView, "Users")
-            self.foldersUsersNotebook.AddPage(self.verificationsView,
-                                              "Verifications")
-            self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
-            self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
-            self.foldersUsersNotebook.AddPage(self.logView, "Log")
-
         def cancelCallback():
             def shutDownUploadThreads():
                 try:
@@ -855,7 +830,7 @@ class MyData(wx.App):
                 logger.debug("Schedule type is Once.")
 
                 def jobFunc(self, event, needToValidateSettings):
-                    self.toolbar.EnableTool(self.stopTool.GetId(), True)
+                    wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
                     wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
@@ -900,7 +875,7 @@ class MyData(wx.App):
                 logger.debug("Schedule type is Timer.")
 
                 def jobFunc(self, event, needToValidateSettings):
-                    self.toolbar.EnableTool(self.stopTool.GetId(), True)
+                    wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
                     wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
