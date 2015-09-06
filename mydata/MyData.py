@@ -856,9 +856,7 @@ class MyData(wx.App):
 
                 def jobFunc(self, event, needToValidateSettings):
                     self.toolbar.EnableTool(self.stopTool.GetId(), True)
-                    logger.info("jobFunc 1")
-                    self.OnRefresh(event, needToValidateSettings)
-                    logger.info("jobFunc 2")
+                    wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
                     # finish time.
@@ -903,7 +901,7 @@ class MyData(wx.App):
 
                 def jobFunc(self, event, needToValidateSettings):
                     self.toolbar.EnableTool(self.stopTool.GetId(), True)
-                    self.OnRefresh(event, needToValidateSettings)
+                    wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
                     # Sleep this thread until the job is really
                     # finished, so we can determine the job's
                     # finish time.
