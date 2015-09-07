@@ -113,7 +113,7 @@ class CustomBuildCommand(build):
                                          "dist/MyData/media/Aha-Soft")
 
             distutils.dir_util\
-                .copy_tree("openssh-5.4p1-1-msys-1.0.13",
+                .copy_tree("resources/win32/openssh-5.4p1-1-msys-1.0.13",
                            "dist/MyData/openssh-5.4p1-1-msys-1.0.13")
             msysHomeDir = "dist/MyData/openssh-5.4p1-1-msys-1.0.13/home"
             for subdir in os.listdir(msysHomeDir):
