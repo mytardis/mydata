@@ -202,9 +202,6 @@ class SettingsDialog(wx.Dialog):
 
         # Schedule tab
 
-        print "TO DO: Finish implementing and testing scheduling " \
-            "functionality specified by these fields."
-
         self.innerSchedulePanel = wx.Panel(self.schedulePanel)
         self.innerSchedulePanelSizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -301,7 +298,7 @@ class SettingsDialog(wx.Dialog):
         self.timerNumCtrl = wx.lib.masked.NumCtrl(self.timerEntryPanel,
                                                   size=(120, -1))
         self.timerNumCtrl.SetMax(999)
-        self.timerNumCtrl.SetValue(180)
+        self.timerNumCtrl.SetValue(15)
         self.timerEntryPanelSizer.Add(self.timerNumCtrl)
         height = self.timerNumCtrl.GetSize().height
         self.timerSpin = wx.SpinButton(self.timerEntryPanel, wx.ID_ANY,
