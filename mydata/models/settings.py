@@ -90,7 +90,7 @@ class SettingsModel():
         self.scheduled_time = \
             datetime.time(datetime.now().replace(microsecond=0) +
             timedelta(minutes=1))
-        self.timer_minutes = 180
+        self.timer_minutes = 15
         self.timer_from_time = \
             datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
         self.timer_to_time = \
