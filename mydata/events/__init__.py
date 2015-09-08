@@ -89,8 +89,11 @@ class MyDataEvent(wx.PyCommandEvent):
 
         def checkConnectivityWorker():
             wx.CallAfter(wx.BeginBusyCursor)
-            activeNetworkInterfaces = \
-                UploaderModel.GetActiveNetworkInterfaces()
+            try:
+                activeNetworkInterfaces = \
+                    UploaderModel.GetActiveNetworkInterfaces()
+            except:
+                logger.error(traceback.format_exc())
 
             def endBusyCursorIfRequired():
                 try:
@@ -254,8 +257,11 @@ class MyDataEvent(wx.PyCommandEvent):
         if event.id != EVT_SETTINGS_DIALOG_VALIDATION:
             event.Skip()
             return
-        event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
-                                                 saveToDisk=False)
+        try:
+            event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
+                                                     saveToDisk=False)
+        except:
+            logger.error(traceback.format_exc())
 
         def validate(settingsModel):
             logger.debug("Starting run() method for thread %s"
