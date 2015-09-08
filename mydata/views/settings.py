@@ -258,6 +258,7 @@ class SettingsDialog(wx.Dialog):
         height = self.dateCtrl.GetSize().height
         self.dateSpin = wx.SpinButton(self.dateEntryPanel, wx.ID_ANY,
                                       size=(-1, height), style=wx.SP_VERTICAL)
+        self.dateSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementDate, self.dateSpin)
         self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementDate, self.dateSpin)
         self.dateEntryPanelSizer.Add(self.dateSpin)
@@ -280,6 +281,7 @@ class SettingsDialog(wx.Dialog):
         height = self.timeCtrl.GetSize().height
         self.timeSpin = wx.SpinButton(self.timeEntryPanel, wx.ID_ANY,
                                       size=(-1, height), style=wx.SP_VERTICAL)
+        self.timeSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementTime, self.timeSpin)
         self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementTime, self.timeSpin)
         self.timeEntryPanelSizer.Add(self.timeSpin)
@@ -305,7 +307,7 @@ class SettingsDialog(wx.Dialog):
         self.timerSpin = wx.SpinButton(self.timerEntryPanel, wx.ID_ANY,
                                        size=(-1, height), style=wx.SP_VERTICAL)
         self.timerSpin.SetMax(999)
-        self.timerSpin.SetValue(180)
+        self.timerSpin.SetValue(15)
         self.Bind(wx.EVT_SPIN, self.OnSpinTimer, self.timerSpin)
         self.timerEntryPanelSizer.Add(self.timerSpin)
         self.timerEntryPanel.SetSizerAndFit(self.timerEntryPanelSizer)
@@ -330,6 +332,7 @@ class SettingsDialog(wx.Dialog):
         self.fromTimeSpin = wx.SpinButton(self.fromTimeEntryPanel, wx.ID_ANY,
                                           size=(-1, height),
                                           style=wx.SP_VERTICAL)
+        self.fromTimeSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementFromTime, self.fromTimeSpin)
         self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime, self.fromTimeSpin)
         self.fromTimeEntryPanelSizer.Add(self.fromTimeSpin)
@@ -354,6 +357,7 @@ class SettingsDialog(wx.Dialog):
         self.toTimeSpin = wx.SpinButton(self.toTimeEntryPanel, wx.ID_ANY,
                                         size=(-1, height),
                                         style=wx.SP_VERTICAL)
+        self.toTimeSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementToTime, self.toTimeSpin)
         self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementToTime, self.toTimeSpin)
         self.toTimeEntryPanelSizer.Add(self.toTimeSpin)
