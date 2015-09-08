@@ -53,7 +53,10 @@ class SmallFileUploadMethod():
 
 
 class OpenSSH():
-    OPENSSH_BUILD_DIR = 'openssh-5.4p1-1-msys-1.0.13'
+    if hasattr(sys, "frozen"):
+        OPENSSH_BUILD_DIR = 'openssh-5.4p1-1-msys-1.0.13'
+    else:
+        OPENSSH_BUILD_DIR = 'resources/win32/openssh-5.4p1-1-msys-1.0.13'
 
     def DoubleQuote(self, x):
         return '"' + x.replace('"', '\\"') + '"'
