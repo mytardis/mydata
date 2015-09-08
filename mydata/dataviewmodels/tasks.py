@@ -100,6 +100,17 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
             timeString = value.strftime("%I:%M:%S %p")
             dateString = "{d.day}/{d.month}/{d.year}".format(d=value)
             return value.strftime("%s on %s" % (timeString, dateString))
+        elif columnKey == "scheduleType" and value == "Weekly":
+            value += " ("
+            days = self.tasksData[row].GetDays()
+            value += 'M' if days[0] else '-'
+            value += 'T' if days[1] else '-'
+            value += 'W' if days[2] else '-'
+            value += 'T' if days[3] else '-'
+            value += 'F' if days[4] else '-'
+            value += 'S' if days[5] else '-'
+            value += 'S' if days[6] else '-'
+            value += ")"
         return str(value)
 
     def GetValuesForColname(self, colname):
@@ -277,7 +288,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              intervalMinutes=intervalMinutes)
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = \
-                        "{d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
@@ -297,7 +308,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              scheduleType="Daily")
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = \
-                        "{d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
