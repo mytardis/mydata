@@ -149,18 +149,19 @@ class CustomBuildCommand(build):
             print "Custom build command."
 
 
-class CustomPy2appCommand(py2app):
-    """
-    On Mac OS X, copy mydata-notifier into MyData.app bundle.
-    """
-    def run(self):
-        py2app.run(self)
-        shutil.copy("resources/macosx/mydata-notifier.app/Contents/MacOS"
-                    "/mydata-notifier", "dist/MyData.app/Contents/MacOS/")
-        distutils.dir_util\
-            .copy_tree("resources/macosx/mydata-notifier.app/Contents"
-                       "/Resources/en.lproj",
-                       "dist/MyData.app/Contents/Resources/en.lproj")
+if sys.platform.startswith("darwin"):
+    class CustomPy2appCommand(py2app):
+        """
+        On Mac OS X, copy mydata-notifier into MyData.app bundle.
+        """
+        def run(self):
+            py2app.run(self)
+            shutil.copy("resources/macosx/mydata-notifier.app/Contents/MacOS"
+                        "/mydata-notifier", "dist/MyData.app/Contents/MacOS/")
+            distutils.dir_util\
+                .copy_tree("resources/macosx/mydata-notifier.app/Contents"
+                           "/Resources/en.lproj",
+                           "dist/MyData.app/Contents/Resources/en.lproj")
 
 
 class CustomBdistCommand(bdist):
