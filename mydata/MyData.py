@@ -841,7 +841,7 @@ class MyData(wx.App):
                         time.sleep(0.01)
 
                 jobArgs = [self, event, False]
-                jobDesc = "scan folders and upload datafiles"
+                jobDesc = "Scan folders and upload datafiles"
                 startTime = \
                     datetime.combine(self.settingsModel.GetScheduledDate(),
                                      self.settingsModel.GetScheduledTime())
@@ -888,7 +888,7 @@ class MyData(wx.App):
                         time.sleep(0.01)
 
                 jobArgs = [self, event, False]
-                jobDesc = "scan folders and upload datafiles"
+                jobDesc = "Scan folders and upload datafiles"
                 intervalMinutes = self.settingsModel.GetTimerMinutes()
                 startTime = datetime.now()
                 timeString = startTime.strftime("%I:%M:%S %p")
