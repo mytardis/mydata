@@ -15,6 +15,10 @@ import distutils.dir_util
 
 import mydata
 
+if sys.platform.startswith("darwin"):
+    from py2app.build_app import py2app
+
+
 app_name = "MyData"
 package_name = "mydata"
 
@@ -143,6 +147,20 @@ class CustomBuildCommand(build):
             os.system("rm -fr dist/*")
         else:
             print "Custom build command."
+
+
+class CustomPy2appCommand(py2app):
+    """
+    On Mac OS X, copy mydata-notifier into MyData.app bundle.
+    """
+    def run(self):
+        py2app.run(self)
+        shutil.copy("resources/macosx/mydata-notifier.app/Contents/MacOS"
+                    "/mydata-notifier", "dist/MyData.app/Contents/MacOS/")
+        distutils.dir_util\
+            .copy_tree("resources/macosx/mydata-notifier.app/Contents"
+                       "/Resources/en.lproj",
+                       "dist/MyData.app/Contents/Resources/en.lproj")
 
 
 class CustomBdistCommand(bdist):
@@ -458,4 +476,5 @@ setup_args = dict(name=app_name,
                   ])
 if sys.platform.startswith("darwin"):
     setup_args['app'] = ["run.py"]  # Used by py2app
+    setup_args['cmdclass']['py2app'] = CustomPy2appCommand
 setup(**setup_args)
