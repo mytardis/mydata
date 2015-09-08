@@ -7,13 +7,14 @@ class TaskModel():
     or it could be a notification POSTed to MyTardis administrators.
     """
     def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime,
-                 intervalMinutes=None):
+                 scheduleType="Once", intervalMinutes=None):
         self.dataViewId = dataViewId
         self.jobFunc = jobFunc
         self.jobArgs = jobArgs
         self.jobDesc = jobDesc
         self.startTime = startTime
         self.finishTime = None
+        self.scheduleType = scheduleType
         self.intervalMinutes = intervalMinutes
         self.callLater = None
 
@@ -31,6 +32,9 @@ class TaskModel():
 
     def GetStartTime(self):
         return self.startTime
+
+    def GetScheduleType(self):
+        return self.scheduleType
 
     def GetIntervalMinutes(self):
         return self.intervalMinutes
