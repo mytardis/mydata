@@ -814,6 +814,16 @@ class SettingsModel():
             self.validation = SettingsValidation(False, message, "")
             return self.validation
 
+        if self.GetScheduleType() == "Once":
+            dateTime = datetime.combine(self.GetScheduledDate(),
+                                        self.GetScheduledTime())
+            if dateTime < datetime.now():
+                message = "Scheduled time is in the past."
+                self.validation = \
+                    SettingsValidation(False, message,
+                                       "scheduled_time")
+                return
+
         logger.debug("SettingsModel validation succeeded!")
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation

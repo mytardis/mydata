@@ -399,6 +399,8 @@ class MyDataEvent(wx.PyCommandEvent):
             elif settingsValidation.GetField() == "api_key":
                 event.settingsDialog.apiKeyField.SetFocus()
                 event.settingsDialog.apiKeyField.SelectAll()
+            elif settingsValidation.GetField() == "scheduled_time":
+                event.settingsDialog.timeCtrl.SetFocus()
             logger.debug("Settings were not valid, so Settings dialog "
                          "should remain visible.")
             return
