@@ -311,6 +311,6 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         self.filteredTasksData = list()
         self.Filter(self.searchString)
 
-    def Shutdown(self):
-        for task in tasksData:
+    def ShutDown(self):
+        for task in self.tasksData:
             task.GetCallLater().Stop()
