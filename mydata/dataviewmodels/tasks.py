@@ -5,6 +5,7 @@ from datetime import timedelta
 import wx.dataview
 
 from mydata.models.task import TaskModel
+from mydata.utils.notification import Notification
 from mydata.logs import logger
 
 
@@ -252,8 +253,14 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
 
             def taskJobFunc():
                 assert callable(taskModel.GetJobFunc())
+                subtitle = "Starting"
+                message = taskModel.GetJobDesc()
+                Notification.notify(message, subtitle=subtitle)
                 taskModel.GetJobFunc()(*taskModel.GetJobArgs())
                 taskModel.SetFinishTime(datetime.now())
+                subtitle = "Finished"
+                message = taskModel.GetJobDesc()
+                Notification.notify(message, subtitle=subtitle)
                 wx.CallAfter(tasksModel.RowValueChanged, row, col)
                 intervalMinutes = taskModel.GetIntervalMinutes()
                 if intervalMinutes:
