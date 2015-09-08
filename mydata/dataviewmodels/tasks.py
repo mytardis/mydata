@@ -253,14 +253,14 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
 
             def taskJobFunc():
                 assert callable(taskModel.GetJobFunc())
-                subtitle = "Starting"
+                title = "Starting"
                 message = taskModel.GetJobDesc()
-                Notification.notify(message, subtitle=subtitle)
+                Notification.notify(message, title=title)
                 taskModel.GetJobFunc()(*taskModel.GetJobArgs())
                 taskModel.SetFinishTime(datetime.now())
-                subtitle = "Finished"
+                title = "Finished"
                 message = taskModel.GetJobDesc()
-                Notification.notify(message, subtitle=subtitle)
+                Notification.notify(message, title=title)
                 wx.CallAfter(tasksModel.RowValueChanged, row, col)
                 intervalMinutes = taskModel.GetIntervalMinutes()
                 if intervalMinutes:
