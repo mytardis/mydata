@@ -38,6 +38,9 @@ install:
   # about it being out of date.
   - "pip install --disable-pip-version-check --user --upgrade pip"
 
+  # Install InnoSetup for building a distributable setup wizard.
+  - choco install -y InnoSetup
+
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
@@ -61,7 +64,7 @@ test_script:
 after_test:
   # If tests are successful, create binary packages for the project.
   - "%CMD_IN_ENV% python setup.py build unsigned"
-  # - "%CMD_IN_ENV% python setup.py bdist unsigned"
+  - "%CMD_IN_ENV% python setup.py bdist unsigned"
   # - "%CMD_IN_ENV% python setup.py bdist_wheel"
   # - "%CMD_IN_ENV% python setup.py bdist_wininst"
   # - "%CMD_IN_ENV% python setup.py bdist_msi"
