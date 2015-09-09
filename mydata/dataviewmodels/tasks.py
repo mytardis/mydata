@@ -24,10 +24,10 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         self.searchString = ""
 
         self.columnNames = ("Id", "Job", "Start Time", "Finish Time",
-                            "Interval (minutes)")
+                            "Schedule Type", "Interval (minutes)")
         self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
-                           "intervalMinutes")
-        self.defaultColumnWidths = (40, 300, 200, 200, 100)
+                           "scheduleType", "intervalMinutes")
+        self.defaultColumnWidths = (40, 300, 200, 200, 100, 100)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -100,6 +100,17 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
             timeString = value.strftime("%I:%M:%S %p")
             dateString = "{d.day}/{d.month}/{d.year}".format(d=value)
             return value.strftime("%s on %s" % (timeString, dateString))
+        elif columnKey == "scheduleType" and value == "Weekly":
+            value += " ("
+            days = self.tasksData[row].GetDays()
+            value += 'M' if days[0] else '-'
+            value += 'T' if days[1] else '-'
+            value += 'W' if days[2] else '-'
+            value += 'T' if days[3] else '-'
+            value += 'F' if days[4] else '-'
+            value += 'S' if days[5] else '-'
+            value += 'S' if days[6] else '-'
+            value += ")"
         return str(value)
 
     def GetValuesForColname(self, colname):
@@ -262,8 +273,9 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                 message = taskModel.GetJobDesc()
                 Notification.notify(message, title=title)
                 wx.CallAfter(tasksModel.RowValueChanged, row, col)
-                intervalMinutes = taskModel.GetIntervalMinutes()
-                if intervalMinutes:
+                scheduleType = taskModel.GetScheduleType()
+                if scheduleType == "Timer":
+                    intervalMinutes = taskModel.GetIntervalMinutes()
                     newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
                     newStartTime = taskModel.GetStartTime() + \
                         timedelta(minutes=intervalMinutes)
@@ -272,16 +284,37 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              taskModel.GetJobArgs(),
                                              taskModel.GetJobDesc(),
                                              newStartTime,
-                                             intervalMinutes)
+                                             scheduleType="Timer",
+                                             intervalMinutes=intervalMinutes)
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = \
-                        "{d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
                                  "(recurring every %d minutes)"
                                  % (taskModel.GetJobDesc(),
                                     timeString, dateString, intervalMinutes))
+                    tasksModel.AddRow(newTaskModel)
+                elif scheduleType == "Daily":
+                    newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
+                    newStartTime = taskModel.GetStartTime() + \
+                        timedelta(days=1)
+                    newTaskModel = TaskModel(newTaskDataViewId,
+                                             taskModel.GetJobFunc(),
+                                             taskModel.GetJobArgs(),
+                                             taskModel.GetJobDesc(),
+                                             newStartTime,
+                                             scheduleType="Daily")
+                    timeString = newStartTime.strftime("%I:%M:%S %p")
+                    dateString = \
+                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
+                                 "The \"%s\" task is scheduled "
+                                 "to run at %s on %s "
+                                 "(recurring daily)"
+                                 % (taskModel.GetJobDesc(),
+                                    timeString, dateString))
                     tasksModel.AddRow(newTaskModel)
 
             thread = threading.Thread(target=taskJobFunc)
