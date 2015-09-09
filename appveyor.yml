@@ -43,7 +43,7 @@ install:
   # target Python version and architecture
   - "%CMD_IN_ENV% pip install -r requirements.txt"
 
-- "%CMD_IN_ENV% pip install --upgrade --pre http://wxpython.org/Phoenix/snapshot-builds/wxPython_Phoenix-3.0.3.dev1820+49a8884-cp34-none-win32.whl"
+  - "%CMD_IN_ENV% pip install --upgrade --pre http://wxpython.org/Phoenix/snapshot-builds/wxPython_Phoenix-3.0.3.dev1820+49a8884-cp34-none-win32.whl"
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
