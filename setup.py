@@ -99,10 +99,14 @@ class CustomBuildCommand(build):
             if os.path.exists("dist"):
                 os.system(r"DEL /Q dist\*.*")
 
-            os.system(r"C:\Python27\python.exe "
-                      r".\pyinstaller\pyinstaller.py "
-                      r"--name=MyData --icon=mydata\media\MyData.ico "
-                      r"--windowed run.py")
+            exitCode = \
+                os.system(r"C:\Python27\python.exe "
+                          r".\pyinstaller\pyinstaller.py "
+                          r"--name=MyData --icon=mydata\media\MyData.ico "
+                          r"--windowed run.py")
+            if exitCode != 0:
+                print "\nPyInstaller failed to build MyData.exe\n"
+                sys.exit(1)
             # favicon.ico and MyData.ico are really the same thing. favicon.ico
             # is the original from the MyTardis repository, and MyData.ico is
             # the result of converting it to PNG and then back to ICO, which
