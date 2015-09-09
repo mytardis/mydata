@@ -100,8 +100,8 @@ class CustomBuildCommand(build):
                 os.system(r"DEL /Q dist\*.*")
 
             exitCode = \
-                os.system(r"C:\Python27\python.exe "
-                          r".\pyinstaller\pyinstaller.py "
+                os.system(sys.executable +
+                          r" .\pyinstaller\pyinstaller.py "
                           r"--name=MyData --icon=mydata\media\MyData.ico "
                           r"--windowed run.py")
             if exitCode != 0:
