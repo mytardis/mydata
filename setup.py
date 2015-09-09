@@ -101,7 +101,7 @@ class CustomBuildCommand(build):
 
             exitCode = \
                 os.system(sys.executable +
-                          r" .\pyinstaller\pyinstaller.py "
+                          r" .\pyinstaller\pyinstaller.py -y "
                           r"--name=MyData --icon=mydata\media\MyData.ico "
                           r"--windowed run.py")
             if exitCode != 0:
