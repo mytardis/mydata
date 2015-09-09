@@ -8,15 +8,10 @@ environment:
   matrix:
 
     # Python 2.7.10 is the latest version and is not pre-installed.
-    # wxPython 3.0.2.0 is the latest version and is not pre-installed.
 
     - PYTHON: "C:\\Python27.10"
       PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "32"
-      WXPYTHON: "C:\\Python27.10\\Lib\\site-packages"
-      WXPYTHON_PTH: "C:\\Python27.10\\Lib\\site-packages\\wx.pth"
-      WXPYTHON_VERSION: "3.0.2.0"
-      WXPYTHON_ARCH: "32"
 
 install:
   - ECHO "Filesystem root:"
@@ -27,10 +22,7 @@ install:
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
-  - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install_python.ps1 }
-
-  # Install wxPython (from the official .exe of http://wxpython.org)
-  - ps: if (-not(Test-Path($env:WXPYTHON_PTH))) { & appveyor\install_wxpython.ps1 }
+  - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
@@ -50,6 +42,8 @@ install:
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
   - "%CMD_IN_ENV% pip install -r requirements.txt"
+
+- "%CMD_IN_ENV% pip install --upgrade --pre http://wxpython.org/Phoenix/snapshot-builds/wxPython_Phoenix-3.0.3.dev1820+49a8884-cp34-none-win32.whl"
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
