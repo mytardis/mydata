@@ -870,13 +870,13 @@ class MyData(wx.App):
                         return
                 timeString = startTime.strftime("%I:%M %p")
                 dateString = \
-                    "{d.day}/{d.month}/{d.year}".format(d=startTime)
+                    "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
                     "to run at %s on %s" % (jobDesc, timeString, dateString))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
-                                 startTime)
+                                 startTime, scheduleType=scheduleType)
                 try:
                     self.tasksModel.AddRow(task)
                 except ValueError, ve:
@@ -884,10 +884,87 @@ class MyData(wx.App):
                     return
             elif scheduleType == "Daily":
                 logger.debug("Schedule type is Daily.")
-                print "Daily scheduling has not been implemented yet."
+
+                def jobFunc(self, event, needToValidateSettings):
+                    wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
+                    while not self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
+                    wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
+                    # Sleep this thread until the job is really
+                    # finished, so we can determine the job's
+                    # finish time.
+                    while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
+
+                jobArgs = [self, event, False]
+                jobDesc = "Scan folders and upload datafiles"
+                startTime = \
+                    datetime.combine(datetime.date(datetime.now()),
+                                     self.settingsModel.GetScheduledTime())
+                if startTime < datetime.now():
+                    startTime = startTime + timedelta(days=1)
+                timeString = startTime.strftime("%I:%M %p")
+                dateString = \
+                    "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
+                self.frame.SetStatusMessage(
+                    "The \"%s\" task is scheduled "
+                    "to run at %s on %s (recurring daily)"
+                    % (jobDesc, timeString, dateString))
+                taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+                task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                                 startTime, scheduleType=scheduleType)
+                try:
+                    self.tasksModel.AddRow(task)
+                except ValueError, ve:
+                    wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                    return
             elif scheduleType == "Weekly":
                 logger.debug("Schedule type is Weekly.")
-                print "Weekly scheduling has not been implemented yet."
+
+                def jobFunc(self, event, needToValidateSettings):
+                    wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(), True)
+                    while not self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
+                    wx.CallAfter(self.OnRefresh, event, needToValidateSettings)
+                    # Sleep this thread until the job is really
+                    # finished, so we can determine the job's
+                    # finish time.
+                    while self.toolbar.GetToolEnabled(self.stopTool.GetId()):
+                        time.sleep(0.01)
+
+                jobArgs = [self, event, False]
+                jobDesc = "Scan folders and upload datafiles"
+                days = [self.settingsModel.IsMondayChecked(),
+                        self.settingsModel.IsTuesdayChecked(),
+                        self.settingsModel.IsWednesdayChecked(),
+                        self.settingsModel.IsThursdayChecked(),
+                        self.settingsModel.IsFridayChecked(),
+                        self.settingsModel.IsSaturdayChecked(),
+                        self.settingsModel.IsSundayChecked()]
+                if not max(days):
+                    logger.warning("No days selected for weekly schedule.")
+                    return
+                startTime = \
+                    datetime.combine(datetime.date(datetime.now()),
+                                     self.settingsModel.GetScheduledTime())
+                while not days[startTime.weekday()]:
+                    startTime = startTime + timedelta(days=1)
+                timeString = startTime.strftime("%I:%M %p")
+                dateString = \
+                    "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
+                self.frame.SetStatusMessage(
+                    "The \"%s\" task is scheduled "
+                    "to run at %s on %s (recurring on specified days)"
+                    % (jobDesc, timeString, dateString))
+                taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+                task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                                 startTime, scheduleType=scheduleType,
+                                 days=days)
+                try:
+                    self.tasksModel.AddRow(task)
+                except ValueError, ve:
+                    wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                    return
             elif scheduleType == "Timer":
                 logger.debug("Schedule type is Timer.")
 
@@ -908,14 +985,15 @@ class MyData(wx.App):
                 startTime = datetime.now()
                 timeString = startTime.strftime("%I:%M:%S %p")
                 dateString = \
-                    "{d.day}/{d.month}/{d.year}".format(d=startTime)
+                    "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
                 self.frame.SetStatusMessage(
                     "The \"%s\" task is scheduled "
                     "to run at %s on %s (recurring every %d minutes)" %
                     (jobDesc, timeString, dateString, intervalMinutes))
                 taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
                 task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
-                                 startTime, intervalMinutes)
+                                 startTime, scheduleType=scheduleType,
+                                 intervalMinutes=intervalMinutes)
                 try:
                     self.tasksModel.AddRow(task)
                 except ValueError, ve:
