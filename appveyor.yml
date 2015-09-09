@@ -15,8 +15,8 @@ environment:
 
     # wxPython 3.0.2.0 is the latest version and is not pre-installed.
 
-    - WXPYTHON: "$PYTHON\Lib\site-packages"
-      WXPYTHON_PTH: "$PYTHON\Lib\site-packages\wx.pth"
+    - WXPYTHON: "$PYTHON\\Lib\\site-packages"
+      WXPYTHON_PTH: "$PYTHON\\Lib\\site-packages\\wx.pth"
       WXPYTHON_VERSION: "3.0.2.0"
       WXPYTHON_ARCH: "32"
 
