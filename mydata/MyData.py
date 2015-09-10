@@ -10,6 +10,10 @@ except ImportError:
     from wx.lib.agw.aui import AUI_NB_TOP
     from wx.lib.agw.aui import AUI_NB_SCROLL_BUTTONS
     from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+try:
+    from wx import EVT_TASKBAR_LEFT_UP
+except:
+    from wx.adv import EVT_TASKBAR_LEFT_UP
 import webbrowser
 import os
 import appdirs
@@ -239,7 +243,7 @@ class MyData(wx.App):
 
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
 
-        wx.EVT_TASKBAR_LEFT_UP(self.taskBarIcon, self.OnTaskBarLeftClick)
+        EVT_TASKBAR_LEFT_UP(self.taskBarIcon, self.OnTaskBarLeftClick)
 
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
