@@ -423,7 +423,7 @@ class SettingsDialog(wx.Dialog):
 
         self.innerSchedulePanel.SetSizerAndFit(self.innerSchedulePanelSizer)
 
-        schedulePanelSizer = wx.FlexGridSizer(rows=1, cols=1)
+        schedulePanelSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
         schedulePanelSizer.Add(self.innerSchedulePanel,
                                flag=wx.ALL, border=20)
         self.schedulePanel.SetSizerAndFit(schedulePanelSizer)
