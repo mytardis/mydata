@@ -1,4 +1,8 @@
 import wx
+try:
+    from wx import TaskBarIcon
+except ImportError:
+    from wx.adv import TaskBarIcon
 import os
 import sys
 import platform
@@ -8,10 +12,10 @@ from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 
 
-class MyDataTaskBarIcon(wx.TaskBarIcon):
+class MyDataTaskBarIcon(TaskBarIcon):
     def __init__(self, frame, settingsModel):
         """Constructor"""
-        wx.TaskBarIcon.__init__(self)
+        TaskBarIcon.__init__(self)
         self.frame = frame
         self.settingsModel = settingsModel
 
