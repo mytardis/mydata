@@ -14,6 +14,8 @@ import pkgutil
 import traceback
 
 from SubmitDebugReportDialog import SubmitDebugReportDialog
+from mydata.logs.wxloghandler import wxLogHandler
+from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
 
 class Logger():
@@ -37,10 +39,8 @@ class Logger():
         self.myDataConfigPath = myDataConfigPath
 
     def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
-        try:
-            logWindowHandler = logging.StreamHandler(stream=logTextCtrl)
-        except:
-            logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
+        self.logTextCtrl = logTextCtrl
+        logWindowHandler = wxLogHandler(self.logTextCtrl)
         logWindowHandler.setLevel(self.level)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
@@ -48,6 +48,8 @@ class Logger():
         logWindowHandler.setFormatter(logging.Formatter(logFormatString))
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(logWindowHandler)
+
+        self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):
         self.loggerObject = logging.getLogger(self.name)
@@ -171,8 +173,8 @@ class Logger():
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         logger.debug("Logger.DumpLog: Flushing "
-                     "self.loggerObject.handlers[0], which is of class: "
-                     + self.loggerObject.handlers[0].__class__.__name__)
+                     "self.loggerObject.handlers[0], which is of class: " +
+                     self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
 
         if myDataMainFrame is None:
@@ -258,5 +260,10 @@ class Logger():
                 logger.error("An error occurred while attempting to submit "
                              "the debug log.")
                 logger.error(response.text)
+
+    def OnWxLogEvent(self, event):
+        msg = event.message.strip("\r") + "\n"
+        self.logTextCtrl.AppendText(msg)
+        event.Skip()
 
 logger = Logger("MyData")
