@@ -1,6 +1,15 @@
 import sys
 import wx
-import wx.aui
+try:
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+    from wx.aui import AUI_NB_SCROLL_BUTTONS
+    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+except ImportError:
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+    from wx.lib.agw.aui import AUI_NB_SCROLL_BUTTONS
+    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 import webbrowser
 import os
 import appdirs
@@ -243,10 +252,10 @@ class MyData(wx.App):
         self.panel = wx.Panel(self.frame)
 
         self.foldersUsersNotebook = \
-            wx.aui.AuiNotebook(self.panel,
-                               style=wx.aui.AUI_NB_TOP |
-                               wx.aui.AUI_NB_SCROLL_BUTTONS)
-        self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGING,
+            AuiNotebook(self.panel,
+                        style=AUI_NB_TOP |
+                        AUI_NB_SCROLL_BUTTONS)
+        self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
                   self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
         self.foldersView = FoldersView(self.foldersUsersNotebook,

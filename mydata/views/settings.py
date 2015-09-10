@@ -1,5 +1,10 @@
 import wx
-import wx.aui
+try:
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+except ImportError:
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
 import wx.lib.masked
 import re
 import requests
@@ -48,7 +53,7 @@ class SettingsDialog(wx.Dialog):
         self.dialogPanel = wx.Panel(self)
 
         self.settingsTabsNotebook = \
-            wx.aui.AuiNotebook(self.dialogPanel, style=wx.aui.AUI_NB_TOP)
+            AuiNotebook(self.dialogPanel, style=AUI_NB_TOP)
         self.generalPanel = wx.Panel(self.settingsTabsNotebook)
         self.schedulePanel = wx.Panel(self.settingsTabsNotebook)
         self.advancedPanel = wx.Panel(self.settingsTabsNotebook)
