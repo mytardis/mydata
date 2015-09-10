@@ -92,8 +92,23 @@ class MyDataEvent(wx.PyCommandEvent):
             try:
                 activeNetworkInterfaces = \
                     UploaderModel.GetActiveNetworkInterfaces()
-            except:
+            except Exception, e:
                 logger.error(traceback.format_exc())
+                if type(e).__name__ == "WindowsError" and \
+                        "The handle is invalid" in str(e):
+                    message = "An error occurred, suggesting " \
+                        "that you have launched MyData.exe from a " \
+                        "Command Prompt window.  Please launch it " \
+                        "from a shortcut or from a Windows Explorer " \
+                        "window instead.\n" \
+                        "\n" \
+                        "See: https://bugs.python.org/issue3905"
+
+                    def showErrorDialog(message):
+                        dlg = wx.MessageDialog(None, message, "MyData",
+                                               wx.OK | wx.ICON_ERROR)
+                        dlg.ShowModal()
+                    wx.CallAfter(showErrorDialog, message)
 
             def endBusyCursorIfRequired():
                 try:

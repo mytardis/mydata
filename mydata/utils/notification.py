@@ -12,9 +12,13 @@ class Notification(object):
             return
         path = "resources/macosx/mydata-notifier.app/Contents/MacOS"
         executable = "mydata-notifier"
-        args = ["-message", message, "-title", title]
+        args = ["-message", message, "-title", title, "-sound", "Purr"]
         if subtitle:
             args = args + ["-subtitle", subtitle]
+        if hasattr(sys, "frozen"):
+            args = args + ["-activate", "org.mytardis.MyData"]
+        else:
+            args = args + ["-activate", "org.python.python"]
         if hasattr(sys, "frozen"):
             path = "../MacOS"
         else:

@@ -1,6 +1,7 @@
 import wx
 import os
 import sys
+import platform
 import webbrowser
 
 from mydata.media import MyDataIcons
@@ -103,6 +104,8 @@ class MyDataTaskBarIcon(wx.TaskBarIcon):
             if not self.settingsModel.RunningInBackgroundMode():
                 os._exit(0)
             if sys.platform.startswith("win"):
+                if platform.release() == "XP":
+                    os._exit(0)
                 import win32com.shell.shell as shell
                 if hasattr(sys, "frozen"):
                     cmd = "MyData.exe"
