@@ -6,7 +6,7 @@ modulegraph==0.12
 poster==0.8.1
 psutil==2.2.1
 # py2app==0.9
-requests==2.5.3
+requests==2.4.3
 validate-email==1.2
 wsgiref==0.1.2
 # wxPython==3.0.2.0
