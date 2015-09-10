@@ -243,7 +243,7 @@ class MyData(wx.App):
 
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
 
-        EVT_TASKBAR_LEFT_UP(self.taskBarIcon, self.OnTaskBarLeftClick)
+        self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
 
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
@@ -255,12 +255,32 @@ class MyData(wx.App):
 
         self.panel = wx.Panel(self.frame)
 
-        self.foldersUsersNotebook = \
-            AuiNotebook(self.panel,
-                        style=AUI_NB_TOP |
-                        AUI_NB_SCROLL_BUTTONS)
-        self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
-                  self.OnNotebookPageChanging, self.foldersUsersNotebook)
+        if sys.platform.startswith("darwin") and \
+                wx.version().startswith("3.0.3.dev"):
+            # AuiNotebook looks buggy in 3.0.3.dev on
+            # Mac OS X. I see a close button on the active
+            # tab even when not using either of these flags
+            # in the AuiNotebook's style:
+            # AUI_NB_CLOSE_ON_ACTIVE_TAB
+            # AUI_NB_DEFAULT_STYLE
+            useAuiNotebook = False
+        else:
+            # AuiNotebook looks better than wx.Notebook on
+            # Windows for MyData's use case.
+            useAuiNotebook = True
+
+        if useAuiNotebook:
+            self.foldersUsersNotebook = \
+                AuiNotebook(self.panel,
+                            style=AUI_NB_TOP)
+            self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
+                      self.OnNotebookPageChanging, self.foldersUsersNotebook)
+        else:
+            self.foldersUsersNotebook = \
+                wx.Notebook(self.panel,
+                            style=wx.NB_TOP)
+            self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,
+                      self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
         self.foldersView = FoldersView(self.foldersUsersNotebook,
                                        foldersModel=self.foldersModel)
@@ -449,16 +469,16 @@ class MyData(wx.App):
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
 
         openIcon = MyDataIcons.GetIcon("Open folder", size="24x24")
-        openTool = self.toolbar.AddSimpleTool(wx.ID_ANY, openIcon, "Open",
-                                              "Open folder")
+        openTool = self.toolbar.AddLabelTool(wx.ID_ANY, "Open folder", openIcon,
+                                             shortHelp="Open folder")
         self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
 
         self.toolbar.AddSeparator()
 
         refreshIcon = MyDataIcons.GetIcon("Refresh", size="24x24")
-        self.refreshTool = self.toolbar.AddSimpleTool(wx.ID_REFRESH,
-                                                      refreshIcon,
-                                                      "Refresh", "")
+        self.refreshTool = self.toolbar.AddLabelTool(wx.ID_REFRESH, "Refresh",
+                                                     refreshIcon,
+                                                     shortHelp="Refresh")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
         self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool,
                   self.refreshTool.GetId())
@@ -467,9 +487,9 @@ class MyData(wx.App):
 
         stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                        style=IconStyle.NORMAL)
-        self.stopTool = self.toolbar.AddSimpleTool(wx.ID_STOP,
-                                                   stopIcon,
-                                                   "Stop", "")
+        self.stopTool = self.toolbar.AddLabelTool(wx.ID_STOP, "Stop",
+                                                  stopIcon,
+                                                  shortHelp="Stop")
         disabledStopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                                style=IconStyle.DISABLED)
         self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
@@ -482,31 +502,35 @@ class MyData(wx.App):
         self.toolbar.AddSeparator()
 
         settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
-        self.settingsTool = self.toolbar.AddSimpleTool(wx.ID_ANY, settingsIcon,
-                                                       "Settings", "")
+        self.settingsTool = self.toolbar.AddLabelTool(wx.ID_ANY, "Settings",
+                                                      settingsIcon,
+                                                      shortHelp="Settings")
         self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
         internetIcon = MyDataIcons.GetIcon("Internet explorer", size="24x24")
-        self.myTardisTool = self.toolbar.AddSimpleTool(wx.ID_ANY, internetIcon,
-                                                       "MyTardis", "")
+        self.myTardisTool = self.toolbar.AddLabelTool(wx.ID_ANY, "MyTardis",
+                                                      internetIcon,
+                                                      shortHelp="MyTardis")
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
         aboutIcon = MyDataIcons.GetIcon("About", size="24x24",
                                         style=IconStyle.HOT)
-        self.aboutTool = self.toolbar.AddSimpleTool(wx.ID_ANY, aboutIcon,
-                                                    "About MyData", "")
+        self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ANY, "About MyData",
+                                                   aboutIcon,
+                                                   shortHelp="About MyData")
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
         helpIcon = MyDataIcons.GetIcon("Help", size="24x24",
                                        style=IconStyle.HOT)
-        self.helpTool = self.toolbar.AddSimpleTool(wx.ID_ANY, helpIcon,
-                                                   "MyData User Guide", "")
+        self.helpTool = \
+            self.toolbar.AddLabelTool(wx.ID_ANY, "Help", helpIcon,
+                                      shortHelp="MyData User Guide")
         self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
 
         self.toolbar.AddStretchableSpace()
