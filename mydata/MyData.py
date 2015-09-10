@@ -469,16 +469,19 @@ class MyData(wx.App):
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
 
         openIcon = MyDataIcons.GetIcon("Open folder", size="24x24")
-        openTool = self.toolbar.AddLabelTool(wx.ID_ANY, "Open folder", openIcon,
-                                             shortHelp="Open folder")
+        if wx.version().startswith("3.0.3.dev"):
+            AddToolMethod = self.toolbar.AddTool
+        else:
+            AddToolMethod = self.toolbar.AddLabelTool
+        openTool = AddToolMethod(wx.ID_ANY, "Open folder",
+                                 openIcon, shortHelp="Open folder")
         self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
 
         self.toolbar.AddSeparator()
 
         refreshIcon = MyDataIcons.GetIcon("Refresh", size="24x24")
-        self.refreshTool = self.toolbar.AddLabelTool(wx.ID_REFRESH, "Refresh",
-                                                     refreshIcon,
-                                                     shortHelp="Refresh")
+        self.refreshTool = AddToolMethod(wx.ID_REFRESH, "Refresh",
+                                         refreshIcon, shortHelp="Refresh")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
         self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool,
                   self.refreshTool.GetId())
@@ -487,9 +490,8 @@ class MyData(wx.App):
 
         stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                        style=IconStyle.NORMAL)
-        self.stopTool = self.toolbar.AddLabelTool(wx.ID_STOP, "Stop",
-                                                  stopIcon,
-                                                  shortHelp="Stop")
+        self.stopTool = AddToolMethod(wx.ID_STOP, "Stop",
+                                      stopIcon, shortHelp="Stop")
         disabledStopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                                style=IconStyle.DISABLED)
         self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
@@ -502,34 +504,30 @@ class MyData(wx.App):
         self.toolbar.AddSeparator()
 
         settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
-        self.settingsTool = self.toolbar.AddLabelTool(wx.ID_ANY, "Settings",
-                                                      settingsIcon,
-                                                      shortHelp="Settings")
+        self.settingsTool = AddToolMethod(wx.ID_ANY, "Settings",
+                                          settingsIcon, shortHelp="Settings")
         self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
         internetIcon = MyDataIcons.GetIcon("Internet explorer", size="24x24")
-        self.myTardisTool = self.toolbar.AddLabelTool(wx.ID_ANY, "MyTardis",
-                                                      internetIcon,
-                                                      shortHelp="MyTardis")
+        self.myTardisTool = AddToolMethod(wx.ID_ANY, "MyTardis",
+                                          internetIcon, shortHelp="MyTardis")
         self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
         aboutIcon = MyDataIcons.GetIcon("About", size="24x24",
                                         style=IconStyle.HOT)
-        self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ANY, "About MyData",
-                                                   aboutIcon,
-                                                   shortHelp="About MyData")
+        self.aboutTool = AddToolMethod(wx.ID_ANY, "About MyData",
+                                       aboutIcon, shortHelp="About MyData")
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
         helpIcon = MyDataIcons.GetIcon("Help", size="24x24",
                                        style=IconStyle.HOT)
-        self.helpTool = \
-            self.toolbar.AddLabelTool(wx.ID_ANY, "Help", helpIcon,
+        self.helpTool = AddToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")
         self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
 
