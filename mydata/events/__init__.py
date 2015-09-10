@@ -103,9 +103,12 @@ class MyDataEvent(wx.PyCommandEvent):
                         "window instead.\n" \
                         "\n" \
                         "See: https://bugs.python.org/issue3905"
-                    dlg = wx.MessageDialog(None, message, "MyData",
-                                           wx.OK | wx.ICON_ERROR)
-                    dlg.ShowModal()
+
+                    def showErrorDialog(message):
+                        dlg = wx.MessageDialog(None, message, "MyData",
+                                               wx.OK | wx.ICON_ERROR)
+                        dlg.ShowModal()
+                    wx.CallAfter(showErrorDialog, message)
 
             def endBusyCursorIfRequired():
                 try:
