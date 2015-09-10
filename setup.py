@@ -103,7 +103,7 @@ class CustomBuildCommand(build):
                 os.system(sys.executable +
                           r" .\pyinstaller\pyinstaller.py -y "
                           r"--name=MyData --icon=mydata\media\MyData.ico "
-                          r"--windowed run.py")
+                          r"--console --debug run.py")
             if exitCode != 0:
                 print "\nPyInstaller failed to build MyData.exe\n"
                 sys.exit(1)
