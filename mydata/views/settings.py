@@ -52,8 +52,26 @@ class SettingsDialog(wx.Dialog):
 
         self.dialogPanel = wx.Panel(self)
 
-        self.settingsTabsNotebook = \
-            AuiNotebook(self.dialogPanel, style=AUI_NB_TOP)
+        if sys.platform.startswith("darwin") and \
+                wx.version().startswith("3.0.3.dev"):
+            # AuiNotebook looks buggy in 3.0.3.dev on
+            # Mac OS X. I see a close button on the active
+            # tab even when not using either of these flags
+            # in the AuiNotebook's style:
+            # AUI_NB_CLOSE_ON_ACTIVE_TAB
+            # AUI_NB_DEFAULT_STYLE
+            useAuiNotebook = False
+        else:
+            # AuiNotebook looks better than wx.Notebook on
+            # Windows for MyData's use case.
+            useAuiNotebook = True
+
+        if useAuiNotebook:
+            self.settingsTabsNotebook = \
+                AuiNotebook(self.dialogPanel, style=AUI_NB_TOP)
+        else:
+            self.settingsTabsNotebook = \
+                wx.Notebook(self.dialogPanel, style=wx.NB_TOP)
         self.generalPanel = wx.Panel(self.settingsTabsNotebook)
         self.schedulePanel = wx.Panel(self.settingsTabsNotebook)
         self.advancedPanel = wx.Panel(self.settingsTabsNotebook)
@@ -562,10 +580,12 @@ class SettingsDialog(wx.Dialog):
         self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
 
         self.settingsTabsNotebook.Fit()
-        self.settingsTabsNotebook\
-            .SetMinSize(wx.Size(generalPanelSize.GetWidth(),
-                                generalPanelSize.height +
-                                self.settingsTabsNotebook.GetTabCtrlHeight()))
+        if useAuiNotebook:
+            self.settingsTabsNotebook\
+                .SetMinSize(wx.Size(generalPanelSize.GetWidth(),
+                                    generalPanelSize.height +
+                                    self.settingsTabsNotebook
+                                    .GetTabCtrlHeight()))
         self.dialogPanel.Fit()
 
         line = wx.StaticLine(self, wx.ID_ANY, size=(20, -1),
