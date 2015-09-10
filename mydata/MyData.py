@@ -638,9 +638,12 @@ class MyData(wx.App):
                                 "window instead.\n" \
                                 "\n" \
                                 "See: https://bugs.python.org/issue3905"
-                            dlg = wx.MessageDialog(None, message, "MyData",
-                                                   wx.OK | wx.ICON_ERROR)
-                            dlg.ShowModal()
+
+                            def showErrorDialog(message):
+                                dlg = wx.MessageDialog(None, message, "MyData",
+                                                       wx.OK | wx.ICON_ERROR)
+                                dlg.ShowModal()
+                            wx.CallAfter(showErrorDialog, message)
                     if len(activeNetworkInterfaces) == 0:
                         message = "No active network interfaces." \
                             "\n\n" \
