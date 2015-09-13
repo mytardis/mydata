@@ -20,6 +20,12 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 
+class LastSettingsWriteMethod:
+    LOAD_SETTINGS = 0
+    SAVE_FIELDS_FROM_DIALOG = 1
+    TASKBAR_MENU_ITEM = 2
+
+
 class SettingsValidation():
     def __init__(self, valid, message="", field="", suggestion=None,
                  datasetCount=-1):
@@ -49,14 +55,14 @@ class SettingsModel():
     def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
-        self.background_mode = "False"
-
         self.uploaderModel = None
         self.uploadToStagingRequest = None
         self.sshKeyPair = None
 
         self.validation = SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
+
+        self.last_settings_write_method = LastSettingsWriteMethod.LOAD_SETTINGS
 
         self.LoadSettings()
 
@@ -181,34 +187,58 @@ class SettingsModel():
                     self.scheduled_time = \
                         datetime.time(datetime.now().replace(microsecond=0) +
                         timedelta(minutes=1))
-                if configParser.has_option(configFileSection,
-                                           "timer_minutes"):
-                    self.timer_minutes = \
-                        configParser.getint(configFileSection,
-                                            "timer_minutes")
-                if configParser.has_option(configFileSection,
-                                           "timer_from_time"):
-                    timestring = configParser.get(configFileSection,
-                                                  "timer_from_time")
-                    self.timer_from_time = datetime.strptime(timestring,
-                                                             "%H:%M:%S")
-                    self.timer_from_time = datetime.time(self.timer_from_time)
-                if configParser.has_option(configFileSection,
-                                           "timer_to_time"):
-                    timestring = configParser.get(configFileSection,
-                                                  "timer_to_time")
-                    self.timer_to_time = datetime.strptime(timestring,
-                                                           "%H:%M:%S")
+                if self.schedule_type == "Timer":
+                    if configParser.has_option(configFileSection,
+                                               "timer_minutes"):
+                        self.timer_minutes = \
+                            configParser.getint(configFileSection,
+                                                "timer_minutes")
+                    if configParser.has_option(configFileSection,
+                                               "timer_from_time"):
+                        timestring = configParser.get(configFileSection,
+                                                      "timer_from_time")
+                        self.timer_from_time = datetime.strptime(timestring,
+                                                                 "%H:%M:%S")
+                        self.timer_from_time = datetime.time(self.timer_from_time)
+                    if configParser.has_option(configFileSection,
+                                               "timer_to_time"):
+                        timestring = configParser.get(configFileSection,
+                                                      "timer_to_time")
+                        self.timer_to_time = datetime.strptime(timestring,
+                                                               "%H:%M:%S")
                     self.timer_to_time = datetime.time(self.timer_to_time)
-                for day in ["monday_checked", "tuesday_checked",
-                            "wednesday_checked", "thursday_checked",
-                            "friday_checked", "saturday_checked",
-                            "sunday_checked"]:
-                    if configParser.has_option(configFileSection, day):
-                        self.__dict__[day] = \
-                            configParser.getboolean(configFileSection, day)
+                else:
+                    self.timer_minutes = 15
+                    self.timer_from_time = \
+                        datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
+                    self.timer_to_time = \
+                        datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
+                if self.schedule_type == "Weekly":
+                    for day in ["monday_checked", "tuesday_checked",
+                                "wednesday_checked", "thursday_checked",
+                                "friday_checked", "saturday_checked",
+                                "sunday_checked"]:
+                        if configParser.has_option(configFileSection, day):
+                            self.__dict__[day] = \
+                                configParser.getboolean(configFileSection, day)
+                else:
+                    self.monday_checked = False
+                    self.tuesday_checked = False
+                    self.wednesday_checked = False
+                    self.thursday_checked = False
+                    self.friday_checked = False
+                    self.saturday_checked = False
+                    self.sunday_checked = False
             except:
                 logger.error(traceback.format_exc())
+
+        facilities = FacilityModel.GetMyFacilities(self)
+        for f in facilities:
+            if self.GetFacilityName() == f.GetName():
+                self.facility = f
+                break
+
+        self.last_settings_write_method = LastSettingsWriteMethod.LOAD_SETTINGS
 
     def GetInstrument(self):
         if self.instrument is None:
@@ -416,17 +446,11 @@ class SettingsModel():
     def SetMaxUploadThreads(self, maxUploadThreads):
         self.max_upload_threads = maxUploadThreads
 
-    def RunningInBackgroundMode(self):
-        return self.background_mode
-
     def GetUuid(self):
         return self.uuid
 
     def SetUuid(self, uuid):
         self.uuid = uuid
-
-    def SetBackgroundMode(self, backgroundMode):
-        self.background_mode = backgroundMode
 
     def GetUploadToStagingRequest(self):
         return self.uploadToStagingRequest
@@ -536,6 +560,9 @@ class SettingsModel():
 
         if saveToDisk:
             self.SaveToDisk(configPath)
+
+        self.last_settings_write_method = \
+            LastSettingsWriteMethod.SAVE_FIELDS_FROM_DIALOG
 
     def Validate(self):
         datasetCount = -1
@@ -1098,3 +1125,9 @@ class SettingsModel():
 
     def SetConfigPath(self, configPath):
         self.configPath = configPath
+
+    def GetLastSettingsWriteMethod(self):
+        return self.last_settings_write_method
+
+    def SetLastSettingsWriteMethod(self, lastSettingsWriteMethod):
+        self.last_settings_write_method = lastSettingsWriteMethod
