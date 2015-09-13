@@ -86,11 +86,11 @@ class MyDataTaskBarIcon(TaskBarIcon):
             return None
 
     def OnMyDataMainWindow(self, event):
-        self.frame.Restore()
+        self.frame.Show(True)
         self.frame.Raise()
 
     def OnMyDataSettings(self, event):
-        self.frame.Restore()
+        self.frame.Show(True)
         self.frame.Raise()
         wx.GetApp().OnSettings(event)
 
@@ -115,7 +115,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         canceled = wx.GetApp().foldersController.Canceled()
         failed = wx.GetApp().foldersController.Failed()
 
-        self.frame.Restore()
+        self.frame.Show(True)
         self.frame.Raise()
         message = "Are you sure you want to quit MyData?"
         if started and not completed and not canceled and not failed:
