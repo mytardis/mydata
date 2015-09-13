@@ -10,6 +10,8 @@ import webbrowser
 
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
+from mydata.logs import logger
+from mydata.models.settings import LastSettingsWriteMethod
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
@@ -25,7 +27,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.SetIcon(self.icon, "MyData")
 
-        # Mouse event handling set up in InstrumentApp class's OnInit method.
+        # Mouse event handling set up in MyData class's OnInit method.
         # self.Bind(wx.EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
 
     def OnTaskBarActivate(self, evt):
@@ -49,11 +51,17 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.menu.AppendSeparator()
 
-        self.myTardisControlPanelMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "MyData Control Panel")
-        self.menu.AppendItem(self.myTardisControlPanelMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnMyDataControlPanel,
-                  self.myTardisControlPanelMenuItem)
+        self.myTardisMainWindowMenuItem = wx.MenuItem(
+            self.menu, wx.NewId(), "MyData Main Window")
+        self.menu.AppendItem(self.myTardisMainWindowMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnMyDataMainWindow,
+                  self.myTardisMainWindowMenuItem)
+
+        self.myTardisSettingsMenuItem = wx.MenuItem(
+            self.menu, wx.NewId(), "MyData Settings")
+        self.menu.AppendItem(self.myTardisSettingsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnMyDataSettings,
+                  self.myTardisSettingsMenuItem)
 
         self.menu.AppendSeparator()
 
@@ -77,12 +85,24 @@ class MyDataTaskBarIcon(TaskBarIcon):
         else:
             return None
 
-    def OnMyDataControlPanel(self, event):
+    def OnMyDataMainWindow(self, event):
         self.frame.Restore()
         self.frame.Raise()
 
+    def OnMyDataSettings(self, event):
+        self.frame.Restore()
+        self.frame.Raise()
+        wx.GetApp().OnSettings(event)
+
     def OnMyTardisSync(self, event):
-        wx.GetApp().OnRefresh(event)
+        # wx.GetApp().OnRefresh(event)
+        logger.debug("MyTardis Sync called from task bar menu item.")
+        app = wx.GetApp()
+        app.tasksModel.DeleteAllRows()
+        app.settingsModel.SetScheduleType("Immediately")
+        app.settingsModel.SetLastSettingsWriteMethod(
+            LastSettingsWriteMethod.TASKBAR_MENU_ITEM)
+        app.ApplySchedule(event)
 
     def OnMyDataHelp(self, event):
         new = 2  # Open in a new tab, if possible
@@ -95,7 +115,9 @@ class MyDataTaskBarIcon(TaskBarIcon):
         canceled = wx.GetApp().foldersController.Canceled()
         failed = wx.GetApp().foldersController.Failed()
 
-        message = "Are you sure you want to close MyData?"
+        self.frame.Restore()
+        self.frame.Raise()
+        message = "Are you sure you want to quit MyData?"
         if started and not completed and not canceled and not failed:
             message += "\n\n" \
                 "MyData will attempt to shut down any uploads currently " \
@@ -105,23 +127,5 @@ class MyDataTaskBarIcon(TaskBarIcon):
                              wx.YES | wx.NO | wx.ICON_QUESTION)
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
-            if not self.settingsModel.RunningInBackgroundMode():
-                os._exit(0)
-            if sys.platform.startswith("win"):
-                if platform.release() == "XP":
-                    os._exit(0)
-                import win32com.shell.shell as shell
-                if hasattr(sys, "frozen"):
-                    cmd = "MyData.exe"
-                else:
-                    cmd = "Python.exe"
-                shell.ShellExecuteEx(lpVerb='runas', lpFile=cmd,
-                                     lpParameters="--version")
-            elif sys.platform.startswith("darwin"):
-                returncode = os.system("osascript -e "
-                                       "'do shell script "
-                                       "\"echo Exiting MyData\" "
-                                       "with administrator privileges'")
-                if returncode != 0:
-                    raise Exception("Failed to get admin privileges.")
+            # See also: wx.GetApp().ShutDownCleanlyAndExit(event)
             os._exit(0)
