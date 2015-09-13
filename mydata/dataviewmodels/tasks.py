@@ -27,7 +27,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                             "Schedule Type", "Interval (minutes)")
         self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
                            "scheduleType", "intervalMinutes")
-        self.defaultColumnWidths = (40, 300, 200, 200, 100, 100)
+        self.defaultColumnWidths = (40, 300, 200, 200, 115, 100)
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -98,7 +98,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
             return ""
         elif columnKey in ("startTime", "finishTime"):
             timeString = value.strftime("%I:%M:%S %p")
-            dateString = "{d.day}/{d.month}/{d.year}".format(d=value)
+            dateString = "{d:%a} {d.day}/{d.month}/{d.year}".format(d=value)
             return value.strftime("%s on %s" % (timeString, dateString))
         elif columnKey == "scheduleType" and value == "Weekly":
             value += " ("
@@ -200,6 +200,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         rows.sort(reverse=True)
 
         for row in rows:
+            self.tasksData[row].Cancel()
             del self.tasksData[row]
             del self.unfilteredTasksData[row]
 
@@ -212,6 +213,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
     def DeleteAllRows(self):
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
+            self.tasksData[row].Cancel()
             del self.tasksData[row]
             rowsDeleted.append(row)
 
@@ -225,7 +227,7 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
         self.filteredTasksData = list()
         self.filtered = False
         self.searchString = ""
-        self.maxDataViewId = 0
+        # self.maxDataViewId = 0
 
     def Contains(self, name):
         for row in range(0, self.GetCount()):
@@ -254,6 +256,8 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
     def AddRow(self, taskModel):
         self.Filter("")
         self.tasksData.append(taskModel)
+        # Ensure that we save the largest ID used so far:
+        self.GetMaxDataViewId()
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
@@ -313,6 +317,30 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
                                  "(recurring daily)"
+                                 % (taskModel.GetJobDesc(),
+                                    timeString, dateString))
+                    tasksModel.AddRow(newTaskModel)
+                elif scheduleType == "Weekly":
+                    newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
+                    newStartTime = taskModel.GetStartTime() + \
+                        timedelta(days=1)
+                    days = taskModel.GetDays()
+                    while not days[newStartTime.weekday()]:
+                        newStartTime = newStartTime + timedelta(days=1)
+                    newTaskModel = TaskModel(newTaskDataViewId,
+                                             taskModel.GetJobFunc(),
+                                             taskModel.GetJobArgs(),
+                                             taskModel.GetJobDesc(),
+                                             newStartTime,
+                                             scheduleType="Weekly",
+                                             days=days)
+                    timeString = newStartTime.strftime("%I:%M:%S %p")
+                    dateString = \
+                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
+                                 "The \"%s\" task is scheduled "
+                                 "to run at %s on %s "
+                                 "(recurring on specified days)"
                                  % (taskModel.GetJobDesc(),
                                     timeString, dateString))
                     tasksModel.AddRow(newTaskModel)
