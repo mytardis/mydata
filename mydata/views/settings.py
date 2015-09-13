@@ -52,10 +52,9 @@ class SettingsDialog(wx.Dialog):
 
         self.dialogPanel = wx.Panel(self)
 
-        if sys.platform.startswith("darwin") and \
-                wx.version().startswith("3.0.3.dev"):
-            # AuiNotebook looks buggy in 3.0.3.dev on
-            # Mac OS X. I see a close button on the active
+        if wx.version().startswith("3.0.3.dev"):
+            # AuiNotebook looks buggy in 3.0.3.dev
+            # I see a close button on the active
             # tab even when not using either of these flags
             # in the AuiNotebook's style:
             # AUI_NB_CLOSE_ON_ACTIVE_TAB
