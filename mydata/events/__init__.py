@@ -352,6 +352,11 @@ class MyDataEvent(wx.PyCommandEvent):
         logger.debug("Started thread %s" % thread.name)
 
     def ProvideSettingsValidationResults(event):
+        """
+        Only called after settings dialog has been shown.
+        Not called if settings validation was triggered by
+        a background task.
+        """
         if event.id != EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS:
             event.Skip()
             return
@@ -443,13 +448,12 @@ class MyDataEvent(wx.PyCommandEvent):
                    "datasets" if numDatasets != 1 else "dataset",
                    event.settingsDialog.GetDataDirectory(),
                    intervalIfUsed)
-            if not event.settingsModel.RunningInBackgroundMode():
-                confirmationDialog = \
-                    wx.MessageDialog(None, message, "MyData",
-                                     wx.YES | wx.NO | wx.ICON_QUESTION)
-                okToContinue = confirmationDialog.ShowModal()
-                if okToContinue != wx.ID_YES:
-                    return
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+            okToContinue = confirmationDialog.ShowModal()
+            if okToContinue != wx.ID_YES:
+                return
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
@@ -487,6 +491,8 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
+                wx.GetApp().tasksModel.DeleteAllRows()
+                wx.GetApp().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
                 shutdownForRefreshCompleteEvent = MyDataEvent(
                     EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
