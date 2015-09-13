@@ -373,7 +373,7 @@ end tell"""
     def OnActivate(self, event):
         if event.GetActive():
             logger.info("Activated")
-            self.frame.Restore()
+            self.frame.Show(True)
             self.frame.Raise()
         event.Skip()
 
