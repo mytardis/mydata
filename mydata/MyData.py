@@ -56,6 +56,7 @@ from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsWriteMethod
 
+
 class NotebookTabs:
     FOLDERS = 0
     USERS = 1
@@ -966,11 +967,14 @@ end tell"""
                                  self.settingsModel.GetScheduledTime())
             if startTime < datetime.now():
                 delta = datetime.now() - startTime
-                if delta.total_seconds() < 100:
+                if delta.total_seconds() < 10:
                     startTime = datetime.now()
                 else:
-                    wx.MessageBox("Scheduled time is in the past.",
-                                  "MyData", wx.ICON_ERROR)
+                    message = "Scheduled time is in the past."
+                    logger.error(message)
+                    if self.settingsModel.GetLastSettingsWriteMethod() != \
+                            LastSettingsWriteMethod.LOAD_SETTINGS:
+                        wx.MessageBox(message, "MyData", wx.ICON_ERROR)
                     return
             timeString = startTime.strftime("%I:%M %p")
             dateString = \

@@ -95,7 +95,7 @@ class SettingsModel():
             datetime.date(datetime.now())
         self.scheduled_time = \
             datetime.time(datetime.now().replace(microsecond=0) +
-            timedelta(minutes=1))
+                          timedelta(minutes=1))
         self.timer_minutes = 15
         self.timer_from_time = \
             datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
@@ -178,15 +178,6 @@ class SettingsModel():
                     self.scheduled_time = datetime.strptime(timestring,
                                                             "%H:%M:%S")
                     self.scheduled_time = datetime.time(self.scheduled_time)
-                if self.scheduled_date < datetime.date(datetime.now()):
-                    self.scheduled_date = datetime.date(datetime.now())
-                    self.scheduled_time = \
-                        datetime.time(datetime.now().replace(microsecond=0))
-                if self.scheduled_date == datetime.date(datetime.now()) and \
-                        self.scheduled_time < datetime.time(datetime.now()):
-                    self.scheduled_time = \
-                        datetime.time(datetime.now().replace(microsecond=0) +
-                        timedelta(minutes=1))
                 if self.schedule_type == "Timer":
                     if configParser.has_option(configFileSection,
                                                "timer_minutes"):
@@ -199,7 +190,8 @@ class SettingsModel():
                                                       "timer_from_time")
                         self.timer_from_time = datetime.strptime(timestring,
                                                                  "%H:%M:%S")
-                        self.timer_from_time = datetime.time(self.timer_from_time)
+                        self.timer_from_time = \
+                            datetime.time(self.timer_from_time)
                     if configParser.has_option(configFileSection,
                                                "timer_to_time"):
                         timestring = configParser.get(configFileSection,
@@ -210,9 +202,11 @@ class SettingsModel():
                 else:
                     self.timer_minutes = 15
                     self.timer_from_time = \
-                        datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
+                        datetime.time(datetime.strptime("12:00 AM",
+                                                        "%I:%M %p"))
                     self.timer_to_time = \
-                        datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
+                        datetime.time(datetime.strptime("11:59 PM",
+                                                        "%I:%M %p"))
                 if self.schedule_type == "Weekly":
                     for day in ["monday_checked", "tuesday_checked",
                                 "wednesday_checked", "thursday_checked",
