@@ -1177,6 +1177,9 @@ class SettingsDialog(wx.Dialog):
 
     def OnScheduleTypeChange(self, event):
         scheduleType = self.scheduleTypeComboBox.GetValue()
+        if scheduleType == "Immediately":
+            self.SetScheduledDate(datetime.date(datetime.now()))
+            self.SetScheduledTime(datetime.time(datetime.now()))
         enableDaysOfWeekCheckBoxes = (scheduleType == "Weekly")
         self.mondayCheckBox.Enable(enableDaysOfWeekCheckBoxes)
         self.mondayCheckBox.Show(enableDaysOfWeekCheckBoxes)
