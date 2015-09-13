@@ -10,8 +10,8 @@ class Notification(object):
         if sys.platform.startswith("win"):
             wx.GetApp().taskBarIcon.ShowBalloon(title, message)
             return
-        path = "resources/macosx/mydata-notifier.app/Contents/MacOS"
-        executable = "mydata-notifier"
+        path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
+        executable = "MyData Notifications"
         args = ["-message", message, "-title", title, "-sound", "Purr"]
         if subtitle:
             args = args + ["-subtitle", subtitle]
@@ -22,7 +22,7 @@ class Notification(object):
         if hasattr(sys, "frozen"):
             path = "../MacOS"
         else:
-            path = "resources/macosx/mydata-notifier.app/Contents/MacOS"
+            path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)

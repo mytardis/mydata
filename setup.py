@@ -74,7 +74,8 @@ if sys.platform.startswith("darwin"):
             CFBundleName=app_name,
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + mydata.__version__,
-            LSArchitecturePriority=["x86_64"]
+            LSArchitecturePriority=["x86_64"],
+            LSUIElement=True
             )
         )
     )
@@ -156,14 +157,14 @@ class CustomBuildCommand(build):
 if sys.platform.startswith("darwin"):
     class CustomPy2appCommand(py2app):
         """
-        On Mac OS X, copy mydata-notifier into MyData.app bundle.
+        On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
         """
         def run(self):
             py2app.run(self)
-            shutil.copy("resources/macosx/mydata-notifier.app/Contents/MacOS"
-                        "/mydata-notifier", "dist/MyData.app/Contents/MacOS/")
+            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
+                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
             distutils.dir_util\
-                .copy_tree("resources/macosx/mydata-notifier.app/Contents"
+                .copy_tree("resources/macosx/MyData Notifications.app/Contents"
                            "/Resources/en.lproj",
                            "dist/MyData.app/Contents/Resources/en.lproj")
 
