@@ -180,7 +180,8 @@ class MyData(wx.App):
         wx.Log.SetLogLevel(wx.LOG_Error)
         self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
         if self.instance.IsAnotherRunning():
-            applescript = \
+            if sys.platform.startswith("darwin"):
+                applescript = \
 """
 tell application "System Events"
         set theprocs to every process whose name is "MyData"
@@ -188,8 +189,12 @@ tell application "System Events"
                 set the frontmost of proc to true
         end repeat
 end tell"""
-            returncode = os.system("osascript -e '%s'" % applescript)
-            return True
+                os.system("osascript -e '%s'" % applescript)
+                return True
+            else:
+                wx.MessageBox("MyData is already running!", "MyData",
+                              wx.ICON_ERROR)
+                return False
 
         if sys.platform.startswith("darwin"):
             # On Mac OS X, adding an Edit menu seems to help with
@@ -372,10 +377,16 @@ end tell"""
         return True
 
     def OnActivate(self, event):
+        print "OnActivate"
         if event.GetActive():
+            print "Activated 1"
             logger.info("Activated")
+            print "Activated 2"
             self.frame.Show(True)
+            print "Activated 3"
             self.frame.Raise()
+            print "Activated 4"
+        print "Activated 5"
         event.Skip()
 
     def OnUndo(self, event):
