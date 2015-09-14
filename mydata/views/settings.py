@@ -23,6 +23,12 @@ from mydata.utils.exceptions import IncompatibleMyTardisVersion
 import mydata.events as mde
 
 
+class SettingsDialogTabs:
+    GENERAL = 0
+    SCHEDULE = 1
+    ADVANCED = 2
+
+
 class SettingsDropTarget(wx.FileDropTarget):
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
@@ -353,7 +359,8 @@ class SettingsDialog(wx.Dialog):
                                           style=wx.SP_VERTICAL)
         self.fromTimeSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementFromTime, self.fromTimeSpin)
-        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime, self.fromTimeSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime,
+                  self.fromTimeSpin)
         self.fromTimeEntryPanelSizer.Add(self.fromTimeSpin)
         self.fromTimeEntryPanel.SetSizerAndFit(self.fromTimeEntryPanelSizer)
         self.fromPanelSizer.Add(self.fromTimeEntryPanel)
@@ -451,7 +458,7 @@ class SettingsDialog(wx.Dialog):
 
         # Advanced tab
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=7, cols=3,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=8, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -574,6 +581,21 @@ class SettingsDialog(wx.Dialog):
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
                                     flag=wx.EXPAND, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        startAutomaticallyOnLoginLabel = \
+            wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                          "Start automatically on login:")
+        self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.startAutomaticallyOnLoginCheckBox = \
+            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer\
+            .Add(self.startAutomaticallyOnLoginCheckBox,
+                 flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
 
         self.advancedPanel.Fit()
         self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
@@ -819,6 +841,13 @@ class SettingsDialog(wx.Dialog):
     def SetMaxUploadThreads(self, numberOfThreads):
         self.maximumUploadThreadsSpinCtrl.SetValue(numberOfThreads)
 
+    def StartAutomaticallyOnLogin(self):
+        return self.startAutomaticallyOnLoginCheckBox.GetValue()
+
+    def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
+        self.startAutomaticallyOnLoginCheckBox.SetValue(
+            startAutomaticallyOnLogin)
+
     def Locked(self):
         return self.lockOrUnlockButton.GetLabel() == "Unlock"
 
@@ -932,6 +961,8 @@ class SettingsDialog(wx.Dialog):
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
         self.SetValidateFolderStructure(
             settingsModel.ValidateFolderStructure())
+        self.SetStartAutomaticallyOnLogin(
+            settingsModel.StartAutomaticallyOnLogin())
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
@@ -1167,6 +1198,7 @@ class SettingsDialog(wx.Dialog):
             .Enable(enabled)
         self.intervalUnitsComboBox.Enable(enabled)
         self.maximumUploadThreadsSpinCtrl.Enable(enabled)
+        self.startAutomaticallyOnLoginCheckBox.Enable(enabled)
         self.Update()
 
     def DisableFields(self):
