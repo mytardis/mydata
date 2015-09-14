@@ -123,7 +123,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
                 "MyData will attempt to shut down any uploads currently " \
                 "in progress before exiting."
         confirmationDialog = \
-            wx.MessageDialog(None, message, "MyData",
+            wx.MessageDialog(self.frame, message, "MyData",
                              wx.YES | wx.NO | wx.ICON_QUESTION)
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
