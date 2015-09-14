@@ -377,16 +377,11 @@ end tell"""
         return True
 
     def OnActivate(self, event):
-        print "OnActivate"
         if event.GetActive():
-            print "Activated 1"
             logger.info("Activated")
-            print "Activated 2"
-            self.frame.Show(True)
-            print "Activated 3"
-            self.frame.Raise()
-            print "Activated 4"
-        print "Activated 5"
+            if sys.platform.startswith("darwin"):
+                self.frame.Show(True)
+                self.frame.Raise()
         event.Skip()
 
     def OnUndo(self, event):
