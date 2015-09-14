@@ -125,7 +125,7 @@ class MyData(wx.App):
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
-        self.Bind(wx.EVT_ACTIVATE_APP, self.OnActivate)
+        self.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
 
         self.lastNetworkConnectivityCheckTime = datetime.fromtimestamp(0)
         self.lastNetworkConnectivityCheckSuccess = False
@@ -248,6 +248,7 @@ end tell"""
         self.frame = MyDataFrame(None, -1, self.name,
                                  style=wx.DEFAULT_FRAME_STYLE,
                                  settingsModel=self.settingsModel)
+        self.frame.Bind(wx.EVT_ACTIVATE, self.OnActivateFrame)
         if sys.platform.startswith("darwin"):
             self.frame.SetMenuBar(self.menuBar)
         self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
@@ -349,11 +350,6 @@ end tell"""
 
         self.SetTopWindow(self.frame)
 
-        # Show, even though we're about to iconize it,
-        # because of an unresolved issue on Mac OS X, where
-        # the content of the main window can appear blank.
-        self.frame.Show(True)
-
         self.scanningFolders = threading.Event()
         self.performingLookupsAndUploads = threading.Event()
 
@@ -376,13 +372,17 @@ end tell"""
 
         return True
 
-    def OnActivate(self, event):
+    def OnActivateApp(self, event):
         if event.GetActive():
-            logger.info("Activated")
             if sys.platform.startswith("darwin"):
                 self.frame.Show(True)
                 self.frame.Raise()
         event.Skip()
+
+    def OnActivateFrame(self, event):
+        if event.GetActive():
+            self.frame.Show(True)
+            self.frame.Raise()
 
     def OnUndo(self, event):
         print "OnUndo"
@@ -486,6 +486,9 @@ end tell"""
         if event.Iconized():
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
             self.frame.Hide()
+        else:
+            self.frame.Show(True)
+            self.frame.Raise()
         # event.Skip()
 
     def CreateToolbar(self):
