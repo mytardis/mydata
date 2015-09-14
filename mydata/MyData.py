@@ -359,7 +359,7 @@ end tell"""
         else:
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
-            self.frame.Iconize()
+            self.frame.Hide()
             title = "MyData"
             if sys.platform.startswith("darwin"):
                 message = \
@@ -421,13 +421,11 @@ end tell"""
 
     def OnCloseFrame(self, event):
         """
-        Don't actually close it, just iconize it.
+        Don't actually close it, just hide it.
         """
         if sys.platform.startswith("win"):
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
-            self.frame.Hide()
-        else:
-            self.frame.Iconize()
+        self.frame.Hide()
 
     def ShutDownCleanlyAndExit(self, event):
         started = self.foldersController.Started()
