@@ -86,7 +86,7 @@ class SettingsModel():
         self.username = ""
         self.api_key = ""
 
-        self.schedule_type = "Immediately"
+        self.schedule_type = "Manually"
         self.monday_checked = False
         self.tuesday_checked = False
         self.wednesday_checked = False
