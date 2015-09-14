@@ -2,7 +2,10 @@ import json
 import sys
 import requests
 import traceback
+import subprocess
 import os
+import psutil
+import getpass
 from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
@@ -110,6 +113,7 @@ class SettingsModel():
         self.ignore_interval_unit = "months"
         self.max_upload_threads = 5
         self.validate_folder_structure = True
+        self.start_automatically_on_login = True
 
         self.locked = False
 
@@ -135,7 +139,8 @@ class SettingsModel():
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "validate_folder_structure", "locked", "uuid"]
+                          "validate_folder_structure", "locked", "uuid",
+                          "start_automatically_on_login"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -160,6 +165,11 @@ class SettingsModel():
                     self.validate_folder_structure = \
                         configParser.getboolean(configFileSection,
                                                 "validate_folder_structure")
+                if configParser.has_option(configFileSection,
+                                           "start_automatically_on_login"):
+                    self.start_automatically_on_login = \
+                        configParser.getboolean(configFileSection,
+                                                "start_automatically_on_login")
                 if configParser.has_option(configFileSection,
                                            "locked"):
                     self.locked = configParser.getboolean(configFileSection,
@@ -397,6 +407,12 @@ class SettingsModel():
     def SetValidateFolderStructure(self, validateFolderStructure):
         self.validate_folder_structure = validateFolderStructure
 
+    def StartAutomaticallyOnLogin(self):
+        return self.start_automatically_on_login
+
+    def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
+        self.start_automatically_on_login = startAutomaticallyOnLogin
+
     def Locked(self):
         return self.locked
 
@@ -506,7 +522,8 @@ class SettingsModel():
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
-                      "validate_folder_structure", "locked", "uuid"]
+                      "validate_folder_structure", "locked", "uuid",
+                      "start_automatically_on_login"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -550,6 +567,9 @@ class SettingsModel():
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
         self.SetValidateFolderStructure(
             settingsDialog.ValidateFolderStructure())
+        self.SetStartAutomaticallyOnLogin(
+            settingsDialog.StartAutomaticallyOnLogin())
+
         self.SetLocked(settingsDialog.Locked())
 
         if saveToDisk:
@@ -825,6 +845,48 @@ class SettingsModel():
                             SettingsValidation(False, message,
                                                "data_directory")
                         return self.validation
+
+            if sys.platform.startswith("darwin"):
+                # Update ~/Library/Preferences/com.apple.loginitems.plist
+                # cfprefsd can cause unwanted caching.
+                # It will automatically respawn when needed.
+                for proc in psutil.process_iter():
+                    if proc.name() == "cfprefsd" and \
+                            proc.username() == getpass.getuser():
+                        proc.kill()
+                applescript = \
+                    'tell application "System Events" ' \
+                    'to get the name of every login item'
+                cmd = "osascript -e '%s'" % applescript
+                loginItemsString = subprocess.check_output(cmd, shell=True)
+                loginItems = [item.strip() for item in
+                              loginItemsString.split(',')]
+                logger.info("Current login items: " + str(loginItems))
+                if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
+                    logger.info("MyData is already set to start automatically "
+                                "on login.")
+                elif 'MyData' not in loginItems and \
+                        self.StartAutomaticallyOnLogin():
+                    logger.info("Adding MyData to login items.")
+                    pathToMyDataApp = "/Applications/MyData.app"
+                    if hasattr(sys, "frozen"):
+                        # Working directory in py2app bundle is
+                        # MyData.app/Contents/Resources/
+                        pathToMyDataApp = os.path.realpath('../..')
+                    applescript = \
+                        'tell application "System Events" ' \
+                        'to make login item at end with properties ' \
+                        '{path:"%s", hidden:false}' % pathToMyDataApp
+                    cmd = "osascript -e '%s'" % applescript
+                    returncode = subprocess.call(cmd, shell=True)
+                elif 'MyData' in loginItems and \
+                        not self.StartAutomaticallyOnLogin():
+                    logger.info("Removing MyData from login items.")
+                    applescript = \
+                        'tell application "System Events" to ' \
+                        'delete login item "MyData"'
+                    cmd = "osascript -e '%s'" % applescript
+                    returncode = subprocess.call(cmd, shell=True)
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
