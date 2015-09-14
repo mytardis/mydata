@@ -236,12 +236,6 @@ class SettingsModel():
             except:
                 logger.error(traceback.format_exc())
 
-        facilities = FacilityModel.GetMyFacilities(self)
-        for f in facilities:
-            if self.GetFacilityName() == f.GetName():
-                self.facility = f
-                break
-
         self.last_settings_write_method = LastSettingsWriteMethod.LOAD_SETTINGS
 
     def GetInstrument(self):
@@ -265,6 +259,15 @@ class SettingsModel():
         return self.facility_name
 
     def GetFacility(self):
+        if not self.facility:
+            try:
+                facilities = FacilityModel.GetMyFacilities(self)
+                for f in facilities:
+                    if self.GetFacilityName() == f.GetName():
+                        self.facility = f
+                        break
+            except:
+                logger.error(traceback.format_exc())
         return self.facility
 
     def SetFacilityName(self, facilityName):
