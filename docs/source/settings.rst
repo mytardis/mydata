@@ -68,6 +68,70 @@ General
   .. image:: images/DownloadApiKey.png
 
 
+.. _settings-dialog-schedule:
+
+Schedule
+^^^^^^^^
+
+  .. image:: images/SettingsSchedule.PNG
+
+**Schedule type - On Startup**
+    Run the folder scans and uploads automatically when MyData is launched.
+
+**Schedule type - On Settings Saved**
+    Run the folder scans and uploads automatically afte the user clicks OK
+    on the Settings dialog.
+
+**Schedule type - Manually**
+    Only run the folder scans and uploads in response to user interaction -
+    either by clicking the Refresh icon on the toolbar, or by clicking the
+    "MyTardis Sync" menu item in the system tray menu.
+
+**Schedule type - Once**
+    Run the folder scans and uploads once, on the date specified by the Date
+    field and at the time specified by the Time field.
+
+**Schedule type - Daily**
+    Run the folder scans and uploads every day, at the time specified by the
+    Time field.
+
+**Schedule type - Weekly**
+    Run the folder scans and uploads every week on the day(s) specified by the
+    weekday checkboxes, at the time specified by the Time field.
+
+**Schedule type - Timer**
+    Run the folder scans and uploads repeatedly with an interval specified by
+    the "Timer (minutes)" field between the hours of "From" and "To", every day.
+
+
+.. _settings-dialog-filters:
+
+Filters
+^^^^^^^
+
+  .. image:: images/SettingsFilters.PNG
+
+**Username/Email/User Group folder name contains**
+    Only scan user folders (or user group folders) whose username (or email
+    or user group) contains the string provided.  The actual text of this
+    setting will change, depending on the Folder Structure specified in the
+    Advanced tab.
+
+**Dataset folder name contains**
+    Only scan dataset folders whose folder name contains the string provided.
+
+**Experiment folder name contains**
+    Only scan experiment folders whose folder name contains the string
+    provided.  This field will be hidden unless the Folder Structure
+    specified in the Advanced tab includes an Experiment folder.
+
+**Ignore datasets older than**
+  MyData is designed to be used for uploading recent data.  If it is configured
+  to use an existing data directory containing a large backlog of old data, it
+  is advisable to instruct MyData to ignore old datasets so that it focus on
+  uploading the recent datasets.
+
+
 .. _settings-dialog-advanced:
 
 Advanced
@@ -158,13 +222,11 @@ Advanced
     (e.g. "D:\\Data\\SmithLab\\Nikon Microscope #1\\John Smith\\Dataset1")
     will be mapped to MyTardis datasets.
 
-**Check For Missing Folders**
-  This option provides extra validation of the folder structure.  For example,
-  if you choose a folder structure of "Username / Dataset" but you don't have
-  any Dataset folders, then when this checkbox is ticked, MyData's settings
-  validation will stop and display an error as shown below.
-
-  .. image:: images/CheckForMissingFolders.png
+**Validate Folder Structure**
+  When this is checked, MyData will ensure that the folders provided appear
+  to be in the correct structure, and it will count the total number of
+  datasets.  This can be disabled if you have a large number of dataset
+  folders and slow disk access.
 
 **Experiment (Dataset Grouping)**
   Defines how datasets will be grouped together into experiments in MyTardis.
@@ -179,17 +241,17 @@ Advanced
   The actual group name in MyTardis (e.g. "TestFacility-SmithLab")
   may have a prefix (e.g. "TestFacility-") prepended to it.
 
-**Ignore datasets older than**
-  MyData is designed to be used for uploading recent data.  If it is configured
-  to use an existing data directory containing a large backlog of old data, it
-  is advisable to instruct MyData to ignore old datasets so that it focus on
-  uploading the recent datasets.
-
 **Max # of upload threads**
   The maximum number of uploads to perform concurrently.  If greater than one,
   MyData will spawn multiple scp (secure copy) processes which (for large
   datafiles) may impact significantly on CPU usage of your system, which could
   affect other applications running alongside MyData.  The default value is 5.
+
+**Start automatically on login**
+    On Windows, a shortcut to MyData will be placed in the current user's Startup
+    folder.  The exact location varies, but on my machine it is
+    "C:\\Users\\wettenhj\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup".
+    On Mac OS X, a login item will could be created in the user's ~/Library/Preferences/com.apple.loginitems.plist
 
 
 Locking and Unlocking MyData's Settings
