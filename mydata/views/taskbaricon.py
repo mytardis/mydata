@@ -11,7 +11,7 @@ import webbrowser
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 from mydata.logs import logger
-from mydata.models.settings import LastSettingsWriteMethod
+from mydata.models.settings import LastSettingsUpdateTrigger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
@@ -99,10 +99,10 @@ class MyDataTaskBarIcon(TaskBarIcon):
         logger.debug("MyTardis Sync called from task bar menu item.")
         app = wx.GetApp()
         app.tasksModel.DeleteAllRows()
-        app.settingsModel.SetScheduleType("Immediately")
-        app.settingsModel.SetLastSettingsWriteMethod(
-            LastSettingsWriteMethod.TASKBAR_MENU_ITEM)
-        app.ApplySchedule(event)
+        app.settingsModel.SetScheduleType("Manually")
+        app.settingsModel.SetLastSettingsUpdateTrigger(
+            LastSettingsUpdateTrigger.UI_RESPONSE)
+        app.ApplySchedule(event, runManually=True)
 
     def OnMyDataHelp(self, event):
         new = 2  # Open in a new tab, if possible
