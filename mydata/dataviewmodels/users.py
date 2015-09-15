@@ -1,4 +1,3 @@
-import wx.dataview
 import os
 import threading
 
@@ -8,8 +7,14 @@ from mydata.logs import logger
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import InvalidFolderStructure
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-class UsersModel(wx.dataview.PyDataViewIndexListModel):
+
+class UsersModel(DataViewIndexListModel):
 
     def __init__(self, settingsModel):
 
@@ -18,8 +23,7 @@ class UsersModel(wx.dataview.PyDataViewIndexListModel):
 
         self.usersData = list()
 
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.usersData))
+        DataViewIndexListModel.__init__(self, len(self.usersData))
 
         self.unfilteredUsersData = self.usersData
         self.filteredUsersData = list()

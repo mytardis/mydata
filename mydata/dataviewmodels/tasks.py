@@ -2,27 +2,27 @@ import sys
 import threading
 from datetime import datetime
 from datetime import timedelta
-import wx.dataview
 
 from mydata.models.task import TaskModel
 from mydata.utils.notification import Notification
 from mydata.logs import logger
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-class TasksModel(wx.dataview.PyDataViewIndexListModel):
+
+class TasksModel(DataViewIndexListModel):
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
-
         self.tasksData = list()
-
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.tasksData))
-
+        DataViewIndexListModel.__init__(self, len(self.tasksData))
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()
         self.filtered = False
         self.searchString = ""
-
         self.columnNames = ("Id", "Job", "Start Time", "Finish Time",
                             "Schedule Type", "Interval (minutes)")
         self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
@@ -291,8 +291,8 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              scheduleType="Timer",
                                              intervalMinutes=intervalMinutes)
                     timeString = newStartTime.strftime("%I:%M:%S %p")
-                    dateString = \
-                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                    dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
+                        .format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
@@ -311,8 +311,8 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              newStartTime,
                                              scheduleType="Daily")
                     timeString = newStartTime.strftime("%I:%M:%S %p")
-                    dateString = \
-                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                    dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
+                        .format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
@@ -335,8 +335,8 @@ class TasksModel(wx.dataview.PyDataViewIndexListModel):
                                              scheduleType="Weekly",
                                              days=days)
                     timeString = newStartTime.strftime("%I:%M:%S %p")
-                    dateString = \
-                        "{d:%A} {d.day}/{d.month}/{d.year}".format(d=newStartTime)
+                    dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
+                        .format(d=newStartTime)
                     wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                                  "The \"%s\" task is scheduled "
                                  "to run at %s on %s "
