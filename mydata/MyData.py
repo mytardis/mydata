@@ -54,7 +54,7 @@ import mydata.events as mde
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 from mydata.utils.notification import Notification
-from mydata.models.settings import LastSettingsWriteMethod
+from mydata.models.settings import LastSettingsUpdateTrigger
 
 
 class NotebookTabs:
@@ -511,7 +511,7 @@ end tell"""
         self.refreshTool = AddToolMethod(wx.ID_REFRESH, "Refresh",
                                          refreshIcon, shortHelp="Refresh")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
-        self.Bind(wx.EVT_TOOL, self.OnRefresh, self.refreshTool,
+        self.Bind(wx.EVT_TOOL, self.OnRefreshFromToolbar, self.refreshTool,
                   self.refreshTool.GetId())
 
         self.toolbar.AddSeparator()
@@ -593,6 +593,14 @@ end tell"""
             self.verificationsModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
             self.uploadsModel.Filter(event.GetString())
+
+    def OnRefreshFromToolbar(self, event):
+        logger.debug("OnRefreshFromToolbar")
+        self.tasksModel.DeleteAllRows()
+        self.settingsModel.SetScheduleType("Manually")
+        self.settingsModel.SetLastSettingsUpdateTrigger(
+            LastSettingsUpdateTrigger.UI_RESPONSE)
+        self.ApplySchedule(event, runManually=True)
 
     def OnRefresh(self, event, needToValidateSettings=True, jobId=None):
         shutdownForRefreshAlreadyComplete = False
@@ -904,11 +912,13 @@ end tell"""
             self.tasksModel.DeleteAllRows()
             self.ApplySchedule(event)
 
-    def ApplySchedule(self, event):
+    def ApplySchedule(self, event, runManually=False):
         logger.debug("Getting schedule type from settings dialog.")
         scheduleType = self.settingsModel.GetScheduleType()
-        if scheduleType == "Immediately":
-            logger.debug("Schedule type is Immediately.")
+        if scheduleType == "On Startup" and \
+                self.settingsModel.GetLastSettingsUpdateTrigger() == \
+                LastSettingsUpdateTrigger.READ_FROM_DISK:
+            logger.debug("Schedule type is %s." % scheduleType)
 
             def jobFunc(app, event, needToValidateSettings, jobId):
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
@@ -925,13 +935,46 @@ end tell"""
 
             jobArgs = [self, event, False]
             jobDesc = "Scan folders and upload datafiles"
-            if self.settingsModel.GetLastSettingsWriteMethod() == \
-                    LastSettingsWriteMethod.LOAD_SETTINGS:
-                startTime = datetime.now() + timedelta(seconds=5)
-            else:
-                # LastSettingsWriteMethod.SAVE_FIELDS_FROM_DIALOG
-                # or LastSettingsWriteMethod.TASKBAR_MENU_ITEM
-                startTime = datetime.now() + timedelta(seconds=1)
+            # Wait a few seconds to give the user a chance to
+            # read the initial MyData notification before
+            # starting the task.
+            startTime = datetime.now() + timedelta(seconds=5)
+            timeString = startTime.strftime("%I:%M %p")
+            dateString = \
+                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
+            self.frame.SetStatusMessage(
+                "The \"%s\" task is scheduled "
+                "to run at %s on %s" % (jobDesc, timeString, dateString))
+            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+            jobArgs.append(taskDataViewId)
+            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                             startTime, scheduleType=scheduleType)
+            try:
+                self.tasksModel.AddRow(task)
+            except ValueError, ve:
+                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                return
+        if scheduleType == "On Settings Saved" and \
+                self.settingsModel.GetLastSettingsUpdateTrigger() == \
+                LastSettingsUpdateTrigger.UI_RESPONSE:
+            logger.debug("Schedule type is %s." % scheduleType)
+
+            def jobFunc(app, event, needToValidateSettings, jobId):
+                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
+                             True)
+                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+                    time.sleep(0.01)
+                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+                             jobId)
+                # Sleep this thread until the job is really
+                # finished, so we can determine the job's
+                # finish time.
+                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+                    time.sleep(0.01)
+
+            jobArgs = [self, event, False]
+            jobDesc = "Scan folders and upload datafiles"
+            startTime = datetime.now() + timedelta(seconds=1)
             timeString = startTime.strftime("%I:%M %p")
             dateString = \
                 "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
@@ -949,8 +992,42 @@ end tell"""
                 return
         elif scheduleType == "Manually":
             logger.debug("Schedule type is Manually.")
-            # Wait for user to manually click Refresh on MyData's toolbar.
-            pass
+            if not runManually:
+                # Wait for user to manually click Refresh on MyData's toolbar.
+                logger.debug("Finished processing schedule type.")
+                return
+
+            def jobFunc(app, event, needToValidateSettings, jobId):
+                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
+                             True)
+                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+                    time.sleep(0.01)
+                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+                             jobId)
+                # Sleep this thread until the job is really
+                # finished, so we can determine the job's
+                # finish time.
+                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+                    time.sleep(0.01)
+
+            jobArgs = [self, event, False]
+            jobDesc = "Scan folders and upload datafiles"
+            startTime = datetime.now() + timedelta(seconds=1)
+            timeString = startTime.strftime("%I:%M %p")
+            dateString = \
+                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
+            self.frame.SetStatusMessage(
+                "The \"%s\" task is scheduled "
+                "to run at %s on %s" % (jobDesc, timeString, dateString))
+            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+            jobArgs.append(taskDataViewId)
+            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+                             startTime, scheduleType=scheduleType)
+            try:
+                self.tasksModel.AddRow(task)
+            except ValueError, ve:
+                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+                return
         elif scheduleType == "Once":
             logger.debug("Schedule type is Once.")
 
@@ -979,8 +1056,8 @@ end tell"""
                 else:
                     message = "Scheduled time is in the past."
                     logger.error(message)
-                    if self.settingsModel.GetLastSettingsWriteMethod() != \
-                            LastSettingsWriteMethod.LOAD_SETTINGS:
+                    if self.settingsModel.GetLastSettingsUpdateTrigger() != \
+                            LastSettingsUpdateTrigger.READ_FROM_DISK:
                         wx.MessageBox(message, "MyData", wx.ICON_ERROR)
                     return
             timeString = startTime.strftime("%I:%M %p")
@@ -1106,12 +1183,11 @@ end tell"""
             jobArgs = [self, event, False]
             jobDesc = "Scan folders and upload datafiles"
             intervalMinutes = self.settingsModel.GetTimerMinutes()
-            if self.settingsModel.GetLastSettingsWriteMethod() == \
-                    LastSettingsWriteMethod.LOAD_SETTINGS:
+            if self.settingsModel.GetLastSettingsUpdateTrigger() == \
+                    LastSettingsUpdateTrigger.READ_FROM_DISK:
                 startTime = datetime.now() + timedelta(seconds=5)
             else:
-                # LastSettingsWriteMethod.SAVE_FIELDS_FROM_DIALOG
-                # or LastSettingsWriteMethod.TASKBAR_MENU_ITEM
+                # LastSettingsUpdateTrigger.UI_RESPONSE
                 startTime = datetime.now() + timedelta(seconds=1)
             timeString = startTime.strftime("%I:%M:%S %p")
             dateString = \
