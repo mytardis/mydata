@@ -24,10 +24,9 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 
-class LastSettingsWriteMethod:
-    LOAD_SETTINGS = 0
-    SAVE_FIELDS_FROM_DIALOG = 1
-    TASKBAR_MENU_ITEM = 2
+class LastSettingsUpdateTrigger:
+    READ_FROM_DISK = 0
+    UI_RESPONSE = 1
 
 
 class SettingsValidation():
@@ -66,7 +65,8 @@ class SettingsModel():
         self.validation = SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
 
-        self.last_settings_write_method = LastSettingsWriteMethod.LOAD_SETTINGS
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
 
         self.LoadSettings()
 
@@ -246,7 +246,8 @@ class SettingsModel():
             except:
                 logger.error(traceback.format_exc())
 
-        self.last_settings_write_method = LastSettingsWriteMethod.LOAD_SETTINGS
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
 
     def GetInstrument(self):
         if self.instrument is None:
@@ -615,8 +616,8 @@ class SettingsModel():
         if saveToDisk:
             self.SaveToDisk(configPath)
 
-        self.last_settings_write_method = \
-            LastSettingsWriteMethod.SAVE_FIELDS_FROM_DIALOG
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
 
     def Validate(self):
         datasetCount = -1
@@ -1384,8 +1385,8 @@ oFS.DeleteFile sLinkFile
     def SetConfigPath(self, configPath):
         self.configPath = configPath
 
-    def GetLastSettingsWriteMethod(self):
-        return self.last_settings_write_method
+    def GetLastSettingsUpdateTrigger(self):
+        return self.last_settings_update_trigger
 
-    def SetLastSettingsWriteMethod(self, lastSettingsWriteMethod):
-        self.last_settings_write_method = lastSettingsWriteMethod
+    def SetLastSettingsUpdateTrigger(self, lastSettingsUpdateTrigger):
+        self.last_settings_update_trigger = lastSettingsUpdateTrigger
