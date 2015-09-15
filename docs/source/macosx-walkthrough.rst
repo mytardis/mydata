@@ -69,12 +69,10 @@ http://mydata.readthedocs.org/en/latest/settings.html
 
 Starting MyData's Scan and Upload Processes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-MyData will scan for data and attempt to upload it as soon as you click "OK"
+Depending on the "schedule type" you configure in MyData's Settings dialog,
+MyData can scan for data and attempt to upload it as soon as you click "OK"
 on the Settings dialog or whenever you press the refresh icon on MyData's
-toolbar.  If you launch MyData with a "--background" command-line argument,
-then it will automatically begin its scan and upload processes straight away,
-even without displaying its Settings dialog, assuming that valid settings have
-been entered previously.
+toolbar, or whenever you launch MyData.
 
 MyData's Upload Methods
 ^^^^^^^^^^^^^^^^^^^^^^^

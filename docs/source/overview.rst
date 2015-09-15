@@ -18,13 +18,14 @@ will become a "dataset" within MyTardis:
 
   .. image:: images/Datasets.PNG
 
-MyData is designed to be able to run interactively or in background mode.  Its
-setup wizard for Windows offers to create a shortcut to MyData in the user's
-Startup Menu which will automatically run MyData in background mode (using its
-"--background" command-line argument) every time the user logs in.  Many
-data-collection instrument PCs use a shared login account which remains logged
-in all day long.  MyData at present cannot run as a `service daemon <http://en.wikipedia.org/wiki/Daemon_%28computing%29>`_ - so it will not run while no
-users are logged in.
+MyData is designed to be able to run interactively or in the background.
+Once its settings have been configured, it minimizes itself to the system
+tray (Windows) or menubar (Mac OS X) and runs the data scan and upload
+task according to a scheduled configured by the user.  Many data-collection
+instrument PCs use a shared login account which remains logged
+in all day long.  MyData at present cannot run as a
+`service daemon <http://en.wikipedia.org/wiki/Daemon_%28computing%29>`_
+- so it will not run while no users are logged in.
 
 The first time you run MyData, you will be asked to enter some settings,
 telling the application how to connect to your MyTardis instance.  You can use
@@ -47,14 +48,10 @@ uploads in the "Uploads" tab.
 
   .. image:: images/FoldersView.PNG
 
-When run in background mode (the default for the shortcut installed by the
-Windows Setup Wizard in the user's "Startup Items" folder), MyData is
-intentionally difficult to shut down.  It is designed to be shut down only by
-facility managers, not by an individual researcher.  Closing the main window
-will minimize the MyData application to an icon in the System Tray (below).
-It is possible to exit MyData using a menu item from the System Tray icon's
-pop-up menu (further below), but upon clicking on this menu item, the user
-will be asked for administrator privileges.
+Closing MyData's main window will minimize the MyData application to an
+icon in the System Tray (below).  It is possible to exit MyData using a
+menu item from the System Tray icon's pop-up menu (further below), but
+exiting will prevent MyData from being able to run scheduled tasks.
 
   .. image:: images/SystemTrayIcon.PNG
 
