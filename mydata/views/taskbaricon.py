@@ -1,8 +1,4 @@
 import wx
-try:
-    from wx import TaskBarIcon
-except ImportError:
-    from wx.adv import TaskBarIcon
 import os
 import sys
 import platform
@@ -13,6 +9,13 @@ from mydata.media import IconStyle
 from mydata.logs import logger
 from mydata.models.settings import LastSettingsUpdateTrigger
 
+if wx.version().startswith("3.0.3.dev"):
+    from wx import Icon as EmptyIcon
+    from wx.adv import TaskBarIcon
+else:
+    from wx import EmptyIcon
+    from wx import TaskBarIcon
+
 
 class MyDataTaskBarIcon(TaskBarIcon):
     def __init__(self, frame, settingsModel):
@@ -22,7 +25,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.settingsModel = settingsModel
 
         bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
-        self.icon = wx.EmptyIcon()
+        self.icon = EmptyIcon()
         self.icon.CopyFromBitmap(bmp)
 
         self.SetIcon(self.icon, "MyData")
