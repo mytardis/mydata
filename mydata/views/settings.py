@@ -240,8 +240,8 @@ class SettingsDialog(wx.Dialog):
                                                       wx.ID_ANY,
                                                       "Schedule type"))
 
-        choices = ["Immediately", "Manually", "Once", "Daily", "Weekly",
-                   "Timer"]
+        choices = ["On Startup", "On Settings Saved", "Manually",
+                   "Once", "Daily", "Weekly", "Timer"]
         self.scheduleTypeComboBox = wx.ComboBox(self.scheduleTypePanel,
                                                 choices=choices,
                                                 style=wx.CB_READONLY)
@@ -460,7 +460,7 @@ class SettingsDialog(wx.Dialog):
         # Filters tab
 
         self.filtersPanelSizer = wx.FlexGridSizer(rows=8, cols=3,
-                                                   vgap=5, hgap=5)
+                                                  vgap=5, hgap=5)
         self.filtersPanel.SetSizer(self.filtersPanelSizer)
         # self.filtersPanelSizer.AddGrowableCol(1)
 
@@ -472,14 +472,15 @@ class SettingsDialog(wx.Dialog):
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
 
-        self.userFolderFilterLabel = wx.StaticText(self.filtersPanel, wx.ID_ANY,
-                                                 "User Group folder name contains:",
-                                                 style=wx.ST_NO_AUTORESIZE)
+        self.userFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "User Group folder name contains:",
+                          style=wx.ST_NO_AUTORESIZE)
         self.filtersPanelSizer.Add(self.userFolderFilterLabel,
                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.userFolderFilterField = wx.TextCtrl(self.filtersPanel,
-                                               wx.ID_ANY, "")
+                                                 wx.ID_ANY, "")
         if sys.platform.startswith("darwin"):
             self.userFolderFilterField.SetMinSize(wx.Size(290, -1))
         else:
@@ -489,13 +490,14 @@ class SettingsDialog(wx.Dialog):
         blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
         self.filtersPanelSizer.Add(blankLine)
 
-        self.datasetFolderFilterLabel = wx.StaticText(self.filtersPanel, wx.ID_ANY,
-                                                 "Dataset folder name contains:")
+        self.datasetFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "Dataset folder name contains:")
         self.filtersPanelSizer.Add(self.datasetFolderFilterLabel,
                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.datasetFolderFilterField = wx.TextCtrl(self.filtersPanel,
-                                               wx.ID_ANY, "")
+                                                    wx.ID_ANY, "")
         if sys.platform.startswith("darwin"):
             self.datasetFolderFilterField.SetMinSize(wx.Size(290, -1))
         else:
@@ -505,13 +507,14 @@ class SettingsDialog(wx.Dialog):
         blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
         self.filtersPanelSizer.Add(blankLine)
 
-        self.expFolderFilterLabel = wx.StaticText(self.filtersPanel, wx.ID_ANY,
-                                                 "Experiment folder name contains:")
+        self.expFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "Experiment folder name contains:")
         self.filtersPanelSizer.Add(self.expFolderFilterLabel,
                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.expFolderFilterField = wx.TextCtrl(self.filtersPanel,
-                                               wx.ID_ANY, "")
+                                                wx.ID_ANY, "")
         if sys.platform.startswith("darwin"):
             self.expFolderFilterField.SetMinSize(wx.Size(290, -1))
         else:
@@ -527,7 +530,7 @@ class SettingsDialog(wx.Dialog):
         self.Bind(wx.EVT_CHECKBOX, self.OnIgnoreOldDatasetsCheckBox,
                   self.ignoreDatasetsOlderThanCheckBox)
         self.filtersPanelSizer.Add(self.ignoreDatasetsOlderThanCheckBox,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.ignoreIntervalPanel = wx.Panel(self.filtersPanel)
         self.ignoreIntervalPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -552,9 +555,9 @@ class SettingsDialog(wx.Dialog):
                                           flag=wx.EXPAND | wx.ALL, border=5)
 
         self.filtersPanelSizer.Add(self.ignoreIntervalPanel, flag=wx.EXPAND,
-                                    border=5)
+                                   border=5)
         self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
-                                                  wx.ID_ANY, ""))
+                                                 wx.ID_ANY, ""))
 
         self.filtersPanel.Fit()
         self.settingsTabsNotebook.AddPage(self.filtersPanel, "Filters")
@@ -734,11 +737,14 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterField.Show(False)
 
         if folderStructure.startswith("Username"):
-            self.userFolderFilterLabel.SetLabel("  Username folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "  Username folder name contains:")
         elif folderStructure.startswith("Email"):
-            self.userFolderFilterLabel.SetLabel("     Email folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "     Email folder name contains:")
         elif folderStructure.startswith("User Group"):
-            self.userFolderFilterLabel.SetLabel("User Group folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "User Group folder name contains:")
 
     # General tab
 
@@ -1196,11 +1202,14 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterField.Show(False)
 
         if folderStructure.startswith("Username"):
-            self.userFolderFilterLabel.SetLabel("  Username folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "  Username folder name contains:")
         elif folderStructure.startswith("Email"):
-            self.userFolderFilterLabel.SetLabel("     Email folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "     Email folder name contains:")
         elif folderStructure.startswith("User Group"):
-            self.userFolderFilterLabel.SetLabel("User Group folder name contains:")
+            self.userFolderFilterLabel.SetLabel(
+                "User Group folder name contains:")
 
     def OnDropFiles(self, filepaths):
         if self.Locked():
@@ -1343,7 +1352,7 @@ class SettingsDialog(wx.Dialog):
 
     def OnScheduleTypeChange(self, event):
         scheduleType = self.scheduleTypeComboBox.GetValue()
-        if scheduleType == "Immediately":
+        if scheduleType in ("On Startup", "On Settings Saved"):
             self.SetScheduledDate(datetime.date(datetime.now()))
             self.SetScheduledTime(datetime.time(datetime.now()))
         enableDaysOfWeekCheckBoxes = (scheduleType == "Weekly")
