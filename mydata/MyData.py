@@ -355,6 +355,7 @@ end tell"""
 
         event = None
         if self.settingsModel.RequiredFieldIsBlank():
+            self.frame.Show(True)
             self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " +
