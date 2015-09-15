@@ -76,6 +76,7 @@ class SettingsModel():
         file,
         e.g. C:\Users\jsmith\AppData\Local\Monash University\MyData\MyData.cfg
         """
+        # General tab
         self.instrument_name = ""
         self.instrument = None
         self.facility_name = ""
@@ -87,6 +88,7 @@ class SettingsModel():
         self.username = ""
         self.api_key = ""
 
+        # Schedule tab
         self.schedule_type = "Manually"
         self.monday_checked = False
         self.tuesday_checked = False
@@ -106,12 +108,18 @@ class SettingsModel():
         self.timer_to_time = \
             datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
 
-        self.folder_structure = "Username / Dataset"
-        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
-        self.group_prefix = ""
+        # Filters tab
+        self.user_filter = ""
+        self.dataset_filter = ""
+        self.experiment_filter = ""
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
+
+        # Advanced tab
+        self.folder_structure = "Username / Dataset"
+        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
+        self.group_prefix = ""
         self.max_upload_threads = 5
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
@@ -137,6 +145,7 @@ class SettingsModel():
                           "friday_checked", "saturday_checked",
                           "sunday_checked", "scheduled_date", "scheduled_time",
                           "timer_minutes", "timer_from_time", "timer_to_time",
+                          "user_filter", "dataset_filter", "experiment_filter",
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
@@ -435,6 +444,24 @@ class SettingsModel():
     def SetGroupPrefix(self, groupPrefix):
         self.group_prefix = groupPrefix
 
+    def GetUserFilter(self):
+        return self.user_filter
+
+    def SetUserFilter(self, userFilter):
+        self.user_filter = userFilter
+
+    def GetDatasetFilter(self):
+        return self.dataset_filter
+
+    def SetDatasetFilter(self, datasetFilter):
+        self.dataset_filter = datasetFilter
+
+    def GetExperimentFilter(self):
+        return self.experiment_filter
+
+    def SetExperimentFilter(self, experimentFilter):
+        self.experiment_filter = experimentFilter
+
     def IgnoreOldDatasets(self):
         return self.ignore_old_datasets
 
@@ -522,6 +549,7 @@ class SettingsModel():
                       "friday_checked", "saturday_checked",
                       "sunday_checked", "scheduled_date", "scheduled_time",
                       "timer_minutes", "timer_from_time", "timer_to_time",
+                      "user_filter", "dataset_filter", "experiment_filter",
                       "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
@@ -537,6 +565,7 @@ class SettingsModel():
                              saveToDisk=True):
         if configPath is None:
             configPath = self.GetConfigPath()
+        # General tab
         self.SetInstrumentName(settingsDialog.GetInstrumentName())
         self.SetFacilityName(settingsDialog.GetFacilityName())
         self.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
@@ -546,6 +575,7 @@ class SettingsModel():
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
 
+        # Schedule tab
         self.SetScheduleType(settingsDialog.GetScheduleType())
         self.SetMondayChecked(settingsDialog.IsMondayChecked())
         self.SetTuesdayChecked(settingsDialog.IsTuesdayChecked())
@@ -560,15 +590,21 @@ class SettingsModel():
         self.SetTimerFromTime(settingsDialog.GetTimerFromTime())
         self.SetTimerToTime(settingsDialog.GetTimerToTime())
 
-        self.SetFolderStructure(settingsDialog.GetFolderStructure())
-        self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
-        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
+        # Filters tab
+        self.SetUserFilter(settingsDialog.GetUserFilter())
+        self.SetDatasetFilter(settingsDialog.GetDatasetFilter())
+        self.SetExperimentFilter(settingsDialog.GetExperimentFilter())
         self.SetIgnoreOldDatasets(settingsDialog.IgnoreOldDatasets())
         self.SetIgnoreOldDatasetIntervalNumber(
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
+
+        # Advanced tab
+        self.SetFolderStructure(settingsDialog.GetFolderStructure())
+        self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
+        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
         self.SetValidateFolderStructure(
             settingsDialog.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
@@ -937,7 +973,8 @@ oLink.Save
                         """ % pathToMyDataExe
                         vbScript.write(script)
                     cmd = ['cscript', '//Nologo', vbScript.name]
-                    logger.info("Adding MyData shortcut to user startup items.")
+                    logger.info("Adding MyData shortcut to user "
+                                "startup items.")
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             shell=False)
@@ -1043,7 +1080,11 @@ oFS.DeleteFile sLinkFile
 
     def PerformFolderStructureValidation(self):
         datasetCount = -1
-        filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
+        userOrGroupFilterString = "*%s*" % self.GetUserFilter()
+        datasetFilterString = "*%s*" % self.GetDatasetFilter()
+        expFilterString = "*%s*" % self.GetExperimentFilter()
+        filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
+                           userOrGroupFilterString))
         dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
         if len(dirsDepth1) == 0:
             message = "The data directory: \"%s\" doesn't contain any " \
@@ -1073,11 +1114,23 @@ oFS.DeleteFile sLinkFile
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName()))
         else:
+            filterString = '*'
+            if self.GetFolderStructure() == 'Username / Dataset':
+                filterString = datasetFilterString
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                filterString = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                filterString = expFilterString
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                filterString = expFilterString
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*'))
+                                            userOrGroupFilterString,
+                                            filterString))
         dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
         if len(dirsDepth2) == 0:
             if self.GetFolderStructure() == 'Username / Dataset':
@@ -1151,12 +1204,28 @@ oFS.DeleteFile sLinkFile
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName(),
                                             '*'))
         else:
+            if self.GetFolderStructure() == 'Username / Dataset':
+                filterString1 = datasetFilterString
+                filterString2 = '*'
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                filterString1 = datasetFilterString
+                filterString2 = '*'
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                filterString1 = expFilterString
+                filterString2 = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                filterString1 = expFilterString
+                filterString2 = datasetFilterString
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*'))
+                                            userOrGroupFilterString,
+                                            filterString1,
+                                            filterString2))
         dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
         if len(dirsDepth3) == 0:
             if self.GetFolderStructure() == \
@@ -1218,12 +1287,15 @@ oFS.DeleteFile sLinkFile
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName(),
-                                            '*', '*'))
+                                            '*', datasetFilterString))
         else:
             filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*', '*'))
+                                            userOrGroupFilterString,
+                                            'MyTardis',
+                                            expFilterString,
+                                            datasetFilterString))
         dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
         if len(dirsDepth4) == 0:
             if self.GetFolderStructure() == \
