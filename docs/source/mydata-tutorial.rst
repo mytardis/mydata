@@ -109,10 +109,8 @@ Start Screen if not using a Start Menu):
 
   .. image:: images/MyDataInStartMenu.PNG
 
-When you launch MyData interactively (which is the default, unless you give
-MyData.exe a command-line argument of "--background"), its settings dialog
-will appear automatically.  The first time you launch MyData, its settings
-will be blank:
+The first time you launch MyData, its settings dialog will appear automatically
+and appear blank:
 
   .. image:: images/MyDataSettingsBlank.PNG
 
