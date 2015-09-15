@@ -7,16 +7,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>mydata-notifier</string>
+	<string>MyData Notifications</string>
 	<key>CFBundleIconFile</key>
 	<string>MyData</string>
 	<key>CFBundleIdentifier</key>
-        <!-- <string>org.mytardis.mydata-notifier</string> -->
-	<string>org.mytardis.MyData</string>
+	<string>org.mytardis.MyData-Notifications</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mydata-notifier</string>
+	<string>MyData Notifications</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -44,7 +43,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2015 James Wettenhall. All rights reserved.</string>
+	<string>Copyright © 2012-2015 James Wettenhall. All rights reserved.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
