@@ -65,6 +65,10 @@ class TaskModel():
     def SetCallLater(self, callLater):
         self.callLater = callLater
 
+    def Cancel(self):
+        if self.callLater:
+            self.callLater.Stop()
+
     def GetValueForKey(self, key):
         if self.__dict__[key]:
             return self.__dict__[key]
