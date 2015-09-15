@@ -1,19 +1,5 @@
 import sys
 import wx
-try:
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
-    from wx.aui import AUI_NB_SCROLL_BUTTONS
-    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-except ImportError:
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-    from wx.lib.agw.aui import AUI_NB_SCROLL_BUTTONS
-    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-try:
-    from wx import EVT_TASKBAR_LEFT_UP
-except:
-    from wx.adv import EVT_TASKBAR_LEFT_UP
 import webbrowser
 import os
 import appdirs
@@ -56,6 +42,20 @@ from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
 
+if wx.version().startswith("3.0.3.dev"):
+    from wx import Icon as EmptyIcon
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+    from wx.lib.agw.aui import AUI_NB_SCROLL_BUTTONS
+    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+    from wx.adv import EVT_TASKBAR_LEFT_UP
+else:
+    from wx import EmptyIcon
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+    from wx.aui import AUI_NB_SCROLL_BUTTONS
+    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+    from wx import EVT_TASKBAR_LEFT_UP
 
 class NotebookTabs:
     FOLDERS = 0
@@ -262,7 +262,7 @@ end tell"""
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
         bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
-        icon = wx.EmptyIcon()
+        icon = EmptyIcon()
         icon.CopyFromBitmap(bmp)
         self.frame.SetIcon(icon)
 
