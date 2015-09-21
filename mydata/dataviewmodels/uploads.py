@@ -1,4 +1,3 @@
-import wx.dataview
 import threading
 import traceback
 
@@ -8,6 +7,12 @@ from mydata.logs import logger
 from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
 
 class ColumnType:
     TEXT = 0
@@ -15,12 +20,11 @@ class ColumnType:
     PROGRESS = 2
 
 
-class UploadsModel(wx.dataview.PyDataViewIndexListModel):
+class UploadsModel(DataViewIndexListModel):
     def __init__(self):
         self.uploadsData = []
 
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.uploadsData))
+        DataViewIndexListModel.__init__(self, len(self.uploadsData))
 
         # Unfiltered uploads data:
         self.uud = self.uploadsData

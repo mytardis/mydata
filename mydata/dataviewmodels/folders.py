@@ -1,5 +1,3 @@
-import wx
-import wx.dataview
 import threading
 import os
 import sys
@@ -15,34 +13,20 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 
-
-# This model class provides the data to the view when it is asked for.
-# Since it is a list-only model (no hierachical data) then it is able
-# to be referenced by row rather than by item object, so in this way
-# it is easier to comprehend and use than other model types.  In this
-# example we also provide a Compare function to assist with sorting of
-# items in our model.  Notice that the data items in the data model
-# object don't ever change position due to a sort or column
-# reordering.  The view manages all of that and maps view rows and
-# columns to the model's rows and columns as needed.
-#
-# Our data is stored in a list of FolderModel objects.
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
-class FoldersModel(wx.dataview.PyDataViewIndexListModel):
+class FoldersModel(DataViewIndexListModel):
 
     def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
 
-        # Earlier prototypes loaded the last used folder view from an Sqlite
-        # database on disk, recording the folders which the user had
-        # previously dragged and dropped into the application.  Whereas now
-        # it scans the root data directory and constructs the folder list from
-        # scratch every time.
-
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.foldersData))
+        DataViewIndexListModel.__init__(self, len(self.foldersData))
 
         self.usersModel = usersModel
         self.groupsModel = groupsModel
