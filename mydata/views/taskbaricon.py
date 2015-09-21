@@ -1,8 +1,4 @@
 import wx
-try:
-    from wx import TaskBarIcon
-except ImportError:
-    from wx.adv import TaskBarIcon
 import os
 import sys
 import platform
@@ -13,6 +9,13 @@ from mydata.media import IconStyle
 from mydata.logs import logger
 from mydata.models.settings import LastSettingsUpdateTrigger
 
+if wx.version().startswith("3.0.3.dev"):
+    from wx import Icon as EmptyIcon
+    from wx.adv import TaskBarIcon
+else:
+    from wx import EmptyIcon
+    from wx import TaskBarIcon
+
 
 class MyDataTaskBarIcon(TaskBarIcon):
     def __init__(self, frame, settingsModel):
@@ -22,7 +25,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.settingsModel = settingsModel
 
         bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
-        self.icon = wx.EmptyIcon()
+        self.icon = EmptyIcon()
         self.icon.CopyFromBitmap(bmp)
 
         self.SetIcon(self.icon, "MyData")
@@ -45,7 +48,10 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisSyncMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyTardis Sync")
-        self.menu.AppendItem(self.myTardisSyncMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisSyncMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisSyncMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyTardisSync,
                   self.myTardisSyncMenuItem, self.myTardisSyncMenuItem.GetId())
 
@@ -53,13 +59,19 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisMainWindowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Main Window")
-        self.menu.AppendItem(self.myTardisMainWindowMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisMainWindowMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisMainWindowMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataMainWindow,
                   self.myTardisMainWindowMenuItem)
 
         self.myTardisSettingsMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Settings")
-        self.menu.AppendItem(self.myTardisSettingsMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisSettingsMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisSettingsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataSettings,
                   self.myTardisSettingsMenuItem)
 
@@ -67,14 +79,20 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisHelpMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Help")
-        self.menu.AppendItem(self.myTardisHelpMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisHelpMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisHelpMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataHelp, self.myTardisHelpMenuItem)
 
         self.menu.AppendSeparator()
 
         self.exitMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Exit MyData")
-        self.menu.AppendItem(self.exitMyDataMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.exitMyDataMenuItem)
+        else:
+            self.menu.AppendItem(self.exitMyDataMenuItem)
         self.Bind(wx.EVT_MENU, self.OnExit, self.exitMyDataMenuItem)
 
         return self.menu

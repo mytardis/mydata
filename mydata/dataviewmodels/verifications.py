@@ -1,6 +1,3 @@
-import wx.dataview
-import traceback
-import threading
 import os
 import threading
 import traceback
@@ -10,26 +7,24 @@ from mydata.models.verification import VerificationStatus
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.logs import logger
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
 
+class VerificationsModel(DataViewIndexListModel):
     def __init__(self):
-
         self.foldersModel = None
-
         self.verificationsData = list()
-
-        wx.dataview.PyDataViewIndexListModel\
-            .__init__(self,
-                      len(self.verificationsData))
-
+        DataViewIndexListModel.__init__(self, len(self.verificationsData))
         # Unfiltered verifications data:
         self.uvd = self.verificationsData
         # Filtered verifications data:
         self.fvd = list()
         self.filtered = False
         self.searchString = ""
-
         self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
                             "Message")
         self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
@@ -37,7 +32,6 @@ class VerificationsModel(wx.dataview.PyDataViewIndexListModel):
         self.defaultColumnWidths = (40, 170, 170, 200, 500)
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.TEXT, ColumnType.TEXT)
-
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
