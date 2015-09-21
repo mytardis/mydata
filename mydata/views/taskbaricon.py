@@ -48,7 +48,10 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisSyncMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyTardis Sync")
-        self.menu.AppendItem(self.myTardisSyncMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisSyncMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisSyncMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyTardisSync,
                   self.myTardisSyncMenuItem, self.myTardisSyncMenuItem.GetId())
 
@@ -56,13 +59,19 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisMainWindowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Main Window")
-        self.menu.AppendItem(self.myTardisMainWindowMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisMainWindowMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisMainWindowMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataMainWindow,
                   self.myTardisMainWindowMenuItem)
 
         self.myTardisSettingsMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Settings")
-        self.menu.AppendItem(self.myTardisSettingsMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisSettingsMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisSettingsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataSettings,
                   self.myTardisSettingsMenuItem)
 
@@ -70,14 +79,20 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisHelpMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Help")
-        self.menu.AppendItem(self.myTardisHelpMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.myTardisHelpMenuItem)
+        else:
+            self.menu.AppendItem(self.myTardisHelpMenuItem)
         self.Bind(wx.EVT_MENU, self.OnMyDataHelp, self.myTardisHelpMenuItem)
 
         self.menu.AppendSeparator()
 
         self.exitMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Exit MyData")
-        self.menu.AppendItem(self.exitMyDataMenuItem)
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.exitMyDataMenuItem)
+        else:
+            self.menu.AppendItem(self.exitMyDataMenuItem)
         self.Bind(wx.EVT_MENU, self.OnExit, self.exitMyDataMenuItem)
 
         return self.menu
