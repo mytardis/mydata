@@ -269,29 +269,16 @@ end tell"""
         self.panel = wx.Panel(self.frame)
 
         if wx.version().startswith("3.0.3.dev"):
-            # AuiNotebook looks buggy in 3.0.3.dev
-            # I see a close button on the active
-            # tab even when not using either of these flags
-            # in the AuiNotebook's style:
-            # AUI_NB_CLOSE_ON_ACTIVE_TAB
-            # AUI_NB_DEFAULT_STYLE
-            useAuiNotebook = False
+            self.foldersUsersNotebook = \
+                AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
         else:
-            # AuiNotebook looks better than wx.Notebook on
-            # Windows for MyData's use case.
-            useAuiNotebook = True
-
-        if useAuiNotebook:
             self.foldersUsersNotebook = \
                 AuiNotebook(self.panel, style=AUI_NB_TOP)
-            self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
-                      self.OnNotebookPageChanging, self.foldersUsersNotebook)
-        else:
-            self.foldersUsersNotebook = \
-                wx.Notebook(self.panel,
-                            style=wx.NB_TOP)
-            self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,
-                      self.OnNotebookPageChanging, self.foldersUsersNotebook)
+        # Without the following line, the tab font looks
+        # too small on Mac OS X:
+        self.foldersUsersNotebook.SetFont(self.panel.GetFont())
+        self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
+                  self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
         self.foldersView = FoldersView(self.foldersUsersNotebook,
                                        foldersModel=self.foldersModel)

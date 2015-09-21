@@ -59,24 +59,14 @@ class SettingsDialog(wx.Dialog):
         self.dialogPanel = wx.Panel(self)
 
         if wx.version().startswith("3.0.3.dev"):
-            # AuiNotebook looks buggy in 3.0.3.dev
-            # I see a close button on the active
-            # tab even when not using either of these flags
-            # in the AuiNotebook's style:
-            # AUI_NB_CLOSE_ON_ACTIVE_TAB
-            # AUI_NB_DEFAULT_STYLE
-            useAuiNotebook = False
+            self.settingsTabsNotebook = \
+                AuiNotebook(self.dialogPanel, agwStyle=AUI_NB_TOP)
         else:
-            # AuiNotebook looks better than wx.Notebook on
-            # Windows for MyData's use case.
-            useAuiNotebook = True
-
-        if useAuiNotebook:
             self.settingsTabsNotebook = \
                 AuiNotebook(self.dialogPanel, style=AUI_NB_TOP)
-        else:
-            self.settingsTabsNotebook = \
-                wx.Notebook(self.dialogPanel, style=wx.NB_TOP)
+        # Without the following line, the tab font looks
+        # too small on Mac OS X:
+        self.settingsTabsNotebook.SetFont(self.dialogPanel.GetFont())
         self.generalPanel = wx.Panel(self.settingsTabsNotebook)
         self.schedulePanel = wx.Panel(self.settingsTabsNotebook)
         self.filtersPanel = wx.Panel(self.settingsTabsNotebook)
@@ -672,12 +662,11 @@ class SettingsDialog(wx.Dialog):
         self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
 
         self.settingsTabsNotebook.Fit()
-        if useAuiNotebook:
-            self.settingsTabsNotebook\
-                .SetMinSize(wx.Size(generalPanelSize.GetWidth(),
-                                    generalPanelSize.height +
-                                    self.settingsTabsNotebook
-                                    .GetTabCtrlHeight()))
+        self.settingsTabsNotebook\
+            .SetMinSize(wx.Size(generalPanelSize.GetWidth(),
+                                generalPanelSize.height +
+                                self.settingsTabsNotebook
+                                .GetTabCtrlHeight()))
         self.dialogPanel.Fit()
 
         line = wx.StaticLine(self, wx.ID_ANY, size=(20, -1),
