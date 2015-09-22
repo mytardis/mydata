@@ -34,6 +34,7 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
+from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
@@ -1219,6 +1220,30 @@ class UploadDatafileRunnable():
                                            self.foldersController,
                                            self.uploadModel)
                             except IOError, e:
+                                if self.uploadModel.GetRetries() < \
+                                        self.uploadModel.GetMaxRetries():
+                                    self.uploadModel.IncrementRetries()
+                                    logger.debug("Restarting upload for " +
+                                                 dataFilePath)
+                                    self.uploadModel.SetMessage(
+                                        "This file will be re-uploaded...")
+                                    self.uploadModel.SetProgress(0)
+                                    continue
+                                else:
+                                    raise
+                            except ScpException, e:
+                                if self.uploadModel.GetRetries() < \
+                                        self.uploadModel.GetMaxRetries():
+                                    self.uploadModel.IncrementRetries()
+                                    logger.debug("Restarting upload for " +
+                                                 dataFilePath)
+                                    self.uploadModel.SetMessage(
+                                        "This file will be re-uploaded...")
+                                    self.uploadModel.SetProgress(0)
+                                    continue
+                                else:
+                                    raise
+                            except SshException, e:
                                 if self.uploadModel.GetRetries() < \
                                         self.uploadModel.GetMaxRetries():
                                     self.uploadModel.IncrementRetries()
