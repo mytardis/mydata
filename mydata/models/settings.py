@@ -121,6 +121,7 @@ class SettingsModel():
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
         self.max_upload_threads = 5
+        self.max_upload_retries = 5
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
 
@@ -149,6 +150,7 @@ class SettingsModel():
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
+                          "max_upload_retries",
                           "validate_folder_structure", "locked", "uuid",
                           "start_automatically_on_login"]
                 for field in fields:
@@ -170,6 +172,11 @@ class SettingsModel():
                     self.max_upload_threads = \
                         configParser.getint(configFileSection,
                                             "max_upload_threads")
+                if configParser.has_option(configFileSection,
+                                           "max_upload_retries"):
+                    self.max_upload_retries = \
+                        configParser.getint(configFileSection,
+                                            "max_upload_retries")
                 if configParser.has_option(configFileSection,
                                            "validate_folder_structure"):
                     self.validate_folder_structure = \
@@ -488,6 +495,12 @@ class SettingsModel():
     def SetMaxUploadThreads(self, maxUploadThreads):
         self.max_upload_threads = maxUploadThreads
 
+    def GetMaxUploadRetries(self):
+        return self.max_upload_retries
+
+    def SetMaxUploadRetries(self, maxUploadRetries):
+        self.max_upload_retries = maxUploadRetries
+
     def GetUuid(self):
         return self.uuid
 
@@ -555,6 +568,7 @@ class SettingsModel():
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
+                      "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login"]
             for field in fields:
@@ -601,6 +615,7 @@ class SettingsModel():
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
+        self.SetMaxUploadRetries(settingsDialog.GetMaxUploadRetries())
 
         # Advanced tab
         self.SetFolderStructure(settingsDialog.GetFolderStructure())

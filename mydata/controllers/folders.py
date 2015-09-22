@@ -1221,7 +1221,8 @@ class UploadDatafileRunnable():
                                            self.uploadModel)
                             except IOError, e:
                                 if self.uploadModel.GetRetries() < \
-                                        self.uploadModel.GetMaxRetries():
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
@@ -1233,7 +1234,8 @@ class UploadDatafileRunnable():
                                     raise
                             except ScpException, e:
                                 if self.uploadModel.GetRetries() < \
-                                        self.uploadModel.GetMaxRetries():
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
@@ -1245,7 +1247,8 @@ class UploadDatafileRunnable():
                                     raise
                             except SshException, e:
                                 if self.uploadModel.GetRetries() < \
-                                        self.uploadModel.GetMaxRetries():
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
