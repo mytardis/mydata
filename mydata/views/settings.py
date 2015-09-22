@@ -991,20 +991,8 @@ class SettingsDialog(wx.Dialog):
                             settingsDialog=self,
                             settingsModel=self.settingsModel,
                             okEvent=event)
-
-        intervalSinceLastConnectivityCheck = \
-            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
-        # FIXME: Magic number of 30 seconds since last connectivity check.
-        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
-                not wx.GetApp().GetLastNetworkConnectivityCheckSuccess():
-            checkConnectivityEvent = \
-                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
-                                settingsModel=self.settingsModel,
-                                nextEvent=settingsDialogValidationEvent)
-            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
-        else:
-            wx.PostEvent(wx.GetApp().GetMainFrame(),
-                         settingsDialogValidationEvent)
+        wx.PostEvent(wx.GetApp().GetMainFrame(),
+                     settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:",
