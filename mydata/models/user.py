@@ -120,26 +120,17 @@ class UserModel():
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
-            session = requests.Session()
-            response = session.get(url=url, headers=headers)
+            response = requests.get(url=url, headers=headers)
         except:
-            response.close()
-            session.close()
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
             message = response.text
-            response.close()
-            session.close()
             raise Exception(message)
         try:
             userRecordsJson = response.json()
         except:
             logger.error(traceback.format_exc())
-            response.close()
-            session.close()
             raise
-        response.close()
-        session.close()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
@@ -162,27 +153,18 @@ class UserModel():
         headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
                    myTardisApiKey}
         try:
-            session = requests.Session()
-            response = session.get(url=url, headers=headers)
+            response = requests.get(url=url, headers=headers)
         except:
-            response.close()
-            session.close()
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
             logger.debug(url)
             message = response.text
-            response.close()
-            session.close()
             raise Exception(message)
         try:
             userRecordsJson = response.json()
         except:
             logger.error(traceback.format_exc())
-            response.close()
-            session.close()
             raise
-        response.close()
-        session.close()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
