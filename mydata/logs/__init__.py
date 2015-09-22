@@ -255,7 +255,7 @@ class Logger():
                     debugLog = debugLog + line
             if errorCount > 0:
                 debugLog = debugLog + "\n"
-            if len(logLines) <= 1500:
+            if len(logLines) <= 5000:
                 debugLog = debugLog + self.loggerOutput.getvalue()
             else:
                 debugLog = debugLog + "".join(logLines[1:125])
@@ -263,7 +263,7 @@ class Logger():
                 debugLog = debugLog + \
                     "*** CONTENT REMOVED BECAUSE OF LARGE LOG SIZE ***\n"
                 debugLog = debugLog + "\n\n"
-                debugLog = debugLog + "".join(logLines[-1000:])
+                debugLog = debugLog + "".join(logLines[-4000:])
             fileInfo = {"logfile": debugLog}
 
             # If we are running in an installation then we have to use
