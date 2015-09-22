@@ -554,7 +554,7 @@ class SettingsDialog(wx.Dialog):
 
         # Advanced tab
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=8, cols=3,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -635,12 +635,31 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
-        self.maximumUploadThreadsSpinCtrl = \
+        self.maxUploadThreadsSpinCtrl = \
             wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
                         "5", min=1, max=99)
-        self.maxUploadThreadsPanelSizer.Add(self.maximumUploadThreadsSpinCtrl,
+        self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl,
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
+                                    flag=wx.EXPAND, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        maxUploadRetriesLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                              "Maximum # of upload retries:")
+        self.advancedPanelSizer.Add(maxUploadRetriesLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.maxUploadRetriesPanel = wx.Panel(self.advancedPanel)
+        self.maxUploadRetriesPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.maxUploadRetriesPanel.SetSizer(self.maxUploadRetriesPanelSizer)
+
+        self.maxUploadRetriesSpinCtrl = \
+            wx.SpinCtrl(self.maxUploadRetriesPanel, wx.ID_ANY,
+                        "5", min=0, max=99)
+        self.maxUploadRetriesPanelSizer.Add(self.maxUploadRetriesSpinCtrl,
+                                            flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(self.maxUploadRetriesPanel,
                                     flag=wx.EXPAND, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
@@ -937,10 +956,16 @@ class SettingsDialog(wx.Dialog):
         self.validateFolderStructureCheckBox.SetValue(validateFolderStructure)
 
     def GetMaxUploadThreads(self):
-        return self.maximumUploadThreadsSpinCtrl.GetValue()
+        return self.maxUploadThreadsSpinCtrl.GetValue()
 
     def SetMaxUploadThreads(self, numberOfThreads):
-        self.maximumUploadThreadsSpinCtrl.SetValue(numberOfThreads)
+        self.maxUploadThreadsSpinCtrl.SetValue(numberOfThreads)
+
+    def GetMaxUploadRetries(self):
+        return self.maxUploadRetriesSpinCtrl.GetValue()
+
+    def SetMaxUploadRetries(self, numberOfRetries):
+        self.maxUploadRetriesSpinCtrl.SetValue(numberOfRetries)
 
     def StartAutomaticallyOnLogin(self):
         return self.startAutomaticallyOnLoginCheckBox.GetValue()
@@ -1056,6 +1081,7 @@ class SettingsDialog(wx.Dialog):
         self.SetDatasetGrouping(settingsModel.GetDatasetGrouping())
         self.SetGroupPrefix(settingsModel.GetGroupPrefix())
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
+        self.SetMaxUploadRetries(settingsModel.GetMaxUploadRetries())
         self.SetValidateFolderStructure(
             settingsModel.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
@@ -1317,7 +1343,8 @@ class SettingsDialog(wx.Dialog):
         self.datasetGroupingField.Enable(enabled)
         self.groupPrefixField.Enable(enabled)
         self.validateFolderStructureCheckBox.Enable(enabled)
-        self.maximumUploadThreadsSpinCtrl.Enable(enabled)
+        self.maxUploadThreadsSpinCtrl.Enable(enabled)
+        self.maxUploadRetriesSpinCtrl.Enable(enabled)
         self.startAutomaticallyOnLoginCheckBox.Enable(enabled)
         self.Update()
 

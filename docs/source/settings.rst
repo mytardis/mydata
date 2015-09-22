@@ -247,6 +247,10 @@ Advanced
   datafiles) may impact significantly on CPU usage of your system, which could
   affect other applications running alongside MyData.  The default value is 5.
 
+**Max # of upload retries**
+  The maximum number of times to retry uploading a file whose upload initially
+  fails, e.g. due to a connection timeout error.
+
 **Start automatically on login**
     On Windows, a shortcut to MyData will be placed in the current user's Startup
     folder.  The exact location varies, but on my machine it is
