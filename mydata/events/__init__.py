@@ -310,7 +310,8 @@ class MyDataEvent(wx.PyCommandEvent):
                                  checkConnectivityEvent)
                     return
 
-                settingsModel.Validate()
+                settingsModel.Validate(
+                    wx.GetApp().GetMainFrame().SetStatusMessage)
 
                 wx.CallAfter(endBusyCursorIfRequired, event)
                 if settingsModel.IsIncompatibleMyTardisVersion():

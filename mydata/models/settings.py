@@ -619,7 +619,7 @@ class SettingsModel():
         self.last_settings_update_trigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
 
-    def Validate(self):
+    def Validate(self, SetStatusMessage=None):
         datasetCount = -1
         try:
             if self.GetInstrumentName().strip() == "":
@@ -680,14 +680,20 @@ class SettingsModel():
                 return self.validation
 
             if self.ValidateFolderStructure():
+                if SetStatusMessage:
+                    SetStatusMessage(
+                        "Settings validation - checking folder structure...")
                 self.validation = self.PerformFolderStructureValidation()
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
             try:
+                if SetStatusMessage:
+                    SetStatusMessage(
+                        "Settings validation - checking MyTardis URL...")
                 session = requests.Session()
-                r = session.get(self.GetMyTardisUrl() + "/about/")
+                r = session.get(self.GetMyTardisUrl() + "/about/", timeout=5)
                 status_code = r.status_code
                 content = r.text
                 history = r.history
@@ -771,6 +777,9 @@ class SettingsModel():
             Here we perform a rather arbitrary query, just to test
             whether our MyTardis credentials work OK with the API.
             """
+            if SetStatusMessage:
+                SetStatusMessage(
+                     "Settings validation - checking MyTardis credentials...")
             url = self.GetMyTardisUrl() + \
                 "/api/v1/user/?format=json&username=" + self.GetUsername()
             headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
@@ -794,6 +803,9 @@ class SettingsModel():
             if status_code < 200 or status_code >= 300:
                 return invalid_user()
 
+            if SetStatusMessage:
+                SetStatusMessage(
+                    "Settings validation - checking MyTardis facility...")
             if self.GetFacilityName().strip() == "":
                 message = "Please enter a valid facility name."
                 suggestion = None
@@ -887,6 +899,10 @@ class SettingsModel():
                                                "data_directory")
                         return self.validation
 
+            if SetStatusMessage:
+                SetStatusMessage(
+                    "Settings validation - "
+                    "checking if MyData is set to start automatically...")
             logger.warning("This auto-start on login stuff shouldn't really "
                            "be in settings validation.  I just put it here "
                            "temporarily to ensure it doesn't run in the "
@@ -1075,6 +1091,9 @@ oFS.DeleteFile sLinkFile
                                        "scheduled_time")
                 return
 
+        if SetStatusMessage:
+            SetStatusMessage(
+                "Settings validation - succeeded!")
         logger.debug("SettingsModel validation succeeded!")
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
