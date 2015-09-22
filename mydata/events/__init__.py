@@ -291,6 +291,26 @@ class MyDataEvent(wx.PyCommandEvent):
                     busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
                     wx.CallAfter(event.settingsDialog.SetCursor, busyCursor)
                 event.settingsDialog.okButton.Disable()
+
+                intervalSinceLastConnCheck = datetime.now() - \
+                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
+                # FIXME: Magic number of 30 secs since last connectivity check.
+                if intervalSinceLastConnCheck.total_seconds() >= 30 or \
+                        not wx.GetApp()\
+                        .GetLastNetworkConnectivityCheckSuccess():
+                    settingsDialogValidationEvent = \
+                        MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
+                                    settingsDialog=event.settingsDialog,
+                                    settingsModel=settingsModel,
+                                    okEvent=event)
+                    checkConnectivityEvent = \
+                        MyDataEvent(EVT_CHECK_CONNECTIVITY,
+                                    settingsModel=settingsModel,
+                                    nextEvent=settingsDialogValidationEvent)
+                    wx.PostEvent(wx.GetApp().GetMainFrame(),
+                                 checkConnectivityEvent)
+                    return
+
                 settingsModel.Validate()
 
                 def endBusyCursorIfRequired():
