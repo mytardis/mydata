@@ -579,6 +579,10 @@ class FoldersController():
             message = "Data scans and uploads failed."
         elif self.Canceled():
             message = "Data scans and uploads were canceled."
+        elif self.uploadsModel.GetFailedCount() > 0:
+            message = \
+                "Data scans and uploads completed with " \
+                "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
         else:
