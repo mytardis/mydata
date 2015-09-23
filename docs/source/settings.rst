@@ -75,6 +75,10 @@ Schedule
 
   .. image:: images/SettingsSchedule.PNG
 
+**Schedule types**
+
+  .. image:: images/ScheduleTypeComboBox.png
+
 **Schedule type - On Startup**
     Run the folder scans and uploads automatically when MyData is launched.
 
