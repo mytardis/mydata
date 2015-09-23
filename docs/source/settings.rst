@@ -5,11 +5,9 @@ Settings
 ========
 
 MyData's Settings dialog can be opened by clicking on the |settings| icon on
-MyData's toolbar.  The Settings dialog will be automatically displayed each
-time MyData is launched, unless MyData is run in "--background" mode
-(which is the default for the MyData shortcut installed in the "Startup"
-folder on Windows if the appropriate checkbox is ticked in MyData's setup
-wizard).
+MyData's toolbar, or by selecting the "MyData Settings" menu item in the 
+MyData System Tray icon's pop-up menu.  The Settings dialog will be
+automatically displayed the first time MyData is launched.
 
 .. |settings| image:: images/Settings.png
 
