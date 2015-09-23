@@ -14,11 +14,13 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.settingsModel = settingsModel
 
-        self.submitDebugReportDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
+        self.submitDebugReportDialogSizer = \
+            wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
         self.SetSizer(self.submitDebugReportDialogSizer)
 
         self.submitDebugReportDialogPanel = wx.Panel(self, wx.ID_ANY)
-        self.submitDebugReportDialogPanelSizer = wx.FlexGridSizer(10, 1)
+        self.submitDebugReportDialogPanelSizer = \
+            wx.FlexGridSizer(10, 1, vgap=0, hgap=0)
         self.submitDebugReportDialogPanel\
             .SetSizer(self.submitDebugReportDialogPanelSizer)
 
@@ -51,7 +53,8 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.innerContactDetailsPanel = wx.Panel(self.contactDetailsPanel,
                                                  wx.ID_ANY)
-        self.innerContactDetailsPanelSizer = wx.FlexGridSizer(5, 2, hgap=10)
+        self.innerContactDetailsPanelSizer = \
+            wx.FlexGridSizer(5, 2, vgap=0, hgap=10)
         self.innerContactDetailsPanel\
             .SetSizer(self.innerContactDetailsPanelSizer)
 
@@ -134,7 +137,7 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.commentsPanel.SetSizer(self.commentsGroupBoxSizer)
 
         self.innerCommentsPanel = wx.Panel(self.commentsPanel, wx.ID_ANY)
-        self.innerCommentsPanelSizer = wx.FlexGridSizer(10, 2, hgap=10)
+        self.innerCommentsPanelSizer = wx.FlexGridSizer(10, 2, vgap=0, hgap=10)
         self.innerCommentsPanelSizer.AddGrowableCol(0)
         self.innerCommentsPanel.SetSizer(self.innerCommentsPanelSizer)
 
@@ -175,7 +178,7 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.debugLogPanel.SetSizer(self.debugLogGroupBoxSizer)
 
         self.innerDebugLogPanel = wx.Panel(self.debugLogPanel, wx.ID_ANY)
-        self.innerDebugLogPanelSizer = wx.FlexGridSizer(10, 2, hgap=10)
+        self.innerDebugLogPanelSizer = wx.FlexGridSizer(10, 2, vgap=0, hgap=10)
         self.innerDebugLogPanelSizer.AddGrowableCol(0)
         self.innerDebugLogPanel.SetSizer(self.innerDebugLogPanelSizer)
 

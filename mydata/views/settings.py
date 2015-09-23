@@ -1,5 +1,10 @@
 import wx
-import wx.aui
+try:
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+except ImportError:
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
 import wx.lib.masked
 import re
 import requests
@@ -16,6 +21,12 @@ from mydata.models.settings import SettingsModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 import mydata.events as mde
+
+
+class SettingsDialogTabs:
+    GENERAL = 0
+    SCHEDULE = 1
+    ADVANCED = 2
 
 
 class SettingsDropTarget(wx.FileDropTarget):
@@ -47,10 +58,18 @@ class SettingsDialog(wx.Dialog):
 
         self.dialogPanel = wx.Panel(self)
 
-        self.settingsTabsNotebook = \
-            wx.aui.AuiNotebook(self.dialogPanel, style=wx.aui.AUI_NB_TOP)
+        if wx.version().startswith("3.0.3.dev"):
+            self.settingsTabsNotebook = \
+                AuiNotebook(self.dialogPanel, agwStyle=AUI_NB_TOP)
+        else:
+            self.settingsTabsNotebook = \
+                AuiNotebook(self.dialogPanel, style=AUI_NB_TOP)
+        # Without the following line, the tab font looks
+        # too small on Mac OS X:
+        self.settingsTabsNotebook.SetFont(self.dialogPanel.GetFont())
         self.generalPanel = wx.Panel(self.settingsTabsNotebook)
         self.schedulePanel = wx.Panel(self.settingsTabsNotebook)
+        self.filtersPanel = wx.Panel(self.settingsTabsNotebook)
         self.advancedPanel = wx.Panel(self.settingsTabsNotebook)
 
         self.dialogPanelSizer = wx.BoxSizer()
@@ -211,8 +230,8 @@ class SettingsDialog(wx.Dialog):
                                                       wx.ID_ANY,
                                                       "Schedule type"))
 
-        choices = ["Immediately", "Manually", "Once", "Daily", "Weekly",
-                   "Timer"]
+        choices = ["On Startup", "On Settings Saved", "Manually",
+                   "Once", "Daily", "Weekly", "Timer"]
         self.scheduleTypeComboBox = wx.ComboBox(self.scheduleTypePanel,
                                                 choices=choices,
                                                 style=wx.CB_READONLY)
@@ -331,7 +350,8 @@ class SettingsDialog(wx.Dialog):
                                           style=wx.SP_VERTICAL)
         self.fromTimeSpin.SetRange(-999, 999)
         self.Bind(wx.EVT_SPIN_UP, self.OnIncrementFromTime, self.fromTimeSpin)
-        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime, self.fromTimeSpin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnDecrementFromTime,
+                  self.fromTimeSpin)
         self.fromTimeEntryPanelSizer.Add(self.fromTimeSpin)
         self.fromTimeEntryPanel.SetSizerAndFit(self.fromTimeEntryPanelSizer)
         self.fromPanelSizer.Add(self.fromTimeEntryPanel)
@@ -418,7 +438,7 @@ class SettingsDialog(wx.Dialog):
 
         self.innerSchedulePanel.SetSizerAndFit(self.innerSchedulePanelSizer)
 
-        schedulePanelSizer = wx.FlexGridSizer(rows=1, cols=1)
+        schedulePanelSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
         schedulePanelSizer.Add(self.innerSchedulePanel,
                                flag=wx.ALL, border=20)
         self.schedulePanel.SetSizerAndFit(schedulePanelSizer)
@@ -427,9 +447,114 @@ class SettingsDialog(wx.Dialog):
 
         self.settingsTabsNotebook.AddPage(self.schedulePanel, "Schedule")
 
+        # Filters tab
+
+        self.filtersPanelSizer = wx.FlexGridSizer(rows=8, cols=3,
+                                                  vgap=5, hgap=5)
+        self.filtersPanel.SetSizer(self.filtersPanelSizer)
+        # self.filtersPanelSizer.AddGrowableCol(1)
+
+        # Add blank space above the settings fields. Our FlexGridSizer
+        # has 4 columns, so we'll add 4 units of blank space.  We don't
+        # care about the width (so we use -1), but we choose a height of
+        # 5px (plus the FlexGridSizer's default vgap).
+        self.filtersPanelSizer.Add(wx.Size(-1, 5))
+        self.filtersPanelSizer.Add(wx.Size(-1, 5))
+        self.filtersPanelSizer.Add(wx.Size(-1, 5))
+
+        self.userFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "User Group folder name contains:",
+                          style=wx.ST_NO_AUTORESIZE)
+        self.filtersPanelSizer.Add(self.userFolderFilterLabel,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.userFolderFilterField = wx.TextCtrl(self.filtersPanel,
+                                                 wx.ID_ANY, "")
+        if sys.platform.startswith("darwin"):
+            self.userFolderFilterField.SetMinSize(wx.Size(290, -1))
+        else:
+            self.userFolderFilterField.SetMinSize(wx.Size(265, -1))
+        self.filtersPanelSizer.Add(self.userFolderFilterField,
+                                   flag=wx.EXPAND | wx.ALL, border=5)
+        blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
+        self.filtersPanelSizer.Add(blankLine)
+
+        self.datasetFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "Dataset folder name contains:")
+        self.filtersPanelSizer.Add(self.datasetFolderFilterLabel,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.datasetFolderFilterField = wx.TextCtrl(self.filtersPanel,
+                                                    wx.ID_ANY, "")
+        if sys.platform.startswith("darwin"):
+            self.datasetFolderFilterField.SetMinSize(wx.Size(290, -1))
+        else:
+            self.datasetFolderFilterField.SetMinSize(wx.Size(265, -1))
+        self.filtersPanelSizer.Add(self.datasetFolderFilterField,
+                                   flag=wx.EXPAND | wx.ALL, border=5)
+        blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
+        self.filtersPanelSizer.Add(blankLine)
+
+        self.expFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "Experiment folder name contains:")
+        self.filtersPanelSizer.Add(self.expFolderFilterLabel,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.expFolderFilterField = wx.TextCtrl(self.filtersPanel,
+                                                wx.ID_ANY, "")
+        if sys.platform.startswith("darwin"):
+            self.expFolderFilterField.SetMinSize(wx.Size(290, -1))
+        else:
+            self.expFolderFilterField.SetMinSize(wx.Size(265, -1))
+        self.filtersPanelSizer.Add(self.expFolderFilterField,
+                                   flag=wx.EXPAND | wx.ALL, border=5)
+        blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
+        self.filtersPanelSizer.Add(blankLine)
+
+        self.ignoreDatasetsOlderThanCheckBox = \
+            wx.CheckBox(self.filtersPanel, wx.ID_ANY,
+                        "Ignore datasets older than:")
+        self.Bind(wx.EVT_CHECKBOX, self.OnIgnoreOldDatasetsCheckBox,
+                  self.ignoreDatasetsOlderThanCheckBox)
+        self.filtersPanelSizer.Add(self.ignoreDatasetsOlderThanCheckBox,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.ignoreIntervalPanel = wx.Panel(self.filtersPanel)
+        self.ignoreIntervalPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.ignoreIntervalPanel.SetSizer(self.ignoreIntervalPanelSizer)
+
+        self.ignoreDatasetsOlderThanSpinCtrl = \
+            wx.SpinCtrl(self.ignoreIntervalPanel, wx.ID_ANY,
+                        "999", min=0, max=999)
+        self.Bind(wx.EVT_SPINCTRL, self.OnIgnoreOldDatasetsSpinCtrl,
+                  self.ignoreDatasetsOlderThanSpinCtrl)
+        self.ignoreDatasetsOlderThanSpinCtrl.Enable(False)
+        self.ignoreIntervalPanelSizer.Add(self.ignoreDatasetsOlderThanSpinCtrl,
+                                          flag=wx.EXPAND | wx.ALL, border=5)
+        self.intervalUnitsPlural = ['days', 'weeks', 'months', 'years']
+        self.intervalUnitsSingular = ['day', 'week', 'month', 'year']
+        self.showingSingularUnits = False
+        self.intervalUnitsComboBox = \
+            wx.ComboBox(self.ignoreIntervalPanel, wx.ID_ANY,
+                        choices=self.intervalUnitsPlural, style=wx.CB_READONLY)
+        self.intervalUnitsComboBox.Enable(False)
+        self.ignoreIntervalPanelSizer.Add(self.intervalUnitsComboBox,
+                                          flag=wx.EXPAND | wx.ALL, border=5)
+
+        self.filtersPanelSizer.Add(self.ignoreIntervalPanel, flag=wx.EXPAND,
+                                   border=5)
+        self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
+                                                 wx.ID_ANY, ""))
+
+        self.filtersPanel.Fit()
+        self.settingsTabsNotebook.AddPage(self.filtersPanel, "Filters")
+
         # Advanced tab
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=7, cols=3,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -501,41 +626,6 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
-        self.ignoreDatasetsOlderThanCheckBox = \
-            wx.CheckBox(self.advancedPanel, wx.ID_ANY,
-                        "Ignore datasets older than:")
-        self.Bind(wx.EVT_CHECKBOX, self.OnIgnoreOldDatasetsCheckBox,
-                  self.ignoreDatasetsOlderThanCheckBox)
-        self.advancedPanelSizer.Add(self.ignoreDatasetsOlderThanCheckBox,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-
-        self.ignoreIntervalPanel = wx.Panel(self.advancedPanel)
-        self.ignoreIntervalPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.ignoreIntervalPanel.SetSizer(self.ignoreIntervalPanelSizer)
-
-        self.ignoreDatasetsOlderThanSpinCtrl = \
-            wx.SpinCtrl(self.ignoreIntervalPanel, wx.ID_ANY,
-                        "999", min=0, max=999)
-        self.Bind(wx.EVT_SPINCTRL, self.OnIgnoreOldDatasetsSpinCtrl,
-                  self.ignoreDatasetsOlderThanSpinCtrl)
-        self.ignoreDatasetsOlderThanSpinCtrl.Enable(False)
-        self.ignoreIntervalPanelSizer.Add(self.ignoreDatasetsOlderThanSpinCtrl,
-                                          flag=wx.EXPAND | wx.ALL, border=5)
-        self.intervalUnitsPlural = ['days', 'weeks', 'months', 'years']
-        self.intervalUnitsSingular = ['day', 'week', 'month', 'year']
-        self.showingSingularUnits = False
-        self.intervalUnitsComboBox = \
-            wx.ComboBox(self.ignoreIntervalPanel, wx.ID_ANY,
-                        choices=self.intervalUnitsPlural, style=wx.CB_READONLY)
-        self.intervalUnitsComboBox.Enable(False)
-        self.ignoreIntervalPanelSizer.Add(self.intervalUnitsComboBox,
-                                          flag=wx.EXPAND | wx.ALL, border=5)
-
-        self.advancedPanelSizer.Add(self.ignoreIntervalPanel, flag=wx.EXPAND,
-                                    border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
-
         maxUploadThreadsLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                               "Maximum # of upload threads:")
         self.advancedPanelSizer.Add(maxUploadThreadsLabel,
@@ -545,13 +635,47 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
-        self.maximumUploadThreadsSpinCtrl = \
+        self.maxUploadThreadsSpinCtrl = \
             wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
                         "5", min=1, max=99)
-        self.maxUploadThreadsPanelSizer.Add(self.maximumUploadThreadsSpinCtrl,
+        self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl,
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
                                     flag=wx.EXPAND, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        maxUploadRetriesLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                              "Maximum # of upload retries:")
+        self.advancedPanelSizer.Add(maxUploadRetriesLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.maxUploadRetriesPanel = wx.Panel(self.advancedPanel)
+        self.maxUploadRetriesPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.maxUploadRetriesPanel.SetSizer(self.maxUploadRetriesPanelSizer)
+
+        self.maxUploadRetriesSpinCtrl = \
+            wx.SpinCtrl(self.maxUploadRetriesPanel, wx.ID_ANY,
+                        "5", min=0, max=99)
+        self.maxUploadRetriesPanelSizer.Add(self.maxUploadRetriesSpinCtrl,
+                                            flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(self.maxUploadRetriesPanel,
+                                    flag=wx.EXPAND, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        startAutomaticallyOnLoginLabel = \
+            wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                          "Start automatically on login:")
+        self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.startAutomaticallyOnLoginCheckBox = \
+            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer\
+            .Add(self.startAutomaticallyOnLoginCheckBox,
+                 flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
 
         self.advancedPanel.Fit()
         self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
@@ -560,7 +684,8 @@ class SettingsDialog(wx.Dialog):
         self.settingsTabsNotebook\
             .SetMinSize(wx.Size(generalPanelSize.GetWidth(),
                                 generalPanelSize.height +
-                                self.settingsTabsNotebook.GetTabCtrlHeight()))
+                                self.settingsTabsNotebook
+                                .GetTabCtrlHeight()))
         self.dialogPanel.Fit()
 
         line = wx.StaticLine(self, wx.ID_ANY, size=(20, -1),
@@ -610,9 +735,26 @@ class SettingsDialog(wx.Dialog):
 
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure != \
-                'User Group / Instrument / Full Name / Dataset':
+                "User Group / Instrument / Full Name / Dataset":
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+
+        if "Experiment" not in folderStructure:
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
+
+        if folderStructure.startswith("Username"):
+            self.userFolderFilterLabel.SetLabel(
+                "  Username folder name contains:")
+        elif folderStructure.startswith("Email"):
+            self.userFolderFilterLabel.SetLabel(
+                "     Email folder name contains:")
+        elif folderStructure.startswith("User Group"):
+            self.userFolderFilterLabel.SetLabel(
+                "User Group folder name contains:")
+
+    # General tab
 
     def GetInstrumentName(self):
         return self.instrumentNameField.GetValue()
@@ -661,6 +803,8 @@ class SettingsDialog(wx.Dialog):
 
     def SetApiKey(self, apiKey):
         self.apiKeyField.SetValue(apiKey)
+
+    # Schedule tab
 
     def GetScheduleType(self):
         return self.scheduleTypeComboBox.GetValue()
@@ -745,6 +889,48 @@ class SettingsDialog(wx.Dialog):
     def SetTimerToTime(self, time):
         self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
 
+    # Filters tab
+
+    def GetUserFilter(self):
+        return self.userFolderFilterField.GetValue()
+
+    def SetUserFilter(self, userFilter):
+        self.userFolderFilterField.SetValue(userFilter)
+
+    def GetDatasetFilter(self):
+        return self.datasetFolderFilterField.GetValue()
+
+    def SetDatasetFilter(self, datasetFilter):
+        self.datasetFolderFilterField.SetValue(datasetFilter)
+
+    def GetExperimentFilter(self):
+        return self.expFolderFilterField.GetValue()
+
+    def SetExperimentFilter(self, experimentFilter):
+        self.expFolderFilterField.SetValue(experimentFilter)
+
+    def IgnoreOldDatasets(self):
+        return self.ignoreDatasetsOlderThanCheckBox.GetValue()
+
+    def SetIgnoreOldDatasets(self, ignoreOldDatasets):
+        self.ignoreDatasetsOlderThanCheckBox.SetValue(ignoreOldDatasets)
+
+    def GetIgnoreOldDatasetIntervalNumber(self):
+        return self.ignoreDatasetsOlderThanSpinCtrl.GetValue()
+
+    def SetIgnoreOldDatasetIntervalNumber(self,
+                                          ignoreOldDatasetIntervalNumber):
+        self.ignoreDatasetsOlderThanSpinCtrl\
+            .SetValue(ignoreOldDatasetIntervalNumber)
+
+    def GetIgnoreOldDatasetIntervalUnit(self):
+        return self.intervalUnitsComboBox.GetValue()
+
+    def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
+        self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
+
+    # Advanced tab
+
     def GetFolderStructure(self):
         return self.folderStructureComboBox.GetValue()
 
@@ -769,31 +955,24 @@ class SettingsDialog(wx.Dialog):
     def SetValidateFolderStructure(self, validateFolderStructure):
         self.validateFolderStructureCheckBox.SetValue(validateFolderStructure)
 
-    def IgnoreOldDatasets(self):
-        return self.ignoreDatasetsOlderThanCheckBox.GetValue()
-
-    def SetIgnoreOldDatasets(self, ignoreOldDatasets):
-        self.ignoreDatasetsOlderThanCheckBox.SetValue(ignoreOldDatasets)
-
-    def GetIgnoreOldDatasetIntervalNumber(self):
-        return self.ignoreDatasetsOlderThanSpinCtrl.GetValue()
-
-    def SetIgnoreOldDatasetIntervalNumber(self,
-                                          ignoreOldDatasetIntervalNumber):
-        self.ignoreDatasetsOlderThanSpinCtrl\
-            .SetValue(ignoreOldDatasetIntervalNumber)
-
-    def GetIgnoreOldDatasetIntervalUnit(self):
-        return self.intervalUnitsComboBox.GetValue()
-
-    def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
-        self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
-
     def GetMaxUploadThreads(self):
-        return self.maximumUploadThreadsSpinCtrl.GetValue()
+        return self.maxUploadThreadsSpinCtrl.GetValue()
 
     def SetMaxUploadThreads(self, numberOfThreads):
-        self.maximumUploadThreadsSpinCtrl.SetValue(numberOfThreads)
+        self.maxUploadThreadsSpinCtrl.SetValue(numberOfThreads)
+
+    def GetMaxUploadRetries(self):
+        return self.maxUploadRetriesSpinCtrl.GetValue()
+
+    def SetMaxUploadRetries(self, numberOfRetries):
+        self.maxUploadRetriesSpinCtrl.SetValue(numberOfRetries)
+
+    def StartAutomaticallyOnLogin(self):
+        return self.startAutomaticallyOnLoginCheckBox.GetValue()
+
+    def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
+        self.startAutomaticallyOnLoginCheckBox.SetValue(
+            startAutomaticallyOnLogin)
 
     def Locked(self):
         return self.lockOrUnlockButton.GetLabel() == "Unlock"
@@ -837,20 +1016,8 @@ class SettingsDialog(wx.Dialog):
                             settingsDialog=self,
                             settingsModel=self.settingsModel,
                             okEvent=event)
-
-        intervalSinceLastConnectivityCheck = \
-            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
-        # FIXME: Magic number of 30 seconds since last connectivity check.
-        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
-                not wx.GetApp().GetLastNetworkConnectivityCheckSuccess():
-            checkConnectivityEvent = \
-                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
-                                settingsModel=self.settingsModel,
-                                nextEvent=settingsDialogValidationEvent)
-            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
-        else:
-            wx.PostEvent(wx.GetApp().GetMainFrame(),
-                         settingsDialogValidationEvent)
+        wx.PostEvent(wx.GetApp().GetMainFrame(),
+                     settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:",
@@ -860,6 +1027,7 @@ class SettingsDialog(wx.Dialog):
             self.dataDirectoryField.SetValue(dlg.GetPath())
 
     def UpdateFieldsFromModel(self, settingsModel):
+        # General tab
         self.SetInstrumentName(settingsModel.GetInstrumentName())
         self.SetFacilityName(settingsModel.GetFacilityName())
         self.SetContactName(settingsModel.GetContactName())
@@ -869,6 +1037,7 @@ class SettingsDialog(wx.Dialog):
         self.SetUsername(settingsModel.GetUsername())
         self.SetApiKey(settingsModel.GetApiKey())
 
+        # Schedule tab
         self.SetScheduleType(settingsModel.GetScheduleType())
         self.SetMondayChecked(settingsModel.IsMondayChecked())
         self.SetTuesdayChecked(settingsModel.IsTuesdayChecked())
@@ -883,9 +1052,10 @@ class SettingsDialog(wx.Dialog):
         self.SetTimerFromTime(settingsModel.GetTimerFromTime())
         self.SetTimerToTime(settingsModel.GetTimerToTime())
 
-        self.SetFolderStructure(settingsModel.GetFolderStructure())
-        self.SetDatasetGrouping(settingsModel.GetDatasetGrouping())
-        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
+        # Filters tab
+        self.SetUserFilter(settingsModel.GetUserFilter())
+        self.SetDatasetFilter(settingsModel.GetDatasetFilter())
+        self.SetExperimentFilter(settingsModel.GetExperimentFilter())
         self.SetIgnoreOldDatasets(settingsModel.IgnoreOldDatasets())
         self.SetIgnoreOldDatasetIntervalNumber(
             settingsModel.GetIgnoreOldDatasetIntervalNumber())
@@ -905,9 +1075,17 @@ class SettingsDialog(wx.Dialog):
             self.showingSingularUnits = True
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
+
+        # Advanced tab
+        self.SetFolderStructure(settingsModel.GetFolderStructure())
+        self.SetDatasetGrouping(settingsModel.GetDatasetGrouping())
+        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
         self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
+        self.SetMaxUploadRetries(settingsModel.GetMaxUploadRetries())
         self.SetValidateFolderStructure(
             settingsModel.ValidateFolderStructure())
+        self.SetStartAutomaticallyOnLogin(
+            settingsModel.StartAutomaticallyOnLogin())
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
@@ -1005,6 +1183,9 @@ class SettingsDialog(wx.Dialog):
                 .SetValue("Instrument Name - Data Owner's Full Name")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
         elif folderStructure == \
                 'Username / "MyTardis" / Experiment / Dataset' or \
                 folderStructure == 'Username / Experiment / Dataset' or \
@@ -1012,11 +1193,26 @@ class SettingsDialog(wx.Dialog):
             self.datasetGroupingField.SetValue("Experiment")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+            self.expFolderFilterLabel.Show(True)
+            self.expFolderFilterField.Show(True)
         elif folderStructure == \
                 'User Group / Instrument / Full Name / Dataset':
             self.datasetGroupingField.SetValue("Instrument - Full Name")
             self.groupPrefixLabel.Show(True)
             self.groupPrefixField.Show(True)
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
+
+        if folderStructure.startswith("Username"):
+            self.userFolderFilterLabel.SetLabel(
+                "  Username folder name contains:")
+        elif folderStructure.startswith("Email"):
+            self.userFolderFilterLabel.SetLabel(
+                "     Email folder name contains:")
+        elif folderStructure.startswith("User Group"):
+            self.userFolderFilterLabel.SetLabel(
+                "User Group folder name contains:")
 
     def OnDropFiles(self, filepaths):
         if self.Locked():
@@ -1133,16 +1329,23 @@ class SettingsDialog(wx.Dialog):
         if enabled:
             self.OnScheduleTypeChange(None)
 
+        # Filters tab
+        self.userFolderFilterField.Enable(enabled)
+        self.datasetFolderFilterField.Enable(enabled)
+        self.expFolderFilterField.Enable(enabled)
+        self.ignoreDatasetsOlderThanCheckBox.Enable(enabled)
+        self.ignoreDatasetsOlderThanSpinCtrl\
+            .Enable(enabled)
+        self.intervalUnitsComboBox.Enable(enabled)
+
         # Advanced tab
         self.folderStructureComboBox.Enable(enabled)
         self.datasetGroupingField.Enable(enabled)
         self.groupPrefixField.Enable(enabled)
         self.validateFolderStructureCheckBox.Enable(enabled)
-        self.ignoreDatasetsOlderThanCheckBox.Enable(enabled)
-        self.ignoreDatasetsOlderThanSpinCtrl\
-            .Enable(enabled)
-        self.intervalUnitsComboBox.Enable(enabled)
-        self.maximumUploadThreadsSpinCtrl.Enable(enabled)
+        self.maxUploadThreadsSpinCtrl.Enable(enabled)
+        self.maxUploadRetriesSpinCtrl.Enable(enabled)
+        self.startAutomaticallyOnLoginCheckBox.Enable(enabled)
         self.Update()
 
     def DisableFields(self):
@@ -1153,6 +1356,9 @@ class SettingsDialog(wx.Dialog):
 
     def OnScheduleTypeChange(self, event):
         scheduleType = self.scheduleTypeComboBox.GetValue()
+        if scheduleType in ("On Startup", "On Settings Saved"):
+            self.SetScheduledDate(datetime.date(datetime.now()))
+            self.SetScheduledTime(datetime.time(datetime.now()))
         enableDaysOfWeekCheckBoxes = (scheduleType == "Weekly")
         self.mondayCheckBox.Enable(enableDaysOfWeekCheckBoxes)
         self.mondayCheckBox.Show(enableDaysOfWeekCheckBoxes)

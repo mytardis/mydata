@@ -74,7 +74,8 @@ if sys.platform.startswith("darwin"):
             CFBundleName=app_name,
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + mydata.__version__,
-            LSArchitecturePriority=["x86_64"]
+            LSArchitecturePriority=["x86_64"],
+            LSUIElement=True
             )
         )
     )
@@ -103,7 +104,7 @@ class CustomBuildCommand(build):
                 os.system(sys.executable +
                           r" .\pyinstaller\pyinstaller.py -y "
                           r"--name=MyData --icon=mydata\media\MyData.ico "
-                          r"--windowed run.py")
+                          r"--console --debug run.py")
             if exitCode != 0:
                 print "\nPyInstaller failed to build MyData.exe\n"
                 sys.exit(1)
@@ -156,14 +157,14 @@ class CustomBuildCommand(build):
 if sys.platform.startswith("darwin"):
     class CustomPy2appCommand(py2app):
         """
-        On Mac OS X, copy mydata-notifier into MyData.app bundle.
+        On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
         """
         def run(self):
             py2app.run(self)
-            shutil.copy("resources/macosx/mydata-notifier.app/Contents/MacOS"
-                        "/mydata-notifier", "dist/MyData.app/Contents/MacOS/")
+            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
+                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
             distutils.dir_util\
-                .copy_tree("resources/macosx/mydata-notifier.app/Contents"
+                .copy_tree("resources/macosx/MyData Notifications.app/Contents"
                            "/Resources/en.lproj",
                            "dist/MyData.app/Contents/Resources/en.lproj")
 
@@ -207,8 +208,8 @@ Name: "{pf}\{#MyDataAppName}\openssh-5.4p1-1-msys-1.0.13\home"; Permissions: "us
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
-;Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
-Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry; Parameters: "--background"
+;Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
+Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
             """.replace("<version>", mydata.__version__)
             with open("dist/MyData.iss", 'w') as innosetup_script_file:
                 innosetup_script_file.write(innosetup_script)

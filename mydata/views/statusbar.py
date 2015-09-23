@@ -47,12 +47,12 @@ class EnhancedStatusBarItem(object):
 
 class EnhancedStatusBar(wx.StatusBar):
 
-    def __init__(self, parent, id=wx.ID_ANY, style=wx.ST_SIZEGRIP,
+    def __init__(self, parent, id=wx.ID_ANY, style=wx.STB_SIZEGRIP,
                  name="EnhancedStatusBar"):
         """Default Class Constructor.
 
         EnhancedStatusBar.__init__(self, parent, id=wx.ID_ANY,
-                                   style=wx.ST_SIZEGRIP,
+                                   style=wx.STB_SIZEGRIP,
                                    name="EnhancedStatusBar")
         """
 
@@ -62,7 +62,7 @@ class EnhancedStatusBar(wx.StatusBar):
         self._curPos = 0
         self._parent = parent
 
-        wx.EVT_SIZE(self, self.OnSize)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         if threading.current_thread().name == "MainThread":
             self.OnSize(None)
         else:

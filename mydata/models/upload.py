@@ -165,6 +165,3 @@ class UploadModel():
 
     def IncrementRetries(self):
         self.retries += 1
-
-    def GetMaxRetries(self):
-        return 5  # FIXME: Magic number

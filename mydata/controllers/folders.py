@@ -34,6 +34,7 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
+from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
@@ -579,6 +580,10 @@ class FoldersController():
             message = "Data scans and uploads failed."
         elif self.Canceled():
             message = "Data scans and uploads were canceled."
+        elif self.uploadsModel.GetFailedCount() > 0:
+            message = \
+                "Data scans and uploads completed with " \
+                "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
         else:
@@ -1216,7 +1221,34 @@ class UploadDatafileRunnable():
                                            self.uploadModel)
                             except IOError, e:
                                 if self.uploadModel.GetRetries() < \
-                                        self.uploadModel.GetMaxRetries():
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
+                                    self.uploadModel.IncrementRetries()
+                                    logger.debug("Restarting upload for " +
+                                                 dataFilePath)
+                                    self.uploadModel.SetMessage(
+                                        "This file will be re-uploaded...")
+                                    self.uploadModel.SetProgress(0)
+                                    continue
+                                else:
+                                    raise
+                            except ScpException, e:
+                                if self.uploadModel.GetRetries() < \
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
+                                    self.uploadModel.IncrementRetries()
+                                    logger.debug("Restarting upload for " +
+                                                 dataFilePath)
+                                    self.uploadModel.SetMessage(
+                                        "This file will be re-uploaded...")
+                                    self.uploadModel.SetProgress(0)
+                                    continue
+                                else:
+                                    raise
+                            except SshException, e:
+                                if self.uploadModel.GetRetries() < \
+                                        self.settingsModel.GetMaxUploadRetries():
+                                    logger.warning(str(e))
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)

@@ -1,10 +1,9 @@
-import wx
-import wx.dataview
 import threading
 import os
 import sys
 import traceback
 from datetime import datetime
+from glob import glob
 
 from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
@@ -14,34 +13,20 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 
-
-# This model class provides the data to the view when it is asked for.
-# Since it is a list-only model (no hierachical data) then it is able
-# to be referenced by row rather than by item object, so in this way
-# it is easier to comprehend and use than other model types.  In this
-# example we also provide a Compare function to assist with sorting of
-# items in our model.  Notice that the data items in the data model
-# object don't ever change position due to a sort or column
-# reordering.  The view manages all of that and maps view rows and
-# columns to the model's rows and columns as needed.
-#
-# Our data is stored in a list of FolderModel objects.
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
-class FoldersModel(wx.dataview.PyDataViewIndexListModel):
+class FoldersModel(DataViewIndexListModel):
 
     def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
 
-        # Earlier prototypes loaded the last used folder view from an Sqlite
-        # database on disk, recording the folders which the user had
-        # previously dragged and dropped into the application.  Whereas now
-        # it scans the root data directory and constructs the folder list from
-        # scratch every time.
-
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.foldersData))
+        DataViewIndexListModel.__init__(self, len(self.foldersData))
 
         self.usersModel = usersModel
         self.groupsModel = groupsModel
@@ -381,8 +366,11 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def ScanForUserFolders(self, incrementProgressDialog, shouldAbort):
         dataDir = self.settingsModel.GetDataDirectory()
+        userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
         folderStructure = self.settingsModel.GetFolderStructure()
-        userFolderNames = os.walk(dataDir).next()[1]
+        filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
+        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        userFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for userFolderName in userFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
@@ -479,7 +467,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def ScanForGroupFolders(self, incrementProgressDialog, shouldAbort):
         dataDir = self.settingsModel.GetDataDirectory()
-        groupFolderNames = os.walk(dataDir).next()[1]
+        userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
+        filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
+        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        groupFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for groupFolderName in groupFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
@@ -523,7 +514,11 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         try:
             logger.debug("Scanning " + pathToScan +
                          " for dataset folders...")
-            datasetFolders = os.walk(pathToScan).next()[1]
+            datasetFilterString = \
+                '*%s*' % self.settingsModel.GetDatasetFilter()
+            filesDepth1 = glob(os.path.join(pathToScan, datasetFilterString))
+            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
                     datasetFolderPath = os.path.join(pathToScan,
@@ -587,16 +582,19 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
 
     def ScanForExperimentFolders(self, pathToScan, owner, userFolderName):
         """
-        Instead of looking for dataset folders as direct children of
-        the username folder, this method looks for dataset folders
-        structured in the following format:
-        <username>\mytardis\<experiment_title>\<dataset_name>
-
+        Scans for experiment folders.
         """
-        expFolders = os.walk(pathToScan).next()[1]
+        datasetFilterString = '*%s*' % self.settingsModel.GetDatasetFilter()
+        expFilterString = '*%s*' % self.settingsModel.GetExperimentFilter()
+        filesDepth1 = glob(os.path.join(pathToScan, expFilterString))
+        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        expFolders = [os.path.basename(d) for d in dirsDepth1]
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
-            datasetFolders = os.walk(expFolderPath).next()[1]
+            filesDepth1 = glob(os.path.join(expFolderPath,
+                                            datasetFilterString))
+            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
                     datasetFolderPath = os.path.join(expFolderPath,
@@ -633,7 +631,12 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
         try:
             logger.debug("Scanning " + groupFolderPath +
                          " for instrument folders...")
-            instrumentFolders = os.walk(groupFolderPath).next()[1]
+            datasetFilterString = \
+                '*%s*' % self.settingsModel.GetDatasetFilter()
+            instrumentName = self.settingsModel.GetInstrumentName()
+            filesDepth1 = glob(os.path.join(groupFolderPath, instrumentName))
+            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            instrumentFolders = [os.path.basename(d) for d in dirsDepth1]
 
             if len(instrumentFolders) > 1:
                 message = "Multiple instrument folders found in %s" \
@@ -675,7 +678,10 @@ class FoldersModel(wx.dataview.PyDataViewIndexListModel):
                                               userFolderName)
                 logger.debug("Scanning " + userFolderPath +
                              " for dataset folders...")
-                datasetFolders = os.walk(userFolderPath).next()[1]
+                filesDepth1 = glob(os.path.join(userFolderPath,
+                                                datasetFilterString))
+                dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+                datasetFolders = [os.path.basename(d) for d in dirsDepth1]
                 for datasetFolderName in datasetFolders:
                     if self.ignoreOldDatasets:
                         datasetFolderPath = os.path.join(userFolderPath,

@@ -27,6 +27,18 @@ EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE = wx.NewId()
 EVT_START_DATA_UPLOADS = wx.NewId()
 
 
+def endBusyCursorIfRequired(event):
+    try:
+        wx.EndBusyCursor()
+        if hasattr(event, "settingsDialog"):
+            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
+    except wx._core.PyAssertionError, e:
+        if "no matching wxBeginBusyCursor()" not in str(e):
+            logger.error(str(e))
+            raise
+
+
 class MyDataEvents():
     def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
@@ -109,15 +121,7 @@ class MyDataEvent(wx.PyCommandEvent):
                                                wx.OK | wx.ICON_ERROR)
                         dlg.ShowModal()
                     wx.CallAfter(showErrorDialog, message)
-
-            def endBusyCursorIfRequired():
-                try:
-                    wx.EndBusyCursor()
-                except wx._core.PyAssertionError, e:
-                    if "no matching wxBeginBusyCursor()" not in str(e):
-                        logger.error(str(e))
-                        raise
-            wx.CallAfter(endBusyCursorIfRequired)
+            wx.CallAfter(endBusyCursorIfRequired, event)
             if len(activeNetworkInterfaces) > 0:
                 logger.debug("Found at least one active network interface: %s."
                              % activeNetworkInterfaces[0])
@@ -233,18 +237,11 @@ class MyDataEvent(wx.PyCommandEvent):
                     event.oldInstrumentName,
                     event.newInstrumentName)
 
-                def endBusyCursorIfRequired():
-                    try:
-                        wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, e:
-                        if "no matching wxBeginBusyCursor()" not in str(e):
-                            logger.error(str(e))
-                            raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(endBusyCursorIfRequired, event)
                 if hasattr(event, "nextEvent"):
                     wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             except DuplicateKey:
-                wx.CallAfter(wx.EndBusyCursor)
+                wx.CallAfter(endBusyCursorIfRequired, event)
 
                 def notifyUserOfDuplicateInstrumentName():
                     message = "Instrument name \"%s\" already exists in " \
@@ -289,20 +286,35 @@ class MyDataEvent(wx.PyCommandEvent):
                     but it doesn't always work on Windows.
                     """
                     busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
-                    wx.CallAfter(event.settingsDialog.SetCursor, busyCursor)
+                    wx.CallAfter(event.settingsDialog.dialogPanel.SetCursor,
+                                 busyCursor)
                 event.settingsDialog.okButton.Disable()
-                settingsModel.Validate()
 
-                def endBusyCursorIfRequired():
-                    try:
-                        wx.EndBusyCursor()
-                        arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-                        event.settingsDialog.SetCursor(arrowCursor)
-                    except wx._core.PyAssertionError, e:
-                        if "no matching wxBeginBusyCursor()" not in str(e):
-                            logger.error(str(e))
-                            raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                intervalSinceLastConnCheck = datetime.now() - \
+                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
+                # FIXME: Magic number of 30 secs since last connectivity check.
+                if intervalSinceLastConnCheck.total_seconds() >= 30 or \
+                        not wx.GetApp()\
+                        .GetLastNetworkConnectivityCheckSuccess():
+                    settingsDialogValidationEvent = \
+                        MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
+                                    settingsDialog=event.settingsDialog,
+                                    settingsModel=settingsModel,
+                                    okEvent=event)
+                    checkConnectivityEvent = \
+                        MyDataEvent(EVT_CHECK_CONNECTIVITY,
+                                    settingsDialog=event.settingsDialog,
+                                    settingsModel=settingsModel,
+                                    nextEvent=settingsDialogValidationEvent)
+                    wx.PostEvent(wx.GetApp().GetMainFrame(),
+                                 checkConnectivityEvent)
+                    return
+
+                def SetStatusMessage(message):
+                    wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                                 message)
+                settingsModel.Validate(SetStatusMessage)
+                wx.CallAfter(endBusyCursorIfRequired, event)
                 if settingsModel.IsIncompatibleMyTardisVersion():
                     event.settingsDialog.okButton.Enable()
                     return
@@ -315,19 +327,14 @@ class MyDataEvent(wx.PyCommandEvent):
             except IncompatibleMyTardisVersion as e:
                 logger.debug("Finished running settingsModel.Validate() 3")
 
-                def endBusyCursorIfRequired():
-                    try:
-                        wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, e:
-                        if "no matching wxBeginBusyCursor()" not in str(e):
-                            logger.error(str(e))
-                            raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(endBusyCursorIfRequired, event)
 
                 def showDialog(message):
                     logger.error(message)
                     try:
                         wx.EndBusyCursor()
+                        arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+                        event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
                     except wx._core.PyAssertionError, e:
                         if "no matching wxBeginBusyCursor()" \
                                 not in str(e):
@@ -339,7 +346,9 @@ class MyDataEvent(wx.PyCommandEvent):
                 message = str(e)
                 wx.CallAfter(showDialog, message)
             finally:
-                event.settingsDialog.okButton.Enable()
+                wx.CallAfter(event.settingsDialog.okButton.Enable)
+                wx.CallAfter(endBusyCursorIfRequired, event)
+
             logger.debug("Finished running settingsModel.Validate() 4")
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
@@ -352,6 +361,11 @@ class MyDataEvent(wx.PyCommandEvent):
         logger.debug("Started thread %s" % thread.name)
 
     def ProvideSettingsValidationResults(event):
+        """
+        Only called after settings dialog has been shown.
+        Not called if settings validation was triggered by
+        a background task.
+        """
         if event.id != EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS:
             event.Skip()
             return
@@ -424,6 +438,8 @@ class MyDataEvent(wx.PyCommandEvent):
                 event.settingsDialog.timeCtrl.SetFocus()
             logger.debug("Settings were not valid, so Settings dialog "
                          "should remain visible.")
+            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
             return
 
         if event.settingsModel.IgnoreOldDatasets():
@@ -443,13 +459,12 @@ class MyDataEvent(wx.PyCommandEvent):
                    "datasets" if numDatasets != 1 else "dataset",
                    event.settingsDialog.GetDataDirectory(),
                    intervalIfUsed)
-            if not event.settingsModel.RunningInBackgroundMode():
-                confirmationDialog = \
-                    wx.MessageDialog(None, message, "MyData",
-                                     wx.YES | wx.NO | wx.ICON_QUESTION)
-                okToContinue = confirmationDialog.ShowModal()
-                if okToContinue != wx.ID_YES:
-                    return
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+            okToContinue = confirmationDialog.ShowModal()
+            if okToContinue != wx.ID_YES:
+                return
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
@@ -487,21 +502,15 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
+                wx.GetApp().tasksModel.DeleteAllRows()
+                wx.GetApp().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
                 shutdownForRefreshCompleteEvent = MyDataEvent(
                     EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
                     shutdownSuccessful=True)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              shutdownForRefreshCompleteEvent)
-
-                def endBusyCursorIfRequired():
-                    try:
-                        wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, e:
-                        if "no matching wxBeginBusyCursor()" not in str(e):
-                            logger.error(str(e))
-                            raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(endBusyCursorIfRequired, event)
             except:
                 logger.debug(traceback.format_exc())
                 message = "An error occurred while trying to shut down " \
@@ -561,15 +570,7 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
             wx.GetApp().SetPerformingLookupsAndUploads(True)
             event.foldersController.StartDataUploads()
-
-            def endBusyCursorIfRequired():
-                try:
-                    wx.EndBusyCursor()
-                except wx._core.PyAssertionError, e:
-                    if "no matching wxBeginBusyCursor()" not in str(e):
-                        logger.error(str(e))
-                        raise
-            wx.CallAfter(endBusyCursorIfRequired)
+            wx.CallAfter(endBusyCursorIfRequired, event)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
