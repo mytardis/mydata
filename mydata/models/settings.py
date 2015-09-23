@@ -23,6 +23,15 @@ from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
+defaultStartupInfo = None
+defaultCreationFlags = 0
+if sys.platform.startswith("win"):
+    defaultStartupInfo = subprocess.STARTUPINFO()
+    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    import win32process
+    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+
 
 class LastSettingsUpdateTrigger:
     READ_FROM_DISK = 0
@@ -948,7 +957,9 @@ End If
                 logger.info("Checking for MyData shortcut in user "
                             "startup items.")
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, shell=False)
+                                        stderr=subprocess.STDOUT, shell=False,
+                                        startupinfo=defaultStartupInfo,
+                                        creationflags=defaultCreationFlags)
                 output, _ = proc.communicate()
                 shortcutInStartupItems = (proc.returncode == 0)
                 if shortcutInStartupItems:
@@ -968,7 +979,9 @@ End If
                 logger.info("Checking for MyData shortcut in common "
                             "startup items.")
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, shell=False)
+                                        stderr=subprocess.STDOUT, shell=False,
+                                        startupinfo=defaultStartupInfo,
+                                        creationflags=defaultCreationFlags)
                 output, _ = proc.communicate()
                 shortcutInCommonStartupItems = (proc.returncode == 0)
                 if shortcutInCommonStartupItems:
@@ -1009,7 +1022,9 @@ oLink.Save
                                 "startup items.")
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
-                                            shell=False)
+                                            shell=False,
+                                            startupinfo=defaultStartupInfo,
+                                            creationflags=defaultCreationFlags)
                     output, _ = proc.communicate()
                     success = (proc.returncode == 0)
                     if not success:
@@ -1035,7 +1050,9 @@ oFS.DeleteFile sLinkFile
                     cmd = ['cscript', '//Nologo', vbScript.name]
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
-                                            shell=False)
+                                            shell=False,
+                                            startupinfo=defaultStartupInfo,
+                                            creationflags=defaultCreationFlags)
                     output, _ = proc.communicate()
                     success = (proc.returncode == 0)
                     if not success:
