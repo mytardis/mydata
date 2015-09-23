@@ -1,22 +1,24 @@
-import wx.dataview
 import os
 import threading
 
 from mydata.models.group import GroupModel
 from mydata.logs import logger
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-class GroupsModel(wx.dataview.PyDataViewIndexListModel):
 
+class GroupsModel(DataViewIndexListModel):
     def __init__(self, settingsModel):
-
         self.settingsModel = settingsModel
         self.foldersModel = None
 
         self.groupsData = list()
 
-        wx.dataview.PyDataViewIndexListModel.__init__(self,
-                                                      len(self.groupsData))
+        DataViewIndexListModel.__init__(self, len(self.groupsData))
 
         self.unfilteredGroupsData = self.groupsData
         self.filteredGroupsData = list()

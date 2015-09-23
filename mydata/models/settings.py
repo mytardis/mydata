@@ -2,13 +2,17 @@ import json
 import sys
 import requests
 import traceback
+import subprocess
 import os
+import psutil
+import getpass
 from glob import glob
 from ConfigParser import ConfigParser
 from validate_email import validate_email
 from datetime import datetime
 from datetime import timedelta
 import threading
+import tempfile
 
 from mydata.logs import logger
 from mydata.models.user import UserModel
@@ -18,6 +22,11 @@ from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
+
+
+class LastSettingsUpdateTrigger:
+    READ_FROM_DISK = 0
+    UI_RESPONSE = 1
 
 
 class SettingsValidation():
@@ -49,14 +58,15 @@ class SettingsModel():
     def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
-        self.background_mode = "False"
-
         self.uploaderModel = None
         self.uploadToStagingRequest = None
         self.sshKeyPair = None
 
         self.validation = SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
+
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
 
         self.LoadSettings()
 
@@ -66,6 +76,7 @@ class SettingsModel():
         file,
         e.g. C:\Users\jsmith\AppData\Local\Monash University\MyData\MyData.cfg
         """
+        # General tab
         self.instrument_name = ""
         self.instrument = None
         self.facility_name = ""
@@ -77,7 +88,8 @@ class SettingsModel():
         self.username = ""
         self.api_key = ""
 
-        self.schedule_type = "Immediately"
+        # Schedule tab
+        self.schedule_type = "Manually"
         self.monday_checked = False
         self.tuesday_checked = False
         self.wednesday_checked = False
@@ -89,21 +101,29 @@ class SettingsModel():
             datetime.date(datetime.now())
         self.scheduled_time = \
             datetime.time(datetime.now().replace(microsecond=0) +
-            timedelta(minutes=1))
+                          timedelta(minutes=1))
         self.timer_minutes = 15
         self.timer_from_time = \
             datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
         self.timer_to_time = \
             datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
 
-        self.folder_structure = "Username / Dataset"
-        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
-        self.group_prefix = ""
+        # Filters tab
+        self.user_filter = ""
+        self.dataset_filter = ""
+        self.experiment_filter = ""
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
+
+        # Advanced tab
+        self.folder_structure = "Username / Dataset"
+        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
+        self.group_prefix = ""
         self.max_upload_threads = 5
+        self.max_upload_retries = 5
         self.validate_folder_structure = True
+        self.start_automatically_on_login = True
 
         self.locked = False
 
@@ -126,10 +146,13 @@ class SettingsModel():
                           "friday_checked", "saturday_checked",
                           "sunday_checked", "scheduled_date", "scheduled_time",
                           "timer_minutes", "timer_from_time", "timer_to_time",
+                          "user_filter", "dataset_filter", "experiment_filter",
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "validate_folder_structure", "locked", "uuid"]
+                          "max_upload_retries",
+                          "validate_folder_structure", "locked", "uuid",
+                          "start_automatically_on_login"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -150,10 +173,20 @@ class SettingsModel():
                         configParser.getint(configFileSection,
                                             "max_upload_threads")
                 if configParser.has_option(configFileSection,
+                                           "max_upload_retries"):
+                    self.max_upload_retries = \
+                        configParser.getint(configFileSection,
+                                            "max_upload_retries")
+                if configParser.has_option(configFileSection,
                                            "validate_folder_structure"):
                     self.validate_folder_structure = \
                         configParser.getboolean(configFileSection,
                                                 "validate_folder_structure")
+                if configParser.has_option(configFileSection,
+                                           "start_automatically_on_login"):
+                    self.start_automatically_on_login = \
+                        configParser.getboolean(configFileSection,
+                                                "start_automatically_on_login")
                 if configParser.has_option(configFileSection,
                                            "locked"):
                     self.locked = configParser.getboolean(configFileSection,
@@ -172,43 +205,56 @@ class SettingsModel():
                     self.scheduled_time = datetime.strptime(timestring,
                                                             "%H:%M:%S")
                     self.scheduled_time = datetime.time(self.scheduled_time)
-                if self.scheduled_date < datetime.date(datetime.now()):
-                    self.scheduled_date = datetime.date(datetime.now())
-                    self.scheduled_time = \
-                        datetime.time(datetime.now().replace(microsecond=0))
-                if self.scheduled_date == datetime.date(datetime.now()) and \
-                        self.scheduled_time < datetime.time(datetime.now()):
-                    self.scheduled_time = \
-                        datetime.time(datetime.now().replace(microsecond=0) +
-                        timedelta(minutes=1))
-                if configParser.has_option(configFileSection,
-                                           "timer_minutes"):
-                    self.timer_minutes = \
-                        configParser.getint(configFileSection,
-                                            "timer_minutes")
-                if configParser.has_option(configFileSection,
-                                           "timer_from_time"):
-                    timestring = configParser.get(configFileSection,
-                                                  "timer_from_time")
-                    self.timer_from_time = datetime.strptime(timestring,
-                                                             "%H:%M:%S")
-                    self.timer_from_time = datetime.time(self.timer_from_time)
-                if configParser.has_option(configFileSection,
-                                           "timer_to_time"):
-                    timestring = configParser.get(configFileSection,
-                                                  "timer_to_time")
-                    self.timer_to_time = datetime.strptime(timestring,
-                                                           "%H:%M:%S")
+                if self.schedule_type == "Timer":
+                    if configParser.has_option(configFileSection,
+                                               "timer_minutes"):
+                        self.timer_minutes = \
+                            configParser.getint(configFileSection,
+                                                "timer_minutes")
+                    if configParser.has_option(configFileSection,
+                                               "timer_from_time"):
+                        timestring = configParser.get(configFileSection,
+                                                      "timer_from_time")
+                        self.timer_from_time = datetime.strptime(timestring,
+                                                                 "%H:%M:%S")
+                        self.timer_from_time = \
+                            datetime.time(self.timer_from_time)
+                    if configParser.has_option(configFileSection,
+                                               "timer_to_time"):
+                        timestring = configParser.get(configFileSection,
+                                                      "timer_to_time")
+                        self.timer_to_time = datetime.strptime(timestring,
+                                                               "%H:%M:%S")
                     self.timer_to_time = datetime.time(self.timer_to_time)
-                for day in ["monday_checked", "tuesday_checked",
-                            "wednesday_checked", "thursday_checked",
-                            "friday_checked", "saturday_checked",
-                            "sunday_checked"]:
-                    if configParser.has_option(configFileSection, day):
-                        self.__dict__[day] = \
-                            configParser.getboolean(configFileSection, day)
+                else:
+                    self.timer_minutes = 15
+                    self.timer_from_time = \
+                        datetime.time(datetime.strptime("12:00 AM",
+                                                        "%I:%M %p"))
+                    self.timer_to_time = \
+                        datetime.time(datetime.strptime("11:59 PM",
+                                                        "%I:%M %p"))
+                if self.schedule_type == "Weekly":
+                    for day in ["monday_checked", "tuesday_checked",
+                                "wednesday_checked", "thursday_checked",
+                                "friday_checked", "saturday_checked",
+                                "sunday_checked"]:
+                        if configParser.has_option(configFileSection, day):
+                            self.__dict__[day] = \
+                                configParser.getboolean(configFileSection, day)
+                else:
+                    self.monday_checked = False
+                    self.tuesday_checked = False
+                    self.wednesday_checked = False
+                    self.thursday_checked = False
+                    self.friday_checked = False
+                    self.saturday_checked = False
+                    self.sunday_checked = False
             except:
                 logger.error(traceback.format_exc())
+
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
 
     def GetInstrument(self):
         if self.instrument is None:
@@ -231,6 +277,15 @@ class SettingsModel():
         return self.facility_name
 
     def GetFacility(self):
+        if not self.facility:
+            try:
+                facilities = FacilityModel.GetMyFacilities(self)
+                for f in facilities:
+                    if self.GetFacilityName() == f.GetName():
+                        self.facility = f
+                        break
+            except:
+                logger.error(traceback.format_exc())
         return self.facility
 
     def SetFacilityName(self, facilityName):
@@ -373,6 +428,12 @@ class SettingsModel():
     def SetValidateFolderStructure(self, validateFolderStructure):
         self.validate_folder_structure = validateFolderStructure
 
+    def StartAutomaticallyOnLogin(self):
+        return self.start_automatically_on_login
+
+    def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
+        self.start_automatically_on_login = startAutomaticallyOnLogin
+
     def Locked(self):
         return self.locked
 
@@ -390,6 +451,24 @@ class SettingsModel():
 
     def SetGroupPrefix(self, groupPrefix):
         self.group_prefix = groupPrefix
+
+    def GetUserFilter(self):
+        return self.user_filter
+
+    def SetUserFilter(self, userFilter):
+        self.user_filter = userFilter
+
+    def GetDatasetFilter(self):
+        return self.dataset_filter
+
+    def SetDatasetFilter(self, datasetFilter):
+        self.dataset_filter = datasetFilter
+
+    def GetExperimentFilter(self):
+        return self.experiment_filter
+
+    def SetExperimentFilter(self, experimentFilter):
+        self.experiment_filter = experimentFilter
 
     def IgnoreOldDatasets(self):
         return self.ignore_old_datasets
@@ -416,17 +495,17 @@ class SettingsModel():
     def SetMaxUploadThreads(self, maxUploadThreads):
         self.max_upload_threads = maxUploadThreads
 
-    def RunningInBackgroundMode(self):
-        return self.background_mode
+    def GetMaxUploadRetries(self):
+        return self.max_upload_retries
+
+    def SetMaxUploadRetries(self, maxUploadRetries):
+        self.max_upload_retries = maxUploadRetries
 
     def GetUuid(self):
         return self.uuid
 
     def SetUuid(self, uuid):
         self.uuid = uuid
-
-    def SetBackgroundMode(self, backgroundMode):
-        self.background_mode = backgroundMode
 
     def GetUploadToStagingRequest(self):
         return self.uploadToStagingRequest
@@ -484,11 +563,14 @@ class SettingsModel():
                       "friday_checked", "saturday_checked",
                       "sunday_checked", "scheduled_date", "scheduled_time",
                       "timer_minutes", "timer_from_time", "timer_to_time",
+                      "user_filter", "dataset_filter", "experiment_filter",
                       "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit", "max_upload_threads",
-                      "validate_folder_structure", "locked", "uuid"]
+                      "max_upload_retries",
+                      "validate_folder_structure", "locked", "uuid",
+                      "start_automatically_on_login"]
             for field in fields:
                 configParser.set("MyData", field, self.__dict__[field])
             configParser.write(configFile)
@@ -498,6 +580,7 @@ class SettingsModel():
                              saveToDisk=True):
         if configPath is None:
             configPath = self.GetConfigPath()
+        # General tab
         self.SetInstrumentName(settingsDialog.GetInstrumentName())
         self.SetFacilityName(settingsDialog.GetFacilityName())
         self.SetMyTardisUrl(settingsDialog.GetMyTardisUrl())
@@ -507,6 +590,7 @@ class SettingsModel():
         self.SetUsername(settingsDialog.GetUsername())
         self.SetApiKey(settingsDialog.GetApiKey())
 
+        # Schedule tab
         self.SetScheduleType(settingsDialog.GetScheduleType())
         self.SetMondayChecked(settingsDialog.IsMondayChecked())
         self.SetTuesdayChecked(settingsDialog.IsTuesdayChecked())
@@ -521,23 +605,36 @@ class SettingsModel():
         self.SetTimerFromTime(settingsDialog.GetTimerFromTime())
         self.SetTimerToTime(settingsDialog.GetTimerToTime())
 
-        self.SetFolderStructure(settingsDialog.GetFolderStructure())
-        self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
-        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
+        # Filters tab
+        self.SetUserFilter(settingsDialog.GetUserFilter())
+        self.SetDatasetFilter(settingsDialog.GetDatasetFilter())
+        self.SetExperimentFilter(settingsDialog.GetExperimentFilter())
         self.SetIgnoreOldDatasets(settingsDialog.IgnoreOldDatasets())
         self.SetIgnoreOldDatasetIntervalNumber(
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
+        self.SetMaxUploadRetries(settingsDialog.GetMaxUploadRetries())
+
+        # Advanced tab
+        self.SetFolderStructure(settingsDialog.GetFolderStructure())
+        self.SetDatasetGrouping(settingsDialog.GetDatasetGrouping())
+        self.SetGroupPrefix(settingsDialog.GetGroupPrefix())
         self.SetValidateFolderStructure(
             settingsDialog.ValidateFolderStructure())
+        self.SetStartAutomaticallyOnLogin(
+            settingsDialog.StartAutomaticallyOnLogin())
+
         self.SetLocked(settingsDialog.Locked())
 
         if saveToDisk:
             self.SaveToDisk(configPath)
 
-    def Validate(self):
+        self.last_settings_update_trigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
+
+    def Validate(self, SetStatusMessage=None):
         datasetCount = -1
         try:
             if self.GetInstrumentName().strip() == "":
@@ -598,14 +695,20 @@ class SettingsModel():
                 return self.validation
 
             if self.ValidateFolderStructure():
+                if SetStatusMessage:
+                    SetStatusMessage(
+                        "Settings validation - checking folder structure...")
                 self.validation = self.PerformFolderStructureValidation()
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
             try:
+                if SetStatusMessage:
+                    SetStatusMessage(
+                        "Settings validation - checking MyTardis URL...")
                 session = requests.Session()
-                r = session.get(self.GetMyTardisUrl() + "/about/")
+                r = session.get(self.GetMyTardisUrl() + "/about/", timeout=5)
                 status_code = r.status_code
                 content = r.text
                 history = r.history
@@ -689,6 +792,9 @@ class SettingsModel():
             Here we perform a rather arbitrary query, just to test
             whether our MyTardis credentials work OK with the API.
             """
+            if SetStatusMessage:
+                SetStatusMessage(
+                     "Settings validation - checking MyTardis credentials...")
             url = self.GetMyTardisUrl() + \
                 "/api/v1/user/?format=json&username=" + self.GetUsername()
             headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
@@ -712,6 +818,9 @@ class SettingsModel():
             if status_code < 200 or status_code >= 300:
                 return invalid_user()
 
+            if SetStatusMessage:
+                SetStatusMessage(
+                    "Settings validation - checking MyTardis facility...")
             if self.GetFacilityName().strip() == "":
                 message = "Please enter a valid facility name."
                 suggestion = None
@@ -804,6 +913,179 @@ class SettingsModel():
                             SettingsValidation(False, message,
                                                "data_directory")
                         return self.validation
+
+            if SetStatusMessage:
+                SetStatusMessage(
+                    "Settings validation - "
+                    "checking if MyData is set to start automatically...")
+            logger.warning("This auto-start on login stuff shouldn't really "
+                           "be in settings validation.  I just put it here "
+                           "temporarily to ensure it doesn't run in the "
+                           "main thread.")
+            if sys.platform.startswith("win"):
+                # Check for MyData shortcut(s) in startup folder(s).
+
+                with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
+                        as vbScript:
+                    script = r"""
+set objShell = CreateObject("WScript.Shell")
+startupFolder = objShell.SpecialFolders("Startup")
+path = startupFolder & "\" & "MyData.lnk"
+
+Set fso = CreateObject("Scripting.FileSystemObject")
+If (fso.FileExists(path)) Then
+   msg = path & " exists."
+   Wscript.Echo(msg)
+   Wscript.Quit(0)
+Else
+   msg = path & " doesn't exist."
+   Wscript.Echo(msg)
+   Wscript.Quit(1)
+End If
+                    """
+                    vbScript.write(script)
+                cmd = ['cscript', '//Nologo', vbScript.name]
+                logger.info("Checking for MyData shortcut in user "
+                            "startup items.")
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, shell=False)
+                output, _ = proc.communicate()
+                shortcutInStartupItems = (proc.returncode == 0)
+                if shortcutInStartupItems:
+                    logger.info("Found MyData shortcut in user startup items.")
+                else:
+                    logger.info("Didn't find MyData shortcut in user "
+                                "startup items.")
+                try:
+                    os.unlink(vbScript.name)
+                except:
+                    logger.error(traceback.format_exc())
+                with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
+                        as vbScript:
+                    script = script.replace("Startup", "AllUsersStartup")
+                    vbScript.write(script)
+                cmd = ['cscript', '//Nologo', vbScript.name]
+                logger.info("Checking for MyData shortcut in common "
+                            "startup items.")
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, shell=False)
+                output, _ = proc.communicate()
+                shortcutInCommonStartupItems = (proc.returncode == 0)
+                if shortcutInCommonStartupItems:
+                    logger.info("Found MyData shortcut in common "
+                                "startup items.")
+                else:
+                    logger.info("Didn't find MyData shortcut in common "
+                                "startup items.")
+                try:
+                    os.unlink(vbScript.name)
+                except:
+                    logger.error(traceback.format_exc())
+                if (shortcutInStartupItems or shortcutInCommonStartupItems) \
+                        and self.StartAutomaticallyOnLogin():
+                    logger.info("MyData is already set to start automatically "
+                                "on login.")
+                elif (not shortcutInStartupItems and
+                      not shortcutInCommonStartupItems) and \
+                        self.StartAutomaticallyOnLogin():
+                    logger.info("Adding MyData shortcut to startup items.")
+                    pathToMyDataExe = \
+                        r"C:\Program Files (x86)\MyData\MyData.exe"
+                    if hasattr(sys, "frozen"):
+                        pathToMyDataExe = os.path.realpath(r'.\MyData.exe')
+                    with tempfile.NamedTemporaryFile(suffix='.vbs',
+                                                     delete=False) as vbScript:
+                        script = r"""
+Set oWS = WScript.CreateObject("WScript.Shell")
+startupFolder = oWS.SpecialFolders("Startup")
+sLinkFile = startupFolder & "\" & "MyData.lnk"
+Set oLink = oWS.CreateShortcut(sLinkFile)
+oLink.TargetPath = "%s"
+oLink.Save
+                        """ % pathToMyDataExe
+                        vbScript.write(script)
+                    cmd = ['cscript', '//Nologo', vbScript.name]
+                    logger.info("Adding MyData shortcut to user "
+                                "startup items.")
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=False)
+                    output, _ = proc.communicate()
+                    success = (proc.returncode == 0)
+                    if not success:
+                        logger.error(output)
+                    try:
+                        os.unlink(vbScript.name)
+                    except:
+                        logger.error(traceback.format_exc())
+                elif (shortcutInStartupItems or
+                      shortcutInCommonStartupItems) and \
+                        not self.StartAutomaticallyOnLogin():
+                    logger.info("Removing MyData from login items.")
+                    with tempfile.NamedTemporaryFile(suffix='.vbs',
+                                                     delete=False) as vbScript:
+                        script = r"""
+Set oWS = WScript.CreateObject("WScript.Shell")
+Set oFS = CreateObject("Scripting.FileSystemObject")
+startupFolder = oWS.SpecialFolders("Startup")
+sLinkFile = startupFolder & "\" & "MyData.lnk"
+oFS.DeleteFile sLinkFile
+                        """
+                        vbScript.write(script)
+                    cmd = ['cscript', '//Nologo', vbScript.name]
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=False)
+                    output, _ = proc.communicate()
+                    success = (proc.returncode == 0)
+                    if not success:
+                        logger.error(output)
+                    try:
+                        os.unlink(vbScript.name)
+                    except:
+                        logger.error(traceback.format_exc())
+
+            elif sys.platform.startswith("darwin"):
+                # Update ~/Library/Preferences/com.apple.loginitems.plist
+                # cfprefsd can cause unwanted caching.
+                # It will automatically respawn when needed.
+                for proc in psutil.process_iter():
+                    if proc.name() == "cfprefsd" and \
+                            proc.username() == getpass.getuser():
+                        proc.kill()
+                applescript = \
+                    'tell application "System Events" ' \
+                    'to get the name of every login item'
+                cmd = "osascript -e '%s'" % applescript
+                loginItemsString = subprocess.check_output(cmd, shell=True)
+                loginItems = [item.strip() for item in
+                              loginItemsString.split(',')]
+                logger.info("Current login items: " + str(loginItems))
+                if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
+                    logger.info("MyData is already set to start automatically "
+                                "on login.")
+                elif 'MyData' not in loginItems and \
+                        self.StartAutomaticallyOnLogin():
+                    logger.info("Adding MyData to login items.")
+                    pathToMyDataApp = "/Applications/MyData.app"
+                    if hasattr(sys, "frozen"):
+                        # Working directory in py2app bundle is
+                        # MyData.app/Contents/Resources/
+                        pathToMyDataApp = os.path.realpath('../..')
+                    applescript = \
+                        'tell application "System Events" ' \
+                        'to make login item at end with properties ' \
+                        '{path:"%s", hidden:false}' % pathToMyDataApp
+                    cmd = "osascript -e '%s'" % applescript
+                    returncode = subprocess.call(cmd, shell=True)
+                elif 'MyData' in loginItems and \
+                        not self.StartAutomaticallyOnLogin():
+                    logger.info("Removing MyData from login items.")
+                    applescript = \
+                        'tell application "System Events" to ' \
+                        'delete login item "MyData"'
+                    cmd = "osascript -e '%s'" % applescript
+                    returncode = subprocess.call(cmd, shell=True)
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
@@ -824,13 +1106,20 @@ class SettingsModel():
                                        "scheduled_time")
                 return
 
+        if SetStatusMessage:
+            SetStatusMessage(
+                "Settings validation - succeeded!")
         logger.debug("SettingsModel validation succeeded!")
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
 
     def PerformFolderStructureValidation(self):
         datasetCount = -1
-        filesDepth1 = glob(os.path.join(self.GetDataDirectory(), '*'))
+        userOrGroupFilterString = "*%s*" % self.GetUserFilter()
+        datasetFilterString = "*%s*" % self.GetDatasetFilter()
+        expFilterString = "*%s*" % self.GetExperimentFilter()
+        filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
+                           userOrGroupFilterString))
         dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
         if len(dirsDepth1) == 0:
             message = "The data directory: \"%s\" doesn't contain any " \
@@ -860,11 +1149,23 @@ class SettingsModel():
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName()))
         else:
+            filterString = '*'
+            if self.GetFolderStructure() == 'Username / Dataset':
+                filterString = datasetFilterString
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                filterString = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                filterString = expFilterString
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                filterString = expFilterString
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*'))
+                                            userOrGroupFilterString,
+                                            filterString))
         dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
         if len(dirsDepth2) == 0:
             if self.GetFolderStructure() == 'Username / Dataset':
@@ -938,12 +1239,28 @@ class SettingsModel():
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName(),
                                             '*'))
         else:
+            if self.GetFolderStructure() == 'Username / Dataset':
+                filterString1 = datasetFilterString
+                filterString2 = '*'
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                filterString1 = datasetFilterString
+                filterString2 = '*'
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                filterString1 = expFilterString
+                filterString2 = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                filterString1 = expFilterString
+                filterString2 = datasetFilterString
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*'))
+                                            userOrGroupFilterString,
+                                            filterString1,
+                                            filterString2))
         dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
         if len(dirsDepth3) == 0:
             if self.GetFolderStructure() == \
@@ -1005,12 +1322,15 @@ class SettingsModel():
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*',
+                                            userOrGroupFilterString,
                                             self.GetInstrumentName(),
-                                            '*', '*'))
+                                            '*', datasetFilterString))
         else:
             filesDepth4 = glob(os.path.join(self.GetDataDirectory(),
-                                            '*', '*', '*', '*'))
+                                            userOrGroupFilterString,
+                                            'MyTardis',
+                                            expFilterString,
+                                            datasetFilterString))
         dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
         if len(dirsDepth4) == 0:
             if self.GetFolderStructure() == \
@@ -1098,3 +1418,9 @@ class SettingsModel():
 
     def SetConfigPath(self, configPath):
         self.configPath = configPath
+
+    def GetLastSettingsUpdateTrigger(self):
+        return self.last_settings_update_trigger
+
+    def SetLastSettingsUpdateTrigger(self, lastSettingsUpdateTrigger):
+        self.last_settings_update_trigger = lastSettingsUpdateTrigger

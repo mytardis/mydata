@@ -14,6 +14,8 @@ import pkgutil
 import traceback
 
 from SubmitDebugReportDialog import SubmitDebugReportDialog
+from mydata.logs.wxloghandler import wxLogHandler
+from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
 
 class Logger():
@@ -37,10 +39,8 @@ class Logger():
         self.myDataConfigPath = myDataConfigPath
 
     def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
-        try:
-            logWindowHandler = logging.StreamHandler(stream=logTextCtrl)
-        except:
-            logWindowHandler = logging.StreamHandler(strm=logTextCtrl)
+        self.logTextCtrl = logTextCtrl
+        logWindowHandler = wxLogHandler(self.logTextCtrl)
         logWindowHandler.setLevel(self.level)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
@@ -48,6 +48,8 @@ class Logger():
         logWindowHandler.setFormatter(logging.Formatter(logFormatString))
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(logWindowHandler)
+
+        self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):
         self.loggerObject = logging.getLogger(self.name)
@@ -171,8 +173,8 @@ class Logger():
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         logger.debug("Logger.DumpLog: Flushing "
-                     "self.loggerObject.handlers[0], which is of class: "
-                     + self.loggerObject.handlers[0].__class__.__name__)
+                     "self.loggerObject.handlers[0], which is of class: " +
+                     self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
 
         if myDataMainFrame is None:
@@ -235,14 +237,33 @@ class Logger():
             else:
                 debugLog = debugLog + "No" + "\n"
             debugLog = debugLog + "Comments:\n\n" + self.comments + "\n\n"
-            atLeastOneError = False
-            for line in self.loggerOutput.getvalue().splitlines(True):
+            errorCount = 0
+            logLines = self.loggerOutput.getvalue().splitlines(True)
+            for line in logLines:
                 if "ERROR" in line:
-                    atLeastOneError = True
+                    if errorCount == 0:
+                        debugLog = debugLog + "\n"
+                        debugLog = debugLog + "*** ERROR SUMMARY ***\n"
+                        debugLog = debugLog + "\n"
+                    errorCount += 1
+                    if errorCount >= 100:
+                        debugLog = debugLog + "\n"
+                        debugLog = debugLog + \
+                            "*** TRUNCATING ERROR SUMMARY " \
+                            "AFTER 100 ERRORS ***\n"
+                        break
                     debugLog = debugLog + line
-            if atLeastOneError:
+            if errorCount > 0:
                 debugLog = debugLog + "\n"
-            debugLog = debugLog + self.loggerOutput.getvalue()
+            if len(logLines) <= 5000:
+                debugLog = debugLog + self.loggerOutput.getvalue()
+            else:
+                debugLog = debugLog + "".join(logLines[1:125])
+                debugLog = debugLog + "\n\n"
+                debugLog = debugLog + \
+                    "*** CONTENT REMOVED BECAUSE OF LARGE LOG SIZE ***\n"
+                debugLog = debugLog + "\n\n"
+                debugLog = debugLog + "".join(logLines[-4000:])
             fileInfo = {"logfile": debugLog}
 
             # If we are running in an installation then we have to use
@@ -258,5 +279,10 @@ class Logger():
                 logger.error("An error occurred while attempting to submit "
                              "the debug log.")
                 logger.error(response.text)
+
+    def OnWxLogEvent(self, event):
+        msg = event.message.strip("\r") + "\n"
+        self.logTextCtrl.AppendText(msg)
+        event.Skip()
 
 logger = Logger("MyData")
