@@ -260,17 +260,49 @@ Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; T
 
             # Digitally sign application:
             if whether_to_sign:
-                cmd = "codesign --deep --force -i org.mytardis.MyData " \
+                cmd = "codesign --force -i org.mytardis.MyData " \
                     "--sign \"%s\" " \
-                    "--verbose=4 dist/MyData.app" % certificateName
+                    "--verbose=4 dist/MyData.app/Contents/Frameworks/*.dylib*" \
+                    % certificateName
                 print cmd
                 os.system(cmd)
-                cmd = "codesign -vvvv dist/MyData.app/"
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 dist/MyData.app/Contents/Frameworks/" \
+                    "Python.framework/Versions/2.7" % certificateName
+                print cmd
+                os.system(cmd)
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 dist/MyData.app/Contents/Frameworks/" \
+                    "Python.framework" % certificateName
+                print cmd
+                os.system(cmd)
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 dist/MyData.app/Contents/MacOS/" \
+                    "python" % certificateName
+                print cmd
+                os.system(cmd)
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 \"dist/MyData.app/Contents/MacOS/" \
+                    "MyData Notifications\"" % certificateName
+                print cmd
+                os.system(cmd)
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 dist/MyData.app/Contents/MacOS/" \
+                    "MyData" % certificateName
+                print cmd
+                os.system(cmd)
+                cmd = "codesign -vvvv dist/MyData.app"
                 print cmd
                 os.system(cmd)
                 cmd = "spctl --assess --raw --type execute --verbose=4 " \
-                    "dist/MyData.app/"
+                    "dist/MyData.app"
                 print cmd
+                os.system(cmd)
 
             print "\nCreating MyData_v%s.dmg...\n" % mydata.__version__
 
@@ -416,6 +448,15 @@ tell application "Finder"
             cmd = 'rm -f ' + temp_dmg_filename
             print cmd
             os.system(cmd)
+
+            # Digitally sign DMG:
+            if whether_to_sign:
+                cmd = "codesign --force -i org.mytardis.MyData " \
+                    "--sign \"%s\" " \
+                    "--verbose=4 dist/%s.dmg" \
+                    % (certificateName, final_dmg_name)
+                print cmd
+                os.system(cmd)
 
             cmd = 'ls -lh "dist/%s.dmg"' % (final_dmg_name)
             print "\n" + cmd
