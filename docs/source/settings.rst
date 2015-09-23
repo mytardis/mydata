@@ -259,7 +259,9 @@ Advanced
     On Windows, a shortcut to MyData will be placed in the current user's Startup
     folder.  The exact location varies, but on my machine it is
     "C:\\Users\\wettenhj\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup".
-    On Mac OS X, a login item will could be created in the user's ~/Library/Preferences/com.apple.loginitems.plist
+    On Mac OS X, a login item will be created in the user's
+    ~/Library/Preferences/com.apple.loginitems.plist which can be accessed from
+    System Preferences, Users & Groups, Login Items.
 
 
 Locking and Unlocking MyData's Settings
