@@ -104,7 +104,7 @@ class CustomBuildCommand(build):
                 os.system(sys.executable +
                           r" .\pyinstaller\pyinstaller.py -y "
                           r"--name=MyData --icon=mydata\media\MyData.ico "
-                          r"--console --debug run.py")
+                          r"--windowed run.py")
             if exitCode != 0:
                 print "\nPyInstaller failed to build MyData.exe\n"
                 sys.exit(1)
@@ -199,17 +199,12 @@ OutputDir=.
 [Files]
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
-[Tasks]
-Name: "StartMenuEntry" ; Description: "Start MyData when Windows starts" ; GroupDescription: "Windows Startup";
-
 [Dirs]
 Name: "{pf}\{#MyDataAppName}\openssh-5.4p1-1-msys-1.0.13\home"; Permissions: "users-modify"
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe}"
-;Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
-Name: "{userstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks:StartMenuEntry;
             """.replace("<version>", mydata.__version__)
             with open("dist/MyData.iss", 'w') as innosetup_script_file:
                 innosetup_script_file.write(innosetup_script)
