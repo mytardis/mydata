@@ -86,7 +86,6 @@ class OpenSSH():
             self.scp = f("bin", "scp.exe")
             self.sshKeyGen = f("bin", "ssh-keygen.exe")
             self.cipher = "arcfour"
-            self.sh = f("bin", "sh.exe")
             self.preferToUseShellInSubprocess = False
 
             # This is not where we store the MyData private key.
