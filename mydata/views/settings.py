@@ -35,7 +35,7 @@ class SettingsDropTarget(wx.FileDropTarget):
         self.parent = parent
 
     def OnDropFiles(self, x, y, filenames):
-        self.parent.OnDropFiles(filenames)
+        return self.parent.OnDropFiles(filenames)
 
 
 class SettingsDialog(wx.Dialog):
@@ -1222,7 +1222,7 @@ class SettingsDialog(wx.Dialog):
             dlg = wx.MessageDialog(None, message, "MyData - Settings Locked",
                                    wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
-            return
+            return False
         self.settingsModel.LoadSettings(configPath=filepaths[0])
         self.UpdateFieldsFromModel(self.settingsModel)
 
@@ -1234,6 +1234,25 @@ class SettingsDialog(wx.Dialog):
         else:
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+
+        if "Experiment" in folderStructure:
+            self.expFolderFilterLabel.Show(True)
+            self.expFolderFilterField.Show(True)
+        else:
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
+
+        if folderStructure.startswith("Username"):
+            self.userFolderFilterLabel.SetLabel(
+                "  Username folder name contains:")
+        elif folderStructure.startswith("Email"):
+            self.userFolderFilterLabel.SetLabel(
+                "     Email folder name contains:")
+        elif folderStructure.startswith("User Group"):
+            self.userFolderFilterLabel.SetLabel(
+                "User Group folder name contains:")
+        return True
 
     def OnLockOrUnlockSettings(self, event):
         if self.lockOrUnlockButton.GetLabel() == "Lock":
