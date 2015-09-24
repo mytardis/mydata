@@ -87,7 +87,6 @@ class OpenSSH():
             self.sshKeyGen = f("bin", "ssh-keygen.exe")
             self.cipher = "arcfour"
             self.sh = f("bin", "sh.exe")
-            self.dd = f("bin", "dd.exe")
             self.preferToUseShellInSubprocess = False
 
             # This is not where we store the MyData private key.
@@ -1008,7 +1007,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         ProgressCallback(None, bytesUploaded, fileSize,
                          message="Performing seek on file, so we can "
                          "resume the upload.")
-        # Using dd command to extract chunk, so don't need fp.seek
+        # See "datafile.seek" below.
         skip = bytesUploaded / chunkSize
         ProgressCallback(None, bytesUploaded, fileSize)
     elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
