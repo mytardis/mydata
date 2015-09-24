@@ -31,7 +31,10 @@ def endBusyCursorIfRequired(event):
     try:
         wx.EndBusyCursor()
         if hasattr(event, "settingsDialog"):
-            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            if wx.version().startswith("3.0.3.dev"):
+                arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+            else:
+                arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
     except wx._core.PyAssertionError, e:
         if "no matching wxBeginBusyCursor()" not in str(e):
@@ -285,10 +288,13 @@ class MyDataEvent(wx.PyCommandEvent):
                     BeginBusyCursor should update the cursor on everything,
                     but it doesn't always work on Windows.
                     """
-                    busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
+                    if wx.version().startswith("3.0.3.dev"):
+                        busyCursor = wx.Cursor(wx.CURSOR_WAIT)
+                    else:
+                        busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
                     wx.CallAfter(event.settingsDialog.dialogPanel.SetCursor,
                                  busyCursor)
-                event.settingsDialog.okButton.Disable()
+                wx.CallAfter(event.settingsDialog.okButton.Disable)
 
                 intervalSinceLastConnCheck = datetime.now() - \
                     wx.GetApp().GetLastNetworkConnectivityCheckTime()
@@ -316,7 +322,7 @@ class MyDataEvent(wx.PyCommandEvent):
                 settingsModel.Validate(SetStatusMessage)
                 wx.CallAfter(endBusyCursorIfRequired, event)
                 if settingsModel.IsIncompatibleMyTardisVersion():
-                    event.settingsDialog.okButton.Enable()
+                    wx.CallAfter(event.settingsDialog.okButton.Enable)
                     return
                 provideSettingsValidationResultsEvent = MyDataEvent(
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
@@ -333,7 +339,10 @@ class MyDataEvent(wx.PyCommandEvent):
                     logger.error(message)
                     try:
                         wx.EndBusyCursor()
-                        arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+                        if wx.version().startswith("3.0.3.dev"):
+                            arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+                        else:
+                            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
                         event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
                     except wx._core.PyAssertionError, e:
                         if "no matching wxBeginBusyCursor()" \
@@ -438,7 +447,10 @@ class MyDataEvent(wx.PyCommandEvent):
                 event.settingsDialog.timeCtrl.SetFocus()
             logger.debug("Settings were not valid, so Settings dialog "
                          "should remain visible.")
-            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            if wx.version().startswith("3.0.3.dev"):
+                arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+            else:
+                arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
             return
 
