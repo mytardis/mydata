@@ -1,6 +1,6 @@
 """
 Methods for using OpenSSH functionality from MyData.
-On Windows, we bundle a MSYS/MinGW build of OpenSSH.
+On Windows, we bundle a Cygwin build of OpenSSH.
 
 subprocess is used extensively throughout this module.
 
@@ -54,9 +54,9 @@ class SmallFileUploadMethod():
 
 class OpenSSH():
     if hasattr(sys, "frozen"):
-        OPENSSH_BUILD_DIR = 'openssh-5.4p1-1-msys-1.0.13'
+        OPENSSH_BUILD_DIR = "openssh-7.1p1-cygwin-2.2.1"
     else:
-        OPENSSH_BUILD_DIR = 'resources/win32/openssh-5.4p1-1-msys-1.0.13'
+        OPENSSH_BUILD_DIR = "resources/win32/openssh-7.1p1-cygwin-2.2.1"
 
     def DoubleQuote(self, x):
         return '"' + x.replace('"', '\\"') + '"'
@@ -64,7 +64,7 @@ class OpenSSH():
     def __init__(self):
         """
         Locate the SSH binaries on various systems. On Windows we bundle a
-        MinGW/MSYS build of OpenSSH.
+        Cygwin build of OpenSSH.
         """
         if sys.platform.startswith("win"):
             if "HOME" not in os.environ:
@@ -86,12 +86,10 @@ class OpenSSH():
             self.scp = f("bin", "scp.exe")
             self.sshKeyGen = f("bin", "ssh-keygen.exe")
             self.cipher = "arcfour"
-            self.sh = f("bin", "sh.exe")
-            self.dd = f("bin", "dd.exe")
             self.preferToUseShellInSubprocess = False
 
             # This is not where we store the MyData private key.
-            # This is where the Msys SSH build looks for our
+            # This is where the Cygwin SSH build looks for our
             # known_hosts file.
             dotSshDir = os.path.join(self.OPENSSH_BUILD_DIR,
                                      "home",
@@ -180,7 +178,7 @@ class KeyPair():
             cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen),
                        "-y",
                        "-f", openSSH.DoubleQuote(
-                           GetMsysPath(self.privateKeyFilePath))]
+                           GetCygwinPath(self.privateKeyFilePath))]
             cmd = " ".join(cmdList)
             logger.debug(cmd)
             proc = subprocess.Popen(cmd,
@@ -234,12 +232,23 @@ class KeyPair():
 
         if sys.platform.startswith('win'):
             quotedPrivateKeyFilePath = \
-                openSSH.DoubleQuote(GetMsysPath(self.privateKeyFilePath))
+                openSSH.DoubleQuote(GetCygwinPath(self.privateKeyFilePath))
+            # On Windows, we're using OpenSSH 7.1p1, and since OpenSSH
+            # version 6.8, ssh-keygen requires -E md5 to get the fingerprint
+            # in the old MD5 Hexadecimal format.
+            # http://www.openssh.com/txt/release-6.8
+            # Eventually we could switch to the new format, but then MyTardis
+            # administrators would need to re-approve Uploader Registration
+            # Requests because of the fingerprint mismatches.
+            # See the UploaderModel class's ExistingUploadToStagingRequest
+            # method in mydata.models.uploader
+            cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen), "-E", "md5",
+                       "-yl", "-f", quotedPrivateKeyFilePath]
         else:
             quotedPrivateKeyFilePath = \
                 openSSH.DoubleQuote(self.privateKeyFilePath)
-        cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen), "-yl",
-                   "-f", quotedPrivateKeyFilePath]
+            cmdList = [openSSH.DoubleQuote(openSSH.sshKeyGen),
+                       "-yl", "-f", quotedPrivateKeyFilePath]
         cmd = " ".join(cmdList)
         logger.debug(cmd)
         # On Mac OS X, passing the entire command string (with arguments)
@@ -268,6 +277,8 @@ class KeyPair():
             sshKeyGenOutComponents = stdout.split(" ")
             if len(sshKeyGenOutComponents) > 1:
                 fingerprint = sshKeyGenOutComponents[1]
+                if fingerprint.upper().startswith("MD5:"):
+                    fingerprint = fingerprint[4:]
             if len(sshKeyGenOutComponents) > 3:
                 keyType = sshKeyGenOutComponents[-1]\
                     .strip().strip('(').strip(')')
@@ -347,7 +358,7 @@ def NewKeyPair(keyName=None,
 
     if sys.platform.startswith('win'):
         quotedPrivateKeyFilePath = \
-            openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath))
+            openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath))
     else:
         quotedPrivateKeyFilePath = openSSH.DoubleQuote(privateKeyFilePath)
     cmdList = \
@@ -379,7 +390,7 @@ def NewKeyPair(keyName=None,
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                               hostname, uploadOrVerificationModel):
     if sys.platform.startswith("win"):
-        privateKeyFilePath = GetMsysPath(privateKeyFilePath)
+        privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
     quotedRemoteFilePath = openSSH.DoubleQuote(remoteFilePath)
 
     if sys.platform.startswith("win"):
@@ -828,7 +839,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (openSSH.DoubleQuote(openSSH.ssh),
-           openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+           openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
            openSSH.cipher,
            username, hostname,
            openSSH.DoubleQuote(remoteRemoveDatafileCommand))
@@ -877,9 +888,9 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s/\\""' \
             % (openSSH.DoubleQuote(openSSH.scp),
-               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+               openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                openSSH.cipher,
-               openSSH.DoubleQuote(GetMsysPath(filePath)),
+               openSSH.DoubleQuote(GetCygwinPath(filePath)),
                username, hostname,
                os.path.dirname(remoteFilePath))
         logger.debug(scpCommandString)
@@ -913,7 +924,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (openSSH.DoubleQuote(openSSH.ssh),
-           openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+           openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
            openSSH.cipher,
            username, hostname,
            openSSH.DoubleQuote(remoteCatCommand))
@@ -1008,7 +1019,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         ProgressCallback(None, bytesUploaded, fileSize,
                          message="Performing seek on file, so we can "
                          "resume the upload.")
-        # Using dd command to extract chunk, so don't need fp.seek
+        # See "datafile.seek" below.
         skip = bytesUploaded / chunkSize
         ProgressCallback(None, bytesUploaded, fileSize)
     elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
@@ -1052,9 +1063,9 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
             % (openSSH.DoubleQuote(openSSH.scp),
-               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+               openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                openSSH.cipher,
-               openSSH.DoubleQuote(GetMsysPath(chunkFile.name)),
+               openSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, hostname,
                remoteChunkPath)
         logger.debug(scpCommandString)
@@ -1093,7 +1104,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
             "%s@%s %s" \
             % (openSSH.DoubleQuote(openSSH.ssh),
-               openSSH.DoubleQuote(GetMsysPath(privateKeyFilePath)),
+               openSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                openSSH.cipher,
                username, hostname,
                openSSH.DoubleQuote(remoteCatCommand))
@@ -1117,16 +1128,17 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             return
 
 
-def GetMsysPath(path):
+def GetCygwinPath(path):
     """
-    Converts "C:\path\\to\\file" to "/C/path/to/file".
+    Converts "C:\path\\to\\file" to "/cygdrive/C/path/to/file".
     """
     realpath = os.path.realpath(path)
     match = re.search(r"^(\S):(.*)", realpath)
     if match:
-        return "/" + match.groups()[0] + match.groups()[1].replace("\\", "/")
+        return "/cygdrive/" + match.groups()[0] + \
+            match.groups()[1].replace("\\", "/")
     else:
-        raise Exception("OpenSSH.GetMsysPath: %s doesn't look like "
+        raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
                         "a valid path." % path)
 
 # Singleton instance of OpenSSH class:
@@ -1149,7 +1161,7 @@ class SshControlMasterProcess():
         tempFile = tempfile.NamedTemporaryFile(delete=True)
         tempFile.close()
         if sys.platform.startswith("win"):
-            self.sshControlPath = GetMsysPath(tempFile.name)
+            self.sshControlPath = GetCygwinPath(tempFile.name)
         else:
             self.sshControlPath = tempFile.name
         sshControlMasterProcessCommandString = \
