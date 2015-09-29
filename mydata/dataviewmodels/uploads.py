@@ -257,7 +257,7 @@ class UploadsModel(DataViewIndexListModel):
 
     def Contains(self, filename):
         for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetFilename().strip() == name:
+            if self.uploadsData[row].GetFilename().strip() == filename:
                 return True
         return False
 

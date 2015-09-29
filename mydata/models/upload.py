@@ -135,6 +135,7 @@ class UploadModel():
                     # See if this throws psutil.NoSuchProcess:
                     p = psutil.Process(int(pid))
                     if sys.platform.startswith("win"):
+                        # pylint: disable=no-member
                         os.kill(pid, signal.CTRL_C_EVENT)
                     else:
                         os.kill(pid, signal.SIGKILL)

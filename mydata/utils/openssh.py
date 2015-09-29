@@ -26,6 +26,7 @@ import errno
 import getpass
 import threading
 import time
+import pkgutil
 
 from mydata.logs import logger
 from mydata.utils.exceptions import SshException
@@ -330,7 +331,6 @@ def FindKeyPair(keyName="MyData", keyPath=None):
                     if not os.path.exists(publicKeyFilePath):
                         publicKeyFilePath = None
                     return KeyPair(privateKeyFilePath, publicKeyFilePath)
-                    break
     raise PrivateKeyDoesNotExist("Couldn't find valid private key in %s"
                                  % os.path.join(keyPath, keyName))
 

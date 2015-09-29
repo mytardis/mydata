@@ -62,10 +62,7 @@ class Logger():
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
-        try:
-            stringHandler = logging.StreamHandler(stream=self.loggerOutput)
-        except:
-            stringHandler = logging.StreamHandler(strm=self.loggerOutput)
+        stringHandler = logging.StreamHandler(stream=self.loggerOutput)
         stringHandler.setLevel(self.level)
         stringHandler.setFormatter(logging.Formatter(self.logFormatString))
         self.loggerObject.addHandler(stringHandler)
