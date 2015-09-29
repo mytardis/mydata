@@ -18,10 +18,8 @@ import appdirs
 import traceback
 import threading
 import argparse
-from datetime import timedelta
 from datetime import datetime
 import logging
-import time
 
 from mydata import __version__ as VERSION
 from mydata import LATEST_COMMIT
@@ -38,7 +36,6 @@ from mydata.views.uploads import UploadsView
 from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.views.tasks import TasksView
 from mydata.dataviewmodels.tasks import TasksModel
-from mydata.models.task import TaskModel
 from mydata.models.uploader import UploaderModel
 from mydata.views.log import LogView
 from mydata.models.settings import SettingsModel
@@ -52,6 +49,7 @@ from mydata.media import MyDataIcons
 from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
+from mydata.controllers.schedule import ScheduleController
 
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
@@ -151,6 +149,7 @@ class MyDataFrame(wx.Frame):
                 self.statusbar.SetStatusConnectionIcon(self.disconnectedBitmap)
 
 
+# pylint: disable=too-many-public-methods
 class MyData(wx.App):
     """
     Encapsulates the MyData application.
@@ -186,7 +185,7 @@ class MyData(wx.App):
         self.myDataEvents = None
 
         self.scanningFolders = False
-        self.scanningFoldersThreadingLock = None
+        self.scanningFoldersThreadingLock = threading.Lock()
         self.performingLookupsAndUploads = False
         self.numUserFoldersScanned = 0
         self.shouldAbort = False
@@ -200,6 +199,7 @@ class MyData(wx.App):
         self.foldersModel = None
         self.foldersView = None
         self.foldersController = None
+        self.scheduleController = None
         self.usersModel = None
         self.usersView = None
         self.groupsModel = None
@@ -214,6 +214,10 @@ class MyData(wx.App):
 
         wx.App.__init__(self, redirect=False)
 
+
+    # This method is too long.  Needs refactoring.
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def OnInit(self):
         """
         Called automatically when application instance is created.
@@ -222,15 +226,10 @@ class MyData(wx.App):
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
-        appauthor = "Monash University"
-        appdirPath = appdirs.user_data_dir(appname, appauthor)
+        appdirPath = appdirs.user_data_dir(appname, "Monash University")
         logger.debug("appdirPath: " + appdirPath)
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
-
-        self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
-        self.lastConnectivityCheckSuccess = False
-        self.activeNetworkInterface = None
 
         if hasattr(sys, "frozen"):
             if sys.platform.startswith("darwin"):
@@ -275,73 +274,10 @@ class MyData(wx.App):
             elif args.loglevel == "ERROR":
                 logger.SetLevel(logging.ERROR)
 
-        # Using wx.SingleInstanceChecker to check whether MyData is already
-        # running.
-        # Running MyData --version is allowed when MyData is already running,
-        # in fact this is used by calls to ShellExecuteEx to test user
-        # privilege elevation on Windows.
-        # A workaround for the 'Deleted stale lock file' issue with
-        # SingleInstanceChecker on Mac OS X is to lower the wx logging level.
-        # MyData doesn't use wx.Log
-        wx.Log.SetLogLevel(wx.LOG_Error)
-        instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
-        if instance.IsAnotherRunning():
-            logger.warning("Another MyData instance is already running.")
-            if sys.platform.startswith("darwin"):
-                applescript = \
-"""
-tell application "System Events"
-        set theprocs to every process whose name is "MyData"
-        repeat with proc in theprocs
-                set the frontmost of proc to true
-        end repeat
-end tell"""
-                os.system("osascript -e '%s'" % applescript)
-                return True
-            else:
-                wx.MessageBox("MyData is already running!", "MyData",
-                              wx.ICON_ERROR)
-                return False
+        self.CheckIfAlreadyRunning(appdirPath)
 
         if sys.platform.startswith("darwin"):
-            # On Mac OS X, adding an Edit menu seems to help with
-            # enabling command-c (copy) and command-v (paste)
-            self.menuBar = wx.MenuBar()
-            self.editMenu = wx.Menu()
-            self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-            self.frame.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
-            self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-            self.frame.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
-            self.editMenu.AppendSeparator()
-            self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
-                                 "Cut the selected text")
-            self.frame.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
-            self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
-                                 "Copy the selected text")
-            self.frame.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
-            self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
-                                 "Paste text from the clipboard")
-            self.frame.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
-            self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
-                                 "Select All")
-            self.frame.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
-            self.menuBar.Append(self.editMenu, "Edit")
-
-            self.helpMenu = wx.Menu()
-
-            helpMenuItemID = wx.NewId()
-            self.helpMenu.Append(helpMenuItemID, "&MyData Help")
-            self.frame.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
-
-            walkthroughMenuItemID = wx.NewId()
-            self.helpMenu.Append(
-                walkthroughMenuItemID, "Mac OS X &Walkthrough")
-            self.frame.Bind(wx.EVT_MENU, self.OnWalkthrough,
-                            id=walkthroughMenuItemID)
-
-            self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
-            self.frame.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
-            self.menuBar.Append(self.helpMenu, "&Help")
+            self.CreateMacMenu()
 
         self.usersModel = UsersModel(self.settingsModel)
         self.groupsModel = GroupsModel(self.settingsModel)
@@ -353,8 +289,6 @@ end tell"""
         self.tasksModel = TasksModel(self.settingsModel)
 
         self.frame.Bind(wx.EVT_ACTIVATE, self.OnActivateFrame)
-        if sys.platform.startswith("darwin"):
-            self.frame.SetMenuBar(self.menuBar)
         self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
 
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
@@ -396,6 +330,9 @@ end tell"""
                               self.verificationsModel,
                               self.uploadsModel,
                               self.settingsModel)
+
+        self.scheduleController = \
+            ScheduleController(self.settingsModel, self.tasksModel)
 
         self.usersView = UsersView(self.foldersUsersNotebook,
                                    usersModel=self.usersModel)
@@ -460,9 +397,81 @@ end tell"""
                 message = \
                     "Click the MyData system tray icon to access its menu."
             Notification.notify(message, title=title)
-            self.ApplySchedule(event)
+            self.scheduleController.ApplySchedule(event)
 
         return True
+
+    def CheckIfAlreadyRunning(self, appdirPath):
+        """
+        Using wx.SingleInstanceChecker to check whether MyData is already
+        running.
+        Running MyData --version is allowed when MyData is already running.
+        A workaround for the 'Deleted stale lock file' issue with
+        SingleInstanceChecker on Mac OS X is to lower the wx logging level.
+        MyData doesn't use wx.Log
+        """
+        wx.Log.SetLogLevel(wx.LOG_Error)
+        instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
+        if instance.IsAnotherRunning():
+            logger.warning("Another MyData instance is already running.")
+            if sys.platform.startswith("darwin"):
+                applescript = (
+                    'tell application "System Events"\n'
+                    '        set theprocs to every process whose name is '
+                    '"MyData"\n'
+                    '        repeat with proc in theprocs\n'
+                    '                set the frontmost of proc to true\n'
+                    '        end repeat\n'
+                    'end tell')
+                os.system("osascript -e '%s'" % applescript)
+                sys.exit(0)
+            else:
+                wx.MessageBox("MyData is already running!", "MyData",
+                              wx.ICON_ERROR)
+                sys.exit(1)
+
+    def CreateMacMenu(self):
+        """
+        On Mac OS X, adding an Edit menu seems to help with
+        enabling command-c (copy) and command-v (paste)
+        """
+        self.menuBar = wx.MenuBar()
+        self.editMenu = wx.Menu()
+        self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
+        self.frame.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
+        self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
+        self.frame.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
+        self.editMenu.AppendSeparator()
+        self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
+                             "Cut the selected text")
+        self.frame.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
+        self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
+                             "Copy the selected text")
+        self.frame.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
+        self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
+                             "Paste text from the clipboard")
+        self.frame.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
+        self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
+                             "Select All")
+        self.frame.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
+        self.menuBar.Append(self.editMenu, "Edit")
+
+        self.helpMenu = wx.Menu()
+
+        helpMenuItemID = wx.NewId()
+        self.helpMenu.Append(helpMenuItemID, "&MyData Help")
+        self.frame.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
+
+        walkthroughMenuItemID = wx.NewId()
+        self.helpMenu.Append(
+            walkthroughMenuItemID, "Mac OS X &Walkthrough")
+        self.frame.Bind(wx.EVT_MENU, self.OnWalkthrough,
+                        id=walkthroughMenuItemID)
+
+        self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
+        self.frame.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+        self.menuBar.Append(self.helpMenu, "&Help")
+        self.frame.SetMenuBar(self.menuBar)
 
     def OnActivateApp(self, event):
         """
@@ -741,7 +750,7 @@ end tell"""
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
-        self.ApplySchedule(event, runManually=True)
+        self.scheduleController.ApplySchedule(event, runManually=True)
 
     def OnRefresh(self, event, needToValidateSettings=True, jobId=None):
         """
@@ -750,36 +759,10 @@ end tell"""
         for existing datafiles on MyTardis and uploading any datafiles
         not yet available on MyTardis.
         """
-        shutdownForRefreshComplete = False
-        if jobId:
-            logger.debug("OnRefresh called from job ID %d" % jobId)
-        elif event is None:
-            logger.debug("OnRefresh called automatically "
-                         "from MyData's OnInit().")
-        elif event.GetId() == self.settingsTool.GetId():
-            logger.debug("OnRefresh called automatically from "
-                         "OnSettings(), after displaying SettingsDialog, "
-                         "which was launched from MyData's toolbar.")
-        elif event.GetId() == self.refreshTool.GetId():
-            logger.debug("OnRefresh triggered by Refresh toolbar icon.")
-        elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
-                event.GetId() == \
-                self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
-            logger.debug("OnRefresh triggered by 'MyTardis Sync' "
-                         "task bar menu item.")
-        elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
-            logger.debug("OnRefresh called from "
-                         "EVT_VALIDATE_SETTINGS_FOR_REFRESH event.")
-        elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
-            logger.debug("OnRefresh called from "
-                         "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
-            shutdownForRefreshComplete = True
-        elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
-            logger.debug("OnRefresh called from "
-                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
-            shutdownForRefreshComplete = True
-        else:
-            logger.debug("OnRefresh: event.GetId() = %d" % event.GetId())
+        self.LogOnRefreshCaller(event, jobId)
+        shutdownForRefreshComplete = \
+            event.GetId() in (mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
+                              mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE)
 
         if hasattr(event, "needToValidateSettings") and \
                 event.needToValidateSettings is False:
@@ -814,18 +797,10 @@ end tell"""
 
         validateSettingsForRefreshEvent = \
             mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH)
-
-        intervalSinceLastCheck = \
-            datetime.now() - self.lastConnectivityCheckTime
-        checkInterval = self.settingsModel.GetConnectivityCheckInterval()
-        if intervalSinceLastCheck.total_seconds() >= checkInterval or \
-                not self.lastConnectivityCheckSuccess:
-            logger.debug("Checking network connectivity...")
-            checkConnectivityEvent = \
-                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
-                                settingsModel=self.settingsModel,
-                                nextEvent=validateSettingsForRefreshEvent)
-            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
+        if self.CheckConnectivityForRefresh(
+                nextEvent=validateSettingsForRefreshEvent):
+            # Wait for the event to be handled, which will result
+            # in OnRefresh being called again.
             return
 
         # Settings validation:
@@ -949,8 +924,6 @@ end tell"""
             wx.CallAfter(self.frame.SetStatusMessage,
                          "Scanning data folders...")
             try:
-                if not hasattr(self, "scanningFoldersThreadingLock"):
-                    self.scanningFoldersThreadingLock = threading.Lock()
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
                 logger.info("Just set ScanningFolders to True")
@@ -997,6 +970,63 @@ end tell"""
         logger.debug("OnRefresh: Starting ScanDataDirs thread.")
         thread.start()
         logger.debug("OnRefresh: Started ScanDataDirs thread.")
+
+    def LogOnRefreshCaller(self, event, jobId):
+        """
+        Called by OnRefresh (the main method for starting the
+        data folder scans and uploads) to log what triggered the
+        call to OnRefresh (e.g. the toolbar button, the task bar
+        icon menu item, or a scheduled task).
+        """
+        if jobId:
+            logger.debug("OnRefresh called from job ID %d" % jobId)
+        elif event is None:
+            logger.debug("OnRefresh called automatically "
+                         "from MyData's OnInit().")
+        elif event.GetId() == self.settingsTool.GetId():
+            logger.debug("OnRefresh called automatically from "
+                         "OnSettings(), after displaying SettingsDialog, "
+                         "which was launched from MyData's toolbar.")
+        elif event.GetId() == self.refreshTool.GetId():
+            logger.debug("OnRefresh triggered by Refresh toolbar icon.")
+        elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
+                event.GetId() == \
+                self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
+            logger.debug("OnRefresh triggered by 'MyTardis Sync' "
+                         "task bar menu item.")
+        elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
+            logger.debug("OnRefresh called from "
+                         "EVT_VALIDATE_SETTINGS_FOR_REFRESH event.")
+        elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
+            logger.debug("OnRefresh called from "
+                         "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
+        elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
+            logger.debug("OnRefresh called from "
+                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
+        else:
+            logger.debug("OnRefresh: event.GetId() = %d" % event.GetId())
+
+    def CheckConnectivityForRefresh(self, nextEvent=None):
+        """
+        Called from OnRefresh (the main method for scanning data folders
+        and uploading data).
+        This method determines if a network connectivity check is due,
+        and if so, posts a check connectivity event, and returns True
+        to indicate that the event has been posted.
+        """
+        intervalSinceLastCheck = \
+            datetime.now() - self.lastConnectivityCheckTime
+        checkInterval = self.settingsModel.GetConnectivityCheckInterval()
+        if intervalSinceLastCheck.total_seconds() >= checkInterval or \
+                not self.lastConnectivityCheckSuccess:
+            logger.debug("Checking network connectivity...")
+            checkConnectivityEvent = \
+                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
+                                settingsModel=self.settingsModel,
+                                nextEvent=nextEvent)
+            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
+            return True
+        return False
 
     def OnStop(self, event):
         """
@@ -1048,335 +1078,13 @@ end tell"""
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
             self.tasksModel.DeleteAllRows()
-            self.ApplySchedule(event)
-
-    def ApplySchedule(self, event, runManually=False):
-        """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
-        """
-        logger.debug("Getting schedule type from settings dialog.")
-        scheduleType = self.settingsModel.GetScheduleType()
-        if scheduleType == "On Startup" and \
-                self.settingsModel.GetLastSettingsUpdateTrigger() == \
-                LastSettingsUpdateTrigger.READ_FROM_DISK:
-            logger.debug("Schedule type is %s." % scheduleType)
-
-            def OnStartup(app, event, needToValidateSettings, jobId):
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            # Wait a few seconds to give the user a chance to
-            # read the initial MyData notification before
-            # starting the task.
-            startTime = datetime.now() + timedelta(seconds=5)
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s" % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, OnStartup, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        if scheduleType == "On Settings Saved" and \
-                self.settingsModel.GetLastSettingsUpdateTrigger() == \
-                LastSettingsUpdateTrigger.UI_RESPONSE:
-            logger.debug("Schedule type is %s." % scheduleType)
-
-            def OnSettingsSaved(app, event, needToValidateSettings, jobId):
-                """
-                Task to run after the Settings dialog's OK button has been
-                pressed and settings have been validated.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            startTime = datetime.now() + timedelta(seconds=1)
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s" % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, OnSettingsSaved, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        elif scheduleType == "Manually":
-            logger.debug("Schedule type is Manually.")
-            if not runManually:
-                # Wait for user to manually click Refresh on MyData's toolbar.
-                logger.debug("Finished processing schedule type.")
-                return
-
-            def RunTaskManually(app, event, needToValidateSettings, jobId):
-                """
-                Task to run when the user manually asks MyData to being the
-                data folder scans and uploads, usually by clicking the Refresh
-                toolbar icon, or by selecting the task bar icon menu's
-                "MyTardis Sync" menu item.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            startTime = datetime.now() + timedelta(seconds=1)
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s" % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, RunTaskManually, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        elif scheduleType == "Once":
-            logger.debug("Schedule type is Once.")
-
-            def RunTaskOnce(app, event, needToValidateSettings, jobId):
-                """
-                Run a task once, on the date and time configured in the
-                Schedule tab of the Settings dialog.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            startTime = \
-                datetime.combine(self.settingsModel.GetScheduledDate(),
-                                 self.settingsModel.GetScheduledTime())
-            if startTime < datetime.now():
-                delta = datetime.now() - startTime
-                if delta.total_seconds() < 10:
-                    startTime = datetime.now()
-                else:
-                    message = "Scheduled time is in the past."
-                    logger.error(message)
-                    if self.settingsModel.GetLastSettingsUpdateTrigger() != \
-                            LastSettingsUpdateTrigger.READ_FROM_DISK:
-                        wx.MessageBox(message, "MyData", wx.ICON_ERROR)
-                    return
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s" % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, RunTaskOnce, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        elif scheduleType == "Daily":
-            logger.debug("Schedule type is Daily.")
-
-            def RunTaskDaily(app, event, needToValidateSettings, jobId):
-                """
-                Run a task every day at the time specified
-                in the Schedule tab of the Settings dialog.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            startTime = \
-                datetime.combine(datetime.date(datetime.now()),
-                                 self.settingsModel.GetScheduledTime())
-            if startTime < datetime.now():
-                startTime = startTime + timedelta(days=1)
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s (recurring daily)"
-                % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, RunTaskDaily, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        elif scheduleType == "Weekly":
-            logger.debug("Schedule type is Weekly.")
-
-            def RunTaskWeekly(app, event, needToValidateSettings, jobId):
-                """
-                Run a task on the days (of the week) and time specified
-                in the Schedule tab of the Settings dialog.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            days = [self.settingsModel.IsMondayChecked(),
-                    self.settingsModel.IsTuesdayChecked(),
-                    self.settingsModel.IsWednesdayChecked(),
-                    self.settingsModel.IsThursdayChecked(),
-                    self.settingsModel.IsFridayChecked(),
-                    self.settingsModel.IsSaturdayChecked(),
-                    self.settingsModel.IsSundayChecked()]
-            if not max(days):
-                logger.warning("No days selected for weekly schedule.")
-                return
-            startTime = \
-                datetime.combine(datetime.date(datetime.now()),
-                                 self.settingsModel.GetScheduledTime())
-            while not days[startTime.weekday()]:
-                startTime = startTime + timedelta(days=1)
-            timeString = startTime.strftime("%I:%M %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s (recurring on specified days)"
-                % (jobDesc, timeString, dateString))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, RunTaskWeekly, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType,
-                             days=days)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        elif scheduleType == "Timer":
-            logger.debug("Schedule type is Timer.")
-
-            def RunTaskOnTimer(app, event, needToValidateSettings, jobId):
-                """
-                Run a task every n minutes, where n is the interval
-                specified in the Schedule tab of the Settings dialog.
-                """
-                wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                             True)
-                while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId)
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
-                    time.sleep(0.01)
-
-            jobArgs = [self, event, False]
-            jobDesc = "Scan folders and upload datafiles"
-            intervalMinutes = self.settingsModel.GetTimerMinutes()
-            if self.settingsModel.GetLastSettingsUpdateTrigger() == \
-                    LastSettingsUpdateTrigger.READ_FROM_DISK:
-                startTime = datetime.now() + timedelta(seconds=5)
-            else:
-                # LastSettingsUpdateTrigger.UI_RESPONSE
-                startTime = datetime.now() + timedelta(seconds=1)
-            timeString = startTime.strftime("%I:%M:%S %p")
-            dateString = \
-                "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-            self.frame.SetStatusMessage(
-                "The \"%s\" task is scheduled "
-                "to run at %s on %s (recurring every %d minutes)" %
-                (jobDesc, timeString, dateString, intervalMinutes))
-            taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-            jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, RunTaskOnTimer, jobArgs, jobDesc,
-                             startTime, scheduleType=scheduleType,
-                             intervalMinutes=intervalMinutes)
-            try:
-                self.tasksModel.AddRow(task)
-            except ValueError, err:
-                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-                return
-        logger.debug("Finished processing schedule type.")
+            self.scheduleController.ApplySchedule(event)
 
     def OnMyTardis(self, event):
+        """
+        Called when user clicks the Internet Browser icon on the
+        main toolbar.
+        """
         # pylint: disable=bare-except
         try:
             items = self.foldersView.GetDataViewControl().GetSelections()
@@ -1395,16 +1103,29 @@ end tell"""
             logger.error(traceback.format_exc())
 
     def OnHelp(self, event):
+        """
+        Called when the user clicks the Help icon on the
+        main toolbar.
+        """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
         webbrowser.open(url, new=new)
 
     def OnWalkthrough(self, event):
+        """
+        Mac OS X Only.
+        Called when the user clicks the Mac OS X Walkthrough
+        menu item in the Help menu.
+        """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
         webbrowser.open(url, new=new)
 
     def OnAbout(self, event):
+        """
+        Called when the user clicks the Info icon on the
+        main toolbar.
+        """
         msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
@@ -1419,48 +1140,114 @@ end tell"""
         dlg.ShowModal()
 
     def GetMainFrame(self):
+        """
+        Returns the application's main frame, which is
+        an instance of MyDataFrame.
+        """
         return self.frame
 
     def GetMyDataEvents(self):
+        """
+        Returns the MyData events object, which is
+        an instance of mydata.events.MyDataEvents
+        """
         return self.myDataEvents
 
+    def GetScheduleController(self):
+        """
+        Returns MyData's schedule controller.
+        """
+        return self.scheduleController
+
     def GetLastConnectivityCheckTime(self):
+        """
+        Returns the last time when MyData checked
+        for network connectivity.
+        """
         return self.lastConnectivityCheckTime
 
     def SetLastConnectivityCheckTime(self, lastConnectivityCheckTime):
+        """
+        Sets the last time when MyData checked
+        for network connectivity.
+        """
         self.lastConnectivityCheckTime = lastConnectivityCheckTime
 
     def GetLastConnectivityCheckSuccess(self):
+        """
+        Returns the success or failure from the MyData's
+        most recent check for network connectivity.
+        """
         return self.lastConnectivityCheckSuccess
 
     def SetLastConnectivityCheckSuccess(self, success):
+        """
+        Sets the success or failure for the MyData's
+        most recent check for network connectivity.
+        """
         self.lastConnectivityCheckSuccess = success
 
     def GetActiveNetworkInterface(self):
+        """
+        Returns the active network interface found
+        during the most recent check for network
+        connectivity.
+        """
         return self.activeNetworkInterface
 
     def SetActiveNetworkInterface(self, activeNetworkInterface):
+        """
+        Sets the active network interface found
+        during the most recent check for network
+        connectivity.
+        """
         self.activeNetworkInterface = activeNetworkInterface
 
     def GetConfigPath(self):
+        """
+        Returns the location on disk of MyData.cfg
+        e.g. "C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
+        """
         return self.configPath
 
     def SetConfigPath(self, configPath):
+        """
+        Sets the location on disk of MyData.cfg
+        e.g. "C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
+        """
         self.configPath = configPath
 
     def ScanningFolders(self):
+        """
+        Returns True if MyData is currently scanning data folders.
+        """
         return self.scanningFolders.isSet()
 
     def SetScanningFolders(self, value):
+        """
+        Records whether MyData is currently scanning data folders.
+        """
         if value:
             self.scanningFolders.set()
         else:
             self.scanningFolders.clear()
 
     def PerformingLookupsAndUploads(self):
+        """
+        Returns True if MyData is currently performing
+        datafile lookups (verifications) and uploading
+        datafiles.
+        """
         return self.performingLookupsAndUploads.isSet()
 
     def SetPerformingLookupsAndUploads(self, value):
+        """
+        Records whether MyData is currently performing
+        datafile lookups (verifications) and uploading
+        datafiles.
+        """
         if value:
             self.performingLookupsAndUploads.set()
         else:
