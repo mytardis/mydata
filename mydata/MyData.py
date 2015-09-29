@@ -1,3 +1,15 @@
+"""
+MyData.py
+
+Main module for MyData.
+
+To run MyData from the command-line, use "python run.py", where run.py is
+in the parent directory of the directory containing MyData.py.
+"""
+
+# Don't worry about exceeding .pylintrc's max-module-lines for now:
+# pylint: disable=C0302
+
 import sys
 import wx
 import webbrowser
@@ -27,11 +39,10 @@ from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.views.tasks import TasksView
 from mydata.dataviewmodels.tasks import TasksModel
 from mydata.models.task import TaskModel
-from models.uploader import UploaderModel
+from mydata.models.uploader import UploaderModel
 from mydata.views.log import LogView
-from models.settings import SettingsModel
+from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
-from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.views.statusbar import EnhancedStatusBar
 from mydata.logs import logger
@@ -46,18 +57,23 @@ if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
-    from wx.lib.agw.aui import AUI_NB_SCROLL_BUTTONS
     from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+    # pylint: disable=import-error
     from wx.adv import EVT_TASKBAR_LEFT_UP
 else:
     from wx import EmptyIcon
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
-    from wx.aui import AUI_NB_SCROLL_BUTTONS
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
     from wx import EVT_TASKBAR_LEFT_UP
 
-class NotebookTabs:
+
+# pylint: disable=too-few-public-methods
+class NotebookTabs(object):
+    """
+    Enumerated data type for referencing the different tab views in
+    MyData's main window.
+    """
     FOLDERS = 0
     USERS = 1
     GROUPS = 2
@@ -66,9 +82,29 @@ class NotebookTabs:
     LOG = 5
 
 
+def EndBusyCursorIfRequired():
+    """
+    The built in wx.EndBusyCursor raises an ugly exception if the
+    busy cursor has already been stopped.
+    """
+    # pylint: disable=no-member
+    # Otherwise pylint complains about PyAssertionError.
+    # pylint: disable=protected-access
+    try:
+        wx.EndBusyCursor()
+    except wx._core.PyAssertionError, err:
+        if "no matching wxBeginBusyCursor()" \
+                not in str(err):
+            logger.error(str(err))
+            raise
+
+
 class MyDataFrame(wx.Frame):
-    def __init__(self, parent, id, title, style, settingsModel):
-        wx.Frame.__init__(self, parent, id, title, style=style)
+    """
+    MyData's main window.
+    """
+    def __init__(self, title, style, settingsModel):
+        wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
         self.statusbar = EnhancedStatusBar(self, wx.ID_ANY)
@@ -85,9 +121,15 @@ class MyDataFrame(wx.Frame):
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
     def SetStatusMessage(self, msg):
+        """
+        Update status bar's message.
+        """
         self.statusbar.SetStatusMessage(msg)
 
     def SetConnected(self, myTardisUrl, connected):
+        """
+        Update status bar's connected/disconnected icon.
+        """
         if self.connected == connected:
             return
 
@@ -110,12 +152,73 @@ class MyDataFrame(wx.Frame):
 
 
 class MyData(wx.App):
+    """
+    Encapsulates the MyData application.
+    """
+
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self, name):
         self.name = name
+
+        self.configPath = None
+
+        self.frame = None
+        self.panel = None
+        self.foldersUsersNotebook = None
+
+        self.menuBar = None
+        self.editMenu = None
+        self.helpMenu = None
+
+        self.toolbar = None
+        self.settingsTool = None
+        self.stopTool = None
+        self.refreshTool = None
+        self.myTardisTool = None
+        self.aboutTool = None
+        self.helpTool = None
+
+        self.taskBarIcon = None
+
+        self.searchCtrl = None
+
+        self.myDataEvents = None
+
+        self.scanningFolders = False
+        self.scanningFoldersThreadingLock = None
+        self.performingLookupsAndUploads = False
+        self.numUserFoldersScanned = 0
+        self.shouldAbort = False
+
+        self.activeNetworkInterface = None
+        self.lastConnectivityCheckSuccess = False
+        self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
+
+        self.settingsModel = None
+        self.settingsValidation = None
+        self.foldersModel = None
+        self.foldersView = None
+        self.foldersController = None
+        self.usersModel = None
+        self.usersView = None
+        self.groupsModel = None
+        self.groupsView = None
+        self.verificationsModel = None
+        self.verificationsView = None
+        self.uploadsModel = None
+        self.uploadsView = None
+        self.tasksModel = None
+        self.tasksView = None
+        self.logView = None
+
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
-        self.SetAppName("MyData")
+        """
+        Called automatically when application instance is created.
+        """
+        self.SetAppName("MyData")  # pylint: disable=no-member
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
@@ -125,10 +228,8 @@ class MyData(wx.App):
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
-        self.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
-
-        self.lastNetworkConnectivityCheckTime = datetime.fromtimestamp(0)
-        self.lastNetworkConnectivityCheckSuccess = False
+        self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
+        self.lastConnectivityCheckSuccess = False
         self.activeNetworkInterface = None
 
         if hasattr(sys, "frozen"):
@@ -150,12 +251,17 @@ class MyData(wx.App):
         logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
 
         self.settingsModel = SettingsModel(self.GetConfigPath())
+        self.frame = MyDataFrame(self.name,
+                                 style=wx.DEFAULT_FRAME_STYLE,
+                                 settingsModel=self.settingsModel)
+
+        self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
 
         parser = argparse.ArgumentParser()
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
-        args, unknown = parser.parse_known_args()
+        args, _ = parser.parse_known_args()
         if args.version:
             print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
             sys.exit(0)
@@ -178,8 +284,9 @@ class MyData(wx.App):
         # SingleInstanceChecker on Mac OS X is to lower the wx logging level.
         # MyData doesn't use wx.Log
         wx.Log.SetLogLevel(wx.LOG_Error)
-        self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
-        if self.instance.IsAnotherRunning():
+        instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
+        if instance.IsAnotherRunning():
+            logger.warning("Another MyData instance is already running.")
             if sys.platform.startswith("darwin"):
                 applescript = \
 """
@@ -202,38 +309,38 @@ end tell"""
             self.menuBar = wx.MenuBar()
             self.editMenu = wx.Menu()
             self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-            self.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
+            self.frame.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
             self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-            self.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
+            self.frame.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
             self.editMenu.AppendSeparator()
             self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
                                  "Cut the selected text")
-            self.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
+            self.frame.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
             self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
                                  "Copy the selected text")
-            self.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
+            self.frame.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
             self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
                                  "Paste text from the clipboard")
-            self.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
+            self.frame.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
             self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
                                  "Select All")
-            self.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
+            self.frame.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
             self.menuBar.Append(self.editMenu, "Edit")
 
             self.helpMenu = wx.Menu()
 
             helpMenuItemID = wx.NewId()
             self.helpMenu.Append(helpMenuItemID, "&MyData Help")
-            self.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
+            self.frame.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
 
             walkthroughMenuItemID = wx.NewId()
             self.helpMenu.Append(
                 walkthroughMenuItemID, "Mac OS X &Walkthrough")
-            self.Bind(wx.EVT_MENU, self.OnWalkthrough,
-                      id=walkthroughMenuItemID)
+            self.frame.Bind(wx.EVT_MENU, self.OnWalkthrough,
+                            id=walkthroughMenuItemID)
 
-            self.helpMenu.Append(wx.ID_ABOUT,   "&About MyData")
-            self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+            self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
+            self.frame.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
             self.menuBar.Append(self.helpMenu, "&Help")
 
         self.usersModel = UsersModel(self.settingsModel)
@@ -245,9 +352,6 @@ end tell"""
         self.uploadsModel = UploadsModel()
         self.tasksModel = TasksModel(self.settingsModel)
 
-        self.frame = MyDataFrame(None, -1, self.name,
-                                 style=wx.DEFAULT_FRAME_STYLE,
-                                 settingsModel=self.settingsModel)
         self.frame.Bind(wx.EVT_ACTIVATE, self.OnActivateFrame)
         if sys.platform.startswith("darwin"):
             self.frame.SetMenuBar(self.menuBar)
@@ -256,7 +360,7 @@ end tell"""
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
         self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
 
-        self.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
+        self.frame.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
 
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
@@ -277,8 +381,8 @@ end tell"""
         # Without the following line, the tab font looks
         # too small on Mac OS X:
         self.foldersUsersNotebook.SetFont(self.panel.GetFont())
-        self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
-                  self.OnNotebookPageChanging, self.foldersUsersNotebook)
+        self.frame.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
+                        self.OnNotebookPageChanging, self.foldersUsersNotebook)
 
         self.foldersView = FoldersView(self.foldersUsersNotebook,
                                        foldersModel=self.foldersModel)
@@ -361,6 +465,9 @@ end tell"""
         return True
 
     def OnActivateApp(self, event):
+        """
+        Called when MyData is activated.
+        """
         if event.GetActive():
             if sys.platform.startswith("darwin"):
                 self.frame.Show(True)
@@ -368,45 +475,81 @@ end tell"""
         event.Skip()
 
     def OnActivateFrame(self, event):
+        """
+        Called when MyData's main window is activated.
+        """
         if event.GetActive():
             self.frame.Show(True)
             self.frame.Raise()
 
+    # pylint: disable=no-self-use
     def OnUndo(self, event):
-        print "OnUndo"
+        """
+        Called when Edit menu's Undo menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
-            print "Calling textCtrl.Undo()"
             textCtrl.Undo()
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnRedo(self, event):
+        """
+        Called when Edit menu's Redo menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             textCtrl.Redo()
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnCut(self, event):
+        """
+        Called when Edit menu's Cut menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             textCtrl.Cut()
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnCopy(self, event):
+        """
+        Called when Edit menu's Copy menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             textCtrl.Copy()
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnPaste(self, event):
+        """
+        Called when Edit menu's Paste menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             textCtrl.Paste()
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnSelectAll(self, event):
+        """
+        Called when Edit menu's Select All menu item is clicked.
+        """
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             textCtrl.SelectAll()
+        event.Skip()
 
-    def OnTaskBarLeftClick(self, evt):
+    def OnTaskBarLeftClick(self, event):
+        """
+        Called when task bar icon is clicked with the left mouse button.
+        """
         self.taskBarIcon.PopupMenu(self.taskBarIcon.CreatePopupMenu())
+        event.Skip()
 
+    # pylint: disable=unused-argument
     def OnCloseFrame(self, event):
         """
         Don't actually close it, just hide it.
@@ -415,7 +558,11 @@ end tell"""
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.frame.Hide()
 
+    # pylint: disable=unused-argument
     def ShutDownCleanlyAndExit(self, event):
+        """
+        Shut down MyData cleanly and quit.
+        """
         started = self.foldersController.Started()
         completed = self.foldersController.Completed()
         canceled = self.foldersController.Canceled()
@@ -432,35 +579,34 @@ end tell"""
                              wx.YES | wx.NO | wx.ICON_QUESTION)
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
-            def shutDownDataScansAndUploads():
-                logger.debug("Starting shutDownDataScansAndUploads...")
+            def ShutDownDataScansAndUploads():
+                """
+                Shut down data folder scanning, datafile lookups
+                (verifications) and uploads.
+                """
+                logger.debug("Starting ShutDownDataScansAndUploads...")
+                # pylint: disable=bare-except
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
                     self.foldersController.ShutDownUploadThreads()
-
-                    def endBusyCursorIfRequired():
-                        try:
-                            wx.EndBusyCursor()
-                        except wx._core.PyAssertionError, e:
-                            if "no matching wxBeginBusyCursor()" \
-                                    not in str(e):
-                                logger.error(str(e))
-                                raise
-                    wx.CallAfter(endBusyCursorIfRequired)
+                    wx.CallAfter(EndBusyCursorIfRequired)
                     self.tasksModel.ShutDown()
                     sys.exit(0)
                 except:
                     try:
                         logger.debug(traceback.format_exc())
                         self.tasksModel.ShutDown()
+                        # pylint: disable=protected-access
                         os._exit(1)
+                    # pylint: disable=bare-except
                     except:
                         logger.debug(traceback.format_exc())
+                        # pylint: disable=protected-access
                         os._exit(1)
                 logger.debug("Finishing run() method for thread %s"
                              % threading.current_thread().name)
 
-            thread = threading.Thread(target=shutDownDataScansAndUploads)
+            thread = threading.Thread(target=ShutDownDataScansAndUploads)
             logger.debug("Starting thread %s" % thread.name)
             thread.start()
             logger.debug("Started thread %s" % thread.name)
@@ -486,27 +632,27 @@ end tell"""
 
         openIcon = MyDataIcons.GetIcon("Open folder", size="24x24")
         if wx.version().startswith("3.0.3.dev"):
-            AddToolMethod = self.toolbar.AddTool
+            addToolMethod = self.toolbar.AddTool
         else:
-            AddToolMethod = self.toolbar.AddLabelTool
-        openTool = AddToolMethod(wx.ID_ANY, "Open folder",
+            addToolMethod = self.toolbar.AddLabelTool
+        openTool = addToolMethod(wx.ID_ANY, "Open folder",
                                  openIcon, shortHelp="Open folder")
-        self.Bind(wx.EVT_MENU, self.OnOpen, openTool)
+        self.frame.Bind(wx.EVT_MENU, self.OnOpen, openTool)
 
         self.toolbar.AddSeparator()
 
         refreshIcon = MyDataIcons.GetIcon("Refresh", size="24x24")
-        self.refreshTool = AddToolMethod(wx.ID_REFRESH, "Refresh",
+        self.refreshTool = addToolMethod(wx.ID_REFRESH, "Refresh",
                                          refreshIcon, shortHelp="Refresh")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
-        self.Bind(wx.EVT_TOOL, self.OnRefreshFromToolbar, self.refreshTool,
-                  self.refreshTool.GetId())
+        self.frame.Bind(wx.EVT_TOOL, self.OnRefreshFromToolbar, self.refreshTool,
+                        self.refreshTool.GetId())
 
         self.toolbar.AddSeparator()
 
         stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                        style=IconStyle.NORMAL)
-        self.stopTool = AddToolMethod(wx.ID_STOP, "Stop",
+        self.stopTool = addToolMethod(wx.ID_STOP, "Stop",
                                       stopIcon, shortHelp="Stop")
         disabledStopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
                                                style=IconStyle.DISABLED)
@@ -514,38 +660,38 @@ end tell"""
                                            disabledStopIcon)
         self.toolbar.EnableTool(self.stopTool.GetId(), False)
 
-        self.Bind(wx.EVT_TOOL, self.OnStop, self.stopTool,
-                  self.stopTool.GetId())
+        self.frame.Bind(wx.EVT_TOOL, self.OnStop, self.stopTool,
+                        self.stopTool.GetId())
 
         self.toolbar.AddSeparator()
 
         settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
-        self.settingsTool = AddToolMethod(wx.ID_ANY, "Settings",
+        self.settingsTool = addToolMethod(wx.ID_ANY, "Settings",
                                           settingsIcon, shortHelp="Settings")
-        self.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
+        self.frame.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
         internetIcon = MyDataIcons.GetIcon("Internet explorer", size="24x24")
-        self.myTardisTool = AddToolMethod(wx.ID_ANY, "MyTardis",
+        self.myTardisTool = addToolMethod(wx.ID_ANY, "MyTardis",
                                           internetIcon, shortHelp="MyTardis")
-        self.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
+        self.frame.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
         aboutIcon = MyDataIcons.GetIcon("About", size="24x24",
                                         style=IconStyle.HOT)
-        self.aboutTool = AddToolMethod(wx.ID_ANY, "About MyData",
+        self.aboutTool = addToolMethod(wx.ID_ANY, "About MyData",
                                        aboutIcon, shortHelp="About MyData")
-        self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
+        self.frame.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
         helpIcon = MyDataIcons.GetIcon("Help", size="24x24",
                                        style=IconStyle.HOT)
-        self.helpTool = AddToolMethod(wx.ID_ANY, "Help", helpIcon,
+        self.helpTool = addToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")
-        self.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
+        self.frame.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
 
         self.toolbar.AddStretchableSpace()
         self.searchCtrl = wx.SearchCtrl(self.toolbar, size=wx.Size(200, -1),
@@ -553,8 +699,8 @@ end tell"""
         self.searchCtrl.ShowSearchButton(True)
         self.searchCtrl.ShowCancelButton(True)
 
-        self.Bind(wx.EVT_TEXT_ENTER, self.OnDoSearch, self.searchCtrl)
-        self.Bind(wx.EVT_TEXT, self.OnDoSearch, self.searchCtrl)
+        self.frame.Bind(wx.EVT_TEXT_ENTER, self.OnDoSearch, self.searchCtrl)
+        self.frame.Bind(wx.EVT_TEXT, self.OnDoSearch, self.searchCtrl)
 
         self.toolbar.AddControl(self.searchCtrl)
 
@@ -570,6 +716,10 @@ end tell"""
         # pass
 
     def OnDoSearch(self, event):
+        """
+        Triggered by user typing into search field in upper-right corner
+        or main window.
+        """
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.USERS:
@@ -583,6 +733,9 @@ end tell"""
             self.uploadsModel.Filter(event.GetString())
 
     def OnRefreshFromToolbar(self, event):
+        """
+        The user pressed the Refresh icon on the main windows' toolbar.
+        """
         logger.debug("OnRefreshFromToolbar")
         self.tasksModel.DeleteAllRows()
         self.settingsModel.SetScheduleType("Manually")
@@ -591,7 +744,13 @@ end tell"""
         self.ApplySchedule(event, runManually=True)
 
     def OnRefresh(self, event, needToValidateSettings=True, jobId=None):
-        shutdownForRefreshAlreadyComplete = False
+        """
+        Shut down any existing data folder scan and upload threads,
+        validate settings, and begin scanning data folders, checking
+        for existing datafiles on MyTardis and uploading any datafiles
+        not yet available on MyTardis.
+        """
+        shutdownForRefreshComplete = False
         if jobId:
             logger.debug("OnRefresh called from job ID %d" % jobId)
         elif event is None:
@@ -608,17 +767,17 @@ end tell"""
                 self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
             logger.debug("OnRefresh triggered by 'MyTardis Sync' "
                          "task bar menu item.")
-        elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH:
+        elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
             logger.debug("OnRefresh called from "
-                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH event.")
+                         "EVT_VALIDATE_SETTINGS_FOR_REFRESH event.")
         elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
             logger.debug("OnRefresh called from "
                          "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
-            shutdownForRefreshAlreadyComplete = True
+            shutdownForRefreshComplete = True
         elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
             logger.debug("OnRefresh called from "
                          "EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
-            shutdownForRefreshAlreadyComplete = True
+            shutdownForRefreshComplete = True
         else:
             logger.debug("OnRefresh: event.GetId() = %d" % event.GetId())
 
@@ -626,12 +785,12 @@ end tell"""
                 event.needToValidateSettings is False:
             needToValidateSettings = False
         if hasattr(event, "shutdownSuccessful") and event.shutdownSuccessful:
-            shutdownForRefreshAlreadyComplete = True
+            shutdownForRefreshComplete = True
 
         # Shutting down existing data scan and upload processes:
 
         if (self.ScanningFolders() or self.PerformingLookupsAndUploads()) \
-                and not shutdownForRefreshAlreadyComplete:
+                and not shutdownForRefreshComplete:
             message = \
                 "Shutting down existing data scan and upload processes..."
             logger.debug(message)
@@ -653,19 +812,19 @@ end tell"""
 
         # Network connectivity check:
 
-        settingsValidationForRefreshEvent = \
-            mde.MyDataEvent(mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH)
+        validateSettingsForRefreshEvent = \
+            mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH)
 
-        intervalSinceLastConnectivityCheck = \
-            datetime.now() - self.lastNetworkConnectivityCheckTime
-        # FIXME: Magic number of 30 seconds since last connectivity check.
-        if intervalSinceLastConnectivityCheck.total_seconds() >= 30 or \
-                not self.lastNetworkConnectivityCheckSuccess:
+        intervalSinceLastCheck = \
+            datetime.now() - self.lastConnectivityCheckTime
+        checkInterval = self.settingsModel.GetConnectivityCheckInterval()
+        if intervalSinceLastCheck.total_seconds() >= checkInterval or \
+                not self.lastConnectivityCheckSuccess:
             logger.debug("Checking network connectivity...")
             checkConnectivityEvent = \
                 mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
                                 settingsModel=self.settingsModel,
-                                nextEvent=settingsValidationForRefreshEvent)
+                                nextEvent=validateSettingsForRefreshEvent)
             wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
             return
 
@@ -676,18 +835,23 @@ end tell"""
             self.frame.SetStatusMessage("Validating settings...")
             self.settingsValidation = None
 
-            def validateSettings():
+            def ValidateSettings():
+                """
+                Validate settings.
+                """
                 logger.debug("Starting run() method for thread %s"
                              % threading.current_thread().name)
+                # pylint: disable=bare-except
                 try:
                     wx.CallAfter(wx.BeginBusyCursor)
+                    # pylint: disable=broad-except
                     try:
                         activeNetworkInterfaces = \
                             UploaderModel.GetActiveNetworkInterfaces()
-                    except Exception, e:
+                    except Exception, err:
                         logger.error(traceback.format_exc())
-                        if type(e).__name__ == "WindowsError" and \
-                                "The handle is invalid" in str(e):
+                        if type(err).__name__ == "WindowsError" and \
+                                "The handle is invalid" in str(err):
                             message = "An error occurred, suggesting " \
                                 "that you have launched MyData.exe from a " \
                                 "Command Prompt window.  Please launch it " \
@@ -696,60 +860,47 @@ end tell"""
                                 "\n" \
                                 "See: https://bugs.python.org/issue3905"
 
-                            def showErrorDialog(message):
+                            def ShowErrorDialog(message):
+                                """
+                                Needs to run in the main thread.
+                                """
                                 dlg = wx.MessageDialog(None, message, "MyData",
                                                        wx.OK | wx.ICON_ERROR)
                                 dlg.ShowModal()
-                            wx.CallAfter(showErrorDialog, message)
+                            wx.CallAfter(ShowErrorDialog, message)
                     if len(activeNetworkInterfaces) == 0:
                         message = "No active network interfaces." \
                             "\n\n" \
                             "Please ensure that you have an active " \
                             "network interface (e.g. Ethernet or WiFi)."
 
-                        def showDialog():
+                        def ShowDialog():
+                            """
+                            Needs to run in the main thread.
+                            """
                             dlg = wx.MessageDialog(None, message, "MyData",
                                                    wx.OK | wx.ICON_ERROR)
                             dlg.ShowModal()
-
-                            def endBusyCursorIfRequired():
-                                try:
-                                    wx.EndBusyCursor()
-                                except wx._core.PyAssertionError, e:
-                                    if "no matching wxBeginBusyCursor()" \
-                                            not in str(e):
-                                        logger.error(str(e))
-                                        raise
-                            wx.CallAfter(endBusyCursorIfRequired)
+                            wx.CallAfter(EndBusyCursorIfRequired)
                             self.frame.SetStatusMessage("")
                             self.frame.SetConnected(
                                 self.settingsModel.GetMyTardisUrl(), False)
-                        wx.CallAfter(showDialog)
+                        wx.CallAfter(ShowDialog)
                         return
 
                     self.settingsValidation = self.settingsModel.Validate()
-                    settingsValidationForRefreshCompleteEvent = \
-                        mde.MyDataEvent(
-                            mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
-                            needToValidateSettings=False)
-                    wx.PostEvent(self.frame,
-                                 settingsValidationForRefreshCompleteEvent)
-
-                    def endBusyCursorIfRequired():
-                        try:
-                            wx.EndBusyCursor()
-                        except wx._core.PyAssertionError, e:
-                            if "no matching wxBeginBusyCursor()" not in str(e):
-                                logger.error(str(e))
-                                raise
-                    wx.CallAfter(endBusyCursorIfRequired)
+                    event = mde.MyDataEvent(
+                        mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
+                        needToValidateSettings=False)
+                    wx.PostEvent(self.frame, event)
+                    wx.CallAfter(EndBusyCursorIfRequired)
                 except:
                     logger.debug(traceback.format_exc())
                     return
                 logger.debug("Finishing run() method for thread %s"
                              % threading.current_thread().name)
 
-            thread = threading.Thread(target=validateSettings,
+            thread = threading.Thread(target=ValidateSettings,
                                       name="OnRefreshValidateSettings")
             logger.debug("Starting thread %s" % thread.name)
             thread.start()
@@ -766,24 +917,6 @@ end tell"""
             self.OnSettings(event)
             return
 
-        def cancelCallback():
-            def shutDownUploadThreads():
-                try:
-                    wx.CallAfter(wx.BeginBusyCursor)
-                    self.foldersController.ShutDownUploadThreads()
-
-                    def endBusyCursorIfRequired():
-                        try:
-                            wx.EndBusyCursor()
-                        except wx._core.PyAssertionError, e:
-                            if "no matching wxBeginBusyCursor()" not in str(e):
-                                logger.error(str(e))
-                                raise
-                    wx.CallAfter(endBusyCursorIfRequired)
-                except:
-                    logger.error(traceback.format_exc())
-            thread = threading.Thread(target=shutDownUploadThreads)
-            thread.start()
         if "Group" in self.settingsModel.GetFolderStructure():
             userOrGroup = "user group"
         else:
@@ -792,7 +925,10 @@ end tell"""
         self.numUserFoldersScanned = 0
         self.shouldAbort = False
 
-        def writeProgressUpdateToStatusBar():
+        def WriteProgressUpdateToStatusBar():
+            """
+            Write progress update to status bar.
+            """
             self.numUserFoldersScanned = self.numUserFoldersScanned + 1
             message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
@@ -803,7 +939,11 @@ end tell"""
         # SECTION 4: Start FoldersModel.ScanFolders(),
         # followed by FoldersController.StartDataUploads().
 
-        def scanDataDirs():
+        def ScanDataDirs():
+            """
+            Scan data folders, looking for datafiles to look up on MyTardis
+            and upload if necessary.
+            """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             wx.CallAfter(self.frame.SetStatusMessage,
@@ -815,30 +955,25 @@ end tell"""
                 self.SetScanningFolders(True)
                 logger.info("Just set ScanningFolders to True")
                 self.toolbar.EnableTool(self.stopTool.GetId(), True)
-                self.foldersModel.ScanFolders(writeProgressUpdateToStatusBar,
+                self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
                                               self.ShouldAbort)
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
                 logger.info("Just set ScanningFolders to False")
             except InvalidFolderStructure, ifs:
-                def showMessageDialog():
+                def ShowMessageDialog():
+                    """
+                    Needs to run in the main thread.
+                    """
                     dlg = wx.MessageDialog(None, str(ifs), "MyData",
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
-                wx.CallAfter(showMessageDialog)
+                wx.CallAfter(ShowMessageDialog)
                 self.frame.SetStatusMessage(str(ifs))
                 return
 
-            def endBusyCursorIfRequired():
-                try:
-                    wx.EndBusyCursor()
-                except wx._core.PyAssertionError, e:
-                    if "no matching wxBeginBusyCursor()" not in str(e):
-                        logger.error(str(e))
-                        raise
-
             if self.ShouldAbort():
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
 
             if self.usersModel.GetNumUserOrGroupFolders() > 0:
@@ -853,32 +988,53 @@ end tell"""
                 logger.debug(message)
                 self.frame.SetStatusMessage(message)
 
-            wx.CallAfter(endBusyCursorIfRequired)
+            wx.CallAfter(EndBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
-        thread = threading.Thread(target=scanDataDirs,
+        thread = threading.Thread(target=ScanDataDirs,
                                   name="ScanDataDirectoriesThread")
-        logger.debug("OnRefresh: Starting scanDataDirs thread.")
+        logger.debug("OnRefresh: Starting ScanDataDirs thread.")
         thread.start()
-        logger.debug("OnRefresh: Started scanDataDirs thread.")
+        logger.debug("OnRefresh: Started ScanDataDirs thread.")
 
     def OnStop(self, event):
+        """
+        The user pressed the stop button on the main toolbar.
+        """
         self.shouldAbort = True
         self.uploadsView.OnCancelRemainingUploads(event)
 
     def ShouldAbort(self):
+        """
+        The user has requested aborting the data folder scans and/or
+        datafile lookups (verifications) and/or uploads.
+        """
         return self.shouldAbort
 
     def OnOpen(self, event):
+        """
+        Open the selected data folder in Windows Explorer (Windows) or
+        in Finder (Mac OS X).
+        """
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersController.OnOpenFolder(event)
 
     def OnNotebookPageChanging(self, event):
-        if hasattr(self, 'searchCtrl'):
+        """
+        Clear the search field after switching views
+        (e.g. from Folders to Users).
+        """
+        if self.searchCtrl:
             self.searchCtrl.SetValue("")
 
     def OnSettings(self, event):
+        """
+        Open the Settings dialog, which could be in response to the main
+        toolbar's Refresh icon, or in response to in response to the task bar
+        icon's "MyData Settings" menu item, or in response to MyData being
+        launched without any previously saved settings.
+        """
         settingsDialog = SettingsDialog(self.frame, -1, "Settings",
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
@@ -895,6 +1051,10 @@ end tell"""
             self.ApplySchedule(event)
 
     def ApplySchedule(self, event, runManually=False):
+        """
+        Create and schedule task(s) according to the settings configured in
+        the Schedule tab of the Settings dialog.
+        """
         logger.debug("Getting schedule type from settings dialog.")
         scheduleType = self.settingsModel.GetScheduleType()
         if scheduleType == "On Startup" and \
@@ -902,7 +1062,7 @@ end tell"""
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
             logger.debug("Schedule type is %s." % scheduleType)
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def OnStartup(app, event, needToValidateSettings, jobId):
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -929,19 +1089,23 @@ end tell"""
                 "to run at %s on %s" % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, OnStartup, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         if scheduleType == "On Settings Saved" and \
                 self.settingsModel.GetLastSettingsUpdateTrigger() == \
                 LastSettingsUpdateTrigger.UI_RESPONSE:
             logger.debug("Schedule type is %s." % scheduleType)
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def OnSettingsSaved(app, event, needToValidateSettings, jobId):
+                """
+                Task to run after the Settings dialog's OK button has been
+                pressed and settings have been validated.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -965,12 +1129,12 @@ end tell"""
                 "to run at %s on %s" % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, OnSettingsSaved, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         elif scheduleType == "Manually":
             logger.debug("Schedule type is Manually.")
@@ -979,7 +1143,13 @@ end tell"""
                 logger.debug("Finished processing schedule type.")
                 return
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def RunTaskManually(app, event, needToValidateSettings, jobId):
+                """
+                Task to run when the user manually asks MyData to being the
+                data folder scans and uploads, usually by clicking the Refresh
+                toolbar icon, or by selecting the task bar icon menu's
+                "MyTardis Sync" menu item.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -1003,17 +1173,21 @@ end tell"""
                 "to run at %s on %s" % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, RunTaskManually, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         elif scheduleType == "Once":
             logger.debug("Schedule type is Once.")
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def RunTaskOnce(app, event, needToValidateSettings, jobId):
+                """
+                Run a task once, on the date and time configured in the
+                Schedule tab of the Settings dialog.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -1050,17 +1224,21 @@ end tell"""
                 "to run at %s on %s" % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, RunTaskOnce, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         elif scheduleType == "Daily":
             logger.debug("Schedule type is Daily.")
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def RunTaskDaily(app, event, needToValidateSettings, jobId):
+                """
+                Run a task every day at the time specified
+                in the Schedule tab of the Settings dialog.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -1089,17 +1267,21 @@ end tell"""
                 % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, RunTaskDaily, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         elif scheduleType == "Weekly":
             logger.debug("Schedule type is Weekly.")
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def RunTaskWeekly(app, event, needToValidateSettings, jobId):
+                """
+                Run a task on the days (of the week) and time specified
+                in the Schedule tab of the Settings dialog.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -1138,18 +1320,22 @@ end tell"""
                 % (jobDesc, timeString, dateString))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, RunTaskWeekly, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType,
                              days=days)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         elif scheduleType == "Timer":
             logger.debug("Schedule type is Timer.")
 
-            def jobFunc(app, event, needToValidateSettings, jobId):
+            def RunTaskOnTimer(app, event, needToValidateSettings, jobId):
+                """
+                Run a task every n minutes, where n is the interval
+                specified in the Schedule tab of the Settings dialog.
+                """
                 wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                              True)
                 while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
@@ -1180,19 +1366,19 @@ end tell"""
                 (jobDesc, timeString, dateString, intervalMinutes))
             taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
             jobArgs.append(taskDataViewId)
-            task = TaskModel(taskDataViewId, jobFunc, jobArgs, jobDesc,
+            task = TaskModel(taskDataViewId, RunTaskOnTimer, jobArgs, jobDesc,
                              startTime, scheduleType=scheduleType,
                              intervalMinutes=intervalMinutes)
             try:
                 self.tasksModel.AddRow(task)
-            except ValueError, ve:
-                wx.MessageBox(str(ve), "MyData", wx.ICON_ERROR)
+            except ValueError, err:
+                wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
                 return
         logger.debug("Finished processing schedule type.")
 
     def OnMyTardis(self, event):
+        # pylint: disable=bare-except
         try:
-            import webbrowser
             items = self.foldersView.GetDataViewControl().GetSelections()
             rows = [self.foldersModel.GetRow(item) for item in items]
             if len(rows) == 1:
@@ -1238,19 +1424,17 @@ end tell"""
     def GetMyDataEvents(self):
         return self.myDataEvents
 
-    def GetLastNetworkConnectivityCheckTime(self):
-        return self.lastNetworkConnectivityCheckTime
+    def GetLastConnectivityCheckTime(self):
+        return self.lastConnectivityCheckTime
 
-    def SetLastNetworkConnectivityCheckTime(self,
-                                            lastNetworkConnectivityCheckTime):
-        self.lastNetworkConnectivityCheckTime = \
-            lastNetworkConnectivityCheckTime
+    def SetLastConnectivityCheckTime(self, lastConnectivityCheckTime):
+        self.lastConnectivityCheckTime = lastConnectivityCheckTime
 
-    def GetLastNetworkConnectivityCheckSuccess(self):
-        return self.lastNetworkConnectivityCheckSuccess
+    def GetLastConnectivityCheckSuccess(self):
+        return self.lastConnectivityCheckSuccess
 
-    def SetLastNetworkConnectivityCheckSuccess(self, success):
-        self.lastNetworkConnectivityCheckSuccess = success
+    def SetLastConnectivityCheckSuccess(self, success):
+        self.lastConnectivityCheckSuccess = success
 
     def GetActiveNetworkInterface(self):
         return self.activeNetworkInterface
@@ -1283,7 +1467,10 @@ end tell"""
             self.performingLookupsAndUploads.clear()
 
 
-def main(argv):
+def Run():
+    """
+    Main function for launching MyData.
+    """
     app = MyData("MyData")
     app.MainLoop()
 

@@ -17,7 +17,7 @@ MYDATA_EVENT_BINDER = wx.PyEventBinder(MYDATA_EVENT_TYPE, 1)
 
 EVT_SHUTDOWN_FOR_REFRESH = wx.NewId()
 EVT_SHUTDOWN_FOR_REFRESH_COMPLETE = wx.NewId()
-EVT_SETTINGS_VALIDATION_FOR_REFRESH = wx.NewId()
+EVT_VALIDATE_SETTINGS_FOR_REFRESH = wx.NewId()
 EVT_CHECK_CONNECTIVITY = wx.NewId()
 EVT_INSTRUMENT_NAME_MISMATCH = wx.NewId()
 EVT_RENAME_INSTRUMENT = wx.NewId()
@@ -50,7 +50,7 @@ class MyDataEvents():
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
                           MyDataEvent.ShutdownForRefreshComplete)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
-                          MyDataEvent.SettingsValidationForRefresh)
+                          MyDataEvent.ValidateSettingsForRefresh)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
                           MyDataEvent.CheckConnectivity)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
@@ -128,15 +128,15 @@ class MyDataEvent(wx.PyCommandEvent):
             if len(activeNetworkInterfaces) > 0:
                 logger.debug("Found at least one active network interface: %s."
                              % activeNetworkInterfaces[0])
-                wx.GetApp().SetLastNetworkConnectivityCheckSuccess(True)
-                wx.GetApp().SetLastNetworkConnectivityCheckTime(datetime.now())
+                wx.GetApp().SetLastConnectivityCheckSuccess(True)
+                wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
                 wx.GetApp()\
                     .SetActiveNetworkInterface(activeNetworkInterfaces[0])
                 if hasattr(event, "nextEvent"):
                     wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             else:
-                wx.GetApp().SetLastNetworkConnectivityCheckSuccess(False)
-                wx.GetApp().SetLastNetworkConnectivityCheckTime(datetime.now())
+                wx.GetApp().SetLastConnectivityCheckSuccess(False)
+                wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
                 wx.GetApp().SetActiveNetworkInterface(None)
                 message = "No active network interfaces." \
                     "\n\n" \
@@ -208,13 +208,14 @@ class MyDataEvent(wx.PyCommandEvent):
                     MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
                                 settingsDialog=event.settingsDialog,
                                 settingsModel=event.settingsModel)
-                intervalSinceLastConnectivityCheck = \
+                intervalSinceLastCheck = \
                     datetime.now() - \
-                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
-                # FIXME: Magic number of 30 seconds below:
-                if intervalSinceLastConnectivityCheck.total_seconds() >= 30 \
+                    wx.GetApp().GetLastConnectivityCheckTime()
+                checkInterval = \
+                    event.settingsModel.GetConnectivityCheckInterval()
+                if intervalSinceLastCheck.total_seconds() >= checkInterval \
                         or not wx.GetApp()\
-                        .GetLastNetworkConnectivityCheckSuccess():
+                        .GetLastConnectivityCheckSuccess():
                     checkConnectivityEvent = \
                         MyDataEvent(EVT_CHECK_CONNECTIVITY,
                                     settingsModel=event.settingsModel,
@@ -296,12 +297,13 @@ class MyDataEvent(wx.PyCommandEvent):
                                  busyCursor)
                 wx.CallAfter(event.settingsDialog.okButton.Disable)
 
-                intervalSinceLastConnCheck = datetime.now() - \
-                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
-                # FIXME: Magic number of 30 secs since last connectivity check.
-                if intervalSinceLastConnCheck.total_seconds() >= 30 or \
+                intervalSinceLastCheck = datetime.now() - \
+                    wx.GetApp().GetLastConnectivityCheckTime()
+                checkInterval = \
+                    event.settingsModel.GetConnectivityCheckInterval()
+                if intervalSinceLastCheck.total_seconds() >= checkInterval or \
                         not wx.GetApp()\
-                        .GetLastNetworkConnectivityCheckSuccess():
+                        .GetLastConnectivityCheckSuccess():
                     settingsDialogValidationEvent = \
                         MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
                                     settingsDialog=event.settingsDialog,
@@ -553,8 +555,8 @@ class MyDataEvent(wx.PyCommandEvent):
             return
         wx.GetApp().OnRefresh(event)
 
-    def SettingsValidationForRefresh(event):
-        if event.id != EVT_SETTINGS_VALIDATION_FOR_REFRESH:
+    def ValidateSettingsForRefresh(event):
+        if event.id != EVT_VALIDATE_SETTINGS_FOR_REFRESH:
             event.Skip()
             return
         wx.GetApp().OnRefresh(event)

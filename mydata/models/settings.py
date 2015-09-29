@@ -77,6 +77,8 @@ class SettingsModel():
         self.last_settings_update_trigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
 
+        self.connectivityCheckInterval = 30  # seconds
+
         self.LoadSettings()
 
     def LoadSettings(self, configPath=None):
@@ -1441,3 +1443,6 @@ oFS.DeleteFile sLinkFile
 
     def SetLastSettingsUpdateTrigger(self, lastSettingsUpdateTrigger):
         self.last_settings_update_trigger = lastSettingsUpdateTrigger
+
+    def GetConnectivityCheckInterval(self):
+        return self.connectivityCheckInterval

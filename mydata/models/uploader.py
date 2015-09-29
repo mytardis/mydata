@@ -119,7 +119,7 @@ class UploaderModel():
             self.settingsModel.SetUuid(self.uuid)
 
         intervalSinceLastConnectivityCheck = \
-            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
+            datetime.now() - wx.GetApp().GetLastConnectivityCheckTime()
 
         # Here we check connectivity even if we've already done so, because
         # we need to ensure that we get the correct network interface for
