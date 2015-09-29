@@ -874,12 +874,6 @@ end tell"""
         if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersController.OnOpenFolder(event)
 
-    def OnDelete(self, event):
-        if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
-            self.foldersController.OnDeleteFolders(event)
-        else:
-            self.usersView.OnDeleteUsers(event)
-
     def OnNotebookPageChanging(self, event):
         if hasattr(self, 'searchCtrl'):
             self.searchCtrl.SetValue("")

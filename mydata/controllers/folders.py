@@ -627,32 +627,6 @@ class FoldersController():
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
 
-    def OnDeleteFolders(self, evt):
-        # Remove the selected row(s) from the model. The model will take care
-        # of notifying the view (and any other observers) that the change has
-        # happened.
-        items = self.foldersView.GetDataViewControl().GetSelections()
-        rows = [self.foldersModel.GetRow(item) for item in items]
-        if len(rows) > 1:
-            message = "Are you sure you want to remove the selected folders?"
-        elif len(rows) == 1:
-            message = "Are you sure you want to remove the \"" + \
-                self.foldersModel\
-                .GetValueForRowColumnKeyName(rows[0], "folder") + \
-                "\" folder?"
-        else:
-            dlg = wx.MessageDialog(self.notifyWindow,
-                                   "Please select a folder to delete.",
-                                   "Delete Folder(s)", wx.OK)
-            dlg.ShowModal()
-            return
-        confirmationDialog = \
-            wx.MessageDialog(self.notifyWindow, message, "Confirm Delete",
-                             wx.OK | wx.CANCEL | wx.ICON_QUESTION)
-        okToDelete = confirmationDialog.ShowModal()
-        if okToDelete == wx.ID_OK:
-            self.foldersModel.DeleteRows(rows)
-
     def OnOpenFolder(self, evt):
         items = self.foldersView.GetDataViewControl().GetSelections()
         rows = [self.foldersModel.GetRow(item) for item in items]
