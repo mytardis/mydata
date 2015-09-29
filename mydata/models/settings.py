@@ -79,13 +79,15 @@ class SettingsModel():
 
         self.connectivityCheckInterval = 30  # seconds
 
+        self.defaultOwner = None
+
         self.LoadSettings()
 
     def LoadSettings(self, configPath=None):
         """
         Sets some default values for settings fields, then loads a settings
         file,
-        e.g. C:\Users\jsmith\AppData\Local\Monash University\MyData\MyData.cfg
+        e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
         """
         # General tab
         self.instrument_name = ""
@@ -333,7 +335,7 @@ class SettingsModel():
         self.username = username
 
     def GetDefaultOwner(self):
-        if hasattr(self, "defaultOwner") and \
+        if self.defaultOwner and \
                 self.defaultOwner.GetUsername() == self.GetUsername():
             return self.defaultOwner
         self.defaultOwner = UserModel.GetUserByUsername(self,

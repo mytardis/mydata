@@ -133,7 +133,10 @@ class UploadsView(wx.Panel):
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
 
-                def endBusyCursorIfRequired():
+                def EndBusyCursorIfRequired():
+                    # pylint: disable=no-member
+                    # Otherwise pylint complains about PyAssertionError.
+                    # pylint: disable=protected-access
                     try:
                         wx.EndBusyCursor()
                     except wx._core.PyAssertionError, e:
@@ -141,7 +144,7 @@ class UploadsView(wx.Panel):
                                 not in str(e):
                             logger.error(str(e))
                             raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(EndBusyCursorIfRequired)
             except:
                 logger.error(traceback.format_exc())
         thread = threading.Thread(target=shutDownUploadThreads)

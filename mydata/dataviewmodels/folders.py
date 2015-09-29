@@ -76,10 +76,6 @@ class FoldersModel(DataViewIndexListModel):
         return self.foldersData[row]
 
     def CleanUp(self):
-        logger.debug("Joining FoldersModel's UploadDataThread...")
-        self.uploadDataThread.join()
-        logger.debug("Joined FoldersModel's UploadDataThread.")
-
         logger.debug("Cleaning up each FolderModel record's threads...")
         for row in range(0, self.GetRowCount()):
             self.foldersData[row].CleanUp()

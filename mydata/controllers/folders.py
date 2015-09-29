@@ -75,7 +75,7 @@ class FoldersController():
         self.canceled = threading.Event()
         self.failed = threading.Event()
 
-        # These will get overwritten in UploadDataThread, but we need
+        # These will get overwritten in StartDataUploads, but we need
         # to initialize them here, so that ShutDownUploadThreads()
         # can be called.
         self.numVerificationWorkerThreads = 0
@@ -97,7 +97,7 @@ class FoldersController():
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
         self.ConnectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
-        self.notifyWindow.Bind(eventBinder,  self.UpdateStatusBar)
+        self.notifyWindow.Bind(eventBinder, self.UpdateStatusBar)
 
         self.ShowMessageDialogEvent, eventBinder = wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.ShowMessageDialog)
@@ -371,7 +371,7 @@ class FoldersController():
                 folderModel = self.foldersModel.GetFolderRecord(row)
                 fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
                 logger.debug(
-                    "UploadDataThread: Starting verifications "
+                    "StartDataUploads: Starting verifications "
                     "and uploads for folder: " +
                     folderModel.GetFolder())
                 if self.IsShuttingDown():
@@ -551,10 +551,6 @@ class FoldersController():
             self.SetCompleted()
         else:
             self.SetCanceled()
-        if hasattr(self, 'uploadDataThread'):
-            logger.debug("Joining FoldersController's UploadDataThread...")
-            self.uploadDataThread.join()
-            logger.debug("Joined FoldersController's UploadDataThread.")
         logger.debug("Shutting down FoldersController upload worker threads.")
         for i in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
@@ -1262,7 +1258,7 @@ class UploadDatafileRunnable():
                             message += \
                                 "Please ask your MyTardis administrator to " \
                                 "check the permissions of the \"%s\" user " \
-                                "account." % myTardisDefaultUsername
+                                "account." % myTardisUsername
                             raise Unauthorized(message)
                         elif response.status_code == 404:
                             message = "Encountered a 404 (Not Found) error " \
