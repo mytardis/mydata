@@ -1,16 +1,21 @@
+
+"""
+mydata/views/taskbaricon.py
+
+Provides a system tray icon (Windows)
+or menubar icon (Mac OS X) for MyData.
+"""
 import wx
 import os
-import sys
-import platform
 import webbrowser
 
 from mydata.media import MyDataIcons
-from mydata.media import IconStyle
 from mydata.logs import logger
 from mydata.models.settings import LastSettingsUpdateTrigger
 
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
+    # pylint: disable=import-error
     from wx.adv import TaskBarIcon
 else:
     from wx import EmptyIcon
@@ -18,6 +23,12 @@ else:
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
+    """
+    Provides a system tray icon (Windows)
+    or menubar icon (Mac OS X) for MyData.
+    """
+
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, frame, settingsModel):
         """Constructor"""
         TaskBarIcon.__init__(self)
@@ -33,17 +44,18 @@ class MyDataTaskBarIcon(TaskBarIcon):
         # Mouse event handling set up in MyData class's OnInit method.
         # self.Bind(wx.EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
 
-    def OnTaskBarActivate(self, evt):
-        """"""
-        pass
-
-    def OnTaskBarClose(self, evt):
-        """
-        Destroy the taskbar icon and frame from the taskbar icon itself
-        """
-        self.frame.Close()
+        self.menu = None
+        self.myTardisSyncMenuItem = None
+        self.myTardisMainWindowMenuItem = None
+        self.myTardisSettingsMenuItem = None
+        self.myTardisHelpMenuItem = None
+        self.exitMyDataMenuItem = None
 
     def CreatePopupMenu(self):
+        """
+        Overrides method in parent class to provide a Popup Menu
+        when the user clicks on MyData's system tray (or menubar) icon.
+        """
         self.menu = wx.Menu()
 
         self.myTardisSyncMenuItem = wx.MenuItem(
@@ -98,21 +110,39 @@ class MyDataTaskBarIcon(TaskBarIcon):
         return self.menu
 
     def GetMyTardisSyncMenuItem(self):
+        """
+        Returns the "MyTardis Sync" menu item.
+        """
         if hasattr(self, "myTardisSyncMenuItem"):
             return self.myTardisSyncMenuItem
         else:
             return None
 
     def OnMyDataMainWindow(self, event):
+        """
+        Called when the "MyData Main Window" menu item is
+        selected from MyData's system tray / menu bar icon menu.
+        """
         self.frame.Show(True)
         self.frame.Raise()
+        event.Skip()
 
     def OnMyDataSettings(self, event):
+        """
+        Called when the "MyData Settings" menu item is
+        selected from MyData's system tray / menu bar icon menu.
+        """
         self.frame.Show(True)
         self.frame.Raise()
         wx.GetApp().OnSettings(event)
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnMyTardisSync(self, event):
+        """
+        Called when the "MyTardis Sync" menu item is
+        selected from MyData's system tray / menu bar icon menu.
+        """
         # wx.GetApp().OnRefresh(event)
         logger.debug("MyTardis Sync called from task bar menu item.")
         app = wx.GetApp()
@@ -120,14 +150,25 @@ class MyDataTaskBarIcon(TaskBarIcon):
         app.settingsModel.SetScheduleType("Manually")
         app.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
-        app.ApplySchedule(event, runManually=True)
+        app.GetScheduleController().ApplySchedule(event, runManually=True)
+        event.Skip()
 
+    # pylint: disable=no-self-use
     def OnMyDataHelp(self, event):
+        """
+        Called when the "MyData Help" menu item is
+        selected from MyData's system tray / menu bar icon menu.
+        """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
         webbrowser.open(url, new=new)
+        event.Skip()
 
     def OnExit(self, event):
+        """
+        Called when the "Exit MyData" menu item is
+        selected from MyData's system tray / menu bar icon menu.
+        """
         started = wx.GetApp().foldersController.Started()
         completed = wx.GetApp().foldersController.Completed()
         canceled = wx.GetApp().foldersController.Canceled()
@@ -146,4 +187,6 @@ class MyDataTaskBarIcon(TaskBarIcon):
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
             # See also: wx.GetApp().ShutDownCleanlyAndExit(event)
+            # pylint: disable=protected-access
             os._exit(0)
+        event.Skip()
