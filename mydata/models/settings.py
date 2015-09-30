@@ -1,4 +1,3 @@
-import json
 import sys
 import requests
 import traceback
@@ -27,18 +26,20 @@ defaultStartupInfo = None
 defaultCreationFlags = 0
 if sys.platform.startswith("win"):
     defaultStartupInfo = subprocess.STARTUPINFO()
+    # pylint: disable=protected-access
     defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    # pylint: disable=import-error
     import win32process
     defaultCreationFlags = win32process.CREATE_NO_WINDOW
 
 
-class LastSettingsUpdateTrigger:
+class LastSettingsUpdateTrigger(object):
     READ_FROM_DISK = 0
     UI_RESPONSE = 1
 
 
-class SettingsValidation():
+class SettingsValidation(object):
     def __init__(self, valid, message="", field="", suggestion=None,
                  datasetCount=-1):
         self.valid = valid
@@ -63,7 +64,7 @@ class SettingsValidation():
         return self.datasetCount
 
 
-class SettingsModel():
+class SettingsModel(object):
     def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
@@ -432,6 +433,7 @@ class SettingsModel():
     def SetFolderStructure(self, folderStructure):
         self.folder_structure = folderStructure
 
+    # pylint: disable=no-self-use
     def AlertUserAboutMissingFolders(self):
         return False
 
@@ -528,10 +530,8 @@ class SettingsModel():
 
     def GetUploaderModel(self):
         if not self.uploaderModel:
-            """
-            This could be called from multiple threads simultaneously,
-            so it requires locking.
-            """
+            # This could be called from multiple threads
+            # simultaneously, so it requires locking.
             if not hasattr(self, "createUploaderThreadingLock"):
                 self.createUploaderThreadingLock = threading.Lock()
             if self.createUploaderThreadingLock.acquire():
@@ -801,10 +801,8 @@ class SettingsModel():
                 logger.error(traceback.format_exc())
                 return self.validation
 
-            """
-            Here we perform a rather arbitrary query, just to test
-            whether our MyTardis credentials work OK with the API.
-            """
+            # Here we perform a rather arbitrary query, just to test
+            # whether our MyTardis credentials work OK with the API.
             if SetStatusMessage:
                 SetStatusMessage(
                      "Settings validation - checking MyTardis credentials...")
@@ -838,7 +836,6 @@ class SettingsModel():
                 message = "Please enter a valid facility name."
                 suggestion = None
                 try:
-                    defaultUserModel = self.GetDefaultOwner()
                     facilities = FacilityModel.GetMyFacilities(self)
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
@@ -850,7 +847,6 @@ class SettingsModel():
                     self.validation = SettingsValidation(False, message,
                                                          "facility_name")
                     return self.validation
-            defaultUserModel = self.GetDefaultOwner()
             facilities = FacilityModel.GetMyFacilities(self)
             for f in facilities:
                 if self.GetFacilityName() == f.GetName():
@@ -1098,7 +1094,10 @@ oFS.DeleteFile sLinkFile
                         'to make login item at end with properties ' \
                         '{path:"%s", hidden:false}' % pathToMyDataApp
                     cmd = "osascript -e '%s'" % applescript
-                    returncode = subprocess.call(cmd, shell=True)
+                    exitCode = subprocess.call(cmd, shell=True)
+                    if exitCode != 0:
+                        logger.error("Received exit code %d from %s" \
+                            % (exitCode, cmd))
                 elif 'MyData' in loginItems and \
                         not self.StartAutomaticallyOnLogin():
                     logger.info("Removing MyData from login items.")
@@ -1106,7 +1105,10 @@ oFS.DeleteFile sLinkFile
                         'tell application "System Events" to ' \
                         'delete login item "MyData"'
                     cmd = "osascript -e '%s'" % applescript
-                    returncode = subprocess.call(cmd, shell=True)
+                    exitCode = subprocess.call(cmd, shell=True)
+                    if exitCode != 0:
+                        logger.error("Received exit code %d from %s" \
+                            % (exitCode, cmd))
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
@@ -1141,7 +1143,7 @@ oFS.DeleteFile sLinkFile
         expFilterString = "*%s*" % self.GetExperimentFilter()
         filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
                            userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         if len(dirsDepth1) == 0:
             message = "The data directory: \"%s\" doesn't contain any " \
                 % self.GetDataDirectory()
@@ -1187,7 +1189,7 @@ oFS.DeleteFile sLinkFile
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
                                             userOrGroupFilterString,
                                             filterString))
-        dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
+        dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
         if len(dirsDepth2) == 0:
             if self.GetFolderStructure() == 'Username / Dataset':
                 message = "The data directory: \"%s\" should contain " \
@@ -1282,7 +1284,7 @@ oFS.DeleteFile sLinkFile
                                             userOrGroupFilterString,
                                             filterString1,
                                             filterString2))
-        dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
+        dirsDepth3 = [item for item in filesDepth3 if os.path.isdir(item)]
         if len(dirsDepth3) == 0:
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -1352,7 +1354,7 @@ oFS.DeleteFile sLinkFile
                                             'MyTardis',
                                             expFilterString,
                                             datasetFilterString))
-        dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
+        dirsDepth4 = [item for item in filesDepth4 if os.path.isdir(item)]
         if len(dirsDepth4) == 0:
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -1410,7 +1412,6 @@ oFS.DeleteFile sLinkFile
 
     def RenameInstrument(self, facilityName,
                          oldInstrumentName, newInstrumentName):
-        defaultUserModel = self.GetDefaultOwner()
         facilities = FacilityModel.GetMyFacilities(self)
         facility = None
         for f in facilities:

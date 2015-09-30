@@ -1,16 +1,14 @@
 import wx
 import os
 import sys
-import traceback
-import ConfigParser
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
 
 
 class SubmitDebugReportDialog(wx.Dialog):
-    def __init__(self, parent, id, title, debugLog, settingsModel):
-        wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+    def __init__(self, parent, title, debugLog, settingsModel):
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, title, wx.DefaultPosition)
 
         self.settingsModel = settingsModel
 

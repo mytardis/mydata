@@ -105,7 +105,7 @@ class MyDataFrame(wx.Frame):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
-        self.statusbar = EnhancedStatusBar(self, wx.ID_ANY)
+        self.statusbar = EnhancedStatusBar(self)
         if sys.platform.startswith("win"):
             self.statusbar.SetSize(wx.Size(-1, 28))
         else:

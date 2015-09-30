@@ -1,12 +1,11 @@
 import requests
-import json
 import urllib
 
 from mydata.logs import logger
 from mydata.utils.exceptions import DoesNotExist
 
 
-class GroupModel():
+class GroupModel(object):
 
     def __init__(self, settingsModel=None, name=None, groupJson=None):
         self.settingsModel = settingsModel

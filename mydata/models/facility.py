@@ -1,12 +1,11 @@
 import requests
-import json
 import urllib
 
 from mydata.logs import logger
 from .group import GroupModel
 
 
-class FacilityModel():
+class FacilityModel(object):
 
     def __init__(self, settingsModel=None, name=None,
                  facilityJson=None):

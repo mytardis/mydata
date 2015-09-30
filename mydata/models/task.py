@@ -1,7 +1,12 @@
-from datetime import datetime
+"""
+Model for reprenting a scheduled task (a.k.a. job), as listed
+in the Tasks view of MyData's main window.
+"""
 
-
-class DayOfWeek():
+class DayOfWeek(object):
+    """
+    Enumerated data type.
+    """
     MON = 0
     TUE = 1
     WED = 2
@@ -11,8 +16,11 @@ class DayOfWeek():
     SUN = 6
 
 
-class TaskModel():
+class TaskModel(object):
     """
+    Model for reprenting a scheduled task (a.k.a. job), as listed
+    in the Tasks view of MyData's main window.
+
     A task can be a folder scan, datafile lookup and upload,
     or it could be a notification POSTed to MyTardis administrators.
     """

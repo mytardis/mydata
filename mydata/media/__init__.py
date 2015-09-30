@@ -3,14 +3,14 @@ import os
 import wx
 
 
-class IconStyle():
+class IconStyle(object):
     NORMAL = 0
     DISABLED = 1
     HOT = 2
     STRINGS = ['NORMAL', 'DISABLED', 'HOT']
 
 
-class Icons():
+class Icons(object):
     def __init__(self):
         self.mediaFolderName = "media"
         if hasattr(sys, "frozen"):

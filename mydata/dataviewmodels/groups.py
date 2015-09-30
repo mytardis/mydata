@@ -1,8 +1,9 @@
-import os
-import threading
+"""
+Represents the Groups tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
 
-from mydata.models.group import GroupModel
-from mydata.logs import logger
+import threading
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -12,6 +13,10 @@ else:
 
 
 class GroupsModel(DataViewIndexListModel):
+    """
+    Represents the Groups tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.foldersModel = None
@@ -213,9 +218,9 @@ class GroupsModel(DataViewIndexListModel):
         self.searchString = ""
         self.maxDataViewId = 0
 
-    def GetGroupById(self, id):
+    def GetGroupById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
-            if self.unfilteredGroupsData[row].GetId() == id:
+            if self.unfilteredGroupsData[row].GetId() == dataViewId:
                 return self.unfilteredGroupsData[row]
         return None
 

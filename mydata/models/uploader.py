@@ -80,8 +80,6 @@ import re
 import pkgutil
 import urllib
 import traceback
-from datetime import datetime
-import wx
 import uuid
 import threading
 
@@ -95,19 +93,22 @@ from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
 from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
+from mydata.utils import BytesToHuman
 
 
 defaultStartupInfo = None
 defaultCreationFlags = 0
 if sys.platform.startswith("win"):
     defaultStartupInfo = subprocess.STARTUPINFO()
+    # pylint: disable=protected-access
     defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    # pylint: disable=import-error
     import win32process
     defaultCreationFlags = win32process.CREATE_NO_WINDOW
 
 
-class UploaderModel():
+class UploaderModel(object):
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.interface = None
@@ -117,9 +118,6 @@ class UploaderModel():
         if self.uuid is None:
             self.GenerateUuid()
             self.settingsModel.SetUuid(self.uuid)
-
-        intervalSinceLastConnectivityCheck = \
-            datetime.now() - wx.GetApp().GetLastConnectivityCheckTime()
 
         # Here we check connectivity even if we've already done so, because
         # we need to ensure that we get the correct network interface for
@@ -262,9 +260,9 @@ class UploaderModel():
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage = disk_usage + (fmt % (
                 part.device,
-                self._bytes2human(usage.total),
-                self._bytes2human(usage.used),
-                self._bytes2human(usage.free),
+                BytesToHuman(usage.total),
+                BytesToHuman(usage.used),
+                BytesToHuman(usage.free),
                 int(usage.percent),
                 part.fstype,
                 part.mountpoint))
@@ -272,17 +270,6 @@ class UploaderModel():
         self.disk_usage = disk_usage.strip()
         self.data_path = self.settingsModel.GetDataDirectory()
         self.default_user = self.settingsModel.GetUsername()
-
-    def _bytes2human(self, n):
-        symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-        prefix = {}
-        for i, s in enumerate(symbols):
-            prefix[s] = 1 << (i + 1) * 10
-        for s in reversed(symbols):
-            if n >= prefix[s]:
-                value = float(n) / prefix[s]
-                return '%.1f%s' % (value, s)
-        return "%sB" % n
 
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
@@ -330,7 +317,7 @@ class UploaderModel():
         self.machine = platform.machine()
         self.architecture = str(platform.architecture())
         self.processor = platform.processor()
-        self.memory = self._bytes2human(psutil.virtual_memory().total)
+        self.memory = BytesToHuman(psutil.virtual_memory().total)
         self.cpus = psutil.cpu_count()
 
         self.hostname = platform.node()
@@ -424,7 +411,8 @@ class UploaderModel():
             logger.info("A request already exists for this uploader.")
             response.close()
             return UploaderRegistrationRequest(
-                settingsModel=self.settingsModel, json=approval_json)
+                settingsModel=self.settingsModel,
+                uploaderRegRequestJson=approval_json)
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
@@ -463,7 +451,8 @@ class UploaderModel():
             responseJson = response.json()
             response.close()
             return UploaderRegistrationRequest(
-                settingsModel=self.settingsModel, json=responseJson)
+                settingsModel=self.settingsModel,
+                uploaderRegRequestJson=responseJson)
         else:
             if response.status_code == 404:
                 response.close()
@@ -533,7 +522,7 @@ class UploaderModel():
 
             for row in stdout.split("\n"):
                 m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)"
-                             "\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
+                             r"\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
                              row)
                 if m:
                     adminState = m.groups()[0]
@@ -545,7 +534,7 @@ class UploaderModel():
                         activeInterfaces.append(interface)
                 # On Windows XP, the state may be blank:
                 m = re.match(r"^(Enabled|Disabled)\s*"
-                             "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
+                             r"(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
                 if m:
                     adminState = m.groups()[0]
                     interfaceType = m.groups()[1]
@@ -617,19 +606,20 @@ class UploaderModel():
         return self.hostname
 
 
-class UploaderRegistrationRequest():
-    def __init__(self, settingsModel=None, json=None):
+class UploaderRegistrationRequest(object):
+    def __init__(self, settingsModel=None, uploaderRegRequestJson=None):
         self.settingsModel = settingsModel
-        self.json = json
+        self.uploaderRegRequestJson = uploaderRegRequestJson
 
     def GetJson(self):
-        return self.json
+        return self.uploaderRegRequestJson
 
     def IsApproved(self):
-        return self.json['approved']
+        return self.uploaderRegRequestJson['approved']
 
     def GetApprovedStorageBox(self):
-        return StorageBox(storageBoxJson=self.json['approved_storage_box'])
+        storageBoxJson = self.uploaderRegRequestJson['approved_storage_box']
+        return StorageBox(storageBoxJson=storageBoxJson)
 
     def GetScpUsername(self):
         storageBox = self.GetApprovedStorageBox()

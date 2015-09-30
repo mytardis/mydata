@@ -11,7 +11,7 @@ from .objectacl import ObjectAclModel
 from .schema import SchemaModel
 
 
-class ExperimentModel():
+class ExperimentModel(object):
 
     def __init__(self, settingsModel, experimentJson):
         self.settingsModel = settingsModel

@@ -9,7 +9,7 @@ from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
 
-class UploadStatus:
+class UploadStatus(object):
     NOT_STARTED = 0
     IN_PROGRESS = 1
     COMPLETED = 2
@@ -17,7 +17,7 @@ class UploadStatus:
     PAUSED = 4
 
 
-class UploadModel():
+class UploadModel(object):
 
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
@@ -133,7 +133,7 @@ class UploadModel():
                 try:
                     pid = self.scpUploadProcess.pid
                     # See if this throws psutil.NoSuchProcess:
-                    p = psutil.Process(int(pid))
+                    _ = psutil.Process(int(pid))
                     if sys.platform.startswith("win"):
                         # pylint: disable=no-member
                         os.kill(pid, signal.CTRL_C_EVENT)

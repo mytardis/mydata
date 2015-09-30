@@ -1,15 +1,22 @@
+"""
+Model class for MyTardis API v1's DataFileResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
 import requests
-import json
 import urllib
 
 from mydata.logs import logger
-from .dataset import DatasetModel
 from .replica import ReplicaModel
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import MultipleObjectsReturned
 
 
-class DataFileModel():
+class DataFileModel(object):
+    """
+    Model class for MyTardis API v1's DataFileResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, settingsModel, dataset, dataFileJson):
         self.settingsModel = settingsModel
         self.json = dataFileJson

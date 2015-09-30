@@ -1,17 +1,22 @@
-import sys
+"""
+Represents the Verifications tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
 import traceback
 import threading
 import wx
 import wx.dataview as dv
 
-from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.dataviewmodels.verifications import ColumnType
-from mydata.models.verification import VerificationModel
 from mydata.logs import logger
 
 
+# pylint: disable=interface-not-implemented
 class VerificationsView(wx.Panel):
-
+    """
+    Represents the Verifications tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, parent, verificationsModel, foldersController):
         wx.Panel.__init__(self, parent, -1)
 

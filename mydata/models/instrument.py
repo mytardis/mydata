@@ -7,7 +7,7 @@ from .facility import FacilityModel
 from mydata.utils.exceptions import Unauthorized
 
 
-class InstrumentModel():
+class InstrumentModel(object):
 
     def __init__(self, settingsModel=None, name=None,
                  instrumentJson=None):

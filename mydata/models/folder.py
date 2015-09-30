@@ -1,15 +1,11 @@
 import os
-import urllib
-import requests
-import json
 from datetime import datetime
 import traceback
 
-from .dataset import DatasetModel
 from mydata.logs import logger
 
 
-class FolderModel():
+class FolderModel(object):
     def __init__(self, dataViewId, folder, location,
                  userFolderName, groupFolderName, owner,
                  foldersModel, usersModel, settingsModel):

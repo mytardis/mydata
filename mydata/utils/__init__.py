@@ -14,8 +14,42 @@ def PidIsRunning(pid):
 
 
 def HumanReadableSizeString(num):
+    """
+    Returns human-readable string.
+    """
     for x in ['bytes', 'KB', 'MB', 'GB']:
         if num < 1024.0 and num > -1024.0:
             return "%3.0f %s" % (num, x)
         num /= 1024.0
     return "%3.0f %s" % (num, 'TB')
+
+def UnderscoreToCamelcase(value):
+    """
+    Convert underscore_separated to camelCase.
+    """
+    output = ""
+    firstWordPassed = False
+    for word in value.split("_"):
+        if not word:
+            output += "_"
+            continue
+        if firstWordPassed:
+            output += word.capitalize()
+        else:
+            output += word.lower()
+        firstWordPassed = True
+    return output
+
+def BytesToHuman(numBytes):
+    """
+    Returns human-readable string.
+    """
+    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    prefix = {}
+    for index, symbol in enumerate(symbols):
+        prefix[symbol] = 1 << (index + 1) * 10
+    for symbol in reversed(symbols):
+        if numBytes >= prefix[symbol]:
+            value = float(numBytes) / prefix[symbol]
+            return '%.1f%s' % (value, symbol)
+    return "%sB" % numBytes

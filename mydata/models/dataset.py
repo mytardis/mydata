@@ -1,5 +1,4 @@
 import urllib
-import urllib2
 import requests
 import json
 import traceback
@@ -10,7 +9,7 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
 
 
-class DatasetModel():
+class DatasetModel(object):
     """
     Client-side model for caching results of querying
     MyTardis's dataset model.
