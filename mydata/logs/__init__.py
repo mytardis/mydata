@@ -14,7 +14,7 @@ import pkgutil
 import traceback
 
 from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
-from mydata.logs.wxloghandler import wxLogHandler
+from mydata.logs.wxloghandler import WxLogHandler
 from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
 
@@ -40,7 +40,7 @@ class Logger(object):
 
     def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
         self.logTextCtrl = logTextCtrl
-        logWindowHandler = wxLogHandler(self.logTextCtrl)
+        logWindowHandler = WxLogHandler(self.logTextCtrl)
         logWindowHandler.setLevel(self.level)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
