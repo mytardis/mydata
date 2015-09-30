@@ -4,6 +4,7 @@ Classes for MyData's settings dialog.
 
 # Disabling some Pylint checks for now...
 # pylint: disable=missing-docstring
+# pylint: disable=too-many-lines
 
 import wx
 
@@ -33,6 +34,8 @@ class SettingsDropTarget(wx.FileDropTarget):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
 
+    # pylint: disable=arguments-differ
+    # pylint: disable=unused-argument
     def OnDropFiles(self, x, y, filenames):
         """
         Handles drag and drop of a MyData.cfg file
@@ -45,11 +48,17 @@ class SettingsDialog(wx.Dialog):
     """
     MyData's settings dialog.
     """
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, parent, ID, title,
                  settingsModel,
                  size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
                  style=wx.DEFAULT_DIALOG_STYLE):
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-branches
         wx.Dialog.__init__(self, parent, ID, title=title, size=size, pos=pos,
                            style=style)
 
@@ -675,10 +684,10 @@ class SettingsDialog(wx.Dialog):
                           "Start automatically on login:")
         self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.startAutomaticallyOnLoginCheckBox = \
+        self.startAutomaticallyCheckBox = \
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer\
-            .Add(self.startAutomaticallyOnLoginCheckBox,
+            .Add(self.startAutomaticallyCheckBox,
                  flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
@@ -974,10 +983,10 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadRetriesSpinCtrl.SetValue(numberOfRetries)
 
     def StartAutomaticallyOnLogin(self):
-        return self.startAutomaticallyOnLoginCheckBox.GetValue()
+        return self.startAutomaticallyCheckBox.GetValue()
 
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
-        self.startAutomaticallyOnLoginCheckBox.SetValue(
+        self.startAutomaticallyCheckBox.SetValue(
             startAutomaticallyOnLogin)
 
     def Locked(self):
@@ -1001,8 +1010,9 @@ class SettingsDialog(wx.Dialog):
 
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
+        event.Skip()
 
-    def OnOK(self, event):
+    def OnOK(self, event):  # pylint: disable=invalid-name
         if self.GetInstrumentName() != \
                 self.settingsModel.GetInstrumentName() and \
                 self.settingsModel.GetInstrumentName() != "":
@@ -1031,6 +1041,7 @@ class SettingsDialog(wx.Dialog):
                            .encode('ascii', 'ignore'))
         if dlg.ShowModal() == wx.ID_OK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
+        event.Skip()
 
     def UpdateFieldsFromModel(self, settingsModel):
         # General tab
@@ -1129,9 +1140,11 @@ class SettingsDialog(wx.Dialog):
                 if configPath != wx.GetApp().GetConfigPath():
                     self.settingsModel.SaveFieldsFromDialog(
                         self, configPath=wx.GetApp().GetConfigPath())
+        event.Skip()
 
     def OnApiKeyFieldFocused(self, event):
         self.apiKeyField.SelectAll()
+        event.Skip()
 
     def OnIgnoreOldDatasetsCheckBox(self, event):
         if event.IsChecked():
@@ -1154,6 +1167,7 @@ class SettingsDialog(wx.Dialog):
                 self.showingSingularUnits = True
             self.intervalUnitsComboBox.SetValue("month")
             self.intervalUnitsComboBox.Enable(False)
+        event.Skip()
 
     def OnIgnoreOldDatasetsSpinCtrl(self, event):
         if event.GetInt() == 1:
@@ -1173,6 +1187,7 @@ class SettingsDialog(wx.Dialog):
                     .AppendItems(self.intervalUnitsPlural)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
+        event.Skip()
 
     # pylint: disable=no-self-use
     def OnHelp(self, event):
@@ -1184,6 +1199,7 @@ class SettingsDialog(wx.Dialog):
         webbrowser.open(
             "http://mydata.readthedocs.org/en/latest/settings.html")
         wx.EndBusyCursor()
+        event.Skip()
 
     def OnSelectFolderStructure(self, event):
         """
@@ -1226,8 +1242,9 @@ class SettingsDialog(wx.Dialog):
         elif folderStructure.startswith("User Group"):
             self.userFolderFilterLabel.SetLabel(
                 "User Group folder name contains:")
+        event.Skip()
 
-    def OnDropFiles(self, filepaths):
+    def OnDropFiles(self, filePaths):
         """
         Handles drag and drop of a MyData.cfg file
         onto the settings dialog.
@@ -1240,7 +1257,7 @@ class SettingsDialog(wx.Dialog):
                                    wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             return False
-        self.settingsModel.LoadSettings(configPath=filepaths[0])
+        self.settingsModel.LoadSettings(configPath=filePaths[0])
         self.UpdateFieldsFromModel(self.settingsModel)
 
         folderStructure = self.folderStructureComboBox.GetValue()
@@ -1301,6 +1318,7 @@ class SettingsDialog(wx.Dialog):
                 if not runningAsAdmin:
                     logger.info("Attempting to run \"%s --version\" "
                                 "as an administrator." % sys.executable)
+                    # pylint: disable=bare-except
                     try:
                         shell.ShellExecuteEx(
                             nShow=win32con.SW_SHOWNORMAL,
@@ -1380,7 +1398,7 @@ class SettingsDialog(wx.Dialog):
         self.validateFolderStructureCheckBox.Enable(enabled)
         self.maxUploadThreadsSpinCtrl.Enable(enabled)
         self.maxUploadRetriesSpinCtrl.Enable(enabled)
-        self.startAutomaticallyOnLoginCheckBox.Enable(enabled)
+        self.startAutomaticallyCheckBox.Enable(enabled)
         self.Update()
 
     def DisableFields(self):
@@ -1429,33 +1447,44 @@ class SettingsDialog(wx.Dialog):
         self.toLabel.Enable(enableTimer)
         self.toTimeCtrl.Enable(enableTimer)
         self.toTimeSpin.Enable(enableTimer)
+        if event:
+            event.Skip()
 
     def OnIncrementDate(self, event):
         self.SetScheduledDate(self.GetScheduledDate() + timedelta(days=1))
+        event.Skip()
 
     def OnDecrementDate(self, event):
         self.SetScheduledDate(self.GetScheduledDate() - timedelta(days=1))
+        event.Skip()
 
     def OnIncrementTime(self, event):
-        self.SetScheduledTime(addMinutes(self.GetScheduledTime(), 1))
+        self.SetScheduledTime(AddMinutes(self.GetScheduledTime(), 1))
+        event.Skip()
 
     def OnDecrementTime(self, event):
-        self.SetScheduledTime(addMinutes(self.GetScheduledTime(), -1))
+        self.SetScheduledTime(AddMinutes(self.GetScheduledTime(), -1))
+        event.Skip()
 
     def OnIncrementFromTime(self, event):
-        self.SetTimerFromTime(addMinutes(self.GetTimerFromTime(), 1))
+        self.SetTimerFromTime(AddMinutes(self.GetTimerFromTime(), 1))
+        event.Skip()
 
     def OnDecrementFromTime(self, event):
-        self.SetTimerFromTime(addMinutes(self.GetTimerFromTime(), -1))
+        self.SetTimerFromTime(AddMinutes(self.GetTimerFromTime(), -1))
+        event.Skip()
 
     def OnIncrementToTime(self, event):
-        self.SetTimerToTime(addMinutes(self.GetTimerToTime(), 1))
+        self.SetTimerToTime(AddMinutes(self.GetTimerToTime(), 1))
+        event.Skip()
 
     def OnDecrementToTime(self, event):
-        self.SetTimerToTime(addMinutes(self.GetTimerToTime(), -1))
+        self.SetTimerToTime(AddMinutes(self.GetTimerToTime(), -1))
+        event.Skip()
 
 
-def addMinutes(tm, minutes):
-    fulldate = datetime(100, 1, 1, tm.hour, tm.minute, tm.second)
+def AddMinutes(initialTime, minutes):
+    fulldate = datetime(100, 1, 1, initialTime.hour,
+                        initialTime.minute, initialTime.second)
     fulldate = fulldate + timedelta(minutes=minutes)
     return fulldate.time()
