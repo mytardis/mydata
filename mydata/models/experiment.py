@@ -1,3 +1,8 @@
+"""
+Model class for MyTardis API v1's ExperimentResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
 import requests
 import json
 import urllib2
@@ -12,7 +17,10 @@ from .schema import SchemaModel
 
 
 class ExperimentModel(object):
-
+    """
+    Model class for MyTardis API v1's ExperimentResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, settingsModel, experimentJson):
         self.settingsModel = settingsModel
         self.json = experimentJson

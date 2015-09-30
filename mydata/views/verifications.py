@@ -18,7 +18,7 @@ class VerificationsView(wx.Panel):
     and the tabular data displayed on that tab view.
     """
     def __init__(self, parent, verificationsModel, foldersController):
-        wx.Panel.__init__(self, parent, -1)
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         # Create a dataview control
         self.verificationsDataViewControl = \
@@ -67,14 +67,14 @@ class VerificationsView(wx.Panel):
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
-        c0 = self.verificationsDataViewControl.Columns[0]
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
+        firstColumn = self.verificationsDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
 
     def OnCancelSelectedVerifications(self, evt):
         """
