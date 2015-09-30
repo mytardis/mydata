@@ -38,22 +38,21 @@ class FoldersView(wx.Panel):
                                   .GetDefaultColumnWidth(col),
                                   mode=dv.DATAVIEW_CELL_INERT)
 
-        c0 = self.foldersDataViewControl.Columns[0]
+        firstColumn = self.foldersDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
-
-        for c in self.foldersDataViewControl.Columns:
-            c.Sortable = True
-            c.Reorderable = True
+        for col in self.foldersDataViewControl.Columns:
+            col.Sortable = True
+            col.Reorderable = True
 
         # Let's change our minds and not let the first col be moved.
-        c0.Reorderable = False
+        firstColumn.Reorderable = False
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.foldersDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.foldersDataViewControl, 1, wx.EXPAND)
 
         self.openFolderButton = wx.Button(self, label="Open Folder")
 

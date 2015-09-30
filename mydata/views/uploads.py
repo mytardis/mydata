@@ -18,7 +18,7 @@ class UploadsView(wx.Panel):
     and the tabular data displayed on that tab view.
     """
     def __init__(self, parent, uploadsModel, foldersController):
-        wx.Panel.__init__(self, parent, -1)
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         self.uploadsDataViewControl = dv.DataViewCtrl(self,
                                                       style=wx.BORDER_THEME
@@ -62,14 +62,14 @@ class UploadsView(wx.Panel):
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
-        c0 = self.uploadsDataViewControl.Columns[0]
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
+        firstColumn = self.uploadsDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
         cancelSelectedUploadsButton = \
             wx.Button(self, label="Cancel Selected Upload(s)")

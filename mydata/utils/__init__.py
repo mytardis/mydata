@@ -1,12 +1,19 @@
+"""
+Miscellaneous utility functions.
+"""
+
 import psutil
 
 
 def PidIsRunning(pid):
+    """
+    Check if a process with PID pid is running.
+    """
     try:
-        p = psutil.Process(int(pid))
-        if p.status == psutil.STATUS_DEAD:
+        proc = psutil.Process(int(pid))
+        if proc.status == psutil.STATUS_DEAD:
             return False
-        if p.status == psutil.STATUS_ZOMBIE:
+        if proc.status == psutil.STATUS_ZOMBIE:
             return False
         return True  # Assume other status are valid
     except psutil.NoSuchProcess:
@@ -17,9 +24,9 @@ def HumanReadableSizeString(num):
     """
     Returns human-readable string.
     """
-    for x in ['bytes', 'KB', 'MB', 'GB']:
+    for unit in ['bytes', 'KB', 'MB', 'GB']:
         if num < 1024.0 and num > -1024.0:
-            return "%3.0f %s" % (num, x)
+            return "%3.0f %s" % (num, unit)
         num /= 1024.0
     return "%3.0f %s" % (num, 'TB')
 

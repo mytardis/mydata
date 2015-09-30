@@ -1,3 +1,8 @@
+"""
+Model class for MyTardis API v1's InstrumentResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
 import requests
 import json
 import urllib
@@ -8,7 +13,10 @@ from mydata.utils.exceptions import Unauthorized
 
 
 class InstrumentModel(object):
-
+    """
+    Model class for MyTardis API v1's InstrumentResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, settingsModel=None, name=None,
                  instrumentJson=None):
 
@@ -61,13 +69,14 @@ class InstrumentModel(object):
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/instrument/"
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
-        instrumentJson = \
-            {"facility": facility.GetResourceUri(),
-             "name": name}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+        instrumentJson = {
+            "facility": facility.GetResourceUri(),
+            "name": name}
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
         status_code = response.status_code
@@ -102,8 +111,9 @@ class InstrumentModel(object):
         url = myTardisUrl + "/api/v1/instrument/?format=json" + \
             "&facility__id=" + str(facility.GetId()) + \
             "&name=" + urllib.quote(name)
-        headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
-                   myTardisApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey)}
         session = requests.Session()
         response = session.get(url=url, headers=headers)
         if response.status_code != 200:
@@ -145,8 +155,9 @@ class InstrumentModel(object):
         for facility in myFacilities:
             url = myTardisUrl + "/api/v1/instrument/?format=json" + \
                 "&facility__id=" + str(facility.GetId())
-            headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
-                       myTardisApiKey}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                   myTardisApiKey)}
             session = requests.Session()
             response = session.get(url=url, headers=headers)
             if response.status_code != 200:
@@ -166,10 +177,11 @@ class InstrumentModel(object):
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = self.settingsModel.GetUsername()
         myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         logger.info("Renaming instrument \"%s\" to \"%s\"."
                     % (str(self), name))
         url = myTardisUrl + "/api/v1/instrument/%d/" % self.GetId()
@@ -185,7 +197,13 @@ class InstrumentModel(object):
         response.close()
 
     def GetSettingsModel(self):
+        """
+        Return settings model.
+        """
         return self.settingsModel
 
     def SetSettingsModel(self, settingsModel):
+        """
+        Set settings model.
+        """
         self.settingsModel = settingsModel

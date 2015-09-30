@@ -1,3 +1,8 @@
+"""
+Model class for MyTardis API v1's DatasetResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
 import urllib
 import requests
 import json

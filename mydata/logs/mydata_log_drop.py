@@ -1,8 +1,13 @@
+"""
+This file, used by MyData, lives in
+/var/www/cgi-bin/mydata_log_drop.py
+on cvl.massive.org.au
+"""
+
+# pylint: disable=invalid-name
+
 #!/usr/bin/env python
 
-# This file, used by MyData, lives in
-# /var/www/cgi-bin/mydata_log_drop.py
-# on cvl.massive.org.au
 
 import cgi
 import cgitb
@@ -18,6 +23,9 @@ MAX_NR_BYTES_LOG = 50*1048576  # 50Mb
 
 
 def free_root_space():
+    """
+    Check free space on root partition.
+    """
     proc = subprocess.Popen('df -B MB /',
                             stdout=subprocess.PIPE,
                             stdin=subprocess.PIPE,
@@ -31,6 +39,9 @@ def free_root_space():
 
 
 def free_space():
+    """
+    Check free space.
+    """
     proc = subprocess.Popen('du -B MB ' + LOG_DIRECTORY,
                             stdout=subprocess.PIPE,
                             stdin=subprocess.PIPE,
