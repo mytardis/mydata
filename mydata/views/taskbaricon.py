@@ -9,7 +9,7 @@ import wx
 import os
 import webbrowser
 
-from mydata.media import MyDataIcons
+from mydata.media import MYDATA_ICONS
 from mydata.logs import logger
 from mydata.models.settings import LastSettingsUpdateTrigger
 
@@ -35,7 +35,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.frame = frame
         self.settingsModel = settingsModel
 
-        bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
+        bmp = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
         self.icon = EmptyIcon()
         self.icon.CopyFromBitmap(bmp)
 

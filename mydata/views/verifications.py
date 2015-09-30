@@ -76,17 +76,20 @@ class VerificationsView(wx.Panel):
         self.SetSizer(sizer)
         sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
 
-    def OnCancelSelectedVerifications(self, evt):
+    def OnCancelSelectedVerifications(self, event):
         """
         Remove the selected row(s) from the model. The model will take
         care of notifying the view (and any other observers) that the
         change has happened.
         """
+        # pylint: disable=fixme
         # FIXME: Should warn the user if already-completed verifications
         # exist within the selection (in which case their datafiles
         # won't be deleted from the MyTardis server).
         # The OnCancelRemainingVerifications method is a bit smarter in
         # terms of only deleting incomplete verification rows from the view.
+
+        # pylint: disable=bare-except
         try:
             items = self.verificationsDataViewControl.GetSelections()
             rows = [self.verificationsModel.GetRow(item) for item in items]
@@ -121,17 +124,31 @@ class VerificationsView(wx.Panel):
                 self.verificationsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
+        finally:
+            event.Skip()
 
-    def OnCancelRemainingVerifications(self, evt):
-        def shutDownVerificationThreads():
+    def OnCancelRemainingVerifications(self, event):
+        """
+        Called when user requests cancel.
+        """
+        def ShutDownVerificationThreads():
+            """
+            Shut down verification threads.
+            """
+            # pylint: disable=bare-except
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownVerificationThreads()
                 wx.CallAfter(wx.EndBusyCursor)
             except:
                 logger.error(traceback.format_exc())
-        thread = threading.Thread(target=shutDownVerificationThreads)
+        thread = threading.Thread(target=ShutDownVerificationThreads)
         thread.start()
 
+        event.Skip()
+
     def GetVerificationsModel(self):
+        """
+        Return verifications model.
+        """
         return self.verificationsModel

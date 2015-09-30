@@ -10,13 +10,17 @@ import wx
 from mydata.logs import logger
 
 
+# pylint: disable=too-few-public-methods
 class Notification(object):
     """
     For balloon notifications near MyData's system tray icon (Windows)
     or menu bar icon (Mac OS X).
     """
     @staticmethod
-    def notify(message, subtitle=None, title="MyData"):
+    def Notify(message, subtitle=None, title="MyData"):
+        """
+        Post notification.
+        """
         if sys.platform.startswith("win"):
             wx.GetApp().taskBarIcon.ShowBalloon(title, message)
             return

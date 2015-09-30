@@ -269,12 +269,12 @@ class TasksModel(DataViewIndexListModel):
                 assert callable(taskModel.GetJobFunc())
                 title = "Starting"
                 message = taskModel.GetJobDesc()
-                Notification.notify(message, title=title)
+                Notification.Notify(message, title=title)
                 taskModel.GetJobFunc()(*taskModel.GetJobArgs())
                 taskModel.SetFinishTime(datetime.now())
                 title = "Finished"
                 message = taskModel.GetJobDesc()
-                Notification.notify(message, title=title)
+                Notification.Notify(message, title=title)
                 wx.CallAfter(tasksModel.RowValueChanged, row, col)
                 scheduleType = taskModel.GetScheduleType()
                 if scheduleType == "Timer":
