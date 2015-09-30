@@ -13,12 +13,12 @@ import inspect
 import pkgutil
 import traceback
 
-from SubmitDebugReportDialog import SubmitDebugReportDialog
+from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
 from mydata.logs.wxloghandler import wxLogHandler
 from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
 
-class Logger():
+class Logger(object):
     """
     Allows logger.debug(...), logger.info(...) etc. to write to MyData's
     Log window and to ~/.MyData_debug_log.txt
@@ -183,7 +183,7 @@ class Logger():
         self.contactEmail = settingsModel.GetContactEmail()
 
         def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(myDataMainFrame, wx.ID_ANY,
+            dlg = SubmitDebugReportDialog(myDataMainFrame,
                                           "MyData - Submit Debug Log",
                                           self.loggerOutput.getvalue(),
                                           settingsModel)

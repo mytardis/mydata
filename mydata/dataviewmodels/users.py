@@ -1,11 +1,10 @@
+"""
+Represents the Users tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
 import os
 import threading
-
-from mydata.models.user import UserModel
-from mydata.models.group import GroupModel
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import InvalidFolderStructure
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -15,7 +14,10 @@ else:
 
 
 class UsersModel(DataViewIndexListModel):
-
+    """
+    Represents the Users tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, settingsModel):
 
         self.settingsModel = settingsModel
@@ -230,9 +232,9 @@ class UsersModel(DataViewIndexListModel):
                 return True
         return False
 
-    def GetUserById(self, id):
+    def GetUserById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
-            if self.unfilteredUsersData[row].GetId() == id:
+            if self.unfilteredUsersData[row].GetId() == dataViewId:
                 return self.unfilteredUsersData[row]
         return None
 

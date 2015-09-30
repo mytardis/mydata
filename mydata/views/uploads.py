@@ -1,22 +1,25 @@
-import sys
+"""
+Represents the Uploads tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
 import wx
 import wx.dataview as dv
 import traceback
 import threading
 
-from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.dataviewmodels.uploads import ColumnType
-from mydata.models.upload import UploadModel
-
 from mydata.logs import logger
 
 
 class UploadsView(wx.Panel):
-
+    """
+    Represents the Uploads tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, -1)
 
-        # Create a dataview control
         self.uploadsDataViewControl = dv.DataViewCtrl(self,
                                                       style=wx.BORDER_THEME
                                                       | dv.DV_ROW_LINES
@@ -68,7 +71,6 @@ class UploadsView(wx.Panel):
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
-        # Add some buttons
         cancelSelectedUploadsButton = \
             wx.Button(self, label="Cancel Selected Upload(s)")
         self.Bind(wx.EVT_BUTTON, self.OnCancelSelectedUploads,
@@ -151,4 +153,7 @@ class UploadsView(wx.Panel):
         thread.start()
 
     def GetUploadsModel(self):
+        """
+        Returns the UploadsModel instance associated with the view.
+        """
         return self.uploadsModel

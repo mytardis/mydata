@@ -1,8 +1,11 @@
-import os
+"""
+Represents the Verifications tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
 import threading
 import traceback
 
-from mydata.models.verification import VerificationModel
 from mydata.models.verification import VerificationStatus
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.logs import logger
@@ -15,6 +18,10 @@ else:
 
 
 class VerificationsModel(DataViewIndexListModel):
+    """
+    Represents the Verifications tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self):
         self.foldersModel = None
         self.verificationsData = list()

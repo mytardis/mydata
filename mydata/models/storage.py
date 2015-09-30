@@ -1,14 +1,16 @@
-import requests
-import json
-import urllib
+"""
+Model class for MyTardis API v1's StorageBoxResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 
-class StorageBox():
+class StorageBox(object):
+    """
+    Model class for MyTardis API v1's StorageBoxResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, storageBoxJson):
         self.json = storageBoxJson
         self.id = None
@@ -83,7 +85,7 @@ class StorageBox():
         return self.json
 
 
-class StorageBoxOption():
+class StorageBoxOption(object):
     def __init__(self, optionJson):
         self.json = optionJson
         self.id = None
@@ -110,7 +112,7 @@ class StorageBoxOption():
         return self.value
 
 
-class StorageBoxAttribute():
+class StorageBoxAttribute(object):
     def __init__(self, attrJson):
         self.json = attrJson
         self.id = None

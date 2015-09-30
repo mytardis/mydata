@@ -4,10 +4,8 @@
 # /var/www/cgi-bin/mydata_log_drop.py
 # on cvl.massive.org.au
 
-import os
 import cgi
 import cgitb
-import string
 import tempfile
 import subprocess
 
@@ -26,7 +24,7 @@ def free_root_space():
                             stderr=subprocess.STDOUT,
                             shell=True,
                             universal_newlines=True)
-    stdout, stderr = proc.communicate()
+    stdout, _ = proc.communicate()
 
     return int(stdout.split('\n')[1].split('MB')[2]) > \
         1.5 * MAX_LOG_DIRECTORY_SIZE
@@ -39,7 +37,7 @@ def free_space():
                             stderr=subprocess.STDOUT,
                             shell=True,
                             universal_newlines=True)
-    stdout, stderr = proc.communicate()
+    stdout, _ = proc.communicate()
 
     return int(stdout.split('\n')[0].split('MB')[0]) < \
         MAX_LOG_DIRECTORY_SIZE

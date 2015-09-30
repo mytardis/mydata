@@ -1,4 +1,9 @@
+"""
+Classes for MyData's settings dialog.
+"""
+
 import wx
+
 try:
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
@@ -6,39 +11,37 @@ except ImportError:
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
 import wx.lib.masked
-import re
-import requests
-import threading
 from datetime import datetime
 from datetime import timedelta
 import sys
 import os
 import traceback
-import time
 
 from mydata.logs import logger
-from mydata.models.settings import SettingsModel
-from mydata.utils.exceptions import DuplicateKey
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 import mydata.events as mde
 
 
-class SettingsDialogTabs:
-    GENERAL = 0
-    SCHEDULE = 1
-    ADVANCED = 2
-
-
 class SettingsDropTarget(wx.FileDropTarget):
+    """
+    Handles drag and drop of a MyData.cfg file
+    onto the settings dialog.
+    """
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
 
     def OnDropFiles(self, x, y, filenames):
+        """
+        Handles drag and drop of a MyData.cfg file
+        onto the settings dialog.
+        """
         return self.parent.OnDropFiles(filenames)
 
 
 class SettingsDialog(wx.Dialog):
+    """
+    MyData's settings dialog.
+    """
     def __init__(self, parent, ID, title,
                  settingsModel,
                  size=wx.DefaultSize,
@@ -1168,7 +1171,11 @@ class SettingsDialog(wx.Dialog):
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
 
+    # pylint: disable=no-self-use
     def OnHelp(self, event):
+        """
+        Open MyData documentation in the default web browser.
+        """
         wx.BeginBusyCursor()
         import webbrowser
         webbrowser.open(
@@ -1176,6 +1183,9 @@ class SettingsDialog(wx.Dialog):
         wx.EndBusyCursor()
 
     def OnSelectFolderStructure(self, event):
+        """
+        Update dialog fields according to selected folder structure.
+        """
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure == 'Username / Dataset' or \
                 folderStructure == 'Email / Dataset':
@@ -1215,6 +1225,10 @@ class SettingsDialog(wx.Dialog):
                 "User Group folder name contains:")
 
     def OnDropFiles(self, filepaths):
+        """
+        Handles drag and drop of a MyData.cfg file
+        onto the settings dialog.
+        """
         if self.Locked():
             message = \
                 "Please unlock MyData's settings before importing " \
@@ -1265,16 +1279,15 @@ class SettingsDialog(wx.Dialog):
             okToLock = confirmationDialog.ShowModal()
             if okToLock != wx.ID_YES:
                 return
-            lockingSettings = True
             unlockingSettings = False
             logger.debug("Locking settings.")
             self.lockOrUnlockButton.SetLabel("Unlock")
         else:
-            lockingSettings = False
             unlockingSettings = True
             logger.debug("Requesting privilege elevation and "
                          "unlocking settings.")
             if sys.platform.startswith("win"):
+                # pylint: disable=import-error
                 import win32com.shell.shell as shell
                 import win32con
                 from win32com.shell import shellcon
@@ -1286,13 +1299,12 @@ class SettingsDialog(wx.Dialog):
                     logger.info("Attempting to run \"%s --version\" "
                                 "as an administrator." % sys.executable)
                     try:
-                        procInfo = shell.ShellExecuteEx(
+                        shell.ShellExecuteEx(
                             nShow=win32con.SW_SHOWNORMAL,
                             fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
                             lpVerb='runas',
                             lpFile=sys.executable,
                             lpParameters=params)
-                        procHandle = procInfo['hProcess']
                     except:
                         logger.error("User privilege elevation failed.")
                         logger.debug(traceback.format_exc())
@@ -1310,6 +1322,7 @@ class SettingsDialog(wx.Dialog):
             self.lockOrUnlockButton.SetLabel("Lock")
 
         self.EnableFields(unlockingSettings)
+        event.Skip()
 
     def EnableFields(self, enabled=True):
         # General tab

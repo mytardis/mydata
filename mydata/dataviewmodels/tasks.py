@@ -1,4 +1,3 @@
-import sys
 import threading
 from datetime import datetime
 from datetime import timedelta
@@ -235,9 +234,9 @@ class TasksModel(DataViewIndexListModel):
                 return True
         return False
 
-    def GetTaskById(self, id):
+    def GetTaskById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
-            if self.unfilteredTasksData[row].GetId() == id:
+            if self.unfilteredTasksData[row].GetId() == dataViewId:
                 return self.unfilteredTasksData[row]
         return None
 

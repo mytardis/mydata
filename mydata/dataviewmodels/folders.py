@@ -8,7 +8,6 @@ from glob import glob
 from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
 from mydata.models.group import GroupModel
-from mydata.models.experiment import ExperimentModel
 from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
@@ -270,12 +269,12 @@ class FoldersModel(DataViewIndexListModel):
             else:
                 wx.CallAfter(self.RowDeleted, row)
 
-    def DeleteFolderById(self, id):
+    def DeleteFolderById(self, dataViewId):
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
         for row in range(0, self.GetRowCount()):
-            if self.foldersData[row].GetId() == id:
+            if self.foldersData[row].GetId() == dataViewId:
                 del self.foldersData[row]
                 # notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
@@ -365,7 +364,7 @@ class FoldersModel(DataViewIndexListModel):
         userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
         folderStructure = self.settingsModel.GetFolderStructure()
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for userFolderName in userFolderNames:
             if shouldAbort():
@@ -465,7 +464,7 @@ class FoldersModel(DataViewIndexListModel):
         dataDir = self.settingsModel.GetDataDirectory()
         userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         groupFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for groupFolderName in groupFolderNames:
             if shouldAbort():
@@ -513,7 +512,7 @@ class FoldersModel(DataViewIndexListModel):
             datasetFilterString = \
                 '*%s*' % self.settingsModel.GetDatasetFilter()
             filesDepth1 = glob(os.path.join(pathToScan, datasetFilterString))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
@@ -583,13 +582,13 @@ class FoldersModel(DataViewIndexListModel):
         datasetFilterString = '*%s*' % self.settingsModel.GetDatasetFilter()
         expFilterString = '*%s*' % self.settingsModel.GetExperimentFilter()
         filesDepth1 = glob(os.path.join(pathToScan, expFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         expFolders = [os.path.basename(d) for d in dirsDepth1]
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
             filesDepth1 = glob(os.path.join(expFolderPath,
                                             datasetFilterString))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
@@ -622,7 +621,7 @@ class FoldersModel(DataViewIndexListModel):
     def ImportGroupFolders(self, groupFolderPath, groupModel):
         """
         Scan folders within a user group folder,
-        e.g. D:\Data\Smith-Lab\
+        e.g. D:\\Data\\Smith-Lab\\
         """
         try:
             logger.debug("Scanning " + groupFolderPath +
@@ -631,7 +630,7 @@ class FoldersModel(DataViewIndexListModel):
                 '*%s*' % self.settingsModel.GetDatasetFilter()
             instrumentName = self.settingsModel.GetInstrumentName()
             filesDepth1 = glob(os.path.join(groupFolderPath, instrumentName))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             instrumentFolders = [os.path.basename(d) for d in dirsDepth1]
 
             if len(instrumentFolders) > 1:
@@ -676,7 +675,7 @@ class FoldersModel(DataViewIndexListModel):
                              " for dataset folders...")
                 filesDepth1 = glob(os.path.join(userFolderPath,
                                                 datasetFilterString))
-                dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+                dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
                 datasetFolders = [os.path.basename(d) for d in dirsDepth1]
                 for datasetFolderName in datasetFolders:
                     if self.ignoreOldDatasets:

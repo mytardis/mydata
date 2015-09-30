@@ -1,5 +1,4 @@
 import requests
-import json
 import traceback
 import urllib2
 
@@ -9,7 +8,7 @@ from mydata.utils.exceptions import DoesNotExist
 from mydata.logs import logger
 
 
-class UserModel():
+class UserModel(object):
 
     USER_NOT_FOUND_STRING = "USER NOT FOUND IN MYTARDIS"
 
@@ -178,7 +177,7 @@ class UserModel():
                              userRecordJson=userRecordsJson['objects'][0])
 
 
-class UserProfileModel():
+class UserProfileModel(object):
 
     """
     Used with the DoesNotExist exception when a 404 from MyTardis's API

@@ -21,8 +21,6 @@ import subprocess
 import traceback
 import re
 import tempfile
-from datetime import datetime
-import errno
 import getpass
 import threading
 import time
@@ -42,23 +40,26 @@ defaultStartupInfo = None
 defaultCreationFlags = 0
 if sys.platform.startswith("win"):
     defaultStartupInfo = subprocess.STARTUPINFO()
+    # pylint: disable=protected-access
     defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    # pylint: disable=import-error
     import win32process
     defaultCreationFlags = win32process.CREATE_NO_WINDOW
 
 
-class SmallFileUploadMethod():
+class SmallFileUploadMethod(object):
     SCP = 0
     CAT = 1
 
 
-class OpenSSH():
+class OpenSSH(object):
     if hasattr(sys, "frozen"):
         OPENSSH_BUILD_DIR = "openssh-7.1p1-cygwin-2.2.1"
     else:
         OPENSSH_BUILD_DIR = "resources/win32/openssh-7.1p1-cygwin-2.2.1"
 
+    # pylint: disable=no-self-use
     def DoubleQuote(self, x):
         return '"' + x.replace('"', '\\"') + '"'
 
@@ -144,7 +145,7 @@ class OpenSSH():
         return self.sshControlMasterPool
 
 
-class KeyPair():
+class KeyPair(object):
 
     def __init__(self, privateKeyFilePath, publicKeyFilePath):
         self.privateKeyFilePath = privateKeyFilePath
@@ -335,14 +336,10 @@ def FindKeyPair(keyName="MyData", keyPath=None):
                                  % os.path.join(keyPath, keyName))
 
 
-def NewKeyPair(keyName=None,
-               keyPath=None,
-               keyComment=None,
-               startupinfo=defaultStartupInfo,
-               creationflags=defaultCreationFlags):
-
-    success = False
-
+def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
+    """
+    Create an RSA key-pair in ~/.ssh for use with SSH and SCP.
+    """
     if keyName is None:
         keyName = "MyData"
     if keyPath is None:
@@ -1046,7 +1043,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                         (smallChunkSize % 2 == 0) and count < 32:
                     smallChunkSize /= 2
                     count *= 2
-                for i in range(count):
+                for _ in range(count):
                     smallChunk = datafile.read(smallChunkSize)
                     chunkFile.write(smallChunk)
                     bytesTransferred += len(smallChunk)
@@ -1130,7 +1127,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
 def GetCygwinPath(path):
     """
-    Converts "C:\path\\to\\file" to "/cygdrive/C/path/to/file".
+    Converts "C:\\path\\to\\file" to "/cygdrive/C/path/to/file".
     """
     realpath = os.path.realpath(path)
     match = re.search(r"^(\S):(.*)", realpath)
@@ -1148,7 +1145,7 @@ scp = openSSH.scp
 sshKeyGen = openSSH.sshKeyGen
 
 
-class SshControlMasterProcess():
+class SshControlMasterProcess(object):
     """
     See "ControlMaster" in "man ssh_config"
     Only available on POSIX systems.
@@ -1198,7 +1195,7 @@ class SshControlMasterProcess():
             startupinfo=defaultStartupInfo,
             creationflags=defaultCreationFlags)
         proc.communicate()
-        return (proc.returncode == 0)
+        return proc.returncode == 0
 
     def Exit(self):
         exitSshControlMasterProcessCommandString = \
@@ -1224,7 +1221,7 @@ class SshControlMasterProcess():
         return self.pid
 
 
-class SshControlMasterPool():
+class SshControlMasterPool(object):
     """
     Re-using an SSH connection with -oControlPath=...
     only works on POSIX systems, not on Windows.

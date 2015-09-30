@@ -1,20 +1,12 @@
-import threading
-
-# ENHANCEDSTATUSBAR wxPython IMPLEMENTATION
-# Python Code By:
-#
-# Andrea Gavana, @ 31 May 2005
-# Nitro, @ 21 September 2005
-# Latest Revision: 21 September 2005, 19.57.20 GMT+2
-
-""" Description:
-
+"""
 EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
 wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
 wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
 
-
+Based on Andrea Gavana's implementation.
 """
+
+import threading
 
 import wx
 
@@ -32,12 +24,14 @@ ESB_ALIGN_RIGHT = 13
 ESB_EXACT_FIT = 20
 
 
-# ---------------------------------------------------------------
-# Class EnhancedStatusBar
-# ---------------------------------------------------------------
-# This Is The Main Class Implementation. See The Demo For Details
-# ---------------------------------------------------------------
 class EnhancedStatusBarItem(object):
+    """
+    EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
+    wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
+    wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
+
+    Based on Andrea Gavana's implementation.
+    """
 
     def __init__(self, widget, pos,
                  horizontalalignment=ESB_ALIGN_CENTER_HORIZONTAL,
@@ -46,17 +40,24 @@ class EnhancedStatusBarItem(object):
 
 
 class EnhancedStatusBar(wx.StatusBar):
+    """
+    EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
+    wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
+    wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
 
-    def __init__(self, parent, id=wx.ID_ANY, style=wx.STB_SIZEGRIP,
+    Based on Andrea Gavana's implementation.
+    """
+
+    def __init__(self, parent, style=wx.STB_SIZEGRIP,
                  name="EnhancedStatusBar"):
         """Default Class Constructor.
 
-        EnhancedStatusBar.__init__(self, parent, id=wx.ID_ANY,
+        EnhancedStatusBar.__init__(self, parent,
                                    style=wx.STB_SIZEGRIP,
                                    name="EnhancedStatusBar")
         """
 
-        wx.StatusBar.__init__(self, parent, id, style, name)
+        wx.StatusBar.__init__(self, parent, wx.ID_ANY, style, name)
 
         self._items = {}
         self._curPos = 0
@@ -95,7 +96,6 @@ class EnhancedStatusBar(wx.StatusBar):
             verticalalignment = item.verticalalignment
 
             rect = self.GetFieldRect(pos)
-            widgetpos = widget.GetPosition()
             widgetsize = widget.GetSize()
 
             rect = self.GetFieldRect(pos)

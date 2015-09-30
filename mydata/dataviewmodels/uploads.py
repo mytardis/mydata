@@ -1,11 +1,13 @@
+"""
+Represents the Uploads tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
 import threading
 import traceback
 
-from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.logs import logger
 from mydata.media import MyDataIcons
-from mydata.media import IconStyle
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -14,13 +16,17 @@ else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
-class ColumnType:
+class ColumnType(object):
     TEXT = 0
     BITMAP = 1
     PROGRESS = 2
 
 
 class UploadsModel(DataViewIndexListModel):
+    """
+    Represents the Uploads tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self):
         self.uploadsData = []
 

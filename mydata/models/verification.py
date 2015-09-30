@@ -1,4 +1,12 @@
-class VerificationStatus:
+"""
+Model for datafile verification / lookup.
+"""
+
+
+class VerificationStatus(object):
+    """
+    Enumerated data type for verification states.
+    """
     NOT_STARTED = 0
     IN_PROGRESS = 1
     # Not found on MyTardis, need to upload this file:
@@ -15,8 +23,10 @@ class VerificationStatus:
     FAILED = 6
 
 
-class VerificationModel():
-
+class VerificationModel(object):
+    """
+    Model for datafile verification / lookup.
+    """
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModel = folderModel
