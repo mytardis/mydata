@@ -21,13 +21,13 @@ class InstrumentModel(object):
                  instrumentJson=None):
 
         self.settingsModel = settingsModel
-        self.id = None
+        self.instrumentId = None
         self.name = name
         self.json = instrumentJson
         self.facility = None
 
         if instrumentJson is not None:
-            self.id = instrumentJson['id']
+            self.instrumentId = instrumentJson['id']
             if name is None:
                 self.name = instrumentJson['name']
             self.facility = FacilityModel(
@@ -37,37 +37,54 @@ class InstrumentModel(object):
         return "InstrumentModel " + self.name + \
             " - " + self.GetFacility().GetName()
 
-    def __unicode__(self):
-        return "InstrumentModel " + self.name + \
-            " - " + self.GetFacility().GetName()
-
     def __repr__(self):
         return "InstrumentModel " + self.name + \
             " - " + self.GetFacility().GetName()
 
     def GetId(self):
-        return self.id
+        """
+        Return the instrument ID.
+        """
+        return self.instrumentId
 
     def GetName(self):
+        """
+        Return the instrument name.
+        """
         return self.name
 
     def GetFacility(self):
+        """
+        Return the facility.
+        """
         return self.facility
 
     def GetResourceUri(self):
+        """
+        Return the API resource URI..
+        """
         return self.json['resource_uri']
 
     def GetValueForKey(self, key):
+        """
+        Get value for key.
+        """
         return self.__dict__[key]
 
     def GetJson(self):
+        """
+        Return JSON representation.
+        """
         return self.json
 
     @staticmethod
     def CreateInstrument(settingsModel, facility, name):
+        """
+        Create instrument.
+        """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/instrument/"
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
@@ -79,32 +96,32 @@ class InstrumentModel(object):
             "name": name}
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
-        status_code = response.status_code
         content = response.text
-        if status_code >= 200 and status_code < 300:
+        if response.status_code >= 200 and response.status_code < 300:
             instrumentJson = response.json()
-            response.close()
             return InstrumentModel(settingsModel=settingsModel, name=name,
                                    instrumentJson=instrumentJson)
         else:
-            response.close()
-            if status_code == 401:
+            if response.status_code == 401:
                 message = "Couldn't create instrument \"%s\" " \
                           "in facility \"%s\"." \
                           % (name, facility.GetName())
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" " \
-                           "user account." % myTardisDefaultUsername
+                           "user account." % myTardisUsername
                 raise Unauthorized(message)
-            if status_code == 404:
+            if response.status_code == 404:
                 raise Exception("HTTP 404 (Not Found) received for: " + url)
-            logger.error("Status code = " + str(status_code))
+            logger.error("Status code = " + str(response.status_code))
             logger.error("URL = " + url)
             raise Exception(content)
 
     @staticmethod
     def GetInstrument(settingsModel, facility, name):
+        """
+        Get instrument.
+        """
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -144,6 +161,9 @@ class InstrumentModel(object):
 
     @staticmethod
     def GetMyInstruments(settingsModel):
+        """
+        Get my instruments.
+        """
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
@@ -174,9 +194,12 @@ class InstrumentModel(object):
         return instruments
 
     def Rename(self, name):
+        """
+        Rename instrument.
+        """
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = self.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
                                                myTardisApiKey),
