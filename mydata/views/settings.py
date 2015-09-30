@@ -2,6 +2,9 @@
 Classes for MyData's settings dialog.
 """
 
+# Disabling some Pylint checks for now...
+# pylint: disable=missing-docstring
+
 import wx
 
 try:

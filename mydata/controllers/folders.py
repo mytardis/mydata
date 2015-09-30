@@ -1,3 +1,10 @@
+"""
+The main controller class for managing datafile verifications
+and uploads from each of the folders in the Folders view.
+"""
+
+# pylint: disable=missing-docstring
+
 import os
 import sys
 import threading
@@ -16,7 +23,7 @@ import poster
 
 from mydata.utils.openssh import GetBytesUploadedToStaging
 from mydata.utils.openssh import UploadFile
-from mydata.utils.openssh import openSSH
+from mydata.utils.openssh import OPENSSH
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -44,17 +51,24 @@ import wx.dataview
 
 
 class ConnectionStatus(object):
+    # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     CONNECTED = 0
     DISCONNECTED = 1
 
 
 class UploadMethod(object):
+    # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     HTTP_POST = 0
     VIA_STAGING = 1
 
 
 class FoldersController(object):
-
+    """
+    The main controller class for managing datafile verifications
+    and uploads from each of the folders in the Folders view.
+    """
     def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
                  verificationsModel, uploadsModel, settingsModel):
         self.notifyWindow = notifyWindow
@@ -71,6 +85,18 @@ class FoldersController(object):
         self.showingWarningDialog = threading.Event()
         self.canceled = threading.Event()
         self.failed = threading.Event()
+
+        self.finishedCountingNumVerificationsToBePerformed = False
+        self.verificationsQueue = None
+        self.threadingLock = threading.Lock()
+        self.uploadsThreadingLock = threading.Lock()
+        self.verifyDatafileRunnable = None
+        self.uploadsQueue = None
+        self.started = False
+        self.completed = False
+        self.uploadDatafileRunnable = None
+        self.numVerificationsToBePerformed = 0
+        self.uploadMethod = UploadMethod.HTTP_POST
 
         # These will get overwritten in StartDataUploads, but we need
         # to initialize them here, so that ShutDownUploadThreads()
@@ -121,10 +147,7 @@ class FoldersController(object):
                                self.CountCompletedUploadsAndVerifications)
 
     def Started(self):
-        if hasattr(self, "started"):
-            return self.started
-        else:
-            return False
+        return self.started
 
     def SetStarted(self, started=True):
         self.started = started
@@ -148,10 +171,7 @@ class FoldersController(object):
             self.failed.clear()
 
     def Completed(self):
-        if hasattr(self, "completed"):
-            return self.completed
-        else:
-            return False
+        return self.completed
 
     def SetCompleted(self, completed=True):
         self.completed = completed
@@ -178,8 +198,6 @@ class FoldersController(object):
         return self.lastErrorMessage
 
     def SetLastErrorMessage(self, message):
-        if not hasattr(self, "threadingLock"):
-            self.threadingLock = threading.Lock()
         self.threadingLock.acquire()
         self.lastErrorMessage = message
         self.threadingLock.release()
@@ -213,6 +231,7 @@ class FoldersController(object):
             self.SetShowingErrorDialog(True)
         dlg = wx.MessageDialog(None, event.message, event.title,
                                wx.OK | event.icon)
+        # pylint: disable=bare-except
         try:
             wx.EndBusyCursor()
             needToRestartBusyCursor = True
@@ -244,8 +263,6 @@ class FoldersController(object):
         if folderModel not in foldersController.uploadDatafileRunnable:
             foldersController.uploadDatafileRunnable[folderModel] = {}
 
-        if not hasattr(self, "uploadsThreadingLock"):
-            self.uploadsThreadingLock = threading.Lock()
         self.uploadsThreadingLock.acquire()
         uploadDataViewId = uploadsModel.GetMaxDataViewId() + 1
         uploadModel = UploadModel(dataViewId=uploadDataViewId,
@@ -294,8 +311,7 @@ class FoldersController(object):
 
         for i in range(fc.numVerificationWorkerThreads):
             t = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
-                                 target=fc.verificationWorker,
-                                 args=(i + 1,))
+                                 target=fc.VerificationWorker)
             fc.verificationWorkerThreads.append(t)
             t.start()
         fc.uploadDatafileRunnable = {}
@@ -356,10 +372,10 @@ class FoldersController(object):
         fc.uploadWorkerThreads = []
         for i in range(fc.numUploadWorkerThreads):
             t = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
-                                 target=fc.uploadWorker, args=())
+                                 target=fc.UploadWorker, args=())
             fc.uploadWorkerThreads.append(t)
             t.start()
-        # pylint: disable=broad-except
+        # pylint: disable=bare-except
         try:
             fc.numVerificationsToBePerformed = 0
             fc.finishedCountingNumVerificationsToBePerformed = \
@@ -447,7 +463,7 @@ class FoldersController(object):
         except:
             logger.error(traceback.format_exc())
 
-    def uploadWorker(self):
+    def UploadWorker(self):
         """
         One worker per thread
         By default, up to 5 threads can run simultaneously
@@ -460,6 +476,7 @@ class FoldersController(object):
             task = self.uploadsQueue.get()
             if task is None:
                 return
+            # pylint: disable=bare-except
             try:
                 task.run()
             except ValueError, err:
@@ -479,7 +496,7 @@ class FoldersController(object):
                 self.uploadsQueue.task_done()
                 return
 
-    def verificationWorker(self, verificationWorkerId):
+    def VerificationWorker(self):
         """
         One worker per thread.
         By default, up to 5 threads can run simultaneously
@@ -492,6 +509,7 @@ class FoldersController(object):
             task = self.verificationsQueue.get()
             if task is None:
                 break
+            # pylint: disable=bare-except
             try:
                 task.run()
             except ValueError, err:
@@ -511,6 +529,7 @@ class FoldersController(object):
                 self.verificationsQueue.task_done()
                 return
 
+    # pylint: disable=unused-argument
     def CountCompletedUploadsAndVerifications(self, event):
         """
         Check if we have finished uploads and verifications,
@@ -563,7 +582,7 @@ class FoldersController(object):
 
         if sys.platform == 'darwin':
             sshControlMasterPool = \
-                openSSH.GetSshControlMasterPool(createIfMissing=False)
+                OPENSSH.GetSshControlMasterPool(createIfMissing=False)
             if sshControlMasterPool:
                 sshControlMasterPool.ShutDown()
 
@@ -587,6 +606,7 @@ class FoldersController(object):
         wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
 
+        # pylint: disable=bare-except
         try:
             wx.EndBusyCursor()
         except:
@@ -618,7 +638,8 @@ class FoldersController(object):
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
 
-    def OnOpenFolder(self, evt):
+    # pylint: disable=unused-argument
+    def OnOpenFolder(self, event):
         items = self.foldersView.GetDataViewControl().GetSelections()
         rows = [self.foldersModel.GetRow(item) for item in items]
         if len(rows) != 1:
@@ -642,21 +663,27 @@ class FoldersController(object):
             dlg.ShowModal()
             return
         if sys.platform == 'darwin':
-            def openFolder(path):
+            def OpenFolder(path):
+                """Open folder."""
                 subprocess.check_call(['open', '--', path])
         elif sys.platform.startswith('linux'):
-            def openFolder(path):
+            def OpenFolder(path):
+                """Open folder."""
                 subprocess.check_call(['xdg-open', '--', path])
         elif sys.platform.startswith('win'):
-            def openFolder(path):
+            def OpenFolder(path):
+                """Open folder."""
                 subprocess.call(['explorer', path])
         else:
             logger.debug("sys.platform = " + sys.platform)
 
-        openFolder(path)
+        OpenFolder(path)
 
     def CalculateMd5Sum(self, filePath, fileSize, uploadModel,
-                        ProgressCallback=None):
+                        progressCallback=None):
+        """
+        Calculate MD5 checksum.
+        """
         md5 = hashlib.md5()
 
         defaultChunkSize = 128 * 1024  # FIXME: magic number
@@ -678,8 +705,8 @@ class FoldersController(object):
                 md5.update(chunk)
                 bytesProcessed += len(chunk)
                 del chunk
-                if ProgressCallback:
-                    ProgressCallback(bytesProcessed)
+                if progressCallback:
+                    progressCallback(bytesProcessed)
         return md5.hexdigest()
 
 
@@ -692,6 +719,7 @@ class VerifyDatafileRunnable(object):
         self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.settingsModel = settingsModel
+        self.verificationModel = None
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -719,6 +747,7 @@ class VerifyDatafileRunnable(object):
         verificationsModel.VerificationMessageUpdated(self.verificationModel)
 
         existingDatafile = None
+        # pylint: disable=bare-except
         try:
             existingDatafile = DataFileModel.GetDataFile(
                 settingsModel=self.settingsModel,
@@ -786,10 +815,9 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                                .ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=message,
-                                    icon=wx.ICON_ERROR))
+                            .ShowMessageDialogEvent(title="MyData",
+                                                    message=message,
+                                                    icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
                         return
                     except StorageBoxAttributeNotFound, err:
@@ -801,10 +829,9 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                                .ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=message,
-                                    icon=wx.ICON_ERROR))
+                            .ShowMessageDialogEvent(title="MyData",
+                                                    message=message,
+                                                    icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
                         return
                     privateKeyFilePath = self.settingsModel\
@@ -832,10 +859,9 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                                .ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=message,
-                                    icon=wx.ICON_ERROR))
+                            .ShowMessageDialogEvent(title="MyData",
+                                                    message=message,
+                                                    icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
                         return
                     except StagingHostSshPermissionDenied, err:
@@ -847,10 +873,9 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                                .ShowMessageDialogEvent(
-                                    title="MyData",
-                                    message=message,
-                                    icon=wx.ICON_ERROR))
+                            .ShowMessageDialogEvent(title="MyData",
+                                                    message=message,
+                                                    icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
                         return
                     if bytesUploadedToStaging == \
@@ -869,12 +894,12 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                                .FoundUnverifiedButFullSizeDatafileEvent(
-                                    id=self.foldersController
-                                    .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
-                                    folderModel=self.folderModel,
-                                    dataFileIndex=self.dataFileIndex,
-                                    dataFilePath=dataFilePath))
+                            .FoundUnverifiedButFullSizeDatafileEvent(
+                                id=self.foldersController
+                                .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
+                                folderModel=self.folderModel,
+                                dataFileIndex=self.dataFileIndex,
+                                dataFilePath=dataFilePath))
                         self.verificationModel.SetComplete()
                         return
                     else:
@@ -978,8 +1003,9 @@ class UploadDatafileRunnable(object):
                 url = myTardisUrl + "/api/v1/mydata_dataset_file/"
             else:
                 url = myTardisUrl + "/api/v1/dataset_file/"
-            headers = {"Authorization": "ApiKey " + myTardisUsername + ":" +
-                       myTardisApiKey}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                   myTardisApiKey)}
 
         if self.foldersController.IsShuttingDown():
             return
@@ -1027,7 +1053,7 @@ class UploadDatafileRunnable(object):
                 self.foldersController\
                     .CalculateMd5Sum(dataFilePath, dataFileSize,
                                      self.uploadModel,
-                                     ProgressCallback=Md5ProgressCallback)
+                                     progressCallback=Md5ProgressCallback)
 
             if self.uploadModel.Canceled():
                 # self.foldersController.SetCanceled()
@@ -1083,7 +1109,7 @@ class UploadDatafileRunnable(object):
             datafileBufferedReader = io.open(dataFilePath, 'rb')
             self.uploadModel.SetBufferedReader(datafileBufferedReader)
 
-        def ProgressCallback(param, current, total, message=None):
+        def ProgressCallback(current, total, message=None):
             if self.uploadModel.Canceled():
                 # self.foldersController.SetCanceled()
                 return
@@ -1124,10 +1150,11 @@ class UploadDatafileRunnable(object):
                                  ("Content-Type", "application/json"),
                                  ("Accept", "application/json")]
         elif not self.existingUnverifiedDatafile:
-            headers = {"Authorization": "ApiKey " +
-                       myTardisUsername + ":" + myTardisApiKey,
-                       "Content-Type": "application/json",
-                       "Accept": "application/json"}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                   myTardisApiKey),
+                "Content-Type": "application/json",
+                "Accept": "application/json"}
             data = json.dumps(dataFileJson)
 
         self.uploadModel.SetMessage("Uploading...")
@@ -1282,6 +1309,7 @@ class UploadDatafileRunnable(object):
                                 "administrator to check in their logs " \
                                 "for more information."
                             message += "\n\n"
+                            # pylint: disable=bare-except
                             try:
                                 message += "ERROR: \"%s\"" \
                                     % response.json()['error_message']
@@ -1314,10 +1342,9 @@ class UploadDatafileRunnable(object):
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
+                    .ShowMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
                 return
             except StagingHostRefusedSshConnection, err:
                 wx.PostEvent(
@@ -1328,10 +1355,9 @@ class UploadDatafileRunnable(object):
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
+                    .ShowMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
                 wx.PostEvent(
@@ -1342,10 +1368,9 @@ class UploadDatafileRunnable(object):
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
+                    .ShowMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
                 return
             except ScpException, err:
                 if self.foldersController.IsShuttingDown() or \
@@ -1372,10 +1397,9 @@ class UploadDatafileRunnable(object):
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
+                    .ShowMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
                 return
             except StorageBoxAttributeNotFound, err:
                 wx.PostEvent(
@@ -1386,10 +1410,9 @@ class UploadDatafileRunnable(object):
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                        .ShowMessageDialogEvent(
-                            title="MyData",
-                            message=message,
-                            icon=wx.ICON_ERROR))
+                    .ShowMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
                 return
         except urllib2.HTTPError, err:
             logger.error("url: " + url)
@@ -1402,6 +1425,7 @@ class UploadDatafileRunnable(object):
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
+            # pylint: disable=bare-except
             try:
                 # If running MyTardis in DEBUG mode, there should
                 # be an error_message returned in JSON format.
@@ -1412,10 +1436,9 @@ class UploadDatafileRunnable(object):
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController
-                    .ShowMessageDialogEvent(
-                        title="MyData",
-                        message=message,
-                        icon=wx.ICON_ERROR))
+                .ShowMessageDialogEvent(title="MyData",
+                                        message=message,
+                                        icon=wx.ICON_ERROR))
             return
         except Exception, err:
             if not self.foldersController.IsShuttingDown():
@@ -1512,6 +1535,7 @@ class UploadDatafileRunnable(object):
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
+            # pylint: disable=bare-except
             try:
                 self.uploadModel.GetBufferedReader().close()
             except:
