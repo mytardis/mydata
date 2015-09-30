@@ -845,8 +845,7 @@ class VerifyDatafileRunnable(object):
                         bytesUploadedToStaging = \
                             GetBytesUploadedToStaging(
                                 remoteFilePath,
-                                username, privateKeyFilePath, host,
-                                self.verificationModel)
+                                username, privateKeyFilePath, host)
                         logger.debug("%d bytes uploaded to staging for %s"
                                      % (bytesUploadedToStaging,
                                         replicas[0].GetUri()))
