@@ -3,6 +3,8 @@ Model for datafile verification / lookup.
 """
 
 
+# pylint: disable=invalid-name
+# pylint: disable=too-few-public-methods
 class VerificationStatus(object):
     """
     Enumerated data type for verification states.
@@ -23,6 +25,7 @@ class VerificationStatus(object):
     FAILED = 6
 
 
+# pylint: disable=too-many-instance-attributes
 class VerificationModel(object):
     """
     Model for datafile verification / lookup.
@@ -39,40 +42,79 @@ class VerificationModel(object):
         self.complete = False
 
     def GetDataViewId(self):
+        """
+        Returns data view ID.
+        """
         return self.dataViewId
 
     def GetFilename(self):
+        """
+        Returns filename.
+        """
         return self.filename
 
     def GetSubdirectory(self):
+        """
+        Returns subdirectory.
+        """
         return self.subdirectory
 
     def GetStatus(self):
+        """
+        Returns status.
+        """
         return self.status
 
     def SetComplete(self, complete=True):
+        """
+        Set this to True when complete.
+        """
         self.complete = complete
 
     def GetComplete(self):
+        """
+        Returns True if complete.
+        """
         return self.complete
 
     def SetStatus(self, status):
+        """
+        Used to set status.
+        """
         self.status = status
 
     def GetMessage(self):
+        """
+        Get message.
+        """
         return self.message
 
     def SetMessage(self, message):
+        """
+        Set message.
+        """
         self.message = message
 
     def GetValueForKey(self, key):
+        """
+        Get value for key.
+        """
         return self.__dict__[key]
 
     def GetFolderModel(self):
+        """
+        Get folder model.
+        """
         return self.folderModel
 
     def GetFolder(self):
+        """
+        Get folder.
+        """
         return self.folder
 
     def GetDataFileIndex(self):
+        """
+        Get datafile index.
+        """
         return self.dataFileIndex

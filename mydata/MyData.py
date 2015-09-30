@@ -45,7 +45,7 @@ from mydata.views.statusbar import EnhancedStatusBar
 from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
 import mydata.events as mde
-from mydata.media import MyDataIcons
+from mydata.media import MYDATA_ICONS
 from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
@@ -113,8 +113,8 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetFieldsCount(2)
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetStatusWidths([-1, 60])
-        self.connectedBitmap = MyDataIcons.GetIcon("Connect")
-        self.disconnectedBitmap = MyDataIcons.GetIcon("Disconnect")
+        self.connectedBitmap = MYDATA_ICONS.GetIcon("Connect")
+        self.disconnectedBitmap = MYDATA_ICONS.GetIcon("Disconnect")
         self.connected = False
         self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
@@ -299,7 +299,7 @@ class MyData(wx.App):
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
-        bmp = MyDataIcons.GetIcon("favicon", vendor="MyTardis")
+        bmp = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
         icon = EmptyIcon()
         icon.CopyFromBitmap(bmp)
         self.frame.SetIcon(icon)
@@ -396,7 +396,7 @@ class MyData(wx.App):
             else:
                 message = \
                     "Click the MyData system tray icon to access its menu."
-            Notification.notify(message, title=title)
+            Notification.Notify(message, title=title)
             self.scheduleController.ApplySchedule(event)
 
         return True
@@ -639,7 +639,7 @@ class MyData(wx.App):
         self.toolbar = self.frame.CreateToolBar()
         self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
 
-        openIcon = MyDataIcons.GetIcon("Open folder", size="24x24")
+        openIcon = MYDATA_ICONS.GetIcon("Open folder", size="24x24")
         if wx.version().startswith("3.0.3.dev"):
             addToolMethod = self.toolbar.AddTool
         else:
@@ -650,7 +650,7 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        refreshIcon = MyDataIcons.GetIcon("Refresh", size="24x24")
+        refreshIcon = MYDATA_ICONS.GetIcon("Refresh", size="24x24")
         self.refreshTool = addToolMethod(wx.ID_REFRESH, "Refresh",
                                          refreshIcon, shortHelp="Refresh")
         self.toolbar.EnableTool(wx.ID_REFRESH, True)
@@ -659,11 +659,11 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        stopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
+        stopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
                                        style=IconStyle.NORMAL)
         self.stopTool = addToolMethod(wx.ID_STOP, "Stop",
                                       stopIcon, shortHelp="Stop")
-        disabledStopIcon = MyDataIcons.GetIcon("Stop sign", size="24x24",
+        disabledStopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
                                                style=IconStyle.DISABLED)
         self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
                                            disabledStopIcon)
@@ -674,21 +674,21 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        settingsIcon = MyDataIcons.GetIcon("Settings", size="24x24")
+        settingsIcon = MYDATA_ICONS.GetIcon("Settings", size="24x24")
         self.settingsTool = addToolMethod(wx.ID_ANY, "Settings",
                                           settingsIcon, shortHelp="Settings")
         self.frame.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
 
         self.toolbar.AddSeparator()
 
-        internetIcon = MyDataIcons.GetIcon("Internet explorer", size="24x24")
+        internetIcon = MYDATA_ICONS.GetIcon("Internet explorer", size="24x24")
         self.myTardisTool = addToolMethod(wx.ID_ANY, "MyTardis",
                                           internetIcon, shortHelp="MyTardis")
         self.frame.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
 
         self.toolbar.AddSeparator()
 
-        aboutIcon = MyDataIcons.GetIcon("About", size="24x24",
+        aboutIcon = MYDATA_ICONS.GetIcon("About", size="24x24",
                                         style=IconStyle.HOT)
         self.aboutTool = addToolMethod(wx.ID_ANY, "About MyData",
                                        aboutIcon, shortHelp="About MyData")
@@ -696,7 +696,7 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        helpIcon = MyDataIcons.GetIcon("Help", size="24x24",
+        helpIcon = MYDATA_ICONS.GetIcon("Help", size="24x24",
                                        style=IconStyle.HOT)
         self.helpTool = addToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")

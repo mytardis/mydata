@@ -7,7 +7,7 @@ import traceback
 
 from mydata.models.upload import UploadStatus
 from mydata.logs import logger
-from mydata.media import MyDataIcons
+from mydata.media import MYDATA_ICONS
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -54,9 +54,9 @@ class UploadsModel(DataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-        self.inProgressIcon = MyDataIcons.GetIcon("Refresh", size="16x16")
-        self.completedIcon = MyDataIcons.GetIcon("Apply", size="16x16")
-        self.failedIcon = MyDataIcons.GetIcon("Delete", size="16x16")
+        self.inProgressIcon = MYDATA_ICONS.GetIcon("Refresh", size="16x16")
+        self.completedIcon = MYDATA_ICONS.GetIcon("Apply", size="16x16")
+        self.failedIcon = MYDATA_ICONS.GetIcon("Delete", size="16x16")
 
     def Filter(self, searchString):
         self.searchString = searchString

@@ -4,6 +4,7 @@ is assumed to have been caused by a missing schema record.
 """
 
 
+# pylint: disable=too-few-public-methods
 class SchemaModel(object):
 
     """
