@@ -32,7 +32,8 @@ class EnhancedStatusBarItem(object):
 
     Based on Andrea Gavana's implementation.
     """
-
+    # pylint: disable=too-few-public-methods
+    # pylint: disable=unused-argument
     def __init__(self, widget, pos,
                  horizontalalignment=ESB_ALIGN_CENTER_HORIZONTAL,
                  verticalalignment=ESB_ALIGN_CENTER_VERTICAL):
@@ -59,9 +60,12 @@ class EnhancedStatusBar(wx.StatusBar):
 
         wx.StatusBar.__init__(self, parent, wx.ID_ANY, style, name)
 
-        self._items = {}
-        self._curPos = 0
-        self._parent = parent
+        self._items = {}  # pylint: disable=invalid-name
+        self._curPos = 0  # pylint: disable=invalid-name
+        self._parent = parent  # pylint: disable=invalid-name
+
+        self.statusbarConnIcon = None
+        self.statusbarStaticText = None
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         if threading.current_thread().name == "MainThread":
@@ -70,7 +74,10 @@ class EnhancedStatusBar(wx.StatusBar):
             wx.CallAfter(self.OnSize, None)
 
     def SetStatusMessage(self, msg):
-        if not hasattr(self, "statusbarStaticText"):
+        """
+        Set status message.
+        """
+        if not self.statusbarStaticText:
             self.statusbarStaticText = wx.StaticText(self, wx.ID_ANY, "")
             self.AddWidget(self.statusbarStaticText, pos=0)
         self.statusbarStaticText.SetLabel(msg)
@@ -78,17 +85,24 @@ class EnhancedStatusBar(wx.StatusBar):
         self.OnSize(None)
 
     def SetStatusConnectionIcon(self, bitmap):
-        if not hasattr(self, "statusbarConnIcon"):
+        """
+        Set status connection icon.
+        """
+        if not self.statusbarConnIcon:
             self.statusbarConnIcon = wx.StaticBitmap(self, wx.ID_ANY)
             self.AddWidget(self.statusbarConnIcon, pos=1)
         self.statusbarConnIcon.SetBitmap(bitmap)
         self.OnSize(None)
 
     def OnSize(self, event):
-        """Handles The wx.EVT_SIZE Events For The StatusBar.
+        """
+        Handles The wx.EVT_SIZE Events For The StatusBar.
 
         Actually, All The Calculations Linked To HorizontalAlignment And
-        VerticalAlignment Are Done In This Function."""
+        VerticalAlignment Are Done In This Function.
+        """
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
 
         for pos, item in self._items.items():
             widget = item.widget
