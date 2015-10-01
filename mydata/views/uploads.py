@@ -3,6 +3,9 @@ Represents the Uploads tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 
+# pylint: disable=fixme
+# pylint: disable=missing-docstring
+
 import wx
 import wx.dataview as dv
 import traceback
@@ -86,7 +89,7 @@ class UploadsView(wx.Panel):
         btnbox.Add(cancelRemainingUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
         self.Sizer.Add(btnbox, 0, wx.TOP | wx.BOTTOM, 5)
 
-    def OnCancelSelectedUploads(self, evt):
+    def OnCancelSelectedUploads(self, event):
         """
         Remove the selected row(s) from the model. The model will take
         care of notifying the view (and any other observers) that the
@@ -97,6 +100,7 @@ class UploadsView(wx.Panel):
         # won't be deleted from the MyTardis server).
         # The OnCancelRemainingUploads method is a bit smarter in
         # terms of only deleting incomplete upload rows from the view.
+        # pylint: disable=bare-except
         try:
             items = self.uploadsDataViewControl.GetSelections()
             rows = [self.uploadsModel.GetRow(item) for item in items]
@@ -128,9 +132,12 @@ class UploadsView(wx.Panel):
                 self.uploadsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
+        finally:
+            event.Skip()
 
-    def OnCancelRemainingUploads(self, evt):
-        def shutDownUploadThreads():
+    def OnCancelRemainingUploads(self, event):
+        def ShutDownUploadThreads():
+            # pylint: disable=bare-except
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
@@ -141,16 +148,17 @@ class UploadsView(wx.Panel):
                     # pylint: disable=protected-access
                     try:
                         wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, e:
+                    except wx._core.PyAssertionError, err:
                         if "no matching wxBeginBusyCursor()" \
-                                not in str(e):
-                            logger.error(str(e))
+                                not in str(err):
+                            logger.error(str(err))
                             raise
                 wx.CallAfter(EndBusyCursorIfRequired)
             except:
                 logger.error(traceback.format_exc())
-        thread = threading.Thread(target=shutDownUploadThreads)
+        thread = threading.Thread(target=ShutDownUploadThreads)
         thread.start()
+        event.Skip()
 
     def GetUploadsModel(self):
         """
