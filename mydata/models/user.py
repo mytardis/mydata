@@ -1,3 +1,7 @@
+"""
+Model class for MyTardis API v1's UserResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
 import requests
 import traceback
 import urllib2
@@ -9,15 +13,21 @@ from mydata.logs import logger
 
 
 class UserModel(object):
-
-    USER_NOT_FOUND_STRING = "USER NOT FOUND IN MYTARDIS"
+    """
+    Model class for MyTardis API v1's UserResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
+    # pylint: disable=missing-docstring
+    # pylint: disable=too-many-instance-attributes
+    userNotFoundString = "USER NOT FOUND IN MYTARDIS"
 
     def __init__(self, settingsModel=None, dataViewId=None,
                  username=None, name=None,
                  email=None, userRecordJson=None,
                  userNotFoundInMyTardis=False):
+        # pylint: disable=too-many-arguments
         self.settingsModel = settingsModel
-        self.id = None
+        self.userId = None
         self.dataViewId = dataViewId
         self.username = username
         self.name = name
@@ -27,7 +37,7 @@ class UserModel(object):
         self.userNotFoundInMyTardis = userNotFoundInMyTardis
 
         if userRecordJson is not None:
-            self.id = userRecordJson['id']
+            self.userId = userRecordJson['id']
             if username is None:
                 self.username = userRecordJson['username']
             if name is None:
@@ -56,7 +66,7 @@ class UserModel(object):
                 raise IncompatibleMyTardisVersion(message)
 
     def GetId(self):
-        return self.id
+        return self.userId
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -68,19 +78,19 @@ class UserModel(object):
         if self.username:
             return self.username
         else:
-            return UserModel.USER_NOT_FOUND_STRING
+            return UserModel.userNotFoundString
 
     def GetName(self):
         if self.name:
             return self.name
         else:
-            return UserModel.USER_NOT_FOUND_STRING
+            return UserModel.userNotFoundString
 
     def GetEmail(self):
         if self.email:
             return self.email
         else:
-            return UserModel.USER_NOT_FOUND_STRING
+            return UserModel.userNotFoundString
 
     def GetGroups(self):
         return self.groups
@@ -90,7 +100,7 @@ class UserModel(object):
             return self.__dict__[key]
         if key in ('username', 'name', 'email') and \
                 self.UserNotFoundInMyTardis():
-            return UserModel.USER_NOT_FOUND_STRING
+            return UserModel.userNotFoundString
         else:
             return None
 
@@ -103,9 +113,6 @@ class UserModel(object):
     def __str__(self):
         return "UserModel: " + self.GetUsername()
 
-    def __unicode__(self):
-        return "UserModel: " + self.GetUsername()
-
     def __repr__(self):
         return "UserModel: " + self.GetUsername()
 
@@ -116,8 +123,9 @@ class UserModel(object):
         myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
-        headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
-                   myTardisApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey)}
         try:
             response = requests.get(url=url, headers=headers)
         except:
@@ -149,8 +157,9 @@ class UserModel(object):
 
         url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
             urllib2.quote(email)
-        headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
-                   myTardisApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey)}
         try:
             response = requests.get(url=url, headers=headers)
         except:
@@ -177,8 +186,8 @@ class UserModel(object):
                              userRecordJson=userRecordsJson['objects'][0])
 
 
+# pylint: disable=too-few-public-methods
 class UserProfileModel(object):
-
     """
     Used with the DoesNotExist exception when a 404 from MyTardis's API
     is assumed to have been caused by a missing user profile record.

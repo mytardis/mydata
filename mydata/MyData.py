@@ -660,11 +660,11 @@ class MyData(wx.App):
         self.toolbar.AddSeparator()
 
         stopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
-                                       style=IconStyle.NORMAL)
+                                        style=IconStyle.NORMAL)
         self.stopTool = addToolMethod(wx.ID_STOP, "Stop",
                                       stopIcon, shortHelp="Stop")
         disabledStopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
-                                               style=IconStyle.DISABLED)
+                                                style=IconStyle.DISABLED)
         self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
                                            disabledStopIcon)
         self.toolbar.EnableTool(self.stopTool.GetId(), False)
@@ -689,7 +689,7 @@ class MyData(wx.App):
         self.toolbar.AddSeparator()
 
         aboutIcon = MYDATA_ICONS.GetIcon("About", size="24x24",
-                                        style=IconStyle.HOT)
+                                         style=IconStyle.HOT)
         self.aboutTool = addToolMethod(wx.ID_ANY, "About MyData",
                                        aboutIcon, shortHelp="About MyData")
         self.frame.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
@@ -697,7 +697,7 @@ class MyData(wx.App):
         self.toolbar.AddSeparator()
 
         helpIcon = MYDATA_ICONS.GetIcon("Help", size="24x24",
-                                       style=IconStyle.HOT)
+                                        style=IconStyle.HOT)
         self.helpTool = addToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")
         self.frame.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)

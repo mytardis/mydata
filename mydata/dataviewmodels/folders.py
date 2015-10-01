@@ -661,25 +661,25 @@ class FoldersModel(DataViewIndexListModel):
                         experimentTitle = "%s - %s" \
                             % (self.settingsModel.GetInstrumentName(),
                                owner.GetUsername())
-                elif owner.GetName() != UserModel.USER_NOT_FOUND_STRING:
+                elif owner.GetName() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetName(),
-                           UserModel.USER_NOT_FOUND_STRING)
-                elif owner.GetUsername() != UserModel.USER_NOT_FOUND_STRING:
+                           UserModel.userNotFoundString)
+                elif owner.GetUsername() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetUsername(),
-                           UserModel.USER_NOT_FOUND_STRING)
-                elif owner.GetEmail() != UserModel.USER_NOT_FOUND_STRING:
+                           UserModel.userNotFoundString)
+                elif owner.GetEmail() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetEmail(),
-                           UserModel.USER_NOT_FOUND_STRING)
+                           UserModel.userNotFoundString)
                 else:
                     experimentTitle = "%s - %s" \
                         % (self.settingsModel.GetInstrumentName(),
-                           UserModel.USER_NOT_FOUND_STRING)
+                           UserModel.userNotFoundString)
                 folderModel.SetExperimentTitle(experimentTitle)
                 self.AddRow(folderModel)
         except:
