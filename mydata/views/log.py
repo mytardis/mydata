@@ -1,3 +1,7 @@
+"""
+Represents the Log tab of MyData's main window,
+and the log text displayed within that tab view.
+"""
 import wx
 import sys
 
@@ -5,7 +9,10 @@ from mydata.logs import logger
 
 
 class LogView(wx.Panel):
-
+    """
+    Represents the Log tab of MyData's main window,
+    and the log text displayed within that tab view.
+    """
     def __init__(self, parent, settingsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
@@ -37,4 +44,12 @@ class LogView(wx.Panel):
         logger.SendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
 
     def OnSubmitDebugLog(self, event):
+        """
+        Called when user presses "Submit debug log" button at the bottom of
+        the Log view.  Opens a dialog, so that the user can add a comment
+        and confirm that they want to POST a debug log to the server
+        (currently hard-coded to be a server managed by the MyData core
+        developers - https://cvl.massive.org.au).
+        """
         logger.DumpLog(self.parent, self.settingsModel, submitDebugLog=True)
+        event.Skip()
