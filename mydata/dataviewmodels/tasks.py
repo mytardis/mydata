@@ -1,3 +1,10 @@
+"""
+Represents the Tasks tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
+# pylint: disable=missing-docstring
+
 import threading
 from datetime import datetime
 from datetime import timedelta
@@ -14,6 +21,12 @@ else:
 
 
 class TasksModel(DataViewIndexListModel):
+    """
+    Represents the Tasks tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
     def __init__(self, settingsModel):
         self.settingsModel = settingsModel
         self.tasksData = list()
@@ -34,14 +47,15 @@ class TasksModel(DataViewIndexListModel):
         self.maxDataViewId = 0
 
     def Filter(self, searchString):
+        # pylint: disable=too-many-branches
         self.searchString = searchString
-        q = self.searchString.lower()
+        query = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
             self.unfilteredTasksData = list(self.tasksData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if q not in self.tasksData[row].GetJobDesc().lower():
+            if query not in self.tasksData[row].GetJobDesc().lower():
                 self.filteredTasksData.append(self.tasksData[row])
                 del self.tasksData[row]
                 # notify the view(s) using this model that it has been removed
@@ -53,7 +67,7 @@ class TasksModel(DataViewIndexListModel):
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
             ftd = self.filteredTasksData[filteredRow]
-            if q in ftd.GetJobDesc().lower():
+            if query in ftd.GetJobDesc().lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -83,14 +97,21 @@ class TasksModel(DataViewIndexListModel):
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
 
-    # All of our columns are strings.  If the model or the renderers
-    # in the view are other types then that should be reflected here.
     def GetColumnType(self, col):
+        """
+        All of our columns are strings.  If the model or the renderers
+        in the view are other types then that should be reflected here.
+        """
+        # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
         return "string"
 
-    # This method is called to provide the tasksData object for a
-    # particular row, col
     def GetValueByRow(self, row, col):
+        """
+        This method is called to provide the tasksData object
+        for a particular row, col
+        """
+        # pylint: disable=arguments-differ
         columnKey = self.GetColumnKeyName(col)
         value = self.tasksData[row].GetValueForKey(columnKey)
         if value is None:
@@ -114,6 +135,7 @@ class TasksModel(DataViewIndexListModel):
 
     def GetValuesForColname(self, colname):
         values = []
+        col = -1
         for col in range(0, self.GetColumnCount()):
             if self.GetColumnName(col) == colname:
                 break
@@ -125,6 +147,7 @@ class TasksModel(DataViewIndexListModel):
         return values
 
     def GetColumnName(self, col):
+        # pylint: disable=arguments-differ
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
@@ -133,29 +156,40 @@ class TasksModel(DataViewIndexListModel):
     def GetDefaultColumnWidth(self, col):
         return self.defaultColumnWidths[col]
 
-    # Report how many rows this model provides data for.
     def GetRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
+        # pylint: disable=arguments-differ
         return len(self.tasksData)
 
-    # Report how many rows this model provides data for.
     def GetUnfilteredRowCount(self):
         return len(self.unfilteredTasksData)
 
-    # Report how many rows this model provides data for.
     def GetFilteredRowCount(self):
         return len(self.filteredTasksData)
 
-    # Report how many columns this model provides data for.
     def GetColumnCount(self):
+        """
+        Report how many columns this model provides data for.
+        """
+        # pylint: disable=arguments-differ
         return len(self.columnNames)
 
-    # Report the number of rows in the model
     def GetCount(self):
+        """
+        Report the number of rows in the model
+        """
+        # pylint: disable=arguments-differ
         return len(self.tasksData)
 
-    # Called to check if non-standard attributes should be used in the
-    # cell at (row, col)
     def GetAttrByRow(self, row, col, attr):
+        """
+        Called to check if non-standard attributes should be
+        used in the cell at (row, col)
+        """
+        # pylint: disable=unused-argument
+        # pylint: disable=arguments-differ
         return False
 
     # This is called to assist with sorting the data in the view.  The
@@ -165,6 +199,7 @@ class TasksModel(DataViewIndexListModel):
     # data set and comparing them.  The return value is -1, 0, or 1,
     # just like Python's cmp() function.
     def Compare(self, item1, item2, col, ascending):
+        # pylint: disable=arguments-differ
         # Swap sort order?
         if not ascending:
             item2, item1 = item1, item2
@@ -263,9 +298,9 @@ class TasksModel(DataViewIndexListModel):
         else:
             wx.CallAfter(self.RowAppended)
 
-        def jobFunc(taskModel, tasksModel, row, col):
+        def JobFunc(taskModel, tasksModel, row, col):
 
-            def taskJobFunc():
+            def TaskJobFunc():
                 assert callable(taskModel.GetJobFunc())
                 title = "Starting"
                 message = taskModel.GetJobDesc()
@@ -344,7 +379,7 @@ class TasksModel(DataViewIndexListModel):
                                     timeString, dateString))
                     tasksModel.AddRow(newTaskModel)
 
-            thread = threading.Thread(target=taskJobFunc)
+            thread = threading.Thread(target=TaskJobFunc)
             logger.debug("Starting task %s" % taskModel.GetJobDesc())
             thread.start()
 
@@ -361,11 +396,11 @@ class TasksModel(DataViewIndexListModel):
                                 % taskModel.GetDataViewId())
         args = [taskModel, self, row, col]
 
-        def scheduleTask():
-            callLater = wx.CallLater(millis, jobFunc, *args)
+        def ScheduleTask():
+            callLater = wx.CallLater(millis, JobFunc, *args)
             taskModel.SetCallLater(callLater)
 
-        wx.CallAfter(scheduleTask)
+        wx.CallAfter(ScheduleTask)
 
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()
