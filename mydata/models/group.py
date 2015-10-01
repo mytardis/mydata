@@ -1,3 +1,10 @@
+"""
+Model class for MyTardis API v1's GroupResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
+# pylint: disable=missing-docstring
+
 import requests
 import urllib
 
@@ -6,34 +13,35 @@ from mydata.utils.exceptions import DoesNotExist
 
 
 class GroupModel(object):
-
+    """
+    Model class for MyTardis API v1's GroupResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, settingsModel=None, name=None, groupJson=None):
         self.settingsModel = settingsModel
-        self.id = None
+        self.groupId = None
         self.name = name
         self.groupJson = groupJson
+        self.dataViewId = 0
 
         if groupJson is not None:
-            self.id = groupJson['id']
+            self.groupId = groupJson['id']
             if name is None:
                 self.name = groupJson['name']
 
         self.shortName = name
         if settingsModel is not None:
-            l = len(settingsModel.GetGroupPrefix())
-            self.shortName = self.name[l:]
+            length = len(settingsModel.GetGroupPrefix())
+            self.shortName = self.name[length:]
 
     def __str__(self):
-        return "GroupModel " + self.name
-
-    def __unicode__(self):
         return "GroupModel " + self.name
 
     def __repr__(self):
         return "GroupModel " + self.name
 
     def GetId(self):
-        return self.id
+        return self.groupId
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -61,8 +69,9 @@ class GroupModel(object):
 
         url = myTardisUrl + "/api/v1/group/?format=json&name=" + \
             urllib.quote(name)
-        headers = {'Authorization': 'ApiKey ' + myTardisUsername + ":" +
-                   myTardisApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey)}
         response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
             logger.debug("Failed to look up group record for name \"" +
