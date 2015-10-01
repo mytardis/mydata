@@ -1,3 +1,10 @@
+"""
+Model class representing a data folder which may or may not
+have a corresponding dataset record in MyTardis.
+"""
+
+# pylint: disable=missing-docstring
+
 import os
 from datetime import datetime
 import traceback
@@ -6,9 +13,17 @@ from mydata.logs import logger
 
 
 class FolderModel(object):
+    """
+    Model class representing a data folder which may or may not
+    have a corresponding dataset record in MyTardis.
+    """
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folder, location,
                  userFolderName, groupFolderName, owner,
                  foldersModel, usersModel, settingsModel):
+        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-locals
         self.dataViewId = dataViewId
         self.folder = folder
         self.location = location
@@ -40,6 +55,7 @@ class FolderModel(object):
         self.settingsModel = settingsModel
 
         self.datasetModel = None
+        self.experimentModel = None
 
         self.dataFileUploaded = []
         for i in range(0, self.numFiles):
@@ -79,7 +95,7 @@ class FolderModel(object):
             createdTimeIsoString = datetime.fromtimestamp(
                 os.stat(absoluteFilePath).st_ctime).isoformat()
             return createdTimeIsoString
-        except:
+        except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
             return None
 
