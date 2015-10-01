@@ -3,6 +3,8 @@ Represents the Folders tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 
+# pylint: disable=missing-docstring
+
 import wx
 import wx.dataview as dv
 
@@ -115,3 +117,4 @@ class FoldersPopupMenu(wx.Menu):
         FoldersPopupMenu instance.
         """
         self.openFolderCallback(self.folderItem)
+        event.Skip()
