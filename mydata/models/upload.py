@@ -1,3 +1,10 @@
+"""
+Model class for a datafile upload, which appears as one row in
+the Uploads view of MyData's main window.
+"""
+
+# pylint: disable=missing-docstring
+
 import os
 import sys
 import signal
@@ -10,6 +17,11 @@ from mydata.utils import HumanReadableSizeString
 
 
 class UploadStatus(object):
+    """
+    Enumerated data type.
+    """
+    # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     NOT_STARTED = 0
     IN_PROGRESS = 1
     COMPLETED = 2
@@ -18,7 +30,12 @@ class UploadStatus(object):
 
 
 class UploadModel(object):
-
+    """
+    Model class for a datafile upload, which appears as one row in
+    the Uploads view of MyData's main window.
+    """
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModel = folderModel
@@ -145,7 +162,7 @@ class UploadModel(object):
                     logger.debug("SCP upload process for %s was terminated "
                                  "gracefully."
                                  % self.GetRelativePathToUpload())
-        except:
+        except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
 
     def SetFileSize(self, fileSize):
