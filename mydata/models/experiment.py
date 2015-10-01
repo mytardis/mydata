@@ -3,6 +3,8 @@ Model class for MyTardis API v1's ExperimentResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
+# pylint: disable=missing-docstring
+
 import requests
 import json
 import urllib2
@@ -34,8 +36,8 @@ class ExperimentModel(object):
             existingExperiment = \
                 ExperimentModel.GetExperimentForFolder(folderModel)
             return existingExperiment
-        except DoesNotExist, e:
-            if e.GetModelClass() == ExperimentModel:
+        except DoesNotExist, err:
+            if err.GetModelClass() == ExperimentModel:
                 return ExperimentModel.CreateExperimentForFolder(folderModel)
             else:
                 raise
@@ -45,6 +47,9 @@ class ExperimentModel(object):
         """
         See also GetOrCreateExperimentForFolder
         """
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements
         settingsModel = folderModel.GetSettingsModel()
 
         uploaderName = settingsModel.GetUploaderModel().GetName()
@@ -70,8 +75,9 @@ class ExperimentModel(object):
         if groupFolderName:
             url += "&group_folder_name=" + urllib2.quote(groupFolderName)
 
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
+                                               myTardisDefaultUserApiKey)}
         response = requests.get(url=url, headers=headers)
         numExperimentsFound = 0
         experimentsJson = []
@@ -89,6 +95,7 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
+                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \
@@ -181,6 +188,9 @@ class ExperimentModel(object):
 
     @staticmethod
     def CreateExperimentForFolder(folderModel):
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements
         settingsModel = folderModel.GetSettingsModel()
         userFolderName = folderModel.GetUserFolderName()
         hostname = settingsModel.GetUploaderModel().GetHostname()
@@ -188,6 +198,7 @@ class ExperimentModel(object):
         groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
+        # pylint: disable=bare-except
         try:
             ownerUserId = folderModel.GetOwner().GetJson()['id']
         except:
@@ -226,14 +237,15 @@ class ExperimentModel(object):
         if groupFolderName:
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
-        headers = {"Authorization": "ApiKey " +
-                   myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
+                                               myTardisDefaultUserApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/mydata_experiment/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(experimentJson))
+        # pylint: disable=bare-except
         try:
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
@@ -317,6 +329,7 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
+                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \
