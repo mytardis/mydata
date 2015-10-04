@@ -30,6 +30,7 @@ def HumanReadableSizeString(num):
         num /= 1024.0
     return "%3.0f %s" % (num, 'TB')
 
+
 def UnderscoreToCamelcase(value):
     """
     Convert underscore_separated to camelCase.
@@ -47,6 +48,7 @@ def UnderscoreToCamelcase(value):
         firstWordPassed = True
     return output
 
+
 def BytesToHuman(numBytes):
     """
     Returns human-readable string.
@@ -60,3 +62,13 @@ def BytesToHuman(numBytes):
             value = float(numBytes) / prefix[symbol]
             return '%.1f%s' % (value, symbol)
     return "%sB" % numBytes
+
+
+class ConnectionStatus(object):
+    """
+    Enumerated data type
+    """
+    # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
+    CONNECTED = 0
+    DISCONNECTED = 1
