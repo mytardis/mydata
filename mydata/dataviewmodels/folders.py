@@ -19,7 +19,7 @@ from mydata.utils.exceptions import DoesNotExist
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
@@ -183,6 +183,7 @@ class FoldersModel(DataViewIndexListModel):
         All of our columns are strings.  If the model or the renderers
         in the view are other types then that should be reflected here.
         """
+        # pylint: disable=no-self-use
         return "string"
 
     # pylint: disable=arguments-differ
@@ -282,6 +283,7 @@ class FoldersModel(DataViewIndexListModel):
         Called to check if non-standard attributes
         should be used in the cell at (row, col)
         """
+        # pylint: disable=no-self-use
         if col == 4:
             attr.SetColour('blue')
             attr.SetBold(True)

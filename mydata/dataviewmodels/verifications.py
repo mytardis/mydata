@@ -14,7 +14,7 @@ from mydata.logs import logger
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
@@ -115,6 +115,7 @@ class VerificationsModel(DataViewIndexListModel):
         """
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
         return "string"
 
     def GetValueByRow(self, row, col):
@@ -172,6 +173,7 @@ class VerificationsModel(DataViewIndexListModel):
         Report the number of rows in the model
         """
         # pylint: disable=arguments-differ
+        # pylint: disable=no-self-use
         return len(self.verificationsData)
 
     def GetAttrByRow(self, row, col, attr):
@@ -181,6 +183,7 @@ class VerificationsModel(DataViewIndexListModel):
         """
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
         return False
 
     # This is called to assist with sorting the data in the view.  The
