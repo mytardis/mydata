@@ -155,7 +155,7 @@ class UploadModel(object):
                         # pylint: disable=no-member
                         os.kill(pid, signal.CTRL_C_EVENT)
                     else:
-                        os.kill(pid, signal.SIGKILL)
+                        os.kill(pid, signal.SIGKILL)  # pylint: disable=no-member
                     logger.debug("Force killed SCP upload process for %s"
                                  % self.GetRelativePathToUpload())
                 except psutil.NoSuchProcess:

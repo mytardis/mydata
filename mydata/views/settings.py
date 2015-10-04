@@ -1308,6 +1308,7 @@ class SettingsDialog(wx.Dialog):
                          "unlocking settings.")
             if sys.platform.startswith("win"):
                 # pylint: disable=import-error
+                # pylint: disable=no-name-in-module
                 import win32com.shell.shell as shell
                 import win32con
                 from win32com.shell import shellcon
