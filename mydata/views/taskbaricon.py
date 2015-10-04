@@ -16,6 +16,7 @@ from mydata.models.settings import LastSettingsUpdateTrigger
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
     # pylint: disable=import-error
+    # pylint: disable=no-name-in-module
     from wx.adv import TaskBarIcon
 else:
     from wx import EmptyIcon

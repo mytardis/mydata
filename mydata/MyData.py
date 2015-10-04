@@ -8,13 +8,13 @@ in the parent directory of the directory containing MyData.py.
 """
 
 # Don't worry about exceeding .pylintrc's max-module-lines for now:
-# pylint: disable=C0302
+# pylint: disable=too-many-lines
 
 import sys
 import wx
 import webbrowser
 import os
-import appdirs
+import appdirs  # pylint: disable=import-error
 import traceback
 import threading
 import argparse
@@ -60,6 +60,7 @@ if wx.version().startswith("3.0.3.dev"):
     from wx.adv import EVT_TASKBAR_LEFT_UP
 else:
     from wx import EmptyIcon
+    # pylint: disable=import-error
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
@@ -213,7 +214,6 @@ class MyData(wx.App):
         self.logView = None
 
         wx.App.__init__(self, redirect=False)
-
 
     # This method is too long.  Needs refactoring.
     # pylint: disable=too-many-branches
@@ -1065,7 +1065,7 @@ class MyData(wx.App):
         icon's "MyData Settings" menu item, or in response to MyData being
         launched without any previously saved settings.
         """
-        settingsDialog = SettingsDialog(self.frame, -1, "Settings",
+        settingsDialog = SettingsDialog(self.frame, "Settings",
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
                                         style=wx.DEFAULT_DIALOG_STYLE)
