@@ -11,12 +11,12 @@ from mydata.dataviewmodels.verifications import ColumnType
 from mydata.logs import logger
 
 
-# pylint: disable=interface-not-implemented
 class VerificationsView(wx.Panel):
     """
     Represents the Verifications tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=interface-not-implemented
     def __init__(self, parent, verificationsModel, foldersController):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 

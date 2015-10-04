@@ -44,7 +44,7 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     # pylint: disable=import-error
     import win32process
-    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW
+    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 
 # pylint: disable=too-few-public-methods
