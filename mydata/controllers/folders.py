@@ -4,6 +4,7 @@ and uploads from each of the folders in the Folders view.
 """
 
 # pylint: disable=missing-docstring
+# pylint: disable=too-many-lines
 
 import os
 import sys
@@ -65,12 +66,15 @@ class UploadMethod(object):
 
 
 class FoldersController(object):
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     """
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
     def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
                  verificationsModel, uploadsModel, settingsModel):
+        # pylint: disable=too-many-arguments
         self.notifyWindow = notifyWindow
         self.foldersModel = foldersModel
         self.foldersView = foldersView
@@ -86,7 +90,7 @@ class FoldersController(object):
         self.canceled = threading.Event()
         self.failed = threading.Event()
 
-        self.finishedCountingNumVerificationsToBePerformed = False
+        self.finishedCountingVerifications = False
         self.verificationsQueue = None
         self.threadingLock = threading.Lock()
         self.uploadsThreadingLock = threading.Lock()
@@ -111,38 +115,39 @@ class FoldersController(object):
         self.foldersView.GetDataViewControl()\
             .Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self.OnOpenFolder)
 
-        self.DidntFindMatchingDatafileOnServerEvent, eventBinder = \
+        self.didntFindDatafileOnServerEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
-        self.UnverifiedDatafileOnServerEvent, eventBinder = \
-            wx.lib.newevent.NewEvent()
+        self.unverifiedDatafileOnServerEvent, eventBinder = \
+                wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
-        self.ConnectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
+        self.connectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.UpdateStatusBar)
 
-        self.ShowMessageDialogEvent, eventBinder = wx.lib.newevent.NewEvent()
+        self.showMessageDialogEvent, eventBinder = \
+                wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.ShowMessageDialog)
 
-        self.ShutdownUploadsEvent, eventBinder = wx.lib.newevent.NewEvent()
+        self.shutdownUploadsEvent, eventBinder = wx.lib.newevent.NewEvent()
         self.notifyWindow.Bind(eventBinder, self.ShutDownUploadThreads)
 
-        self.FoundVerifiedDatafileEvent, eventBinder = \
+        self.foundVerifiedDatafileEvent, eventBinder = \
             wx.lib.newevent.NewCommandEvent()
-        self.EVT_FOUND_VERIFIED_DATAFILE = wx.NewId()
+        self.EVT_FOUND_VERIFIED_DATAFILE = wx.NewId()  # pylint: disable=invalid-name
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
-        self.FoundUnverifiedButFullSizeDatafileEvent, eventBinder = \
+        self.foundUnverifiedDatafileEvent, eventBinder = \
             wx.lib.newevent.NewCommandEvent()
-        self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE = wx.NewId()
+        self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE = wx.NewId()  # pylint:disable=invalid-name
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
-        self.UploadCompleteEvent, eventBinder = \
+        self.uploadCompleteEvent, eventBinder = \
             wx.lib.newevent.NewCommandEvent()
-        self.EVT_UPLOAD_COMPLETE = wx.NewId()
+        self.EVT_UPLOAD_COMPLETE = wx.NewId()  # pylint:disable=invalid-name
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
@@ -296,7 +301,10 @@ class FoldersController(object):
                            duration.total_seconds())
 
     def StartDataUploads(self):
-        fc = self
+        # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
+        fc = self  # pylint: disable=invalid-name
         fc.SetStarted()
         settingsModel = fc.settingsModel
         fc.canceled.clear()
@@ -310,10 +318,10 @@ class FoldersController(object):
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
-            t = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
-                                 target=fc.VerificationWorker)
-            fc.verificationWorkerThreads.append(t)
-            t.start()
+            thread = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
+                                      target=fc.VerificationWorker)
+            fc.verificationWorkerThreads.append(thread)
+            thread.start()
         fc.uploadDatafileRunnable = {}
         fc.uploadsQueue = Queue.Queue()
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
@@ -329,7 +337,7 @@ class FoldersController(object):
             logger.error(traceback.format_exc())
             wx.PostEvent(
                 self.notifyWindow,
-                self.ShowMessageDialogEvent(
+                self.showMessageDialogEvent(
                     title="MyData",
                     message=str(err),
                     icon=wx.ICON_ERROR))
@@ -356,7 +364,7 @@ class FoldersController(object):
             logger.warning(message)
             wx.PostEvent(
                 self.notifyWindow,
-                self.ShowMessageDialogEvent(
+                self.showMessageDialogEvent(
                     title="MyData",
                     message=message,
                     icon=wx.ICON_WARNING))
@@ -371,14 +379,14 @@ class FoldersController(object):
 
         fc.uploadWorkerThreads = []
         for i in range(fc.numUploadWorkerThreads):
-            t = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
-                                 target=fc.UploadWorker, args=())
-            fc.uploadWorkerThreads.append(t)
-            t.start()
+            thread = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
+                                      target=fc.UploadWorker, args=())
+            fc.uploadWorkerThreads.append(thread)
+            thread.start()
         # pylint: disable=bare-except
         try:
             fc.numVerificationsToBePerformed = 0
-            fc.finishedCountingNumVerificationsToBePerformed = \
+            fc.finishedCountingVerifications = \
                 threading.Event()
             for row in range(0, self.foldersModel.GetRowCount()):
                 if self.IsShuttingDown():
@@ -407,18 +415,18 @@ class FoldersController(object):
                         logger.error(traceback.format_exc())
                         wx.PostEvent(
                             self.notifyWindow,
-                            self.ShowMessageDialogEvent(
+                            self.showMessageDialogEvent(
                                 title="MyData",
                                 message=str(err),
                                 icon=wx.ICON_ERROR))
                         return
                     folderModel.SetExperiment(experimentModel)
-                    CONNECTED = ConnectionStatus.CONNECTED
+                    connected = ConnectionStatus.CONNECTED
                     wx.PostEvent(
                         self.notifyWindow,
-                        self.ConnectionStatusEvent(
+                        self.connectionStatusEvent(
                             myTardisUrl=myTardisUrl,
-                            connectionStatus=CONNECTED))
+                            connectionStatus=connected))
                     # pylint: disable=broad-except
                     try:
                         datasetModel = DatasetModel\
@@ -427,7 +435,7 @@ class FoldersController(object):
                         logger.error(traceback.format_exc())
                         wx.PostEvent(
                             self.notifyWindow,
-                            self.ShowMessageDialogEvent(
+                            self.showMessageDialogEvent(
                                 title="MyData",
                                 message=str(err),
                                 icon=wx.ICON_ERROR))
@@ -436,13 +444,13 @@ class FoldersController(object):
                     self.VerifyDatafiles(folderModel)
                 except requests.exceptions.ConnectionError, err:
                     if not self.IsShuttingDown():
-                        DISCONNECTED = \
+                        disconnected = \
                             ConnectionStatus.DISCONNECTED
                         wx.PostEvent(
                             self.notifyWindow,
-                            self.ConnectionStatusEvent(
+                            self.connectionStatusEvent(
                                 myTardisUrl=myTardisUrl,
-                                connectionStatus=DISCONNECTED))
+                                connectionStatus=disconnected))
                     return
                 except ValueError, err:
                     logger.debug("Failed to retrieve experiment "
@@ -458,7 +466,7 @@ class FoldersController(object):
                     return
                 if self.IsShuttingDown():
                     return
-            fc.finishedCountingNumVerificationsToBePerformed.set()
+            fc.finishedCountingVerifications.set()
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
@@ -478,7 +486,7 @@ class FoldersController(object):
                 return
             # pylint: disable=bare-except
             try:
-                task.run()
+                task.Run()
             except ValueError, err:
                 if str(err) == "I/O operation on closed file":
                     logger.info(
@@ -511,7 +519,7 @@ class FoldersController(object):
                 break
             # pylint: disable=bare-except
             try:
-                task.run()
+                task.Run()
             except ValueError, err:
                 if str(err) == "I/O operation on closed file":
                     logger.info(
@@ -543,15 +551,16 @@ class FoldersController(object):
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
-                and self.finishedCountingNumVerificationsToBePerformed.isSet() \
+                and self.finishedCountingVerifications.isSet() \
                 and uploadsProcessed == uploadsToBePerformed:
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
             wx.PostEvent(self.notifyWindow,
-                         self.ShutdownUploadsEvent(completed=True))
+                         self.shutdownUploadsEvent(completed=True))
 
     def ShutDownUploadThreads(self, event=None):
+        # pylint: disable=too-many-branches
         if self.IsShuttingDown():
             return
         self.SetShuttingDown(True)
@@ -686,18 +695,17 @@ class FoldersController(object):
         """
         md5 = hashlib.md5()
 
-        defaultChunkSize = 128 * 1024  # FIXME: magic number
-        maxChunkSize = 16 * 1024 * 1024  # FIXME: magic number
+        defaultChunkSize = 128 * 1024
+        maxChunkSize = 16 * 1024 * 1024
         chunkSize = defaultChunkSize
-        # FIXME: magic number (approximately 50 progress bar increments)
         while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
             chunkSize = chunkSize * 2
         bytesProcessed = 0
-        with open(filePath, 'rb') as f:
+        with open(filePath, 'rb') as fileHandle:
             # Note that the iter() func needs an empty byte string
             # for the returned iterator to halt at EOF, since read()
             # returns b'' (not just '').
-            for chunk in iter(lambda: f.read(chunkSize), b''):
+            for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
                 if self.IsShuttingDown() or uploadModel.Canceled():
                     logger.debug("Aborting MD5 calculation for "
                                  "%s" % filePath)
@@ -714,6 +722,7 @@ class VerifyDatafileRunnable(object):
 
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, settingsModel):
+        # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
@@ -724,13 +733,17 @@ class VerifyDatafileRunnable(object):
     def GetDatafileIndex(self):
         return self.dataFileIndex
 
-    def run(self):
+    def Run(self):
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
+
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileDirectory = \
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         verificationsModel = self.foldersController.verificationsModel
-        fc = self.foldersController
+        fc = self.foldersController  # pylint: disable=invalid-name
         if not hasattr(fc, "verificationsThreadingLock"):
             fc.verificationsThreadingLock = threading.Lock()
         fc.verificationsThreadingLock.acquire()
@@ -767,7 +780,7 @@ class VerifyDatafileRunnable(object):
                 .VerificationMessageUpdated(self.verificationModel)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.DidntFindMatchingDatafileOnServerEvent(
+                self.foldersController.didntFindDatafileOnServerEvent(
                     foldersController=self.foldersController,
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
@@ -777,7 +790,7 @@ class VerifyDatafileRunnable(object):
             self.foldersModel.FolderStatusUpdated(self.folderModel)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.FoundVerifiedDatafileEvent(
+                self.foldersController.foundVerifiedDatafileEvent(
                     id=self.foldersController.EVT_FOUND_VERIFIED_DATAFILE,
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
@@ -809,13 +822,13 @@ class VerifyDatafileRunnable(object):
                     except IncompatibleMyTardisVersion, err:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
-                            self.foldersController.ShutdownUploadsEvent(
+                            self.foldersController.shutdownUploadsEvent(
                                 failed=True))
                         message = str(err)
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                            .ShowMessageDialogEvent(title="MyData",
+                            .showMessageDialogEvent(title="MyData",
                                                     message=message,
                                                     icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
@@ -823,13 +836,13 @@ class VerifyDatafileRunnable(object):
                     except StorageBoxAttributeNotFound, err:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
-                            self.foldersController.ShutdownUploadsEvent(
+                            self.foldersController.shutdownUploadsEvent(
                                 failed=True))
                         message = str(err)
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                            .ShowMessageDialogEvent(title="MyData",
+                            .showMessageDialogEvent(title="MyData",
                                                     message=message,
                                                     icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
@@ -852,13 +865,13 @@ class VerifyDatafileRunnable(object):
                     except StagingHostRefusedSshConnection, err:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
-                            self.foldersController.ShutdownUploadsEvent(
+                            self.foldersController.shutdownUploadsEvent(
                                 failed=True))
                         message = str(err)
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                            .ShowMessageDialogEvent(title="MyData",
+                            .showMessageDialogEvent(title="MyData",
                                                     message=message,
                                                     icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
@@ -866,13 +879,13 @@ class VerifyDatafileRunnable(object):
                     except StagingHostSshPermissionDenied, err:
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
-                            self.foldersController.ShutdownUploadsEvent(
+                            self.foldersController.shutdownUploadsEvent(
                                 failed=True))
                         message = str(err)
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                            .ShowMessageDialogEvent(title="MyData",
+                            .showMessageDialogEvent(title="MyData",
                                                     message=message,
                                                     icon=wx.ICON_ERROR))
                         self.verificationModel.SetComplete()
@@ -893,7 +906,7 @@ class VerifyDatafileRunnable(object):
                         wx.PostEvent(
                             self.foldersController.notifyWindow,
                             self.foldersController
-                            .FoundUnverifiedButFullSizeDatafileEvent(
+                            .foundUnverifiedDatafileEvent(
                                 id=self.foldersController
                                 .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
                                 folderModel=self.folderModel,
@@ -918,7 +931,7 @@ class VerifyDatafileRunnable(object):
                                         int(existingDatafile.GetSize())))
                     wx.PostEvent(
                         self.foldersController.notifyWindow,
-                        self.foldersController.UnverifiedDatafileOnServerEvent(
+                        self.foldersController.unverifiedDatafileOnServerEvent(
                             foldersController=self.foldersController,
                             folderModel=self.folderModel,
                             dataFileIndex=self.dataFileIndex,
@@ -942,7 +955,7 @@ class VerifyDatafileRunnable(object):
                 self.foldersModel.FolderStatusUpdated(self.folderModel)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.FoundVerifiedDatafileEvent(
+                    self.foldersController.foundVerifiedDatafileEvent(
                         id=self.foldersController.EVT_FOUND_VERIFIED_DATAFILE,
                         folderModel=self.folderModel,
                         dataFileIndex=self.dataFileIndex,
@@ -951,10 +964,11 @@ class VerifyDatafileRunnable(object):
 
 
 class UploadDatafileRunnable(object):
-
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, uploadsModel, uploadModel, settingsModel,
                  existingUnverifiedDatafile):
+        # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
@@ -967,7 +981,11 @@ class UploadDatafileRunnable(object):
     def GetDatafileIndex(self):
         return self.dataFileIndex
 
-    def run(self):
+    def Run(self):
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
         if self.uploadModel.Canceled():
             # self.foldersController.SetCanceled()
             logger.debug("Upload for \"%s\" was canceled "
@@ -1045,7 +1063,7 @@ class UploadDatafileRunnable(object):
                 myTardisUrl = self.settingsModel.GetMyTardisUrl()
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ConnectionStatusEvent(
+                    self.foldersController.connectionStatusEvent(
                         myTardisUrl=myTardisUrl,
                         connectionStatus=ConnectionStatus.CONNECTED))
             dataFileMd5Sum = \
@@ -1131,11 +1149,11 @@ class UploadDatafileRunnable(object):
             myTardisUrl = self.settingsModel.GetMyTardisUrl()
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.ConnectionStatusEvent(
+                self.foldersController.connectionStatusEvent(
                     myTardisUrl=myTardisUrl,
                     connectionStatus=ConnectionStatus.CONNECTED))
 
-        # FIXME: The database interactions below should go in a model class.
+        # The database interactions below should go in a model class.
 
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             datagen, headers = poster.encode.multipart_encode(
@@ -1198,8 +1216,8 @@ class UploadDatafileRunnable(object):
                             # without specifying a storage location, then a
                             # temporary location is returned for the client
                             # to copy/upload the file to.
-                            temp_url = response.text
-                            remoteFilePath = temp_url
+                            tempUrl = response.text
+                            remoteFilePath = tempUrl
                         while True:
                             try:
                                 UploadFile(dataFilePath,
@@ -1318,7 +1336,7 @@ class UploadDatafileRunnable(object):
                                     "information."
                             raise InternalServerError(message)
                         else:
-                            # FIXME: If POST fails for some other reason,
+                            # If POST fails for some other reason,
                             # for now, we will just populate the upload's
                             # message field with an error message, and
                             # allow the other uploads to continue.  There
@@ -1335,39 +1353,39 @@ class UploadDatafileRunnable(object):
                 # (key="location", value="/mnt/.../MYTARDIS_STAGING")
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ShutdownUploadsEvent(
+                    self.foldersController.shutdownUploadsEvent(
                         failed=True))
                 message = str(err)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
+                    .showMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostRefusedSshConnection, err:
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ShutdownUploadsEvent(
+                    self.foldersController.shutdownUploadsEvent(
                         failed=True))
                 message = str(err)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
+                    .showMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ShutdownUploadsEvent(
+                    self.foldersController.shutdownUploadsEvent(
                         failed=True))
                 message = str(err)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
+                    .showMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -1390,26 +1408,26 @@ class UploadDatafileRunnable(object):
             except IncompatibleMyTardisVersion, err:
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ShutdownUploadsEvent(
+                    self.foldersController.shutdownUploadsEvent(
                         failed=True))
                 message = str(err)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
+                    .showMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StorageBoxAttributeNotFound, err:
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ShutdownUploadsEvent(
+                    self.foldersController.shutdownUploadsEvent(
                         failed=True))
                 message = str(err)
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
+                    .showMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -1420,7 +1438,7 @@ class UploadDatafileRunnable(object):
             logger.error(errorResponse)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.ShutdownUploadsEvent(
+                self.foldersController.shutdownUploadsEvent(
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
@@ -1435,7 +1453,7 @@ class UploadDatafileRunnable(object):
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController
-                .ShowMessageDialogEvent(title="MyData",
+                .showMessageDialogEvent(title="MyData",
                                         message=message,
                                         icon=wx.ICON_ERROR))
             return
@@ -1443,7 +1461,7 @@ class UploadDatafileRunnable(object):
             if not self.foldersController.IsShuttingDown():
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
-                    self.foldersController.ConnectionStatusEvent(
+                    self.foldersController.connectionStatusEvent(
                         myTardisUrl=self.settingsModel.GetMyTardisUrl(),
                         connectionStatus=ConnectionStatus.DISCONNECTED))
 
@@ -1499,7 +1517,7 @@ class UploadDatafileRunnable(object):
             self.foldersModel.FolderStatusUpdated(self.folderModel)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.UploadCompleteEvent(
+                self.foldersController.uploadCompleteEvent(
                     id=self.foldersController.EVT_UPLOAD_COMPLETE,
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
@@ -1528,7 +1546,7 @@ class UploadDatafileRunnable(object):
             self.foldersModel.FolderStatusUpdated(self.folderModel)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
-                self.foldersController.UploadCompleteEvent(
+                self.foldersController.uploadCompleteEvent(
                     id=self.foldersController.EVT_UPLOAD_COMPLETE,
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,

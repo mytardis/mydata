@@ -66,12 +66,12 @@ else:
     from wx import EVT_TASKBAR_LEFT_UP
 
 
-# pylint: disable=too-few-public-methods
 class NotebookTabs(object):
     """
     Enumerated data type for referencing the different tab views in
     MyData's main window.
     """
+    # pylint: disable=too-few-public-methods
     FOLDERS = 0
     USERS = 1
     GROUPS = 2
