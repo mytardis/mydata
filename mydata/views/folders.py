@@ -101,7 +101,9 @@ class FoldersPopupMenu(wx.Menu):
     allowing user to open a data folder in Windows Explorer (Windows)
     or in Finder (Mac OS X).
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, folderItem, openFolderCallback):
+        # pylint: disable=invalid-name
         wx.Menu.__init__(self)
 
         self.folderItem = folderItem

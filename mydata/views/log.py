@@ -13,6 +13,7 @@ class LogView(wx.Panel):
     Represents the Log tab of MyData's main window,
     and the log text displayed within that tab view.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, settingsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 

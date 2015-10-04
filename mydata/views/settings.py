@@ -5,6 +5,7 @@ Classes for MyData's settings dialog.
 # Disabling some Pylint checks for now...
 # pylint: disable=missing-docstring
 # pylint: disable=too-many-lines
+# pylint: disable=no-member
 
 import wx
 
@@ -30,13 +31,14 @@ class SettingsDropTarget(wx.FileDropTarget):
     Handles drag and drop of a MyData.cfg file
     onto the settings dialog.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
 
     # pylint: disable=arguments-differ
     # pylint: disable=unused-argument
-    def OnDropFiles(self, x, y, filenames):
+    def OnDropFiles(self, x, y, filenames):  # pylint: disable=invalid-name
         """
         Handles drag and drop of a MyData.cfg file
         onto the settings dialog.
@@ -50,7 +52,7 @@ class SettingsDialog(wx.Dialog):
     """
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, parent, ID, title,
+    def __init__(self, parent, title,
                  settingsModel,
                  size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
@@ -59,8 +61,8 @@ class SettingsDialog(wx.Dialog):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
-        wx.Dialog.__init__(self, parent, ID, title=title, size=size, pos=pos,
-                           style=style)
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, title=title,
+                           size=size, pos=pos, style=style)
 
         self.CenterOnParent()
 

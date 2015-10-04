@@ -12,6 +12,7 @@ class GroupsView(wx.Panel):
     Represents the Groups tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, groupsModel):
         wx.Panel.__init__(self, parent, -1)
 
