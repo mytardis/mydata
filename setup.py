@@ -65,7 +65,7 @@ install_requires = ['appdirs', 'lxml', 'poster', 'psutil',
                     'requests', 'validate_email']
 
 if sys.platform.startswith("darwin"):
-    setup_requires = ["nose", "py2app"]
+    setup_requires = ["nose", "coverage", "py2app"]
     options = dict(py2app=dict(
         arch="x86_64",
         plist=dict(
@@ -83,7 +83,7 @@ if sys.platform.startswith("darwin"):
         )
     )
 else:
-    setup_requires = ["nose"]
+    setup_requires = ["nose", "coverage"]
     options = {}
 
 
