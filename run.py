@@ -11,6 +11,7 @@ Only the very latest pre-release wxPython (3.0.3.dev)
 is pip-installable.  For earlier versions (2.9.5 or
 3.0.2), use the installer from http://wxpython.org
 """
+import sys
 from mydata import MyData
 
-MyData.Run()
+MyData.Run(sys.argv)

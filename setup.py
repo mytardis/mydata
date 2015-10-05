@@ -58,11 +58,12 @@ for icon_files_path in ("media/Aha-Soft/png-normal/icons16x16",
             resourceFile = (icon_files_path, [icon_file_path])
             resourceFiles.append(resourceFile)
 
-install_requires = ['wxPython', 'appdirs', 'lxml', 'poster', 'psutil',
+# wxPython not included below because it is difficult to install automatically.
+install_requires = ['appdirs', 'lxml', 'poster', 'psutil',
                     'requests', 'validate_email']
 
 if sys.platform.startswith("darwin"):
-    setup_requires = ["py2app"]
+    setup_requires = ["nose", "py2app"]
     options = dict(py2app=dict(
         arch="x86_64",
         plist=dict(
@@ -80,7 +81,7 @@ if sys.platform.startswith("darwin"):
         )
     )
 else:
-    setup_requires = []
+    setup_requires = ["nose"]
     options = {}
 
 

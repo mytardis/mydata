@@ -158,8 +158,9 @@ class MyData(wx.App):
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, argv):
+        self.name = "MyData"
+        self.argv = argv
 
         self.configPath = None
 
@@ -223,6 +224,7 @@ class MyData(wx.App):
         Called automatically when application instance is created.
         """
         self.SetAppName("MyData")  # pylint: disable=no-member
+        logger.debug("self.argv = " + str(self.argv))
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
@@ -260,10 +262,13 @@ class MyData(wx.App):
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(self.argv[1:])
         if args.version:
+            logger.debug("Found --version")
             print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
             sys.exit(0)
+        else:
+            logger.debug("Didn't find --version")
         if args.loglevel:
             if args.loglevel == "DEBUG":
                 logger.SetLevel(logging.DEBUG)
@@ -1254,11 +1259,11 @@ class MyData(wx.App):
             self.performingLookupsAndUploads.clear()
 
 
-def Run():
+def Run(argv):
     """
     Main function for launching MyData.
     """
-    app = MyData("MyData")
+    app = MyData(argv)
     app.MainLoop()
 
 if __name__ == "__main__":

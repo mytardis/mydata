@@ -138,10 +138,10 @@ variable-rgx=[a-z][A-Za-z0-9]{2,30}$
 variable-name-hint=[a-z][a-z0-9]{2,30}$
 
 # Regular expression matching correct constant names
-const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__)|logger)$
 
 # Naming hint for constant names
-const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__)|logger)$
 
 # Regular expression matching correct attribute names
 attr-rgx=[a-z][A-Za-z0-9]{2,30}$
@@ -180,10 +180,10 @@ module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 
 # Regular expression matching correct method names
-method-rgx=((([A-Z][a-z0-9]+)+)|(__.*__)){1,30}$
+method-rgx=((([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
 
 # Naming hint for method names
-method-name-hint=((([A-Z][a-z0-9]+)+)|(__.*__)){1,30}$
+method-name-hint=((([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
