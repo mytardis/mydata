@@ -3,7 +3,6 @@ Represents the Verifications tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 import traceback
-import threading
 import wx
 import wx.dataview as dv
 
@@ -17,7 +16,7 @@ class VerificationsView(wx.Panel):
     and the tabular data displayed on that tab view.
     """
     # pylint: disable=interface-not-implemented
-    def __init__(self, parent, verificationsModel, foldersController):
+    def __init__(self, parent, verificationsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         # Create a dataview control
@@ -33,7 +32,6 @@ class VerificationsView(wx.Panel):
         self.verificationsDataViewControl.SetFont(smallFont)
 
         self.verificationsModel = verificationsModel
-        self.foldersController = foldersController
 
         self.verificationsDataViewControl.AssociateModel(
             self.verificationsModel)
@@ -126,26 +124,6 @@ class VerificationsView(wx.Panel):
             logger.debug(traceback.format_exc())
         finally:
             event.Skip()
-
-    def OnCancelRemainingVerifications(self, event):
-        """
-        Called when user requests cancel.
-        """
-        def ShutDownVerificationThreads():
-            """
-            Shut down verification threads.
-            """
-            # pylint: disable=bare-except
-            try:
-                wx.CallAfter(wx.BeginBusyCursor)
-                self.foldersController.ShutDownVerificationThreads()
-                wx.CallAfter(wx.EndBusyCursor)
-            except:
-                logger.error(traceback.format_exc())
-        thread = threading.Thread(target=ShutDownVerificationThreads)
-        thread.start()
-
-        event.Skip()
 
     def GetVerificationsModel(self):
         """

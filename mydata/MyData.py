@@ -349,8 +349,7 @@ class MyData(wx.App):
 
         self.verificationsView = \
             VerificationsView(self.foldersUsersNotebook,
-                              verificationsModel=self.verificationsModel,
-                              foldersController=self.foldersController)
+                              verificationsModel=self.verificationsModel)
         self.foldersUsersNotebook.AddPage(self.verificationsView,
                                           "Verifications")
 
