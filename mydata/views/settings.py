@@ -52,7 +52,7 @@ class SettingsDialog(wx.Dialog):
     """
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, parent, title,
+    def __init__(self, parent,
                  settingsModel,
                  size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
@@ -61,7 +61,7 @@ class SettingsDialog(wx.Dialog):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
-        wx.Dialog.__init__(self, parent, wx.ID_ANY, title=title,
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, title="Settings",
                            size=size, pos=pos, style=style)
 
         self.CenterOnParent()

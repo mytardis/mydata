@@ -23,9 +23,8 @@ class SettingsDialogTester(unittest.TestCase):
 
         app = wx.App(redirect=False)  # pylint: disable=unused-variable
         parent = None
-        title = "Settings"
         settingsModel = SettingsModel(configPath=None)
-        settingsDialog = SettingsDialog(parent, title, settingsModel)
+        settingsDialog = SettingsDialog(parent, settingsModel)
         settingsDialog.Show()
         settingsDialog.Destroy()
 

@@ -1070,7 +1070,7 @@ class MyData(wx.App):
         icon's "MyData Settings" menu item, or in response to MyData being
         launched without any previously saved settings.
         """
-        settingsDialog = SettingsDialog(self.frame, "Settings",
+        settingsDialog = SettingsDialog(self.frame,
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
                                         style=wx.DEFAULT_DIALOG_STYLE)
