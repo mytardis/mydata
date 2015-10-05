@@ -388,7 +388,7 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
         raise SshException(stdout)
 
 
-#pylint: disable=too-many-locals
+# pylint: disable=too-many-locals
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                               hostname):
     if sys.platform.startswith("win"):
@@ -600,7 +600,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     and then append the chunk onto the remote (partial) datafile.
     """
 
-    remoteChunkPath = remoteFilePath + ".chunk"
+    remoteChunkPath = "." + remoteFilePath + ".chunk"
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
@@ -956,7 +956,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
 
-    remoteChunkPath = remoteFilePath + ".chunk"
+    remoteChunkPath = "." + remoteFilePath + ".chunk"
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
