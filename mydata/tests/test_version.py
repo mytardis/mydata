@@ -6,7 +6,6 @@ import unittest
 import logging
 import subprocess
 
-from mydata.MyData import Run
 from mydata import __version__ as VERSION
 from mydata import LATEST_COMMIT
 
