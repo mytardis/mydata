@@ -794,14 +794,16 @@ class SettingsModel(object):
                 if setStatusMessage:
                     setStatusMessage(
                         "Settings validation - checking MyTardis URL...")
-                response = requests.get(self.GetMyTardisUrl() + "/about/", timeout=5)
+                response = requests.get(self.GetMyTardisUrl() + "/about/",
+                                        timeout=5)
                 content = response.text
                 history = response.history
                 url = response.url
                 if response.status_code < 200 or response.status_code >= 300:
                     logger.debug("Received HTTP %d while trying to access "
                                  "MyTardis server (%s)."
-                                 % (response.status_code, self.GetMyTardisUrl()))
+                                 % (response.status_code,
+                                    self.GetMyTardisUrl()))
                     logger.debug(content)
                     if not self.GetMyTardisUrl().startswith("http"):
                         message = "Please enter a valid MyTardis URL, " \
@@ -1167,8 +1169,8 @@ oFS.DeleteFile sLinkFile
                     cmd = "osascript -e '%s'" % applescript
                     exitCode = subprocess.call(cmd, shell=True)
                     if exitCode != 0:
-                        logger.error("Received exit code %d from %s" \
-                            % (exitCode, cmd))
+                        logger.error("Received exit code %d from %s"
+                                     % (exitCode, cmd))
                 elif 'MyData' in loginItems and \
                         not self.StartAutomaticallyOnLogin():
                     logger.info("Removing MyData from login items.")
@@ -1178,8 +1180,8 @@ oFS.DeleteFile sLinkFile
                     cmd = "osascript -e '%s'" % applescript
                     exitCode = subprocess.call(cmd, shell=True)
                     if exitCode != 0:
-                        logger.error("Received exit code %d from %s" \
-                            % (exitCode, cmd))
+                        logger.error("Received exit code %d from %s"
+                                     % (exitCode, cmd))
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
