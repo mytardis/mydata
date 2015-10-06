@@ -7,7 +7,7 @@ https://github.com/paramiko/paramiko/blob/master/demos/demo_server.py
 
 It listens on port 2200, so you can connect to it as follows:
 
-ssh -oNoHostAuthenticationForLocalhost=yes -i mydata/tests/id_rsa \
+ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyData \
         -p 2200 mydata@localhost wc -c setup.py
 
 When running the above SSH client request, the following STDOUT appears
@@ -37,6 +37,8 @@ import subprocess
 import paramiko
 from paramiko.py3compat import decodebytes
 
+import mydata.utils.openssh as OpenSSH
+
 
 # setup logging
 paramiko.util.log_to_file('fake_ssh_server.log')
@@ -48,13 +50,10 @@ class Server(paramiko.ServerInterface):
     """
     Fake SSH Server
     """
-    data = (b'AAAAB3NzaC1yc2EAAAADAQABAAABAQDTX+C0QMBac0j+qb8+HyolS+6ofler42'
-            b'HEmFrUderxfPex5vO6ss6mNfdVOfaY7yHcecZScDC3SDKNN6MXUP+c78kcGGFU'
-            b'j1IKJ8Gd7BqXdjCyD2lwAkKxR1gyQDncxomWjASsIRu5PQFW7tAGuh6Qb23eKt'
-            b'udmtcbwanYucvrqGbK0OB0nHHnYGZO+ftA0VqGSE0LRKUzKjhbPePeTD0I7oZK'
-            b'8Ohv6pJD8t6qIRO9Ft12rCrwf0O9IliJKzOND3o1V9aLj3Rp8gEtqLTr+Qy9az'
-            b'YIwa4ZAtFy8nxc2c9moKE5eF5DWuUa29I69lu/xHSD1ytIDWrMgUmur0MtPqi5')
-    good_pub_key = paramiko.RSAKey(data=decodebytes(data))
+    keyPair = OpenSSH.FindKeyPair("MyData")
+    # Remove "ssh-rsa " and "MyData key":
+    data = bytes(keyPair.GetPublicKey().split(" ")[1])
+    mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def __init__(self):
         self.event = threading.Event()
@@ -71,7 +70,7 @@ class Server(paramiko.ServerInterface):
         return True
 
     def check_auth_publickey(self, username, key):
-        if (username == 'mydata') and (key == self.good_pub_key):
+        if (username == 'mydata') and (key == self.mydata_pub_key):
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 

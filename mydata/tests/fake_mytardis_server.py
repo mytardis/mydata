@@ -325,7 +325,14 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                     "resource_uri": "/api/v1/storageboxattribute/12/",
                                     "storage_box": "/api/v1/storagebox/10/",
                                     "value": "receiving"
-                                }
+                                },
+                                {
+                                    "id": 13,
+                                    "key": "scp_port",
+                                    "resource_uri": "/api/v1/storageboxattribute/13/",
+                                    "storage_box": "/api/v1/storagebox/10/",
+                                    "value": "2200",
+                                },
                             ],
                             "options": [
                                 {
