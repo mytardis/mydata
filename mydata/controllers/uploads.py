@@ -283,6 +283,7 @@ class UploadDatafileRunnable(object):
                         uploadToStagingRequest = self.settingsModel\
                             .GetUploadToStagingRequest()
                         host = uploadToStagingRequest.GetScpHostname()
+                        port = uploadToStagingRequest.GetScpPort()
                         location = uploadToStagingRequest.GetLocation()
                         username = uploadToStagingRequest.GetScpUsername()
                         privateKeyFilePath = self.settingsModel\
@@ -306,7 +307,7 @@ class UploadDatafileRunnable(object):
                                            dataFileSize,
                                            username,
                                            privateKeyFilePath,
-                                           host, remoteFilePath,
+                                           host, port, remoteFilePath,
                                            ProgressCallback,
                                            self.foldersController,
                                            self.uploadModel)

@@ -160,6 +160,7 @@ class VerifyDatafileRunnable(object):
                     privateKeyFilePath = self.settingsModel\
                         .GetSshKeyPair().GetPrivateKeyFilePath()
                     host = uploadToStagingRequest.GetScpHostname()
+                    port = uploadToStagingRequest.GetScpPort()
                     location = uploadToStagingRequest.GetLocation()
                     remoteFilePath = "%s/%s" % (location.rstrip('/'),
                                                 replicas[0].GetUri())
@@ -168,7 +169,7 @@ class VerifyDatafileRunnable(object):
                         bytesUploadedToStaging = \
                             GetBytesUploadedToStaging(
                                 remoteFilePath,
-                                username, privateKeyFilePath, host)
+                                username, privateKeyFilePath, host, port)
                         logger.debug("%d bytes uploaded to staging for %s"
                                      % (bytesUploadedToStaging,
                                         replicas[0].GetUri()))
