@@ -39,6 +39,7 @@ from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
+from mydata.utils.exceptions import SshControlMasterLimit
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
@@ -1213,7 +1214,14 @@ class SshControlMasterPool(object):
                 for sshControlMasterProcess in self.sshControlMasterProcesses:
                     if sshControlMasterProcess.Check():
                         return sshControlMasterProcess
-            raise Exception("Exceeded max connections in SshControlMasterPool")
+            message = "Exceeded max connections in SshControlMasterPool\n\n" \
+                "This suggests a problem with the scp_hostname and/or " \
+                "scp_username attributes of the assigned storage box."
+            logger.error(message)
+            logger.info("scp_hostname: %s" % self.hostname)
+            logger.info("scp_username: %s" % self.username)
+            logger.info("Private key path: %s" % self.privateKeyFilePath)
+            raise SshControlMasterLimit(message)
 
     def ShutDown(self):
         for sshControlMasterProcess in self.sshControlMasterProcesses:
