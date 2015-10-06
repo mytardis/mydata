@@ -605,7 +605,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     and then append the chunk onto the remote (partial) datafile.
     """
 
-    remoteChunkPath = "." + remoteFilePath + ".chunk"
+    remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
+                                        os.path.basename(remoteFilePath))
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
@@ -968,7 +969,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
 
-    remoteChunkPath = "." + remoteFilePath + ".chunk"
+    remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
+                                        os.path.basename(remoteFilePath))
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
