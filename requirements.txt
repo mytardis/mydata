@@ -12,4 +12,5 @@ wsgiref==0.1.2
 # wxPython-common>=2.9.5.0
 nose==1.3.7
 coverage==4.0
+paramiko==1.15.3
 lxml==3.4.4
