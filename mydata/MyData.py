@@ -264,11 +264,8 @@ class MyData(wx.App):
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
         args, _ = parser.parse_known_args(self.argv[1:])
         if args.version:
-            logger.debug("Found --version")
             print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
             sys.exit(0)
-        else:
-            logger.debug("Didn't find --version")
         if args.loglevel:
             if args.loglevel == "DEBUG":
                 logger.SetLevel(logging.DEBUG)

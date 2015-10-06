@@ -405,6 +405,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
                       "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
+                      "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
                       host,
@@ -427,6 +428,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
                       "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
+                      "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
                       "-oControlPath=%s" % OPENSSH.DoubleQuote(sshControlPath),
@@ -627,6 +629,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
          "-oControlPath=%s" % OPENSSH.DoubleQuote(sshControlPath),
          "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
+         "-oNoHostAuthenticationForLocalhost=yes",
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
@@ -650,6 +653,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         "%s -p %s -i %s -c %s " \
         "-oControlPath=%s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+        "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh),
@@ -734,6 +738,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             '%s -P %s -i %s -c %s ' \
             '-oControlPath=%s ' \
             '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
+            '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
             % (OPENSSH.DoubleQuote(OPENSSH.scp),
@@ -784,6 +789,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             "%s -p %s -i %s -c %s " \
             "-oControlPath=%s " \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+            "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
             "%s@%s %s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
@@ -818,6 +824,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         "%s -p %s -i %s -c %s " \
         "-oControlPath=%s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+        "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
@@ -850,6 +857,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteFilePath)
     rmCommandString = \
         "%s -p %s -n -i %s -c %s " \
+        "-oNoHostAuthenticationForLocalhost=yes " \
         "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
@@ -880,6 +888,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
+         "-oNoHostAuthenticationForLocalhost=yes",
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
@@ -899,6 +908,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
 
     scpCommandString = \
         '%s -P %s -i %s -c %s ' \
+        '-oNoHostAuthenticationForLocalhost=yes ' \
         '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
         '%s "%s@%s:\\"%s/\\""' \
         % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
@@ -952,6 +962,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
+         "-oNoHostAuthenticationForLocalhost=yes",
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
@@ -1026,6 +1037,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
         scpCommandString = \
             '%s -P %s -i %s -c %s ' \
+            '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
             % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
@@ -1067,6 +1079,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                               OPENSSH.DoubleQuote(remoteFilePath))
         catCommandString = \
             "%s -p %s -n -i %s -c %s " \
+            "-oNoHostAuthenticationForLocalhost=yes " \
             "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
             "%s@%s %s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
@@ -1132,6 +1145,7 @@ class SshControlMasterProcess(object):
             "%s -p %s -N -i %s -c %s " \
             "-oControlMaster=yes -oControlPath=%s " \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+            "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
             "%s@%s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
