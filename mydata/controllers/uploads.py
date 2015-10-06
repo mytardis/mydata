@@ -31,6 +31,7 @@ from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
+from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
 
@@ -458,6 +459,19 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.shutdownUploadsEvent(
+                        failed=True))
+                message = str(err)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                    .showMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
+                return
+            except SshControlMasterLimit, err:
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
