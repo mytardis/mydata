@@ -675,6 +675,14 @@ class UploaderRegistrationRequest(object):
                 return attribute.GetValue()
         raise StorageBoxAttributeNotFound(storageBox, "scp_hostname")
 
+    def GetScpPort(self):
+        storageBox = self.GetApprovedStorageBox()
+        attributes = storageBox.GetAttributes()
+        for attribute in attributes:
+            if attribute.GetKey() == "scp_port":
+                return attribute.GetValue()
+        return "22"
+
     def GetLocation(self):
         storageBox = self.GetApprovedStorageBox()
         options = storageBox.GetOptions()
