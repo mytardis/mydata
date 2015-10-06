@@ -322,7 +322,13 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        existingUploaderRecords = response.json()
+        if response.status_code >= 200 and response.status_code < 300:
+            existingUploaderRecords = response.json()
+        else:
+            logger.error("An error occurred while retrieving uploader info.")
+            logger.error("Status code = " + str(response.status_code))
+            logger.error(response.text)
+            raise Exception(response.text)
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
