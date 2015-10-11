@@ -16,12 +16,20 @@ import json
 import tempfile
 import os
 import urllib
+# import urlparse
 import logging
 
 HOST_NAME = '127.0.0.1'
 PORT_NUMBER = 9000
 
 logger = logging.getLogger(__name__)
+
+handle = tempfile.NamedTemporaryFile()
+handle.close()
+STAGING_PATH = handle.name
+os.makedirs(STAGING_PATH)
+logger.info("Created temporary staging directory: %s",
+            STAGING_PATH)
 
 
 class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -274,12 +282,6 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                              "Missing RSA key fingerprint in GET query"}
                 self.wfile.write(json.dumps(errorJson))
                 return
-            handle = tempfile.NamedTemporaryFile()
-            handle.close()
-            stagingPath = handle.name
-            os.makedirs(stagingPath)
-            logger.info("Created temporary staging directory: %s",
-                        stagingPath)
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -340,7 +342,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                     "key": "location",
                                     "resource_uri": "/api/v1/storageboxoption/8/",
                                     "storage_box": "/api/v1/storagebox/10/",
-                                    "value": stagingPath
+                                    "value": STAGING_PATH
                                 }
                             ],
                             "resource_uri": "/api/v1/storagebox/10/",
@@ -534,46 +536,59 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            datafilesJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": 290385,
-                        "created_time": "2015-06-25T00:26:21",
-                        "datafile": None,
-                        "dataset": "/api/v1/dataset/%s/" % datasetId,
-                        "deleted": False,
-                        "deleted_time": None,
-                        "directory": directory,
-                        "filename": filename,
-                        "md5sum": "53c6ac03b64f61d5e0b596f70ed75a51",
-                        "mimetype": "image/jpeg",
-                        "modification_time": None,
-                        "parameter_sets": [],
-                        "replicas": [
-                            {
-                                "created_time": "2015-10-06T10:21:48.910470",
-                                "datafile": "/api/v1/dataset_file/290385/",
-                                "id": 444891,
-                                "last_verified_time": "2015-10-06T10:21:53.952521",
-                                "resource_uri": "/api/v1/replica/444891/",
-                                "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
-                                "verified": False
-                            }
-                        ],
-                        "resource_uri": "/api/v1/mydata_dataset_file/290385/",
-                        "sha512sum": "",
-                        "size": "116537",
-                        "version": 1
-                    }
-                ]
-            }
+            testResumingUploads = False
+            if testResumingUploads:
+                datafilesJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": 290385,
+                            "created_time": "2015-06-25T00:26:21",
+                            "datafile": None,
+                            "dataset": "/api/v1/dataset/%s/" % datasetId,
+                            "deleted": False,
+                            "deleted_time": None,
+                            "directory": directory,
+                            "filename": filename,
+                            "md5sum": "53c6ac03b64f61d5e0b596f70ed75a51",
+                            "mimetype": "image/jpeg",
+                            "modification_time": None,
+                            "parameter_sets": [],
+                            "replicas": [
+                                {
+                                    "created_time": "2015-10-06T10:21:48.910470",
+                                    "datafile": "/api/v1/dataset_file/290385/",
+                                    "id": 444891,
+                                    "last_verified_time": "2015-10-06T10:21:53.952521",
+                                    "resource_uri": "/api/v1/replica/444891/",
+                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                    "verified": False
+                                }
+                            ],
+                            "resource_uri": "/api/v1/mydata_dataset_file/290385/",
+                            "sha512sum": "",
+                            "size": "116537",
+                            "version": 1
+                        }
+                    ]
+                }
+            else:
+                datafilesJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 0
+                    },
+                    "objects": []
+                }
             self.wfile.write(json.dumps(datafilesJson))
         elif self.path == "/about/":
             self.send_response(200)
@@ -590,9 +605,29 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         Respond to a POST request
         """
+        length = int(self.headers['Content-Length'])
+        # postData = urlparse.parse_qs(self.rfile.read(length).decode('utf-8'))
+        postData = json.loads(self.rfile.read(length))
+
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
+
+        filename = postData['filename']
+        directory = postData['directory']
+        dataset = postData['dataset']  # e.g. "/api/v1/dataset/123/"
+        datasetId = dataset.split("/")[-2]
+        foundAttachedFile = ('attached_file' in postData)
+        foundReplicas = ('replicas' in postData)
+        # For datafiles uploaded via staging, the
+        # POST request should return a temp url.
+        if self.path == "/api/v1/mydata_dataset_file/":
+            if not foundReplicas and not foundAttachedFile:
+                if directory and directory != "":
+                    tempUrl = "%s/DatasetDescription-%s/%s/%s" % (STAGING_PATH, datasetId, directory, filename)
+                else:
+                    tempUrl = "%s/DatasetDescription-%s/%s" % (STAGING_PATH, datasetId, filename)
+                self.wfile.write(tempUrl)
 
     def do_PUT(self):  # pylint: disable=invalid-name
         """
