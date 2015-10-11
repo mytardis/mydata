@@ -35,6 +35,7 @@ as follows:
 """
 
 # pylint: disable=invalid-name
+# pylint: disable=missing-docstring
 
 import socket
 import sys
@@ -103,9 +104,9 @@ class Server(paramiko.ServerInterface):
 
 # now connect
 try:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', 2200))
+    SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    SOCK.bind(('', 2200))
 except Exception as e:  # pylint: disable=broad-except
     print '*** Bind failed: ' + str(e)
     traceback.print_exc()
@@ -113,11 +114,20 @@ except Exception as e:  # pylint: disable=broad-except
 
 
 class ChannelListener(object):
+    """
+    Listen for SSH/SCP connection.
+    """
+    # pylint: disable=too-few-public-methods
     def __init__(self, sock):
         self.sock = sock
         self.modeSizeFilename = "Sink: "
+        self.chan = None
+        self.server = None
+        self.client = None
+        self.transport = None
 
     def listen(self):
+        # pylint: disable=too-many-branches
         print "listen for self = " + str(self)
         try:
             self.sock.listen(100)
@@ -222,7 +232,7 @@ class ChannelListener(object):
                                     # calculated.
                                     windowSize = fileSize
                                     m.add_int(windowSize)
-                                    self.transport._send_user_message(m)
+                                    self.transport._send_user_message(m)  # pylint: disable=protected-access
                                     while True:
                                         char = proc.stdout.read(1)
                                         # This will just be the mode, size and
@@ -244,7 +254,7 @@ class ChannelListener(object):
                                     # scp client debug2 output is the
                                     # following:
                                     # "debug2: channel 0: read<=0 rfd 5 len 0"
-                                    for i in range(fileSize):
+                                    for _ in range(fileSize):
                                         proc.stdin.write("*")
                                         self.chan.send("*")
                                     proc.stdin.flush()
@@ -316,4 +326,4 @@ class ChannelListener(object):
 
 while True:
     print "Waiting for a connection..."
-    ChannelListener(sock).listen()
+    ChannelListener(SOCK).listen()

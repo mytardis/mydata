@@ -657,7 +657,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
         logger.error("'%s' returned %d" % (mkdirCmdString,
-                     mkdirProcess.returncode))
+                                           mkdirProcess.returncode))
         raise SshException(stdout, mkdirProcess.returncode)
 
     remoteRemoveChunkCommand = \
