@@ -24,7 +24,7 @@ PORT_NUMBER = 9000
 
 logger = logging.getLogger(__name__)
 
-handle = tempfile.NamedTemporaryFile()
+handle = tempfile.NamedTemporaryFile()  # pylint: disable=invalid-name
 handle.close()
 STAGING_PATH = handle.name
 os.makedirs(STAGING_PATH)
@@ -624,9 +624,11 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if self.path == "/api/v1/mydata_dataset_file/":
             if not foundReplicas and not foundAttachedFile:
                 if directory and directory != "":
-                    tempUrl = "%s/DatasetDescription-%s/%s/%s" % (STAGING_PATH, datasetId, directory, filename)
+                    tempUrl = "%s/DatasetDescription-%s/%s/%s" \
+                        % (STAGING_PATH, datasetId, directory, filename)
                 else:
-                    tempUrl = "%s/DatasetDescription-%s/%s" % (STAGING_PATH, datasetId, filename)
+                    tempUrl = "%s/DatasetDescription-%s/%s" \
+                        % (STAGING_PATH, datasetId, filename)
                 self.wfile.write(tempUrl)
 
     def do_PUT(self):  # pylint: disable=invalid-name
