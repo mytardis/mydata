@@ -24,6 +24,14 @@ Client asked us to execute: wc -c setup.py
 Authenticated!
 Executing: wc -c setup.py
 
+It can also be used to test SCP, for example, copying the file "hello"
+as follows:
+
+"/usr/bin/scp" -qvvv -P 2200 -i /Users/wettenhj/.ssh/MyData -c arcfour128 \
+    -oIdentitiesOnly=yes -oPasswordAuthentication=no \
+    -oNoHostAuthenticationForLocalhost=yes -oStrictHostKeyChecking=no \
+    ./hello mydata@localhost:~
+
 """
 
 # pylint: disable=invalid-name
@@ -33,9 +41,12 @@ import sys
 import threading
 import traceback
 import subprocess
+import time
 
 import paramiko
 from paramiko.py3compat import decodebytes
+from paramiko.message import Message
+from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 
 import mydata.utils.openssh as OpenSSH
 
@@ -65,7 +76,11 @@ class Server(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):
-        print "Client asked us to execute: %s" % command
+        """
+        Returns:
+        True if this channel is now hooked up to the stdin, stdout, and stderr
+        of the executing command; False if the command will not be executed.
+        """
         self.command = command
         return True
 
@@ -75,19 +90,16 @@ class Server(paramiko.ServerInterface):
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
-        return 'publickey'
+        return 'publickey,password'
 
     def check_channel_shell_request(self, channel):
         self.event.set()
         return True
 
-    def check_channel_pty_request(self, channel, term, width, height, pixelwidth,
-                                  pixelheight, modes):
+    def check_channel_pty_request(self, channel, term, width, height,
+                                  pixelwidth, pixelheight, modes):
         # pylint: disable=too-many-arguments
         return True
-
-
-DoGSSAPIKeyExchange = False
 
 # now connect
 try:
@@ -99,56 +111,209 @@ except Exception as e:  # pylint: disable=broad-except
     traceback.print_exc()
     sys.exit(1)
 
-try:
-    sock.listen(100)
-    print 'Listening for connection ...'
-    client, addr = sock.accept()
-except Exception as e:  # pylint: disable=broad-except
-    print '*** Listen/accept failed: ' + str(e)
-    traceback.print_exc()
-    sys.exit(1)
 
-print 'Got a connection!'
+class ChannelListener(object):
+    def __init__(self, sock):
+        self.sock = sock
+        self.modeSizeFilename = "Sink: "
 
-try:
-    t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
-    t.set_gss_host(socket.getfqdn(""))
-    try:
-        t.load_server_moduli()
-    except:  # pylint: disable=bare-except
-        print '(Failed to load moduli -- gex will be unsupported.)'
-        raise
-    t.add_server_key(host_key)
-    server = Server()
-    try:
-        t.start_server(server=server)
-    except paramiko.SSHException:
-        print '*** SSH negotiation failed.'
-        sys.exit(1)
+    def listen(self):
+        print "listen for self = " + str(self)
+        try:
+            self.sock.listen(100)
+            print 'Listening for connection ...'
+            self.client, _ = self.sock.accept()
+            print 'Got connection.'
+        except Exception as e:  # pylint: disable=broad-except
+            print '*** Listen/accept failed: ' + str(e)
+            traceback.print_exc()
+            sys.exit(1)
 
-    # wait for auth
-    chan = t.accept(20)
-    if chan is None:
-        print '*** No channel.'
-        sys.exit(1)
-    print 'Authenticated!'
+        self.transport = paramiko.Transport(self.client, gss_kex=False)
+        self.transport.set_gss_host(socket.getfqdn(""))
+        try:
+            self.transport.load_server_moduli()
+        except:  # pylint: disable=bare-except
+            print '(Failed to load moduli -- gex will be unsupported.)'
+            raise
+        self.transport.add_server_key(host_key)
 
-    if server.command:
-        print "Executing: %s" % server.command
-        proc = subprocess.Popen(server.command, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, shell=True)
-        stdout, _ = proc.communicate()
-        chan.send(stdout)
-    else:
-        print "No command to execute."
+        self.server = Server()
 
-    chan.close()
+        try:
+            self.transport.start_server(server=self.server)
+        except paramiko.SSHException:
+            print '*** SSH negotiation failed.'
+            sys.exit(1)
 
-except Exception as e:  # pylint: disable=broad-except
-    print '*** Caught exception: ' + str(e.__class__) + ': ' + str(e)
-    traceback.print_exc()
-    try:
-        t.close()
-    except:  # pylint: disable=bare-except
-        pass
-    sys.exit(1)
+        print 'Got a connection!'
+
+        try:
+            # wait for auth
+            self.chan = self.transport.accept(20)
+            if self.chan is None:
+                print '*** No channel.'
+                # sys.exit(1)
+                return
+            print 'Authenticated!'
+
+            if self.server.command:
+                print "Client asked us to execute: %s" % self.server.command
+                print "Executing: %s" % self.server.command
+                if "scp" not in self.server.command:
+                    proc = subprocess.Popen(self.server.command,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=True)
+                    stdout, _ = proc.communicate()
+                    self.chan.send(stdout)
+                    print "Closing channel."
+                    self.chan.send_exit_status(proc.returncode)
+                    self.chan.close()
+                else:
+                    proc = subprocess.Popen(self.server.command,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=True)
+
+                    def ReadFromChannel():
+                        try:
+                            while True:
+                                char = ''
+                                if self.chan.recv_ready():
+                                    char = self.chan.recv(1)
+                                    self.modeSizeFilename += char
+                                    proc.stdin.write(char)
+                                    proc.stdin.flush()
+                                    sys.stdout.write(char)
+                                    sys.stdout.flush()
+                                else:
+                                    time.sleep(0.1)
+                                if char == '\n':
+                                    print "Newline found while reading " \
+                                        "from channel."
+
+                                    # send_stderr below results in:
+                                    # "rcvd ext data [len]"
+                                    # appearing in the scp client's debug2 log.
+                                    # where [len] is the length of
+                                    # "Sink: C0600 131072 tmpt1q6jx"
+                                    # including one extra character
+                                    # (which must be the newline or '\0' ?)
+                                    # "C0600" is the file mode (read only),
+                                    # 131072 is the file size, and tmpt1q6jx
+                                    # is the filename.
+                                    self.chan.send_stderr(
+                                        self.modeSizeFilename)
+
+                                    # Sending the message below results in:
+                                    # "rcvd adjust [window_size]"
+                                    # appearing in the scp client's debug2 log.
+                                    components = \
+                                        self.modeSizeFilename.split(" ")
+                                    fileSize = int(components[-2])
+                                    m = Message()
+                                    m.add_byte(cMSG_CHANNEL_WINDOW_ADJUST)
+                                    m.add_int(self.chan.get_id())
+                                    # Using filename size for window size for
+                                    # now, which is wrong. I'm not sure how
+                                    # the window size is supposed to be
+                                    # calculated.
+                                    windowSize = fileSize
+                                    m.add_int(windowSize)
+                                    self.transport._send_user_message(m)
+                                    while True:
+                                        char = proc.stdout.read(1)
+                                        # This will just be the mode, size and
+                                        # filename echoed back.
+                                        self.chan.send(char)
+                                        if proc.returncode is not None:
+                                            print "proc has finished."
+                                            break
+                                        if char == '\0':
+                                            print r"'\0' found in output of " \
+                                                r"scp -t"
+                                            break
+                                    # XXX
+                                    # chan.recv_ready will return False, but we
+                                    # want more stuff from the channel!!!
+                                    # Let's write some stuff, just to see what
+                                    # happens.
+                                    # What we actually want to achieve in the
+                                    # scp client debug2 output is the
+                                    # following:
+                                    # "debug2: channel 0: read<=0 rfd 5 len 0"
+                                    for i in range(fileSize):
+                                        proc.stdin.write("*")
+                                        self.chan.send("*")
+                                    proc.stdin.flush()
+                                    proc.stdin.write("\0")
+                                    self.chan.send("*")
+                                    if not self.chan.recv_ready():
+                                        break
+                                # End if char == '\n':
+                            # end while True:
+                        except socket.error:
+                            print "ReadFromChannel socket error."
+                            return
+                    readFromChannelThread = \
+                        threading.Thread(target=ReadFromChannel)
+                    readFromChannelThread.start()
+
+                    def WriteToChannel():
+                        try:
+                            while True:
+                                char = proc.stdout.read(1)
+                                sys.stdout.write(char)
+                                sys.stdout.flush()
+                                self.chan.send(char)
+                                if proc.returncode is not None:
+                                    print "proc has finished."
+                                if char == '\0':
+                                    print r"'\0' found in output of scp -t"
+                                    return
+                        except socket.error:
+                            print "WriteToChannel socket error."
+                            print traceback.format_exc()
+                            return
+                    writeToChannelThread = \
+                        threading.Thread(target=WriteToChannel)
+                    writeToChannelThread.start()
+
+                    print "Waiting for scp to finish..."
+                    readFromChannelThread.join()
+                    print "readFromChannelThread joined."
+                    writeToChannelThread.join()
+                    print "writeToChannelThread joined."
+                    if proc.returncode is not None:
+                        print "Sending return code %d over channel and " \
+                            "closing channel." % proc.returncode
+                        self.chan.send_exit_status(proc.returncode)
+                    else:
+                        print "No proc.returncode. Sending return code 0 " \
+                            "over channel and closing channel."
+                        self.chan.send_exit_status(0)
+                    print "Closing channel."
+                    self.chan.close()
+            else:  # if self.server.command
+                print "Closing channel."
+                self.chan.close()
+
+            try:
+                self.transport.close()
+            except:  # pylint: disable=bare-except
+                traceback.print_exc()
+
+        except Exception as e:  # pylint: disable=broad-except
+            print '*** Caught exception: ' + str(e.__class__) + ': ' + str(e)
+            traceback.print_exc()
+            try:
+                self.transport.close()
+            except:  # pylint: disable=bare-except
+                traceback.print_exc()
+            sys.exit(1)
+
+while True:
+    print "Waiting for a connection..."
+    ChannelListener(sock).listen()
