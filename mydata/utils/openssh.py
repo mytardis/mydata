@@ -56,6 +56,9 @@ if sys.platform.startswith("win"):
     import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
+# The "ControlMaster" option is described in "man ssh_config":
+USE_SSH_CONTROL_MASTER_WHEN_AVAILABLE = True
+
 
 # pylint: disable=too-many-instance-attributes
 class OpenSSH(object):
@@ -411,17 +414,21 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       host,
                       OPENSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
     else:
-        sshControlMasterPool = \
-            OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                            host, port)
-        sshControlMasterProcess = \
-            sshControlMasterPool.GetSshControlMasterProcess()
-        sshControlPath = sshControlMasterProcess.GetControlPath()
+        if USE_SSH_CONTROL_MASTER_WHEN_AVAILABLE:
+            sshControlMasterPool = \
+                OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
+                                                host, port)
+            sshControlMasterProcess = \
+                sshControlMasterPool.GetSshControlMasterProcess()
+            sshControlPathOptionValuePair = \
+                sshControlMasterProcess.GetControlPathOptionValuePair()
+        else:
+            sshControlPathOptionValuePair = ""
 
         # The authentication options below (-i privateKeyFilePath etc.)
         # shouldn't be necessary if the socket created by the SSH master
-        # process (sshControlPath)is ready), but we can't guarantee that it
-        # will be ready immediately.
+        # process (sshControlPath) is ready), but we can't guarantee that
+        # it will be ready immediately.
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", port,
                       "-c", OPENSSH.cipher,
@@ -431,7 +438,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
-                      "-oControlPath=%s" % OPENSSH.DoubleQuote(sshControlPath),
+                      sshControlPathOptionValuePair,
                       host,
                       OPENSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
     cmdString = " ".join(cmdAndArgs)
@@ -612,12 +619,16 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
-    sshControlMasterPool = \
-        OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                        host, port)
-    sshControlMasterProcess = \
-        sshControlMasterPool.GetSshControlMasterProcess()
-    sshControlPath = sshControlMasterProcess.GetControlPath()
+    if USE_SSH_CONTROL_MASTER_WHEN_AVAILABLE:
+        sshControlMasterPool = \
+            OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
+                                            host, port)
+        sshControlMasterProcess = \
+            sshControlMasterPool.GetSshControlMasterProcess()
+        sshControlPathOptionValuePair = \
+            sshControlMasterProcess.GetControlPathOptionValuePair()
+    else:
+        sshControlPathOptionValuePair = ""
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuote(remoteDir)
@@ -626,7 +637,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
          "-p", port,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-c", OPENSSH.cipher,
-         "-oControlPath=%s" % OPENSSH.DoubleQuote(sshControlPath),
+         sshControlPathOptionValuePair,
          "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
@@ -645,13 +656,14 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                          creationflags=DEFAULT_CREATION_FLAGS)
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
+        logger.error("'%s' returned %d" % (mkdirCmdString,
+                     mkdirProcess.returncode))
         raise SshException(stdout, mkdirProcess.returncode)
 
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteChunkPath)
     rmCommandString = \
-        "%s -p %s -i %s -c %s " \
-        "-oControlPath=%s " \
+        "%s -p %s -i %s -c %s %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
@@ -659,10 +671,10 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         % (OPENSSH.DoubleQuote(OPENSSH.ssh),
            port,
            privateKeyFilePath, OPENSSH.cipher,
-           OPENSSH.DoubleQuote(sshControlPath),
+           sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
-    # logger.debug(rmCommandString)
+    logger.debug(rmCommandString)
     removeRemoteChunkProcess = \
         subprocess.Popen(rmCommandString,
                          shell=OPENSSH.preferToUseShellInSubprocess,
@@ -713,7 +725,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                skip,
                OPENSSH.DoubleQuote(filePath),
                OPENSSH.DoubleQuote(chunkFilePath))
-        # logger.debug(ddCommandString)
+        logger.debug(ddCommandString)
         ddProcess = subprocess.Popen(
             ddCommandString,
             shell=OPENSSH.preferToUseShellInSubprocess,
@@ -735,8 +747,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         skip += 1
 
         scpCommandString = \
-            '%s -P %s -i %s -c %s ' \
-            '-oControlPath=%s ' \
+            '%s -P %s -i %s -c %s %s ' \
             '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oStrictHostKeyChecking=no ' \
@@ -745,11 +756,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                port,
                privateKeyFilePath,
                OPENSSH.cipher,
-               OPENSSH.DoubleQuote(sshControlPath),
+               sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
                remoteChunkPath)
-        # logger.debug(scpCommandString)
+        logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
             shell=OPENSSH.preferToUseShellInSubprocess,
@@ -786,8 +797,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               redirect,
                               OPENSSH.DoubleQuote(remoteFilePath))
         catCommandString = \
-            "%s -p %s -i %s -c %s " \
-            "-oControlPath=%s " \
+            "%s -p %s -i %s -c %s %s" \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
             "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
@@ -795,7 +805,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
                privateKeyFilePath,
                OPENSSH.cipher,
-               OPENSSH.DoubleQuote(sshControlPath),
+               sshControlPathOptionValuePair,
                username, host,
                OPENSSH.DoubleQuote(remoteCatCommand))
         # logger.debug(catCommandString)
@@ -821,15 +831,14 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteChunkPath)
     rmCommandString = \
-        "%s -p %s -i %s -c %s " \
-        "-oControlPath=%s " \
+        "%s -p %s -i %s -c %s %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
            privateKeyFilePath, OPENSSH.cipher,
-           OPENSSH.DoubleQuote(sshControlPath),
+           sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
     # logger.debug(rmCommandString)
@@ -1198,6 +1207,9 @@ class SshControlMasterProcess(object):
 
     def GetControlPath(self):
         return self.sshControlPath
+
+    def GetControlPathOptionValuePair(self):
+        return "-oControlPath=%s" % OPENSSH.DoubleQuote(self.sshControlPath)
 
     def GetPid(self):
         return self.pid
