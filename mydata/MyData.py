@@ -761,7 +761,7 @@ class MyData(wx.App):
         not yet available on MyTardis.
         """
         self.LogOnRefreshCaller(event, jobId)
-        shutdownForRefreshComplete = \
+        shutdownForRefreshComplete = event and \
             event.GetId() in (mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
                               mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE)
 
