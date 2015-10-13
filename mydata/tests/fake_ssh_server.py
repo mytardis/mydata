@@ -54,7 +54,8 @@ import paramiko
 from paramiko.py3compat import decodebytes
 
 import mydata.utils.openssh as OpenSSH
-
+from paramiko.message import Message
+from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 
 # setup logging
 paramiko.util.log_to_file('fake_ssh_server.log')
@@ -224,10 +225,11 @@ class ChannelListener(object):
                     print "Executing: %s" % self.server.command
                 self.server.command = \
                     self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
+                stderr_handle = subprocess.PIPE if self.verbose else None
                 proc = subprocess.Popen(self.server.command,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
+                                        stderr=stderr_handle,
                                         shell=True)
                 # Confirm to the channel that we started the command:
                 self.chan.send('\0')
@@ -285,7 +287,7 @@ class ChannelListener(object):
                                 "string: %s" % buf
                             self.transfer_type = match2.group(1)
                             self.file_mode = match2.group(2)
-                            self.file_size = match2.group(3)
+                            self.file_size = int(match2.group(3))
                             self.file_name = match2.group(4)
                             # Acknowledge receipt of file modes.
                             self.chan.send('\0')
@@ -298,6 +300,28 @@ class ChannelListener(object):
                         print traceback.format_exc()
                         return
 
+                def adjust_window_size():
+                    """
+                    Increasing window size (used by SSH's
+                    flow control) can speed up transfers
+                    of large files.
+
+
+                    The message below should result in
+                    a "recvd adjust" message in the client's
+                    debug2 log (if using "scp -vv").
+                    """
+                    m = Message()
+                    m.add_byte(cMSG_CHANNEL_WINDOW_ADJUST)
+                    m.add_int(self.chan.get_id())
+                    # This is a bit arbitrary:
+                    window_size = min(2*self.file_size, 10000000)
+                    m.add_int(window_size)
+                    # pylint: disable=protected-access
+                    self.transport._send_user_message(m)
+
+
+
                 def read_file_content():
                     try:
                         while not self.chan.recv_ready():
@@ -305,11 +329,12 @@ class ChannelListener(object):
 
                         # Read the file content from the SSH channel,
                         # and write it into the "scp -t" subprocess:
+                        chunk_size = 1024
                         while True:
-                            char = self.chan.recv(1)
-                            proc.stdin.write(char)
+                            chunk = self.chan.recv(chunk_size)
+                            proc.stdin.write(chunk)
                             proc.stdin.flush()
-                            if char == '\0':
+                            if len(chunk) < chunk_size:
                                 break
                     except socket.error:
                         print "read_file_content socket error."
@@ -342,6 +367,9 @@ class ChannelListener(object):
                 print "Reading protocol messages..."
                 read_protocol_messages()
                 print "Finished reading protocol messages."
+                print "Adjusting window size..."
+                adjust_window_size()
+                print "Finished adjusting window size."
                 if self.verbose:
                     print "Joining stderr"
                     stderr_thread.join()
@@ -354,7 +382,8 @@ class ChannelListener(object):
                 if not proc.returncode:
                     stdout, _ = proc.communicate()
                 print "scp -t exit code = " + str(proc.returncode)
-                self.chan.send('\0E\n\0')
+                self.chan.send('\0')
+                self.chan.send('E\n\0')
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
                 print ""
