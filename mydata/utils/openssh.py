@@ -797,7 +797,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               redirect,
                               OPENSSH.DoubleQuote(remoteFilePath))
         catCommandString = \
-            "%s -p %s -i %s -c %s %s" \
+            "%s -p %s -i %s -c %s %s " \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
             "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
