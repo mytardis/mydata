@@ -133,12 +133,10 @@ class ChannelListener(object):
 
     def listen(self):
         # pylint: disable=too-many-branches
-        print "listen for self = " + str(self)
         try:
             self.sock.listen(100)
             print 'Listening for connection ...'
             self.client, _ = self.sock.accept()
-            print 'Got connection.'
         except Exception as e:  # pylint: disable=broad-except
             print '*** Listen/accept failed: ' + str(e)
             traceback.print_exc()
@@ -166,7 +164,6 @@ class ChannelListener(object):
         try:
             # wait for auth
             self.chan = self.transport.accept(20)
-            print "self.chan = " + str(self.chan)
             if self.chan is None:
                 print '*** No channel.'
                 # sys.exit(1)
@@ -187,6 +184,8 @@ class ChannelListener(object):
                     self.chan.send_exit_status(proc.returncode)
                     self.chan.close()
                 if "scp" in self.server.command:
+                    self.server.command = \
+                        self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
                     proc = subprocess.Popen(self.server.command,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
@@ -202,14 +201,15 @@ class ChannelListener(object):
                                 if self.chan.recv_ready():
                                     char = self.chan.recv(1)
                                     if char == '\0':
-                                        print r"ReadFromChannel: '\0' received from channel."
-                                        print "Breaking!!!"
+                                        print r"ReadFromChannel: '\0' " \
+                                            r"received from channel."
+                                        print "Breaking out of loop!"
                                         break
                                     if not finishedReadingModeSizeFilename:
                                         self.modeSizeFilename += char
                                     proc.stdin.write(char)
                                     proc.stdin.flush()
-                                    sys.stdout.write(char)
+                                    sys.stdout.write(char.encode('utf-8'))
                                     sys.stdout.flush()
                                 else:
                                     break
@@ -220,21 +220,23 @@ class ChannelListener(object):
                                     if not finishedReadingModeSizeFilename:
                                         # send_stderr below results in:
                                         # "rcvd ext data [len]"
-                                        # appearing in the scp client's debug2 log.
+                                        # appearing in the scp client's debug2
+                                        # log.
                                         # where [len] is the length of
                                         # "Sink: C0600 131072 tmpt1q6jx"
                                         # including one extra character
                                         # (which must be the newline or '\0' ?)
                                         # "C0600" is the file mode (read only),
-                                        # 131072 is the file size, and tmpt1q6jx
-                                        # is the filename.
+                                        # 131072 is the file size, and
+                                        # tmpt1q6jx # is the filename.
                                         self.chan.send_stderr(
                                             self.modeSizeFilename)
                                         finishedReadingModeSizeFilename = True
 
                                         # Sending the message below results in:
                                         # "rcvd adjust [window_size]"
-                                        # appearing in the scp client's debug2 log.
+                                        # appearing in the scp client's debug2
+                                        # log.
                                         components = \
                                             self.modeSizeFilename.split(" ")
                                         print "components = " + str(components)
@@ -242,26 +244,29 @@ class ChannelListener(object):
                                         m = Message()
                                         m.add_byte(cMSG_CHANNEL_WINDOW_ADJUST)
                                         m.add_int(self.chan.get_id())
-                                        # Using filename size for window size for
-                                        # now, which is wrong. I'm not sure how
-                                        # the window size is supposed to be
+                                        # Using filename size for window size
+                                        # for now, which is wrong. I'm not sure
+                                        # how the window size is supposed to be
                                         # calculated.
                                         windowSize = fileSize
                                         m.add_int(windowSize)
-                                        self.transport._send_user_message(m)  # pylint: disable=protected-access
+                                        # pylint: disable=protected-access
+                                        self.transport._send_user_message(m)
+
                                         while True:
                                             char = proc.stdout.read(1)
-                                            # This will just be the mode, size and
-                                            # filename echoed back.
+                                            # This will just be the mode, size
+                                            # and filename echoed back.
                                             self.chan.send(char)
                                             if proc.returncode is not None:
                                                 print "proc has finished."
                                                 break
                                             if char == '\0':
-                                                print r"ReadFromChannel: '\0' found in output of " \
-                                                    r"scp -t"
+                                                print r"ReadFromChannel: " \
+                                                    r"'\0' found in output " \
+                                                    r"of scp -t"
                                                 break
-                                    # End: if not finishedReadingModeSizeFilename:
+                                    # End: if not finishedReadingMode
 
                                     while True:
                                         char = ''
@@ -269,14 +274,17 @@ class ChannelListener(object):
                                             char = self.chan.recv(1)
                                             proc.stdin.write(char)
                                             proc.stdin.flush()
-                                            sys.stdout.write(char)
+                                            sys.stdout.write(
+                                                char.encode('utf-8'))
                                             sys.stdout.flush()
                                         else:
-                                            print "Breaking because chan recv not ready. (2)"
+                                            print "Breaking because chan " \
+                                                "recv not ready. (2)"
+                                            proc.stdin.write('\0E\n\0')
+                                            proc.stdin.flush()
                                             break
-                                    if not self.chan.recv_ready():
-                                        print "Breaking because chan recv not ready. (3)"
-                                        break
+                                    proc.stdin.write('\0E\n\0')
+                                    proc.stdin.flush()
                                 # End if char == '\n':
                             # end while True:
                         except socket.error:
@@ -292,9 +300,10 @@ class ChannelListener(object):
                             while True:
                                 char = proc.stdout.read(1)
                                 if char == '\0':
-                                    print r"WriteToChannel: '\0' found in output of scp -t"
+                                    print r"WriteToChannel: '\0' found " \
+                                        "in output of scp -t"
                                     return
-                                sys.stdout.write(char)
+                                sys.stdout.write(char.encode('utf-8'))
                                 sys.stdout.flush()
                                 self.chan.send(char)
                         except socket.error:
@@ -305,38 +314,21 @@ class ChannelListener(object):
                         threading.Thread(target=WriteToChannel)
                     writeToChannelThread.start()
 
-                    print "Waiting for readFromChannelThread to finish..."
                     readFromChannelThread.join()
-                    print "readFromChannelThread joined."
-                    print "Waiting for writeToChannelThread to finish..."
                     writeToChannelThread.join()
-                    print "writeToChannelThread joined."
                     if proc.returncode is not None:
-                        print "Sending return code %d over channel and " \
-                            "closing channel." % proc.returncode
-                        self.chan.send_exit_status(proc.returncode)
-                        print "Closing channel."
-                        self.chan.close()
-                    else:
-                        # print "No return code to send over channel."
-                        # print "Not closing channel."
-                        print "Waiting for scp -t to finish."
-                        stdout, _ = proc.communicate('E\n')
-                        print "scp -t process completed!"
-                        print "STDOUT from scp -t: " + stdout
                         print "scp -t exit code = " + str(proc.returncode)
                         self.chan.send_exit_status(proc.returncode)
-                        print "Closing channel."
+                        self.chan.close()
+                    else:
+                        stdout, _ = proc.communicate()
+                        print "scp -t exit code = " + str(proc.returncode)
+                        self.chan.send_exit_status(proc.returncode)
                         self.chan.close()
                 # End: if "scp" in self.server.command:
+                print ""
             else:  # if self.server.command
-                print "Closing channel."
                 self.chan.close()
-
-            # try:
-                # self.transport.close()
-            # except:  # pylint: disable=bare-except
-                # traceback.print_exc()
 
         except Exception as e:  # pylint: disable=broad-except
             print '*** Caught exception: ' + str(e.__class__) + ': ' + str(e)
@@ -348,5 +340,4 @@ class ChannelListener(object):
             sys.exit(1)
 
 while True:
-    print "Waiting for a connection..."
     ChannelListener(SOCK).listen()
