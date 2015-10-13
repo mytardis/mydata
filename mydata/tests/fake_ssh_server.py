@@ -27,13 +27,16 @@ Executing: wc -c setup.py
 It can also be used to test SCP, for example, copying the file "hello"
 using a Cygwin build of scp from a Windows command prompt:
 
-scp -vv -oNoHostAuthenticationForLocalhost=yes -P 2200 \
+scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
 -i /cygdrive/C/Users/jsmith/.ssh/MyData \
 /cygdrive/C/Users/jsmith/Desktop/hello.txt \
 mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 
-So far, I've always used the verbose options, so leave them out at
-your own risk.
+TO DO:
+1. Test whether it works with binary files (only ASCII files tested so far)!!!
+2. Provide a nice way to stop the SSH/SCP server.
+etc.
+
 """
 
 # pylint: disable=invalid-name
@@ -45,6 +48,7 @@ import threading
 import traceback
 import subprocess
 import time
+import re
 
 import paramiko
 from paramiko.py3compat import decodebytes
@@ -126,12 +130,26 @@ class ChannelListener(object):
     # pylint: disable=too-few-public-methods
     def __init__(self, sock):
         self.sock = sock
-        self.modeSizeFilename = "Sink: "
         self.chan = None
         self.server = None
         self.client = None
         self.transport = None
+
+        # These are used for SCP only:
         self.verbose = False
+        # modified: Only populated if scp client uses "-p".
+        self.modified = None
+        # accessed: Only populated if scp client uses "-p".
+        self.accessed = None
+        # transfer_type: C for single file copy or
+        #                D for recursive directory copy.
+        self.transfer_type = None
+        # file_mode: POSIX permissions, e.g. 0644
+        self.file_mode = None
+        # file_size: File size in bytes
+        self.file_size = None
+        # file_name: File name
+        self.file_name = None
 
     def listen(self):
         # pylint: disable=too-many-branches
@@ -173,6 +191,7 @@ class ChannelListener(object):
                 return
             print 'Authenticated!'
 
+            # Wait for the SSH/SCP client to provide a remote command.
             count = 0
             while not self.server.command:
                 time.sleep(0.01)
@@ -187,6 +206,7 @@ class ChannelListener(object):
                     return
 
             if "scp" not in self.server.command:
+                # Execute a remote command other than scp.
                 proc = subprocess.Popen(self.server.command,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
@@ -196,9 +216,11 @@ class ChannelListener(object):
                 print "Closing channel."
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
+
             if "scp" in self.server.command:
                 if "-v" in self.server.command.split(" "):
                     self.verbose = True
+                if self.verbose:
                     print "Executing: %s" % self.server.command
                 self.server.command = \
                     self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
@@ -210,91 +232,124 @@ class ChannelListener(object):
                 # Confirm to the channel that we started the command:
                 self.chan.send('\0')
 
-                def ReadFromChannel():
+                def read_protocol_messages():
+                    """
+                    The SCP protocol messages don't appear to be
+                    officially documented anywhere, but they are
+                    unofficially described here:
+                    https://blogs.oracle.com/janp/entry/how_the_scp_protocol_works
+
+                    The first thing we read from the client via the
+                    channel will usually be the file mode, size and
+                    filename (e.g. "C0644 128 hello.txt"). Or, if
+                    scp has been run with the -p option, then we
+                    should receive timestamps first, followed by
+                    the file mode/size/filename string.
+
+                    We pass this info onto the "remote" scp process,
+                    using proc.stdin.write().
+                    """
                     # pylint: disable=too-many-statements
-                    # The first thing we read from the client via the
-                    # channel will be the file mode, size and filename
-                    # (or timestamps if given, but they haven't
-                    # been tested yet).
-                    # We pass this info onto the remote scp process,
-                    # using proc.stdin.write().
                     while not self.chan.recv_ready():
                         time.sleep(0.01)
                     try:
-                        while True:
-                            char = ''
-                            if self.chan.recv_ready():
+                        buf = ""
+                        while self.chan.recv_ready():
+                            char = self.chan.recv(1)
+                            proc.stdin.write(char)
+                            proc.stdin.flush()
+                            if char == '\n':
+                                break
+                            buf += char
+                        match1 = re.match(
+                            r"^T([0-9]+)\s+0\s+([0-9]+)\s0$", buf)
+                        if match1:
+                            print "Received timestamps string: %s" % buf
+                            # Acknowledge receipt of timestamps.
+                            self.chan.send('\0')
+                            self.modified = match1.group(1)
+                            self.accessed = match1.group(2)
+                            buf = ""
+                            while self.chan.recv_ready():
                                 char = self.chan.recv(1)
-                                if char == '\0':
-                                    break
                                 proc.stdin.write(char)
                                 proc.stdin.flush()
-                                sys.stdout.write(char.encode('utf-8'))
-                                sys.stdout.flush()
-                            else:
-                                break
-                        # end while True:
+                                if char == '\n':
+                                    break
+                                buf += char
+                        match2 = re.match(
+                            r"^([C,D])([0-7][0-7][0-7][0-7])\s+" \
+                            r"([0-9]+)\s+(\S+)$", buf)
+                        if match2:
+                            print "Received file mode/size/filename " \
+                                "string: %s" % buf
+                            self.transfer_type = match2.group(1)
+                            self.file_mode = match2.group(2)
+                            self.file_size = match2.group(3)
+                            self.file_name = match2.group(4)
+                            # Acknowledge receipt of file modes.
+                            self.chan.send('\0')
+                            buf = ""
+                        else:
+                            raise Exception(
+                                "Unknown message format: %s" % buf)
                     except socket.error:
-                        print "ReadFromChannel socket error."
+                        print "read_protocol_messages socket error."
                         print traceback.format_exc()
                         return
-                readFromChannelThread = \
-                    threading.Thread(target=ReadFromChannel)
-                readFromChannelThread.daemon = True
-                readFromChannelThread.start()
 
-                def WriteToChannel():
+                def read_file_content():
                     try:
+                        while not self.chan.recv_ready():
+                            time.sleep(0.01)
+
+                        # Read the file content from the SSH channel,
+                        # and write it into the "scp -t" subprocess:
                         while True:
-                            char = proc.stdout.read(1)
+                            char = self.chan.recv(1)
+                            proc.stdin.write(char)
+                            proc.stdin.flush()
                             if char == '\0':
-                                return
-                            sys.stdout.write(char.encode('utf-8'))
-                            sys.stdout.flush()
-                            self.chan.send(char)
+                                break
                     except socket.error:
-                        print "WriteToChannel socket error."
+                        print "read_file_content socket error."
                         print traceback.format_exc()
                         return
-                writeToChannelThread = \
-                    threading.Thread(target=WriteToChannel)
-                writeToChannelThread.daemon = True
-                writeToChannelThread.start()
 
-                def ReadRemoteStderr():
+                def read_remote_stderr():
                     try:
                         buf = ""
                         while True:
                             char = proc.stderr.read(1)
                             buf += char
-                            if char == '\n':
+                            if char == '\n' and self.verbose:
                                 self.chan.send_stderr(buf)
                                 self.chan.send('\0')
-                                return
+                                break
+                            if char == '\0':
+                                self.chan.send('\0')
+                                break
                     except socket.error:
-                        print "ReadRemoteStderr socket error."
+                        print "read_remote_stderr socket error."
                         print traceback.format_exc()
                         return
-                readRemoteStderrThread = \
-                    threading.Thread(target=ReadRemoteStderr)
-                readRemoteStderrThread.daemon = True
-                readRemoteStderrThread.start()
+                stderr_thread = \
+                    threading.Thread(target=read_remote_stderr)
+                stderr_thread.daemon = True
+                if self.verbose:
+                    stderr_thread.start()
 
-                readFromChannelThread.join()
-                writeToChannelThread.join()
-                readRemoteStderrThread.join()
+                print "Reading protocol messages..."
+                read_protocol_messages()
+                print "Finished reading protocol messages."
+                if self.verbose:
+                    print "Joining stderr"
+                    stderr_thread.join()
+                    print "Joined stderr."
 
-                # Stuff below should go in a thread!
-                while not self.chan.recv_ready():
-                    time.sleep(0.01)
-
-                while True:
-                    char = self.chan.recv(1)
-                    # sys.stdout.write(char)
-                    proc.stdin.write(char)
-                    proc.stdin.flush()
-                    if char == '\0':
-                        break
+                print "Reading file content..."
+                read_file_content()
+                print "Finished reading file content."
 
                 if not proc.returncode:
                     stdout, _ = proc.communicate()
