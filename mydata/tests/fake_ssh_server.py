@@ -25,13 +25,15 @@ Authenticated!
 Executing: wc -c setup.py
 
 It can also be used to test SCP, for example, copying the file "hello"
-as follows:
+using a Cygwin build of scp from a Windows command prompt:
 
-"/usr/bin/scp" -qvvv -P 2200 -i /Users/wettenhj/.ssh/MyData -c arcfour128 \
-    -oIdentitiesOnly=yes -oPasswordAuthentication=no \
-    -oNoHostAuthenticationForLocalhost=yes -oStrictHostKeyChecking=no \
-    ./hello mydata@localhost:~
+scp -vv -oNoHostAuthenticationForLocalhost=yes -P 2200 \
+-i /cygdrive/C/Users/jsmith/.ssh/MyData \
+/cygdrive/C/Users/jsmith/Desktop/hello.txt \
+mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 
+So far, I've always used the verbose options, so leave them out at
+your own risk.
 """
 
 # pylint: disable=invalid-name
@@ -129,12 +131,14 @@ class ChannelListener(object):
         self.server = None
         self.client = None
         self.transport = None
+        self.verbose = False
 
     def listen(self):
         # pylint: disable=too-many-branches
         try:
-            self.sock.listen(100)
-            print 'Listening for connection ...'
+            backlog = 0
+            self.sock.listen(backlog)
+            print 'Listening for an SSH/SCP connection on port 2200...'
             self.client, _ = self.sock.accept()
         except Exception as e:  # pylint: disable=broad-except
             print '*** Listen/accept failed: ' + str(e)
@@ -169,124 +173,136 @@ class ChannelListener(object):
                 return
             print 'Authenticated!'
 
-            if self.server.command:
-                print "Client asked us to execute: %s" % self.server.command
-                print "Executing: %s" % self.server.command
-                if "scp" not in self.server.command:
-                    proc = subprocess.Popen(self.server.command,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
-                                            shell=True)
-                    stdout, _ = proc.communicate()
-                    self.chan.send(stdout)
-                    print "Closing channel."
-                    self.chan.send_exit_status(proc.returncode)
+            count = 0
+            while not self.server.command:
+                time.sleep(0.01)
+                count += 1
+                if count > 100:
+                    message = "\nInteractive shells are not supported.\n" \
+                        "Please provide a command to be executed.\n\n"
+                    sys.stderr.write(message)
+                    self.chan.send_stderr(message)
+                    self.chan.send_exit_status(1)
                     self.chan.close()
-                if "scp" in self.server.command:
-                    self.server.command = \
-                        self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
-                    proc = subprocess.Popen(self.server.command,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            shell=True)
-                    # Confirm to the channel that we started the command:
-                    self.chan.send('\0')
+                    return
 
-                    def ReadFromChannel():
-                        # pylint: disable=too-many-statements
-                        # The first thing we read from the client via the
-                        # channel will be the file mode, size and filename
-                        # (or timestamps if given, but they haven't
-                        # been tested yet).
-                        # We pass this info onto the remote scp process,
-                        # using proc.stdin.write().
-                        while not self.chan.recv_ready():
-                            time.sleep(0.01)
-                        try:
-                            while True:
-                                char = ''
-                                if self.chan.recv_ready():
-                                    char = self.chan.recv(1)
-                                    if char == '\0':
-                                        break
-                                    proc.stdin.write(char)
-                                    proc.stdin.flush()
-                                    sys.stdout.write(char.encode('utf-8'))
-                                    sys.stdout.flush()
-                                else:
-                                    break
-                            # end while True:
-                        except socket.error:
-                            print "ReadFromChannel socket error."
-                            print traceback.format_exc()
-                            return
-                    readFromChannelThread = \
-                        threading.Thread(target=ReadFromChannel)
-                    readFromChannelThread.start()
+            if "scp" not in self.server.command:
+                proc = subprocess.Popen(self.server.command,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        shell=True)
+                stdout, _ = proc.communicate()
+                self.chan.send(stdout)
+                print "Closing channel."
+                self.chan.send_exit_status(proc.returncode)
+                self.chan.close()
+            if "scp" in self.server.command:
+                if "-v" in self.server.command.split(" "):
+                    self.verbose = True
+                    print "Executing: %s" % self.server.command
+                self.server.command = \
+                    self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
+                proc = subprocess.Popen(self.server.command,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        shell=True)
+                # Confirm to the channel that we started the command:
+                self.chan.send('\0')
 
-                    def WriteToChannel():
-                        try:
-                            while True:
-                                char = proc.stdout.read(1)
-                                if char == '\0':
-                                    return
-                                sys.stdout.write(char.encode('utf-8'))
-                                sys.stdout.flush()
-                                self.chan.send(char)
-                        except socket.error:
-                            print "WriteToChannel socket error."
-                            print traceback.format_exc()
-                            return
-                    writeToChannelThread = \
-                        threading.Thread(target=WriteToChannel)
-                    writeToChannelThread.start()
-
-                    def ReadRemoteStderr():
-                        try:
-                            buf = ""
-                            while True:
-                                char = proc.stderr.read(1)
-                                buf += char
-                                if char == '\n':
-                                    self.chan.send_stderr(buf)
-                                    self.chan.send('\0')
-                                    return
-                        except socket.error:
-                            print "ReadRemoteStderr socket error."
-                            print traceback.format_exc()
-                            return
-                    readRemoteStderrThread = \
-                        threading.Thread(target=ReadRemoteStderr)
-                    readRemoteStderrThread.start()
-
-                    readFromChannelThread.join()
-                    writeToChannelThread.join()
-                    readRemoteStderrThread.join()
-
-                    # Stuff below should go in a thread!
+                def ReadFromChannel():
+                    # pylint: disable=too-many-statements
+                    # The first thing we read from the client via the
+                    # channel will be the file mode, size and filename
+                    # (or timestamps if given, but they haven't
+                    # been tested yet).
+                    # We pass this info onto the remote scp process,
+                    # using proc.stdin.write().
                     while not self.chan.recv_ready():
                         time.sleep(0.01)
+                    try:
+                        while True:
+                            char = ''
+                            if self.chan.recv_ready():
+                                char = self.chan.recv(1)
+                                if char == '\0':
+                                    break
+                                proc.stdin.write(char)
+                                proc.stdin.flush()
+                                sys.stdout.write(char.encode('utf-8'))
+                                sys.stdout.flush()
+                            else:
+                                break
+                        # end while True:
+                    except socket.error:
+                        print "ReadFromChannel socket error."
+                        print traceback.format_exc()
+                        return
+                readFromChannelThread = \
+                    threading.Thread(target=ReadFromChannel)
+                readFromChannelThread.daemon = True
+                readFromChannelThread.start()
 
-                    while True:
-                        char = self.chan.recv(1)
-                        # sys.stdout.write(char)
-                        proc.stdin.write(char)
-                        proc.stdin.flush()
-                        if char == '\0':
-                            break
+                def WriteToChannel():
+                    try:
+                        while True:
+                            char = proc.stdout.read(1)
+                            if char == '\0':
+                                return
+                            sys.stdout.write(char.encode('utf-8'))
+                            sys.stdout.flush()
+                            self.chan.send(char)
+                    except socket.error:
+                        print "WriteToChannel socket error."
+                        print traceback.format_exc()
+                        return
+                writeToChannelThread = \
+                    threading.Thread(target=WriteToChannel)
+                writeToChannelThread.daemon = True
+                writeToChannelThread.start()
 
-                    if not proc.returncode:
-                        stdout, _ = proc.communicate()
-                    print "scp -t exit code = " + str(proc.returncode)
-                    self.chan.send('\0E\n\0')
-                    self.chan.send_exit_status(proc.returncode)
-                    self.chan.close()
-                # End: if "scp" in self.server.command:
-                print ""
-            else:  # if self.server.command
+                def ReadRemoteStderr():
+                    try:
+                        buf = ""
+                        while True:
+                            char = proc.stderr.read(1)
+                            buf += char
+                            if char == '\n':
+                                self.chan.send_stderr(buf)
+                                self.chan.send('\0')
+                                return
+                    except socket.error:
+                        print "ReadRemoteStderr socket error."
+                        print traceback.format_exc()
+                        return
+                readRemoteStderrThread = \
+                    threading.Thread(target=ReadRemoteStderr)
+                readRemoteStderrThread.daemon = True
+                readRemoteStderrThread.start()
+
+                readFromChannelThread.join()
+                writeToChannelThread.join()
+                readRemoteStderrThread.join()
+
+                # Stuff below should go in a thread!
+                while not self.chan.recv_ready():
+                    time.sleep(0.01)
+
+                while True:
+                    char = self.chan.recv(1)
+                    # sys.stdout.write(char)
+                    proc.stdin.write(char)
+                    proc.stdin.flush()
+                    if char == '\0':
+                        break
+
+                if not proc.returncode:
+                    stdout, _ = proc.communicate()
+                print "scp -t exit code = " + str(proc.returncode)
+                self.chan.send('\0E\n\0')
+                self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
-
+                print ""
         except Exception as e:  # pylint: disable=broad-except
             print '*** Caught exception: ' + str(e.__class__) + ': ' + str(e)
             traceback.print_exc()
