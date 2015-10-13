@@ -238,10 +238,14 @@ class UploadDatafileRunnable(object):
         # The database interactions below should go in a model class.
 
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
+            def PosterCallback(param, current, total):
+                # pylint: disable=unused-argument
+                ProgressCallback(current, total)
+
             datagen, headers = poster.encode.multipart_encode(
                 {"json_data": json.dumps(dataFileJson),
                  "attached_file": datafileBufferedReader},
-                cb=ProgressCallback)
+                cb=PosterCallback)
             opener = poster.streaminghttp.register_openers()
             opener.addheaders = [("Authorization", "ApiKey " +
                                   myTardisUsername +
