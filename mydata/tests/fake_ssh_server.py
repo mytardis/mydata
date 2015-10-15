@@ -31,12 +31,6 @@ scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
 -i /cygdrive/C/Users/jsmith/.ssh/MyData \
 /cygdrive/C/Users/jsmith/Desktop/hello.txt \
 mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
-
-TO DO:
-1. Test whether it works with binary files (only ASCII files tested so far)!!!
-2. Provide a nice way to stop the SSH/SCP server.
-etc.
-
 """
 
 # pylint: disable=invalid-name
