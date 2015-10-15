@@ -36,9 +36,10 @@ class SettingsDropTarget(wx.FileDropTarget):
         wx.FileDropTarget.__init__(self)
         self.parent = parent
 
-    # pylint: disable=arguments-differ
-    # pylint: disable=unused-argument
-    def OnDropFiles(self, x, y, filenames):  # pylint: disable=invalid-name
+    def OnDropFiles(self, x, y, filenames):
+        # pylint: disable=invalid-name
+        # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
         """
         Handles drag and drop of a MyData.cfg file
         onto the settings dialog.
@@ -1128,6 +1129,7 @@ class SettingsDialog(wx.Dialog):
                 event.Skip()
 
     def OnSave(self, event):
+        # pylint: disable=unused-argument
         mydataConfigPath = self.settingsModel.GetConfigPath()
         if mydataConfigPath is not None:
             dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
@@ -1142,7 +1144,7 @@ class SettingsDialog(wx.Dialog):
                 if configPath != wx.GetApp().GetConfigPath():
                     self.settingsModel.SaveFieldsFromDialog(
                         self, configPath=wx.GetApp().GetConfigPath())
-        event.Skip()
+        # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):
         self.apiKeyField.SelectAll()
