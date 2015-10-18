@@ -63,6 +63,9 @@ class UploadDatafileRunnable(object):
     def GetDatafileIndex(self):
         return self.dataFileIndex
 
+    def GetDatafilePath(self):
+        return self.folderModel.GetDataFilePath(self.dataFileIndex)
+
     def Run(self):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-return-statements
@@ -568,6 +571,7 @@ class UploadDatafileRunnable(object):
             self.uploadModel.SetMessage(str(err))
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             self.uploadModel.SetStatus(UploadStatus.FAILED)
+            self.uploadModel.SetTraceback(traceback.format_exc())
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             if dataFileDirectory != "":
                 logger.debug("Upload failed for datafile " + dataFileName +
