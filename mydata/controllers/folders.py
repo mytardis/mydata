@@ -439,6 +439,8 @@ class FoldersController(object):
             logger.error(traceback.format_exc())
 
     def UploadWorker(self):
+        # pylint: disable=fixme
+        # FIXME: Should this be in uploads (not folders) controller?
         """
         One worker per thread
         By default, up to 5 threads can run simultaneously
@@ -472,6 +474,8 @@ class FoldersController(object):
                 return
 
     def VerificationWorker(self):
+        # pylint: disable=fixme
+        # FIXME: Should this be in verifications (not folders) controller?
         """
         One worker per thread.
         By default, up to 5 threads can run simultaneously
@@ -504,12 +508,12 @@ class FoldersController(object):
                 self.verificationsQueue.task_done()
                 return
 
-    # pylint: disable=unused-argument
     def CountCompletedUploadsAndVerifications(self, event):
         """
         Check if we have finished uploads and verifications,
         and if so, call ShutDownUploadThreads
         """
+        # pylint: disable=unused-argument
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
         uploadsToBePerformed = self.uploadsModel.GetRowCount()
@@ -533,7 +537,8 @@ class FoldersController(object):
         self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
         logger.info(message)
-        wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            wx.GetApp().GetMainFrame().SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
             self.SetFailed()
             self.uploadsModel.CancelRemaining()
@@ -576,10 +581,13 @@ class FoldersController(object):
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
         logger.info(message)
-        wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            wx.GetApp().GetMainFrame().SetStatusMessage(message)
         app = wx.GetApp()
-        app.toolbar.EnableTool(app.stopTool.GetId(), False)
-        wx.GetApp().SetPerformingLookupsAndUploads(False)
+        if hasattr(app, "toolbar"):
+            app.toolbar.EnableTool(app.stopTool.GetId(), False)
+        if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
+            wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
 
         # pylint: disable=bare-except
