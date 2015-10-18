@@ -50,6 +50,7 @@ class UploadModel(object):
         self.progress = 0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
+        self.traceback = None
         self.bufferedReader = None
         self.scpUploadProcess = None
         self.fileSize = 0  # File size long integer in bytes
@@ -95,6 +96,12 @@ class UploadModel(object):
 
     def SetMessage(self, message):
         self.message = message
+
+    def GetTraceback(self):
+        return self.traceback
+
+    def SetTraceback(self, trace):
+        self.traceback = trace
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
