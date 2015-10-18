@@ -8,6 +8,7 @@ have been copied and pasted from a real MyTardis server's
 responses and hard-coded below.  In some cases, unnecessary
 fields have been removed from the JSON responses.
 """
+import sys
 import time
 import BaseHTTPServer
 import traceback
@@ -18,6 +19,8 @@ import os
 import urllib
 # import urlparse
 import logging
+
+from mydata.utils.openssh import GetCygwinPath
 
 HOST_NAME = '127.0.0.1'
 PORT_NUMBER = 9000
@@ -30,6 +33,8 @@ STAGING_PATH = handle.name
 os.makedirs(STAGING_PATH)
 logger.info("Created temporary staging directory: %s",
             STAGING_PATH)
+if sys.platform.startswith("win"):
+    STAGING_PATH = GetCygwinPath(STAGING_PATH)
 
 
 class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -43,6 +48,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     stored in instance variables of the handler. Subclasses should not need
     to override or extend the __init__() method.
     """
+    datafileIdAutoIncrement = 0
+
     def do_HEAD(self):  # pylint: disable=invalid-name
         """
         Respond to a HEAD request
@@ -58,6 +65,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-return-statements
         if self.path.startswith("/api/v1/"):
             try:
                 authorization = self.headers.getheader("Authorization", "")
@@ -590,6 +598,25 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "objects": []
                 }
             self.wfile.write(json.dumps(datafilesJson))
+        elif self.path.startswith("/api/v1/dataset_file") and "verify" in self.path:
+            # e.g. /api/v1/dataset_file/1/verify/
+            match = re.match(r"^/api/v1/dataset_file/([0-9]+)/verify/$", self.path)
+            if match:
+                # pylint: disable=unused-variable
+                datafileId = match.groups()[0]
+            else:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message":
+                    "Missing datafile ID in datafile verify query"
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            self.send_response(200)
+            self.end_headers()
+            return
         elif self.path == "/about/":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
@@ -611,6 +638,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
+        self.datafileIdAutoIncrement += 1
+        self.send_header("location", "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
         self.end_headers()
 
         filename = postData['filename']
