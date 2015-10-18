@@ -43,6 +43,9 @@ class VerifyDatafileRunnable(object):
     def GetDatafileIndex(self):
         return self.dataFileIndex
 
+    def GetDatafilePath(self):
+        return self.folderModel.GetDataFilePath(self.dataFileIndex)
+
     def Run(self):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -169,7 +172,8 @@ class VerifyDatafileRunnable(object):
                         bytesUploadedToStaging = \
                             GetBytesUploadedToStaging(
                                 remoteFilePath,
-                                username, privateKeyFilePath, host, port)
+                                username, privateKeyFilePath, host, port,
+                                self.settingsModel)
                         logger.debug("%d bytes uploaded to staging for %s"
                                      % (bytesUploadedToStaging,
                                         replicas[0].GetUri()))
