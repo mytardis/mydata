@@ -18,7 +18,7 @@ on the client side:
 When running the above SSH client request, the following STDOUT appears from
 fake_ssh_server.py:
 
-Listening for connection ...
+Listening for an SSH/SCP connection on port 2200...
 Got a connection!
 Client asked us to execute: wc -c setup.py
 Authenticated!
@@ -55,6 +55,8 @@ from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 paramiko.util.log_to_file('fake_ssh_server.log')
 
 host_key = paramiko.RSAKey.generate(1024)
+
+DEBUG = False
 
 
 class Server(paramiko.ServerInterface):
@@ -111,7 +113,7 @@ class Server(paramiko.ServerInterface):
 try:
     SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    SOCK.bind(('', 2200))
+    SOCK.bind(('127.0.0.1', 2200))
 except Exception as e:  # pylint: disable=broad-except
     print '*** Bind failed: ' + str(e)
     traceback.print_exc()
@@ -123,6 +125,7 @@ class ChannelListener(object):
     Listen for SSH/SCP connection.
     """
     # pylint: disable=too-few-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, sock):
         self.sock = sock
         self.chan = None
@@ -158,13 +161,10 @@ class ChannelListener(object):
             traceback.print_exc()
             sys.exit(1)
 
-        self.transport = paramiko.Transport(self.client, gss_kex=False)
-        self.transport.set_gss_host(socket.getfqdn(""))
-        try:
-            self.transport.load_server_moduli()
-        except:  # pylint: disable=bare-except
-            print '(Failed to load moduli -- gex will be unsupported.)'
-            raise
+    def handle(self):
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
+        self.transport = paramiko.Transport(self.client)
         self.transport.add_server_key(host_key)
 
         self.server = Server()
@@ -175,7 +175,8 @@ class ChannelListener(object):
             print '*** SSH negotiation failed.'
             sys.exit(1)
 
-        print 'Got a connection!'
+        if DEBUG:
+            print 'Got a connection!'
 
         try:
             # wait for auth
@@ -184,7 +185,8 @@ class ChannelListener(object):
                 print '*** No channel.'
                 # sys.exit(1)
                 return
-            print 'Authenticated!'
+            if DEBUG:
+                print 'Authenticated!'
 
             # Wait for the SSH/SCP client to provide a remote command.
             count = 0
@@ -200,15 +202,37 @@ class ChannelListener(object):
                     self.chan.close()
                     return
 
+            if sys.platform.startswith("win"):
+                # Use bundled Cygwin binaries for these commands:
+                if self.server.command.startswith("/bin/rm -f"):
+                    self.server.command = \
+                        self.server.command.replace("/bin/rm",
+                                                    OpenSSH.OPENSSH.rm)
+                if self.server.command.startswith("mkdir"):
+                    self.server.command = \
+                        self.server.command.replace("mkdir",
+                                                    OpenSSH.OPENSSH.mkdir)
+                if self.server.command.startswith("cat"):
+                    self.server.command = \
+                        self.server.command.replace("cat",
+                                                    OpenSSH.OPENSSH.cat)
+                if self.server.command.startswith("scp"):
+                    self.server.command = \
+                        self.server.command.replace("scp",
+                                                    OpenSSH.OPENSSH.scp)
+
             if "scp" not in self.server.command:
                 # Execute a remote command other than scp.
+                if DEBUG:
+                    print "Executing: %s" % self.server.command
                 proc = subprocess.Popen(self.server.command,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         shell=True)
                 stdout, _ = proc.communicate()
                 self.chan.send(stdout)
-                print "Closing channel."
+                if DEBUG:
+                    print "Closing channel."
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
 
@@ -217,8 +241,6 @@ class ChannelListener(object):
                     self.verbose = True
                 if self.verbose:
                     print "Executing: %s" % self.server.command
-                self.server.command = \
-                    self.server.command.replace("scp", OpenSSH.OPENSSH.scp)
                 stderr_handle = subprocess.PIPE if self.verbose else None
                 proc = subprocess.Popen(self.server.command,
                                         stdin=subprocess.PIPE,
@@ -260,7 +282,8 @@ class ChannelListener(object):
                         match1 = re.match(
                             r"^T([0-9]+)\s+0\s+([0-9]+)\s0$", buf)
                         if match1:
-                            print "Received timestamps string: %s" % buf
+                            if DEBUG:
+                                print "Received timestamps string: %s" % buf
                             # Acknowledge receipt of timestamps.
                             self.chan.send('\0')
                             self.modified = match1.group(1)
@@ -277,8 +300,9 @@ class ChannelListener(object):
                             r"^([C,D])([0-7][0-7][0-7][0-7])\s+" \
                             r"([0-9]+)\s+(\S+)$", buf)
                         if match2:
-                            print "Received file mode/size/filename " \
-                                "string: %s" % buf
+                            if DEBUG:
+                                print "Received file mode/size/filename " \
+                                    "string: %s" % buf
                             self.transfer_type = match2.group(1)
                             self.file_mode = match2.group(2)
                             self.file_size = int(match2.group(3))
@@ -358,29 +382,38 @@ class ChannelListener(object):
                 if self.verbose:
                     stderr_thread.start()
 
-                print "Reading protocol messages..."
+                if DEBUG:
+                    print "Reading protocol messages..."
                 read_protocol_messages()
-                print "Finished reading protocol messages."
-                print "Adjusting window size..."
+                if DEBUG:
+                    print "Finished reading protocol messages."
+                    print "Adjusting window size..."
                 adjust_window_size()
-                print "Finished adjusting window size."
+                if DEBUG:
+                    print "Finished adjusting window size."
                 if self.verbose:
-                    print "Joining stderr"
+                    if DEBUG:
+                        print "Joining stderr"
                     stderr_thread.join()
-                    print "Joined stderr."
+                    if DEBUG:
+                        print "Joined stderr."
 
-                print "Reading file content..."
+                if DEBUG:
+                    print "Reading file content..."
                 read_file_content()
-                print "Finished reading file content."
+                if DEBUG:
+                    print "Finished reading file content."
 
                 if not proc.returncode:
                     stdout, _ = proc.communicate()
-                print "scp -t exit code = " + str(proc.returncode)
+                if DEBUG:
+                    print "scp -t exit code = " + str(proc.returncode)
                 self.chan.send('\0')
                 self.chan.send('E\n\0')
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
-                print ""
+                if DEBUG:
+                    print ""
         except Exception as e:  # pylint: disable=broad-except
             print '*** Caught exception: ' + str(e.__class__) + ': ' + str(e)
             traceback.print_exc()
@@ -391,4 +424,13 @@ class ChannelListener(object):
             sys.exit(1)
 
 while True:
-    ChannelListener(SOCK).listen()
+    channelListener = ChannelListener(SOCK)
+    channelListener.listen()
+    def handle():
+        try:
+            channelListener.handle()
+        except EOFError, err:
+            if err is not None and str(err).strip() != "":
+                print str(err)
+    handler = threading.Thread(target=handle)
+    handler.start()
