@@ -129,7 +129,7 @@ try:
     SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     SOCK.bind(('127.0.0.1', 2200))
 except Exception as e:  # pylint: disable=broad-except
-    traceback.print_exc()
+    logger.error(traceback.format_exc())
     sys.exit(1)
 
 logger.debug("Initialized socket for fake SSH server.")
@@ -172,7 +172,7 @@ class ChannelListener(object):
             self.client, _ = self.sock.accept()
         except Exception as e:  # pylint: disable=broad-except
             logger.error('*** Listen/accept failed: %s', str(e))
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             sys.exit(1)
 
     def handle(self):
@@ -197,6 +197,10 @@ class ChannelListener(object):
             if self.chan is None:
                 logger.error('*** No channel.')
                 # sys.exit(1)
+                try:
+                    self.transport.close()
+                except:  # pylint: disable=bare-except
+                    logger.error(traceback.format_exc())
                 return
             logger.info('Authenticated!')
 
@@ -212,6 +216,10 @@ class ChannelListener(object):
                     self.chan.send_stderr(message)
                     self.chan.send_exit_status(1)
                     self.chan.close()
+                    try:
+                        self.transport.close()
+                    except:  # pylint: disable=bare-except
+                        logger.error(traceback.format_exc())
                     return
 
             if sys.platform.startswith("win"):
@@ -324,6 +332,10 @@ class ChannelListener(object):
                     except socket.error:
                         logger.error("read_protocol_messages socket error.")
                         logger.error(traceback.format_exc())
+                        try:
+                            self.transport.close()
+                        except:  # pylint: disable=bare-except
+                            logger.error(traceback.format_exc())
                         return
 
                 def adjust_window_size():
@@ -365,6 +377,10 @@ class ChannelListener(object):
                     except socket.error:
                         logger.error("read_file_content socket error.")
                         logger.error(traceback.format_exc())
+                        try:
+                            self.transport.close()
+                        except:  # pylint: disable=bare-except
+                            logger.error(traceback.format_exc())
                         return
 
                 def read_remote_stderr():
@@ -383,6 +399,10 @@ class ChannelListener(object):
                     except socket.error:
                         logger.error("read_remote_stderr socket error.")
                         logger.error(traceback.format_exc())
+                        try:
+                            self.transport.close()
+                        except:  # pylint: disable=bare-except
+                            logger.error(traceback.format_exc())
                         return
                 stderr_thread = \
                     threading.Thread(target=read_remote_stderr)
@@ -413,13 +433,17 @@ class ChannelListener(object):
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
                 logger.info("")
+                try:
+                    self.transport.close()
+                except:  # pylint: disable=bare-except
+                    logger.error(traceback.format_exc())
         except Exception as e:  # pylint: disable=broad-except
             logger.error('*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
             logger.error(traceback.format_exc())
             try:
                 self.transport.close()
             except:  # pylint: disable=bare-except
-                traceback.print_exc()
+                logger.error(traceback.format_exc())
             sys.exit(1)
 
 while True:
