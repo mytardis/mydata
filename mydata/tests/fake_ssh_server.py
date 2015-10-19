@@ -173,7 +173,7 @@ class ChannelListener(object):
         except Exception as e:  # pylint: disable=broad-except
             logger.error('*** Listen/accept failed: %s', str(e))
             logger.error(traceback.format_exc())
-            sys.exit(1)
+            return
 
     def handle(self):
         # pylint: disable=too-many-statements
@@ -187,7 +187,7 @@ class ChannelListener(object):
             self.transport.start_server(server=self.server)
         except paramiko.SSHException:
             logger.error('*** SSH negotiation failed.')
-            sys.exit(1)
+            return
 
         logger.debug('Got a connection!')
 
@@ -196,7 +196,6 @@ class ChannelListener(object):
             self.chan = self.transport.accept(20)
             if self.chan is None:
                 logger.error('*** No channel.')
-                # sys.exit(1)
                 try:
                     self.transport.close()
                 except:  # pylint: disable=bare-except
@@ -444,7 +443,7 @@ class ChannelListener(object):
                 self.transport.close()
             except:  # pylint: disable=bare-except
                 logger.error(traceback.format_exc())
-            sys.exit(1)
+            return
 
 while True:
     channelListener = ChannelListener(SOCK)
