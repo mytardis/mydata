@@ -46,10 +46,11 @@ import re
 
 import paramiko
 from paramiko.py3compat import decodebytes
-
-import mydata.utils.openssh as OpenSSH
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
+
+import mydata.utils.openssh as OpenSSH
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
 sys.stderr.write("Setting up logging for fake SSH server.\n")
 # setup logging
@@ -67,7 +68,10 @@ class Server(paramiko.ServerInterface):
     """
     Fake SSH Server
     """
-    keyPair = OpenSSH.FindKeyPair("MyData")
+    try:
+        keyPair = OpenSSH.FindKeyPair("MyData")
+    except PrivateKeyDoesNotExist:
+        keyPair = OpenSSH.NewKeyPair("MyData")
     # Remove "ssh-rsa " and "MyData key":
     data = bytes(keyPair.GetPublicKey().split(" ")[1])
     mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
