@@ -124,17 +124,22 @@ class ScanFoldersTester(unittest.TestCase):
                               uploadsModel,
                               settingsModel)
 
-        sys.stderr.write("Waiting for fake SSH server to start up...\n")
         username = "mydata"
         try:
             keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
         privateKeyFilePath = keyPair.GetPrivateKeyFilePath()
-        host = "localhost"
+        host = "127.0.0.1"
         port = 2200
+        sys.stderr.write("Waiting for fake SSH server to start up...\n")
+        attempts = 0
         while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
                                            host, port):
+            attempts += 1
+            if attempts > 10:
+                raise Exception(
+                    "Couldn't connect to SSH server at 127.0.0.1:2200")
             time.sleep(0.1)
 
         foldersController.StartDataUploads()
