@@ -429,13 +429,16 @@ def SshServerIsReady(username, privateKeyFilePath,
                       OPENSSH.DoubleQuote("echo Ready")]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
+    sys.stderr.write("%s\n" % cmdString)
     proc = subprocess.Popen(cmdString,
                             shell=OPENSSH.preferToUseShellInSubprocess,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             startupinfo=DEFAULT_STARTUP_INFO,
                             creationflags=DEFAULT_CREATION_FLAGS)
-    proc.communicate()
+    stdout, _ = proc.communicate()
+    if proc.returncode != 0:
+        sys.stderr.write("%s\n" % stdout)
     return proc.returncode == 0
 
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
