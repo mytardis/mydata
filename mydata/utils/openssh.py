@@ -492,7 +492,6 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       OPENSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
-    print cmdString
     proc = subprocess.Popen(cmdString,
                             shell=OPENSSH.preferToUseShellInSubprocess,
                             stdout=subprocess.PIPE,
@@ -797,7 +796,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         skip += 1
 
         scpCommandString = \
-            '%s -P %s -i %s -c %s %s ' \
+            '%s -v -P %s -i %s -c %s %s ' \
             '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oStrictHostKeyChecking=no ' \
@@ -966,7 +965,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         raise SshException(stdout, mkdirProcess.returncode)
 
     scpCommandString = \
-        '%s -P %s -i %s -c %s ' \
+        '%s -v -P %s -i %s -c %s ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \
         '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
         '%s "%s@%s:\\"%s/\\""' \
@@ -987,7 +986,6 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
 
     stdout, _ = scpUploadProcess.communicate()
     if scpUploadProcess.returncode != 0:
-        print "ScpException: %s" % stdout
         raise ScpException(stdout, scpCommandString,
                            scpUploadProcess.returncode)
     bytesUploaded = fileSize
@@ -1096,7 +1094,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             return
 
         scpCommandString = \
-            '%s -P %s -i %s -c %s ' \
+            '%s -v -P %s -i %s -c %s ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
