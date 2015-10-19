@@ -33,7 +33,7 @@ if sys.platform.startswith("win"):
     elif len(sys.argv) == 3 and sys.argv[2] == 'unsigned':
         whether_to_sign = False
         del sys.argv[2:3]
-    elif len(sys.argv) == 2 and sys.argv[1] == 'nosetests':
+    elif len(sys.argv) >= 2 and sys.argv[1] == 'nosetests':
         pass
     else:
         print "\nUsage: python setup.py [build|bdist|install] " \
