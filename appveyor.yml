@@ -1,7 +1,12 @@
-init:
-  # Enable Remote Desktop access to build worker
-  # http://www.appveyor.com/docs/how-to/rdp-to-build-worker
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# appveyor.yml
+# Configuration for continuous integration (CI).
+# http://www.appveyor.com/about
+# http://www.appveyor.com/docs/appveyor-yml
+
+# Remote Desktop access to the build worker seems
+# to require a paid AppVeyor account, rather than
+# a free open-source account.
+# http://www.appveyor.com/docs/how-to/rdp-to-build-worker
 
 environment:
   global:
@@ -82,9 +87,3 @@ artifacts:
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
-
-on_finish:
-  # Allow extra Remote Desktop access time after the build is finished
-  # (until the build time limit is reached).
-  # http://www.appveyor.com/docs/how-to/rdp-to-build-worker
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))#
