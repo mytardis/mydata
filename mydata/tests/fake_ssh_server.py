@@ -1,28 +1,12 @@
 """
 fake_ssh_server.py
 
-based on Paramiko's demo_server.py:
-
-https://github.com/paramiko/paramiko/blob/master/demos/demo_server.py
+Local SSH/SCP server for testing.
 
 It listens on port 2200, so you can connect to it as follows:
 
 ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyData \
         -p 2200 mydata@localhost wc -c setup.py
-
-When running the above SSH client request, the following STDOUT appears
-on the client side:
-
-   20768 setup.py
-
-When running the above SSH client request, the following STDOUT appears from
-fake_ssh_server.py:
-
-Listening for an SSH/SCP connection on port 2200...
-Got a connection!
-Client asked us to execute: wc -c setup.py
-Authenticated!
-Executing: wc -c setup.py
 
 It can also be used to test SCP, for example, copying the file "hello"
 using a Cygwin build of scp from a Windows command prompt:
@@ -36,7 +20,7 @@ mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 # pylint: disable=invalid-name
 # pylint: disable=missing-docstring
 
-import socket
+import SocketServer
 import sys
 import threading
 import traceback
@@ -44,6 +28,7 @@ import subprocess
 import time
 import re
 import logging
+from cStringIO import StringIO
 
 import paramiko
 from paramiko.py3compat import decodebytes
@@ -70,21 +55,17 @@ handler.setFormatter(logging.Formatter(
     '%(name)s: %(message)s', '%Y%m%d-%H:%M:%S'))
 paramiko_logger.addHandler(handler)
 
-host_key = paramiko.RSAKey.generate(1024)
 
-
-class Server(paramiko.ServerInterface):
+class SshServerInterface(paramiko.ServerInterface):
     """
-    Fake SSH Server
+    Fake SSH/SCP Server interface.
     """
-    keyPair = OpenSSH.FindKeyPair("MyData")
-    # Remove "ssh-rsa " and "MyData key":
-    data = bytes(keyPair.GetPublicKey().split(" ")[1])
-    mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
-
     def __init__(self):
-        self.event = threading.Event()
         self.command = None
+        keyPair = OpenSSH.FindKeyPair("MyData")
+        # Remove "ssh-rsa " and "MyData key":
+        data = bytes(keyPair.GetPublicKey().split(" ")[1])
+        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
@@ -115,35 +96,61 @@ class Server(paramiko.ServerInterface):
         return 'publickey,password'
 
     def check_channel_shell_request(self, channel):
-        self.event.set()
-        return True
+        return False
 
     def check_channel_pty_request(self, channel, term, width, height,
                                   pixelwidth, pixelheight, modes):
         # pylint: disable=too-many-arguments
         return True
 
-logger.debug("Initializing socket for fake SSH server.")
-try:
-    SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    SOCK.bind(('127.0.0.1', 2200))
-except Exception as e:  # pylint: disable=broad-except
-    logger.error(traceback.format_exc())
-    sys.exit(1)
 
-logger.debug("Initialized socket for fake SSH server.")
+# Default host key used by ThreadedSshServer
+#
+DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
+    "-----BEGIN RSA PRIVATE KEY-----\n" \
+    "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n" \
+    "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n" \
+    "DiN+GmGxCSFfxRQtyA0pa7qMDnXUKnFVViDc1r6WlzkOjmFPVRvvOO/fisumN8qM\n" \
+    "72N82wFzI9cWPMg1cx60ioRFHJ56Oz1D43IEc7jLw4weIxp+1HDciVwN1FMGcpf5\n" \
+    "9MkwYKqsu3zJKsrOJq59NwDwvGPZ0ZJHXOk8jvAdjH5fOyleQQCLdTmHZFR4gLMA\n" \
+    "cz9puMjUJwHQ0+YZ+SI9w8pkmIo1EEXWo2MV3wIDAQABAoIBAQCJGPkrXhvkAVck\n" \
+    "PwhnlqT/DOgZQ+cee+lTRCFmRjP2HWL0jqQwzwJjoXkNYcLXZ2STjBEqTKBl3ZvT\n" \
+    "Rk9Wf8R8tYuPGu7NzwgMYvHj+a2Rd6kGM2AFzT9mkjYE120hDzk3xjFDwRKDMLVn\n" \
+    "ebtEOCYOjN09+0z4/U+21QmK+ZRwoc283kJz4RcHI64GhzHxvvzVONHIgjWWzP15\n" \
+    "Cnjnn3CjNTJYoa/oP6/XF7gcZqMmKN95YVkBlqcC23QAncRCmKNadShiggVEms9z\n" \
+    "6nZu+0vHKUEjgSPTuq0G0yavCv/4jtWyKywdt2C+RZf1TZg4ng5jgIXVbPzzRGL/\n" \
+    "gwzccvgRAoGBANxavLHltKGvNg4nxvI13GXlTEURhtOAOGpRu64/drQml+BhRf5H\n" \
+    "IiR1esaVYJvwIWmAiccH/ATQ5x32EDOZnhBKE3eZxhOr1ms4MQqJlVWxKQgC6Ee+\n" \
+    "NzXfdhrj9ryvdt5/CfXupsTAZkFDSCJdJ0aBCpQpamiq7qcqQvAxSCZdAoGBAM0R\n" \
+    "nCrU4MMW+tWzGi/UvpMXTc74yKqG83GUl5zuuZmTE5gZmcx7+8XAhXRFe5piEPmV\n" \
+    "XKIth6cNg3NFUdgfZeeUPeffbFUj8egSkMrqUBiLDQ9WasXg9Ju0aYfXiA9WkqJM\n" \
+    "u6C6T7pLzxWOOt2jKZzQLjonlSv5/jebU47JvHFrAoGAfKnk+SxAjfyHM2jzl9I6\n" \
+    "93bLOIQa6AsxX40QBhund3IiGHJP2/S4bzH7nN+jwXUQIhTzXaO5w6vAJWYxck/l\n" \
+    "acfOzao0sqpT62Ll89U0pD9PPFYQvY3yxErBEaOI0uTd9jCfHQDAXq2O7Ds5Ux+q\n" \
+    "eavFpV7s8XxK+k3hguwOqo0CgYBlRZYW/OxGzBlx4bJD/s9iurZ9SRVoSZ7974D0\n" \
+    "Sly0QBMEIVh3yJ7s6Qe/BPVmp5l0eFO37743PJA3I/uoPNFJjUcJNKg+X7L+hfSl\n" \
+    "kROfG0SG14mBUXfbUTxwjnst//YIWtaqKHhpKzkIjyX5ALPzMkgyBgxAHIR0F6wr\n" \
+    "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n" \
+    "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n" \
+    "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n" \
+    "-----END RSA PRIVATE KEY-----\n"
+))
 
-class ChannelListener(object):
+class SshRequestHandler(SocketServer.BaseRequestHandler):
     """
-    Listen for SSH/SCP connection.
+    Handles a client address and creates a paramiko
+    Transport object.
     """
     # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, sock):
-        self.sock = sock
+    def __init__(self, request, client_address, server):
+        SocketServer.BaseRequestHandler.__init__(self, request, client_address,
+                                                 server)
+        self.timeout = 60
+        self.auth_timeout = 60
+
         self.chan = None
-        self.server = None
+        self.server_instance = None
         self.client = None
         self.transport = None
 
@@ -163,28 +170,24 @@ class ChannelListener(object):
         # file_name: File name
         self.file_name = None
 
-    def listen(self):
-        # pylint: disable=too-many-branches
-        try:
-            backlog = 0
-            self.sock.listen(backlog)
-            logger.info('Listening for an SSH/SCP connection on port 2200...')
-            self.client, _ = self.sock.accept()
-        except Exception as e:  # pylint: disable=broad-except
-            logger.error('*** Listen/accept failed: %s', str(e))
-            logger.error(traceback.format_exc())
-            return
+    def setup(self):
+        """
+        Creates the SSH transport. Sets security options.
+        """
+        self.transport = paramiko.Transport(self.request)
+        self.transport.add_server_key(self.server.host_key)
 
     def handle(self):
+        """
+        Start the paramiko server, this will start a thread to handle
+        the connection.
+        """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
-        self.transport = paramiko.Transport(self.client)
-        self.transport.add_server_key(host_key)
-
-        self.server = Server()
 
         try:
-            self.transport.start_server(server=self.server)
+            self.server_instance = SshServerInterface()
+            self.transport.start_server(server=self.server_instance)
         except paramiko.SSHException:
             logger.error('*** SSH negotiation failed.')
             return
@@ -205,7 +208,7 @@ class ChannelListener(object):
 
             # Wait for the SSH/SCP client to provide a remote command.
             count = 0
-            while not self.server.command:
+            while not self.server_instance.command:
                 time.sleep(0.01)
                 count += 1
                 if count > 100:
@@ -223,27 +226,27 @@ class ChannelListener(object):
 
             if sys.platform.startswith("win"):
                 # Use bundled Cygwin binaries for these commands:
-                if self.server.command.startswith("/bin/rm -f"):
-                    self.server.command = \
-                        self.server.command.replace("/bin/rm",
-                                                    OpenSSH.OPENSSH.rm)
-                if self.server.command.startswith("mkdir"):
-                    self.server.command = \
-                        self.server.command.replace("mkdir",
-                                                    OpenSSH.OPENSSH.mkdir)
-                if self.server.command.startswith("cat"):
-                    self.server.command = \
-                        self.server.command.replace("cat",
-                                                    OpenSSH.OPENSSH.cat)
-                if self.server.command.startswith("scp"):
-                    self.server.command = \
-                        self.server.command.replace("scp",
-                                                    OpenSSH.OPENSSH.scp)
+                if self.server_instance.command.startswith("/bin/rm -f"):
+                    self.server_instance.command = \
+                        self.server_instance.command.replace("/bin/rm",
+                                                             OpenSSH.OPENSSH.rm)
+                if self.server_instance.command.startswith("mkdir"):
+                    self.server_instance.command = \
+                        self.server_instance.command.replace("mkdir",
+                                                             OpenSSH.OPENSSH.mkdir)
+                if self.server_instance.command.startswith("cat"):
+                    self.server_instance.command = \
+                        self.server_instance.command.replace("cat",
+                                                             OpenSSH.OPENSSH.cat)
+                if self.server_instance.command.startswith("scp"):
+                    self.server_instance.command = \
+                        self.server_instance.command.replace("scp",
+                                                             OpenSSH.OPENSSH.scp)
 
-            if "scp" not in self.server.command:
+            if "scp" not in self.server_instance.command:
                 # Execute a remote command other than scp.
-                logger.info("Executing: %s", self.server.command)
-                proc = subprocess.Popen(self.server.command,
+                logger.info("Executing: %s", self.server_instance.command)
+                proc = subprocess.Popen(self.server_instance.command,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         shell=True)
@@ -253,13 +256,12 @@ class ChannelListener(object):
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
 
-            if "scp" in self.server.command:
-                if "-v" in self.server.command.split(" "):
-                    self.verbose = True
+            if "scp" in self.server_instance.command:
+                self.verbose = ("-v" in self.server_instance.command.split(" "))
                 if self.verbose:
-                    logger.info("Executing: %s", self.server.command)
+                    logger.info("Executing: %s", self.server_instance.command)
                 stderr_handle = subprocess.PIPE if self.verbose else None
-                proc = subprocess.Popen(self.server.command,
+                proc = subprocess.Popen(self.server_instance.command,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=stderr_handle,
@@ -328,8 +330,8 @@ class ChannelListener(object):
                         else:
                             raise Exception(
                                 "Unknown message format: %s" % buf)
-                    except socket.error:
-                        logger.error("read_protocol_messages socket error.")
+                    except:  # pylint: disable=bare-except
+                        logger.error("read_protocol_messages error.")
                         logger.error(traceback.format_exc())
                         try:
                             self.transport.close()
@@ -358,7 +360,6 @@ class ChannelListener(object):
                     self.transport._send_user_message(m)
 
 
-
                 def read_file_content():
                     try:
                         while not self.chan.recv_ready():
@@ -373,8 +374,8 @@ class ChannelListener(object):
                             proc.stdin.flush()
                             if len(chunk) < chunk_size:
                                 break
-                    except socket.error:
-                        logger.error("read_file_content socket error.")
+                    except:  # pylint: disable=bare-except
+                        logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
                         try:
                             self.transport.close()
@@ -395,8 +396,8 @@ class ChannelListener(object):
                             if char == '\0':
                                 self.chan.send('\0')
                                 break
-                    except socket.error:
-                        logger.error("read_remote_stderr socket error.")
+                    except:  # pylint: disable=bare-except
+                        logger.error("read_remote_stderr error.")
                         logger.error(traceback.format_exc())
                         try:
                             self.transport.close()
@@ -445,14 +446,50 @@ class ChannelListener(object):
                 logger.error(traceback.format_exc())
             return
 
-while True:
-    channelListener = ChannelListener(SOCK)
-    channelListener.listen()
-    def handle():
+    def handle_timeout(self):
         try:
-            channelListener.handle()
-        except EOFError, err:
-            if err is not None and str(err).strip() != "":
-                logger.error(str(err))
-    handler = threading.Thread(target=handle)
-    handler.start()
+            self.transport.close()
+        finally:
+            SocketServer.BaseRequestHandler.handle_timeout(self)
+
+
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    """
+    ThreadedTCPServer
+    """
+    pass
+
+
+class ThreadedSshServer(ThreadedTCPServer):
+    """
+    A multi-threaded test server for SSH/SCP.
+
+    Can be used as follows:
+
+        server = ThreadedSshServer((hostname, port))
+        server.serve_forever()
+    """
+    # If the server stops/starts quickly, don't fail because of
+    # "port in use" error.
+    allow_reuse_address = True
+
+    def __init__(self, address):
+        self.host_key = DEFAULT_HOST_KEY
+        SocketServer.TCPServer.__init__(self, address, SshRequestHandler)
+
+    def shutdown_request(self, request):
+        # Prevent TCPServer from closing the connection prematurely
+        return
+
+    def close_request(self, request):
+        # Prevent TCPServer from closing the connection prematurely
+        return
+
+
+if __name__ == "__main__":
+    SERVER = ThreadedSshServer(("127.0.0.1", 2200))
+    try:
+        print "Listening on port 2200..."
+        SERVER.serve_forever()
+    except (SystemExit, KeyboardInterrupt):
+        SERVER.server_close()
