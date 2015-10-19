@@ -51,7 +51,6 @@ from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 
 import mydata.utils.openssh as OpenSSH
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
 # setup logging
 logger = logging.getLogger(__name__)
@@ -78,10 +77,7 @@ class Server(paramiko.ServerInterface):
     """
     Fake SSH Server
     """
-    try:
-        keyPair = OpenSSH.FindKeyPair("MyData")
-    except PrivateKeyDoesNotExist:
-        keyPair = OpenSSH.NewKeyPair("MyData")
+    keyPair = OpenSSH.FindKeyPair("MyData")
     # Remove "ssh-rsa " and "MyData key":
     data = bytes(keyPair.GetPublicKey().split(" ")[1])
     mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
@@ -127,7 +123,7 @@ class Server(paramiko.ServerInterface):
         # pylint: disable=too-many-arguments
         return True
 
-logger.debug("Initializing socket for fake SSH server.\n")
+logger.debug("Initializing socket for fake SSH server.")
 try:
     SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -136,7 +132,7 @@ except Exception as e:  # pylint: disable=broad-except
     traceback.print_exc()
     sys.exit(1)
 
-logger.debug("Initialized socket for fake SSH server.\n")
+logger.debug("Initialized socket for fake SSH server.")
 
 class ChannelListener(object):
     """

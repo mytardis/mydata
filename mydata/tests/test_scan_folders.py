@@ -39,6 +39,14 @@ class ScanFoldersTester(unittest.TestCase):
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanFoldersTester')
         self.StartFakeMyTardisServer()
+        # The fake SSH server needs to know the public
+        # key so it can authenticate the test client.
+        # So we need to ensure that the MyData keypair
+        # is generated before starting the fake SSH server.
+        try:
+            self.keyPair = OpenSSH.FindKeyPair("MyData")
+        except PrivateKeyDoesNotExist:
+            self.keyPair = OpenSSH.NewKeyPair("MyData")
         self.StartFakeSshServer()
 
     def tearDown(self):
@@ -125,11 +133,7 @@ class ScanFoldersTester(unittest.TestCase):
                               settingsModel)
 
         username = "mydata"
-        try:
-            keyPair = OpenSSH.FindKeyPair("MyData")
-        except PrivateKeyDoesNotExist:
-            keyPair = OpenSSH.NewKeyPair("MyData")
-        privateKeyFilePath = keyPair.GetPrivateKeyFilePath()
+        privateKeyFilePath = self.keyPair.GetPrivateKeyFilePath()
         host = "127.0.0.1"
         port = 2200
         sys.stderr.write("Waiting for fake SSH server to start up...\n")
