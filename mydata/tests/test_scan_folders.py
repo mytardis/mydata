@@ -222,8 +222,6 @@ class ScanFoldersTester(unittest.TestCase):
         self.fakeSshServerProcess = \
             subprocess.Popen([sys.executable,
                               "mydata/tests/fake_ssh_server.py"],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
                              env=os.environ)
 
 
