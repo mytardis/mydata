@@ -82,11 +82,11 @@ class ScanFoldersTester(unittest.TestCase):
                              timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
-                sys.stderr.write(str(err) + "\n")
                 time.sleep(0.1)
                 if attempts > 10:
-                    raise Exception("Couldn't connect to %s"
-                                    % settingsModel.GetMyTardisUrl())
+                    raise Exception("Couldn't connect to %s: %s"
+                                    % (settingsModel.GetMyTardisUrl(),
+                                       str(err)))
 
         settingsValidation = settingsModel.Validate()
         assert settingsValidation.IsValid()

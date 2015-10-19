@@ -39,16 +39,16 @@ import mydata.utils.openssh as OpenSSH
 
 # setup logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 handler = logging.StreamHandler(sys.stderr)
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 paramiko_logger = logging.getLogger("paramiko")
-paramiko_logger.setLevel(logging.DEBUG)
+paramiko_logger.setLevel(logging.WARNING)
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter(
     '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d ' \
@@ -489,7 +489,7 @@ class ThreadedSshServer(ThreadedTCPServer):
 if __name__ == "__main__":
     SERVER = ThreadedSshServer(("127.0.0.1", 2200))
     try:
-        print "Listening on port 2200..."
+        logger.info("Listening on port 2200...")
         SERVER.serve_forever()
     except (SystemExit, KeyboardInterrupt):
         SERVER.server_close()
