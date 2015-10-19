@@ -716,7 +716,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to PUT: %s" % self.path)
 
-    def log_message(self, format, *args):
+    def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         """
         Supressing logging of HTTP requests to STDERR.
         """
