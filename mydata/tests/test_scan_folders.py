@@ -20,6 +20,7 @@ from mydata.views.folders import FoldersView
 from mydata.controllers.folders import FoldersController
 import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,10 @@ class ScanFoldersTester(unittest.TestCase):
 
         print "Waiting for fake SSH server to start up..."
         username = "mydata"
-        keyPair = OpenSSH.FindKeyPair("MyData")
+        try:
+            keyPair = OpenSSH.FindKeyPair("MyData")
+        except PrivateKeyDoesNotExist:
+            keyPair = OpenSSH.NewKeyPair("MyData")
         privateKeyFilePath = keyPair.GetPrivateKeyFilePath()
         host = "localhost"
         port = 2200
