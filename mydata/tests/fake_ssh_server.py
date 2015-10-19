@@ -54,8 +54,6 @@ import mydata.utils.openssh as OpenSSH
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
 # setup logging
-paramiko.util.log_to_file('fake_ssh_server.log')
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -64,6 +62,14 @@ handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+paramiko_logger = logging.getLogger("paramiko")
+paramiko_logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter(
+    '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d ' \
+    '%(name)s: %(message)s', '%Y%m%d-%H:%M:%S'))
+paramiko_logger.addHandler(handler)
 
 host_key = paramiko.RSAKey.generate(1024)
 
