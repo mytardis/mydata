@@ -65,7 +65,7 @@ class ScanFoldersTester(unittest.TestCase):
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdata1"))
         settingsModel.SetUseSshControlMasterIfAvailable(False)
-        print "Waiting for fake MyTardis server to start..."
+        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
             try:
@@ -74,7 +74,7 @@ class ScanFoldersTester(unittest.TestCase):
                              timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
-                print str(err)
+                sys.stderr.write(str(err) + "\n")
                 time.sleep(0.1)
                 if attempts > 10:
                     raise Exception("Couldn't connect to %s"
@@ -124,7 +124,7 @@ class ScanFoldersTester(unittest.TestCase):
                               uploadsModel,
                               settingsModel)
 
-        print "Waiting for fake SSH server to start up..."
+        sys.stderr.write("Waiting for fake SSH server to start up...\n")
         username = "mydata"
         try:
             keyPair = OpenSSH.FindKeyPair("MyData")
@@ -169,7 +169,7 @@ class ScanFoldersTester(unittest.TestCase):
                 verificationModel=verificationModel)
             foldersController.UploadDatafile(event)
 
-        print "Waiting for uploads to complete..."
+        sys.stderr.write("Waiting for uploads to complete...\n")
         logger.debug("Waiting for uploads to complete...")
         while True:
             uploadsCompleted = uploadsModel.GetCompletedCount()
@@ -181,20 +181,21 @@ class ScanFoldersTester(unittest.TestCase):
             time.sleep(0.1)
         foldersController.ShutDownUploadThreads()
 
-        print ""
-        print "%d/%d uploads completed." % (uploadsCompleted, uploadsProcessed)
+        sys.stderr.write("\n")
+        sys.stderr.write("%d/%d uploads completed.\n" % (uploadsCompleted, uploadsProcessed))
         if uploadsFailed > 0:
-            print "%d/%d uploads failed." % (uploadsFailed, uploadsProcessed)
+            sys.stderr.write("%d/%d uploads failed.\n" % (uploadsFailed, uploadsProcessed))
 
         for i in range(uploadsProcessed):
             uploadModel = uploadsModel.uploadsData[i]
             if uploadModel.GetStatus() == UploadStatus.FAILED:
-                print "Upload failed for %s: %s" % \
+                sys.stderr.write(
+                    "Upload failed for %s: %s\n" %
                     (uploadModel.GetFilename(),
-                     uploadModel.GetMessage().strip())
+                     uploadModel.GetMessage().strip()))
                 if uploadModel.GetTraceback():
-                    print uploadModel.GetTraceback()
-        print ""
+                    sys.stderr.write(uploadModel.GetTraceback())
+        sys.stderr.write("\n")
 
         assert uploadsCompleted == numFiles
 
