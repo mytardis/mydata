@@ -716,6 +716,12 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to PUT: %s" % self.path)
 
+    def log_message(self, format, *args):
+        """
+        Supressing logging of HTTP requests to STDERR.
+        """
+        return
+
 
 if __name__ == '__main__':
     HTTPD = BaseHTTPServer.HTTPServer((HOST_NAME, PORT_NUMBER),

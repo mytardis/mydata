@@ -429,7 +429,6 @@ def SshServerIsReady(username, privateKeyFilePath,
                       OPENSSH.DoubleQuote("echo Ready")]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
-    sys.stderr.write("%s\n" % cmdString)
     proc = subprocess.Popen(cmdString,
                             shell=OPENSSH.preferToUseShellInSubprocess,
                             stdout=subprocess.PIPE,
