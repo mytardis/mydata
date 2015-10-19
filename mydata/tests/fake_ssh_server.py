@@ -51,10 +51,14 @@ import mydata.utils.openssh as OpenSSH
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 
+sys.stderr.write("Setting up logging for fake SSH server.\n")
 # setup logging
 paramiko.util.log_to_file('fake_ssh_server.log')
+sys.stderr.write("Finished setting up logging for fake SSH server.\n")
 
+sys.stderr.write("Generating host key for fake SSH server.\n")
 host_key = paramiko.RSAKey.generate(1024)
+sys.stderr.write("Generated host key for fake SSH server.\n")
 
 DEBUG = True
 
@@ -109,16 +113,21 @@ class Server(paramiko.ServerInterface):
         # pylint: disable=too-many-arguments
         return True
 
-# now connect
+sys.stderr.write("Initializing socket for fake SSH server (1)\n")
 try:
+    sys.stderr.write("Initializing socket for fake SSH server (2)\n")
     SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sys.stderr.write("Initializing socket for fake SSH server (3)\n")
     SOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sys.stderr.write("Initializing socket for fake SSH server (4)\n")
     SOCK.bind(('127.0.0.1', 2200))
+    sys.stderr.write("Initializing socket for fake SSH server (5)\n")
 except Exception as e:  # pylint: disable=broad-except
     sys.stderr.write('*** Bind failed: %s\n' % str(e))
     traceback.print_exc()
     sys.exit(1)
 
+sys.stderr.write("Initialized socket for fake SSH server (6)\n")
 
 class ChannelListener(object):
     """
