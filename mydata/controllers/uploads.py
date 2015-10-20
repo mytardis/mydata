@@ -319,6 +319,8 @@ class UploadDatafileRunnable(object):
                                            self.foldersController,
                                            self.uploadModel)
                             except IOError, err:
+                                self.uploadModel.SetTraceback(
+                                    traceback.format_exc())
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -332,6 +334,8 @@ class UploadDatafileRunnable(object):
                                 else:
                                     raise
                             except ScpException, err:
+                                self.uploadModel.SetTraceback(
+                                    traceback.format_exc())
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -345,6 +349,8 @@ class UploadDatafileRunnable(object):
                                 else:
                                     raise
                             except SshException, err:
+                                self.uploadModel.SetTraceback(
+                                    traceback.format_exc())
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -434,6 +440,8 @@ class UploadDatafileRunnable(object):
                             # raise an exception and abort all uploads.
                             pass
             except DoesNotExist, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 # This generally means that MyTardis's API couldn't assign
                 # a staging storage box, possibly because the MyTardis
                 # administrator hasn't created a storage box record with
@@ -454,6 +462,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostRefusedSshConnection, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
@@ -467,6 +477,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
@@ -480,6 +492,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except SshControlMasterLimit, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
@@ -493,6 +507,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except ScpException, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 if self.foldersController.IsShuttingDown() or \
                         self.uploadModel.Canceled():
                     return
@@ -500,6 +516,8 @@ class UploadDatafileRunnable(object):
                 message += "\n\n" + err.command
                 logger.error(message)
             except ValueError, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 if str(err) == "read of closed file" or \
                         str(err) == "seek of closed file":
                     logger.debug("Aborting upload for \"%s\" because "
@@ -509,6 +527,8 @@ class UploadDatafileRunnable(object):
                 else:
                     raise
             except IncompatibleMyTardisVersion, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
@@ -522,6 +542,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except StorageBoxAttributeNotFound, err:
+                self.uploadModel.SetTraceback(
+                    traceback.format_exc())
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.shutdownUploadsEvent(
@@ -535,6 +557,8 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
         except urllib2.HTTPError, err:
+            self.uploadModel.SetTraceback(
+                traceback.format_exc())
             logger.error("url: " + url)
             logger.error(traceback.format_exc())
             errorResponse = err.read()
@@ -561,18 +585,17 @@ class UploadDatafileRunnable(object):
                                         icon=wx.ICON_ERROR))
             return
         except Exception, err:
+            self.uploadModel.SetMessage(str(err))
+            self.uploadModel.SetStatus(UploadStatus.FAILED)
+            self.uploadModel.SetTraceback(traceback.format_exc())
+            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
+            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             if not self.foldersController.IsShuttingDown():
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
                     self.foldersController.connectionStatusEvent(
                         myTardisUrl=self.settingsModel.GetMyTardisUrl(),
                         connectionStatus=ConnectionStatus.DISCONNECTED))
-
-            self.uploadModel.SetMessage(str(err))
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
-            self.uploadModel.SetTraceback(traceback.format_exc())
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             if dataFileDirectory != "":
                 logger.debug("Upload failed for datafile " + dataFileName +
                              " in subdirectory " + dataFileDirectory +
