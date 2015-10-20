@@ -82,7 +82,7 @@ class ScanFoldersTester(unittest.TestCase):
                              timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
-                time.sleep(0.1)
+                time.sleep(0.25)
                 if attempts > 10:
                     raise Exception("Couldn't connect to %s: %s"
                                     % (settingsModel.GetMyTardisUrl(),
@@ -144,7 +144,7 @@ class ScanFoldersTester(unittest.TestCase):
             if attempts > 10:
                 raise Exception(
                     "Couldn't connect to SSH server at 127.0.0.1:2200")
-            time.sleep(0.1)
+            time.sleep(0.25)
 
         foldersController.StartDataUploads()
 
