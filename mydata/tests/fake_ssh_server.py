@@ -206,7 +206,8 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 return
             logger.info('Authenticated!')
 
-            # Wait for the SSH/SCP client to provide a remote command.
+            # Wait for the SSH/SCP client to provide a "remote" command.
+            # (to be run locally when running a test server on 127.0.0.1).
             count = 0
             while not self.server_instance.command:
                 time.sleep(0.01)
@@ -244,7 +245,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                                                              OpenSSH.OPENSSH.scp)
 
             if "scp" not in self.server_instance.command:
-                # Execute a remote command other than scp.
+                # Execute a "remote" command other than scp.
                 logger.info("Executing: %s", self.server_instance.command)
                 proc = subprocess.Popen(self.server_instance.command,
                                         stdout=subprocess.PIPE,
@@ -267,7 +268,11 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                                         stderr=stderr_handle,
                                         shell=True)
                 # Confirm to the channel that we started the command:
-                self.chan.send('\0')
+                logger.info("Waiting for the 'scp -t' process to "
+                            "acknowledge that it has started up OK.")
+                response = proc.stdout.read(1)
+                assert response == '\0'
+                self.chan.send(response)
 
                 def read_protocol_messages():
                     """
@@ -324,12 +329,14 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             self.file_mode = match2.group(2)
                             self.file_size = int(match2.group(3))
                             self.file_name = match2.group(4)
-                            # Acknowledge receipt of file modes.
-                            self.chan.send('\0')
-                            buf = ""
                         else:
                             raise Exception(
                                 "Unknown message format: %s" % buf)
+                        logger.info("Waiting for the 'scp -t' process "
+                                    "to acknowledge protocol messages.")
+                        response = proc.stdout.read(1)
+                        assert response == '\0'
+                        self.chan.send(response)
                     except:  # pylint: disable=bare-except
                         logger.error("read_protocol_messages error.")
                         logger.error(traceback.format_exc())
@@ -421,14 +428,21 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     stderr_thread.join()
                     logger.info("Joined stderr.")
 
-                logger.info("Reading file content...")
+                logger.info("Reading file content and writing to scp -t...")
                 read_file_content()
-                logger.info("Finished reading file content.")
+                logger.info(
+                    "Finished reading file content and writing to scp -t.")
+
+                logger.info("Waiting for 'scp -t' to acknowledge that it "
+                            "has received all of the file content.")
+                response = proc.stdout.read(1)
+                assert response == '\0'
+                self.chan.send(response)
 
                 if not proc.returncode:
                     stdout, _ = proc.communicate()
                 logger.info("scp -t exit code = %s", str(proc.returncode))
-                self.chan.send('\0')
+                # 'E' means 'end' in the SCP protocol:
                 self.chan.send('E\n\0')
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
