@@ -375,12 +375,15 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         # Read the file content from the SSH channel,
                         # and write it into the "scp -t" subprocess:
                         chunk_size = 1024
+                        bytes_written = 0
                         while True:
                             chunk = self.chan.recv(chunk_size)
                             proc.stdin.write(chunk)
                             proc.stdin.flush()
+                            bytes_written += len(chunk)
                             if len(chunk) < chunk_size:
                                 break
+                        logger.info("%d bytes written to scp -t" % bytes_written)
                     except:  # pylint: disable=bare-except
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
