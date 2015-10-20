@@ -437,7 +437,7 @@ def SshServerIsReady(username, privateKeyFilePath,
                             creationflags=DEFAULT_CREATION_FLAGS)
     stdout, _ = proc.communicate()
     if proc.returncode != 0:
-        sys.stderr.write("%s\n" % stdout)
+        logger.debug(stdout)
     return proc.returncode == 0
 
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
