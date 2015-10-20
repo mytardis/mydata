@@ -383,7 +383,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             bytes_written += len(chunk)
                             if len(chunk) < chunk_size:
                                 break
-                        logger.info("%d bytes written to scp -t" % bytes_written)
+                        logger.info("%d bytes written to scp -t", bytes_written)
                     except:  # pylint: disable=bare-except
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
