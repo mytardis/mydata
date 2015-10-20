@@ -39,10 +39,10 @@ import mydata.utils.openssh as OpenSSH
 
 # setup logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 
 handler = logging.StreamHandler(sys.stderr)
-handler.setLevel(logging.WARNING)
+handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
