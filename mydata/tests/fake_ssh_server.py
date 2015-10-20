@@ -329,14 +329,14 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             self.file_mode = match2.group(2)
                             self.file_size = int(match2.group(3))
                             self.file_name = match2.group(4)
+                            logger.info("Waiting for the 'scp -t' process "
+                                        "to acknowledge protocol messages.")
+                            response = proc.stdout.read(1)
+                            assert response == '\0'
+                            self.chan.send(response)
                         else:
                             raise Exception(
                                 "Unknown message format: %s" % buf)
-                        logger.info("Waiting for the 'scp -t' process "
-                                    "to acknowledge protocol messages.")
-                        response = proc.stdout.read(1)
-                        assert response == '\0'
-                        self.chan.send(response)
                     except:  # pylint: disable=bare-except
                         logger.error("read_protocol_messages error.")
                         logger.error(traceback.format_exc())
@@ -375,15 +375,28 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         # Read the file content from the SSH channel,
                         # and write it into the "scp -t" subprocess:
                         chunk_size = 1024
-                        bytes_written = 0
+                        previous_chunk = None
                         while True:
                             chunk = self.chan.recv(chunk_size)
                             proc.stdin.write(chunk)
                             proc.stdin.flush()
-                            bytes_written += len(chunk)
                             if len(chunk) < chunk_size:
+                                if len(chunk) > 0 and chunk[-1] != '\0':
+                                    # We just read the final chunk, but it didn't
+                                    # end with a null character ('\0'), so we'll
+                                    # add one.
+                                    proc.stdin.write('\0')
+                                    proc.stdin.flush()
+                                elif len(chunk) == 0 and \
+                                        (not previous_chunk or
+                                         previous_chunk[-1] != '\0'):
+                                    # We just read an empty chunk, so the previous
+                                    # chunk must have been the final chunk.  Let's
+                                    # ensure that it ends with a '\0'.
+                                    proc.stdin.write('\0')
+                                    proc.stdin.flush()
                                 break
-                        logger.info("%d bytes written to scp -t", bytes_written)
+                            previous_chunk = chunk
                     except:  # pylint: disable=bare-except
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
@@ -398,13 +411,12 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         buf = ""
                         while True:
                             char = proc.stderr.read(1)
+                            if len(char) < 1:
+                                break
                             buf += char
                             if char == '\n' and self.verbose:
                                 self.chan.send_stderr(buf)
-                                self.chan.send('\0')
-                                break
-                            if char == '\0':
-                                self.chan.send('\0')
+                                buf = ""
                                 break
                     except:  # pylint: disable=bare-except
                         logger.error("read_remote_stderr error.")
@@ -423,13 +435,10 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 logger.info("Reading protocol messages...")
                 read_protocol_messages()
                 logger.info("Finished reading protocol messages.")
+
                 logger.info("Adjusting window size...")
                 adjust_window_size()
                 logger.info("Finished adjusting window size.")
-                if self.verbose:
-                    logger.info("Joining stderr")
-                    stderr_thread.join()
-                    logger.info("Joined stderr.")
 
                 logger.info("Reading file content and writing to scp -t...")
                 read_file_content()
@@ -442,7 +451,17 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 assert response == '\0'
                 self.chan.send(response)
 
+                # Tell the SCP client that the progress meter has been stopped,
+                # so it can report the output to the user.
+                self.chan.send("\n")
+
+                if self.verbose:
+                    logger.info("Joining stderr")
+                    stderr_thread.join()
+                    logger.info("Joined stderr.")
+
                 if not proc.returncode:
+                    logger.info("Waiting for 'scp -t' process to finish running.")
                     stdout, _ = proc.communicate()
                 logger.info("scp -t exit code = %s", str(proc.returncode))
                 # 'E' means 'end' in the SCP protocol:
