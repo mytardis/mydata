@@ -1,14 +1,22 @@
+"""
+Represents the Folders tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
+# pylint: disable=missing-docstring
+
 import wx
 import wx.dataview as dv
 
-from mydata.models.folder import FolderModel
-
 
 class FoldersView(wx.Panel):
+    """
+    Represents the Folders tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, parent, foldersModel):
         wx.Panel.__init__(self, parent, -1)
 
-        # Create a dataview control
         self.foldersDataViewControl = dv.DataViewCtrl(self,
                                                       style=wx.BORDER_THEME
                                                       | dv.DV_ROW_LINES
@@ -22,26 +30,7 @@ class FoldersView(wx.Panel):
 
         self.foldersModel = foldersModel
 
-        # Associate model with the dataview control.  Models can
-        # be shared between multiple DataViewCtrls, so this does not
-        # assign ownership like many things in wx do.  There is some
-        # internal reference counting happening so you don't really
-        # need to hold a reference to it either, but we do for this
-        # example so we can fiddle with the model from the widget
-        # inspector or whatever.
         self.foldersDataViewControl.AssociateModel(self.foldersModel)
-
-        # Now we create some columns.  The second parameter is the
-        # column number within the model that the DataViewColumn will
-        # fetch the data from.  This means that you can have views
-        # using the same model that show different columns of data, or
-        # that they can be in a different order than in the model.
-
-        # Technically the column names and widths should be properties
-        # of the view, not the model.
-        # but it is convenient to keep them in the model, because
-        # that's we keep the keys for
-        # looking up values in dictionary-like objects.
 
         for col in range(0, self.foldersModel.GetColumnCount()):
             self.foldersDataViewControl\
@@ -51,42 +40,27 @@ class FoldersView(wx.Panel):
                                   .GetDefaultColumnWidth(col),
                                   mode=dv.DATAVIEW_CELL_INERT)
 
-        # There are Prepend methods too, and also convenience methods
-        # for other data types but we are only using strings in this
-        # example.  You can also create a DataViewColumn object
-        # yourself and then just use AppendColumn or PrependColumn.
+        firstColumn = self.foldersDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        c0 = self.foldersDataViewControl.Columns[0]
-
-        # The DataViewColumn object is returned from the Append and
-        # Prepend methods, and we can modify some of it's properties
-        # like this.
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
-
-        for c in self.foldersDataViewControl.Columns:
-            c.Sortable = True
-            c.Reorderable = True
+        for col in self.foldersDataViewControl.Columns:
+            col.Sortable = True
+            col.Reorderable = True
 
         # Let's change our minds and not let the first col be moved.
-        c0.Reorderable = False
+        firstColumn.Reorderable = False
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.foldersDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.foldersDataViewControl, 1, wx.EXPAND)
 
         self.openFolderButton = wx.Button(self, label="Open Folder")
 
         buttonBox = wx.BoxSizer(wx.HORIZONTAL)
         buttonBox.Add(self.openFolderButton, 0, wx.LEFT | wx.RIGHT, 5)
         self.Sizer.Add(buttonBox, 0, wx.TOP | wx.BOTTOM, 5)
-
-        # Bind some events so we can see what the DVC sends us
-        self.Bind(dv.EVT_DATAVIEW_ITEM_EDITING_DONE, self.OnEditingDone,
-                  self.foldersDataViewControl)
-        self.Bind(dv.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self.OnValueChanged,
-                  self.foldersDataViewControl)
 
         self.lastUsedFolderType = None
 
@@ -110,12 +84,6 @@ class FoldersView(wx.Panel):
         if okToDelete == wx.ID_OK:
             self.foldersModel.DeleteFolderById(folderId)
 
-    def OnEditingDone(self, evt):
-        pass
-
-    def OnValueChanged(self, evt):
-        pass
-
     def ShowGroupColumn(self, showOrHide):
         for col in range(0, self.foldersModel.GetColumnCount()):
             column = self.foldersDataViewControl.Columns[col]
@@ -128,17 +96,27 @@ class FoldersView(wx.Panel):
 
 
 class FoldersPopupMenu(wx.Menu):
-
-    def __init__(self, folderItem, openFolderCallback, deleteFolderCallback):
+    """
+    Creates popup menu when user right-clicks on Folders view,
+    allowing user to open a data folder in Windows Explorer (Windows)
+    or in Finder (Mac OS X).
+    """
+    # pylint: disable=too-few-public-methods
+    def __init__(self, folderItem, openFolderCallback):
+        # pylint: disable=invalid-name
         wx.Menu.__init__(self)
 
         self.folderItem = folderItem
         self.openFolderCallback = openFolderCallback
-        self.deleteFolderCallback = deleteFolderCallback
 
         self.openFolderMenuItem = wx.MenuItem(self, wx.NewId(), "Open Folder")
         self.AppendItem(self.openFolderMenuItem)
         self.Bind(wx.EVT_MENU, self.OnOpenFolder, self.openFolderMenuItem)
 
     def OnOpenFolder(self, event):
+        """
+        Runs the callback which was supplied when initializing the
+        FoldersPopupMenu instance.
+        """
         self.openFolderCallback(self.folderItem)
+        event.Skip()

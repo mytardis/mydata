@@ -1,4 +1,16 @@
-import json
+"""
+Model classes for the settings displayed in the settings dialog
+and saved to disk in MyData.cfg
+"""
+
+# Disabling some Pylint checks for now...
+# pylint: disable=missing-docstring
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-instance-attributes
+
 import sys
 import requests
 import traceback
@@ -23,22 +35,27 @@ from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
-defaultStartupInfo = None
-defaultCreationFlags = 0
+DEFAULT_STARTUP_INFO = None
+DEFAULT_CREATION_FLAGS = 0
 if sys.platform.startswith("win"):
-    defaultStartupInfo = subprocess.STARTUPINFO()
-    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    DEFAULT_STARTUP_INFO = subprocess.STARTUPINFO()
+    # pylint: disable=protected-access
+    DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
+    # pylint: disable=import-error
     import win32process
-    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 
-class LastSettingsUpdateTrigger:
+# pylint: disable=too-few-public-methods
+class LastSettingsUpdateTrigger(object):
+    # pylint: disable=invalid-name
     READ_FROM_DISK = 0
     UI_RESPONSE = 1
 
 
-class SettingsValidation():
+# pylint: disable=too-many-arguments
+class SettingsValidation(object):
     def __init__(self, valid, message="", field="", suggestion=None,
                  datasetCount=-1):
         self.valid = valid
@@ -63,7 +80,12 @@ class SettingsValidation():
         return self.datasetCount
 
 
-class SettingsModel():
+# pylint: disable=too-many-public-methods
+class SettingsModel(object):
+    """
+    Model class for the settings displayed in the settings dialog
+    and saved to disk in MyData.cfg
+    """
     def __init__(self, configPath):
         self.SetConfigPath(configPath)
 
@@ -74,8 +96,66 @@ class SettingsModel():
         self.validation = SettingsValidation(True)
         self.incompatibleMyTardisVersion = False
 
-        self.last_settings_update_trigger = \
+        self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
+
+        self.connectivityCheckInterval = 30  # seconds
+
+        # Allow MyData to reuse SSH connections on POSIX systems:
+        # (See ControlMaster and ControlPath in "man ssh_config".)
+        self.useSshControlMasterIfAvailable = True
+
+        # pylint: disable=invalid-name
+        # MyData mostly uses lowerCamelCase for attributes, but these
+        # attributes correspond to fields in MyData.cfg which we
+        # are using underscore_separated names for.
+
+        self.facility_name = ""
+        self.instrument_name = ""
+        self.contact_name = ""
+        self.contact_email = ""
+        self.data_directory = ""
+        self.mytardis_url = ""
+        self.username = ""
+        self.api_key = ""
+
+        self.schedule_type = "Manually"
+        self.scheduled_date = None
+        self.scheduled_time = None
+        self.monday_checked = False
+        self.tuesday_checked = False
+        self.wednesday_checked = False
+        self.thursday_checked = False
+        self.friday_checked = False
+        self.saturday_checked = False
+        self.sunday_checked = False
+        self.timer_from_time = None
+        self.timer_to_time = None
+        self.timer_minutes = 15
+
+        self.user_filter = ""
+        self.dataset_filter = ""
+        self.experiment_filter = ""
+        self.ignore_old_datasets = False
+        self.ignore_interval_number = 0
+        self.ignore_interval_unit = "months"
+
+        self.folder_structure = "Username / Dataset"
+        self.dataset_grouping = ""
+        self.group_prefix = ""
+        self.validate_folder_structure = True
+        self.max_upload_threads = 5
+        self.max_upload_retries = 5
+        self.start_automatically_on_login = True
+
+        self.locked = False
+        self.uuid = ""
+
+        self.defaultOwner = None
+        self.facility = None
+        self.instrument = None
+
+        self.createUploaderThreadingLock = threading.Lock()
 
         self.LoadSettings()
 
@@ -83,7 +163,7 @@ class SettingsModel():
         """
         Sets some default values for settings fields, then loads a settings
         file,
-        e.g. C:\Users\jsmith\AppData\Local\Monash University\MyData\MyData.cfg
+        e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
         """
         # General tab
         self.instrument_name = ""
@@ -143,6 +223,7 @@ class SettingsModel():
 
         if configPath is not None and os.path.exists(configPath):
             logger.info("Reading settings from: " + configPath)
+            # pylint: disable=bare-except
             try:
                 configParser = ConfigParser()
                 configParser.read(configPath)
@@ -262,7 +343,7 @@ class SettingsModel():
             except:
                 logger.error(traceback.format_exc())
 
-        self.last_settings_update_trigger = \
+        self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
 
     def GetInstrument(self):
@@ -287,11 +368,12 @@ class SettingsModel():
 
     def GetFacility(self):
         if not self.facility:
+            # pylint: disable=bare-except
             try:
                 facilities = FacilityModel.GetMyFacilities(self)
-                for f in facilities:
-                    if self.GetFacilityName() == f.GetName():
-                        self.facility = f
+                for facility in facilities:
+                    if self.GetFacilityName() == facility.GetName():
+                        self.facility = facility
                         break
             except:
                 logger.error(traceback.format_exc())
@@ -331,7 +413,7 @@ class SettingsModel():
         self.username = username
 
     def GetDefaultOwner(self):
-        if hasattr(self, "defaultOwner") and \
+        if self.defaultOwner and \
                 self.defaultOwner.GetUsername() == self.GetUsername():
             return self.defaultOwner
         self.defaultOwner = UserModel.GetUserByUsername(self,
@@ -428,6 +510,7 @@ class SettingsModel():
     def SetFolderStructure(self, folderStructure):
         self.folder_structure = folderStructure
 
+    # pylint: disable=no-self-use
     def AlertUserAboutMissingFolders(self):
         return False
 
@@ -524,12 +607,8 @@ class SettingsModel():
 
     def GetUploaderModel(self):
         if not self.uploaderModel:
-            """
-            This could be called from multiple threads simultaneously,
-            so it requires locking.
-            """
-            if not hasattr(self, "createUploaderThreadingLock"):
-                self.createUploaderThreadingLock = threading.Lock()
+            # This could be called from multiple threads
+            # simultaneously, so it requires locking.
             if self.createUploaderThreadingLock.acquire():
                 try:
                     self.uploaderModel = UploaderModel(self)
@@ -640,11 +719,13 @@ class SettingsModel():
         if saveToDisk:
             self.SaveToDisk(configPath)
 
-        self.last_settings_update_trigger = \
+        self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
 
-    def Validate(self, SetStatusMessage=None):
+    # pylint: disable=too-many-locals
+    def Validate(self, setStatusMessage=None):
         datasetCount = -1
+        # pylint: disable=bare-except
         try:
             if self.GetInstrumentName().strip() == "":
                 message = "Please enter a valid instrument name."
@@ -704,30 +785,31 @@ class SettingsModel():
                 return self.validation
 
             if self.ValidateFolderStructure():
-                if SetStatusMessage:
-                    SetStatusMessage(
-                        "Settings validation - checking folder structure...")
+                message = "Settings validation - checking folder structure..."
+                logger.debug(message)
+                if setStatusMessage:
+                    setStatusMessage(message)
                 self.validation = self.PerformFolderStructureValidation()
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
+            # pylint: disable=bare-except
             try:
-                if SetStatusMessage:
-                    SetStatusMessage(
-                        "Settings validation - checking MyTardis URL...")
-                session = requests.Session()
-                r = session.get(self.GetMyTardisUrl() + "/about/", timeout=5)
-                status_code = r.status_code
-                content = r.text
-                history = r.history
-                url = r.url
-                r.close()
-                session.close()
-                if status_code < 200 or status_code >= 300:
+                message = "Settings validation - checking MyTardis URL..."
+                logger.debug(message)
+                if setStatusMessage:
+                    setStatusMessage(message)
+                response = requests.get(self.GetMyTardisUrl() + "/about/",
+                                        timeout=5)
+                content = response.text
+                history = response.history
+                url = response.url
+                if response.status_code < 200 or response.status_code >= 300:
                     logger.debug("Received HTTP %d while trying to access "
                                  "MyTardis server (%s)."
-                                 % (status_code, self.GetMyTardisUrl()))
+                                 % (response.status_code,
+                                    self.GetMyTardisUrl()))
                     logger.debug(content)
                     if not self.GetMyTardisUrl().startswith("http"):
                         message = "Please enter a valid MyTardis URL, " \
@@ -736,7 +818,7 @@ class SettingsModel():
                     else:
                         message = "Please enter a valid MyTardis URL.\n\n"
                         message += "Received HTTP status code %d" \
-                            % status_code
+                            % response.status_code
                         suggestion = None
                     self.validation = SettingsValidation(False, message,
                                                          "mytardis_url",
@@ -797,44 +879,44 @@ class SettingsModel():
                 logger.error(traceback.format_exc())
                 return self.validation
 
-            """
-            Here we perform a rather arbitrary query, just to test
-            whether our MyTardis credentials work OK with the API.
-            """
-            if SetStatusMessage:
-                SetStatusMessage(
-                     "Settings validation - checking MyTardis credentials...")
+            # Here we perform a rather arbitrary query, just to test
+            # whether our MyTardis credentials work OK with the API.
+            message = "Settings validation - checking MyTardis credentials..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
             url = self.GetMyTardisUrl() + \
                 "/api/v1/user/?format=json&username=" + self.GetUsername()
-            headers = {"Authorization": "ApiKey " + self.GetUsername() + ":" +
-                       self.GetApiKey(),
-                       "Content-Type": "application/json",
-                       "Accept": "application/json"}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (self.GetUsername(),
+                                                   self.GetApiKey()),
+                "Content-Type": "application/json",
+                "Accept": "application/json"}
             response = requests.get(headers=headers, url=url)
-            status_code = response.status_code
+            statusCode = response.status_code
             # We don't care about the response content here, only the
             # status code, but failing to read the content risks leaving
             # a lingering open connection, so we'll close it.
             response.close()
 
-            def invalid_user():
+            def InvalidUser():
                 message = "Your MyTardis credentials are invalid.\n\n" \
                     "Please check your Username and API Key."
                 self.validation = \
                     SettingsValidation(False, message, "username")
                 return self.validation
 
-            if status_code < 200 or status_code >= 300:
-                return invalid_user()
+            if statusCode < 200 or statusCode >= 300:
+                return InvalidUser()
 
-            if SetStatusMessage:
-                SetStatusMessage(
-                    "Settings validation - checking MyTardis facility...")
+            message = "Settings validation - checking MyTardis facility..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
             if self.GetFacilityName().strip() == "":
                 message = "Please enter a valid facility name."
                 suggestion = None
                 try:
-                    defaultUserModel = self.GetDefaultOwner()
                     facilities = FacilityModel.GetMyFacilities(self)
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
@@ -846,11 +928,10 @@ class SettingsModel():
                     self.validation = SettingsValidation(False, message,
                                                          "facility_name")
                     return self.validation
-            defaultUserModel = self.GetDefaultOwner()
             facilities = FacilityModel.GetMyFacilities(self)
-            for f in facilities:
-                if self.GetFacilityName() == f.GetName():
-                    self.facility = f
+            for facility in facilities:
+                if self.GetFacilityName() == facility.GetName():
+                    self.facility = facility
                     break
             if self.facility is None:
                 message = "Facility \"%s\" was not found in MyTardis." \
@@ -859,8 +940,8 @@ class SettingsModel():
                     message += "\n\n" + \
                         "The facilities which user \"%s\" " \
                         "has access to are:\n\n" % self.GetUsername()
-                    for f in facilities:
-                        message = message + "    " + f.GetName() + "\n"
+                    for facility in facilities:
+                        message = message + "    " + facility.GetName() + "\n"
                 else:
                     message += "\n\n" + \
                         "Please ask your MyTardis administrator to " \
@@ -898,8 +979,8 @@ class SettingsModel():
                 try:
                     self.instrument = InstrumentModel.CreateInstrument(
                         self, self.GetFacility(), self.GetInstrumentName())
-                except Unauthorized, e:
-                    message = str(e)
+                except Unauthorized, err:
+                    message = str(err)
                     self.validation = \
                         SettingsValidation(False, message, "instrument_name")
                     return self.validation
@@ -923,10 +1004,11 @@ class SettingsModel():
                                                "data_directory")
                         return self.validation
 
-            if SetStatusMessage:
-                SetStatusMessage(
-                    "Settings validation - "
-                    "checking if MyData is set to start automatically...")
+            message = "Settings validation - " \
+                "checking if MyData is set to start automatically..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
             logger.warning("This auto-start on login stuff shouldn't really "
                            "be in settings validation.  I just put it here "
                            "temporarily to ensure it doesn't run in the "
@@ -958,8 +1040,8 @@ End If
                             "startup items.")
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, shell=False,
-                                        startupinfo=defaultStartupInfo,
-                                        creationflags=defaultCreationFlags)
+                                        startupinfo=DEFAULT_STARTUP_INFO,
+                                        creationflags=DEFAULT_CREATION_FLAGS)
                 output, _ = proc.communicate()
                 shortcutInStartupItems = (proc.returncode == 0)
                 if shortcutInStartupItems:
@@ -980,8 +1062,8 @@ End If
                             "startup items.")
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, shell=False,
-                                        startupinfo=defaultStartupInfo,
-                                        creationflags=defaultCreationFlags)
+                                        startupinfo=DEFAULT_STARTUP_INFO,
+                                        creationflags=DEFAULT_CREATION_FLAGS)
                 output, _ = proc.communicate()
                 shortcutInCommonStartupItems = (proc.returncode == 0)
                 if shortcutInCommonStartupItems:
@@ -1023,8 +1105,8 @@ oLink.Save
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             shell=False,
-                                            startupinfo=defaultStartupInfo,
-                                            creationflags=defaultCreationFlags)
+                                            startupinfo=DEFAULT_STARTUP_INFO,
+                                            creationflags=DEFAULT_CREATION_FLAGS)
                     output, _ = proc.communicate()
                     success = (proc.returncode == 0)
                     if not success:
@@ -1051,8 +1133,8 @@ oFS.DeleteFile sLinkFile
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             shell=False,
-                                            startupinfo=defaultStartupInfo,
-                                            creationflags=defaultCreationFlags)
+                                            startupinfo=DEFAULT_STARTUP_INFO,
+                                            creationflags=DEFAULT_CREATION_FLAGS)
                     output, _ = proc.communicate()
                     success = (proc.returncode == 0)
                     if not success:
@@ -1094,7 +1176,10 @@ oFS.DeleteFile sLinkFile
                         'to make login item at end with properties ' \
                         '{path:"%s", hidden:false}' % pathToMyDataApp
                     cmd = "osascript -e '%s'" % applescript
-                    returncode = subprocess.call(cmd, shell=True)
+                    exitCode = subprocess.call(cmd, shell=True)
+                    if exitCode != 0:
+                        logger.error("Received exit code %d from %s"
+                                     % (exitCode, cmd))
                 elif 'MyData' in loginItems and \
                         not self.StartAutomaticallyOnLogin():
                     logger.info("Removing MyData from login items.")
@@ -1102,7 +1187,10 @@ oFS.DeleteFile sLinkFile
                         'tell application "System Events" to ' \
                         'delete login item "MyData"'
                     cmd = "osascript -e '%s'" % applescript
-                    returncode = subprocess.call(cmd, shell=True)
+                    exitCode = subprocess.call(cmd, shell=True)
+                    if exitCode != 0:
+                        logger.error("Received exit code %d from %s"
+                                     % (exitCode, cmd))
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
@@ -1123,21 +1211,22 @@ oFS.DeleteFile sLinkFile
                                        "scheduled_time")
                 return
 
-        if SetStatusMessage:
-            SetStatusMessage(
-                "Settings validation - succeeded!")
-        logger.debug("SettingsModel validation succeeded!")
+        message = "Settings validation - succeeded!"
+        logger.debug(message)
+        if setStatusMessage:
+            setStatusMessage(message)
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
 
+    # pylint: disable=too-many-locals
     def PerformFolderStructureValidation(self):
         datasetCount = -1
         userOrGroupFilterString = "*%s*" % self.GetUserFilter()
         datasetFilterString = "*%s*" % self.GetDatasetFilter()
         expFilterString = "*%s*" % self.GetExperimentFilter()
         filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
-                           userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+                                        userOrGroupFilterString))
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         if len(dirsDepth1) == 0:
             message = "The data directory: \"%s\" doesn't contain any " \
                 % self.GetDataDirectory()
@@ -1183,7 +1272,7 @@ oFS.DeleteFile sLinkFile
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
                                             userOrGroupFilterString,
                                             filterString))
-        dirsDepth2 = filter(lambda f: os.path.isdir(f), filesDepth2)
+        dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
         if len(dirsDepth2) == 0:
             if self.GetFolderStructure() == 'Username / Dataset':
                 message = "The data directory: \"%s\" should contain " \
@@ -1278,7 +1367,7 @@ oFS.DeleteFile sLinkFile
                                             userOrGroupFilterString,
                                             filterString1,
                                             filterString2))
-        dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
+        dirsDepth3 = [item for item in filesDepth3 if os.path.isdir(item)]
         if len(dirsDepth3) == 0:
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -1348,7 +1437,7 @@ oFS.DeleteFile sLinkFile
                                             'MyTardis',
                                             expFilterString,
                                             datasetFilterString))
-        dirsDepth4 = filter(lambda f: os.path.isdir(f), filesDepth4)
+        dirsDepth4 = [item for item in filesDepth4 if os.path.isdir(item)]
         if len(dirsDepth4) == 0:
             if self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -1406,12 +1495,11 @@ oFS.DeleteFile sLinkFile
 
     def RenameInstrument(self, facilityName,
                          oldInstrumentName, newInstrumentName):
-        defaultUserModel = self.GetDefaultOwner()
         facilities = FacilityModel.GetMyFacilities(self)
         facility = None
-        for f in facilities:
-            if facilityName == f.GetName():
-                facility = f
+        for facil in facilities:
+            if facilityName == facil.GetName():
+                facility = facil
                 break
         if facility is None:
             raise Exception("Facility is None in "
@@ -1437,7 +1525,17 @@ oFS.DeleteFile sLinkFile
         self.configPath = configPath
 
     def GetLastSettingsUpdateTrigger(self):
-        return self.last_settings_update_trigger
+        return self.lastSettingsUpdateTrigger
 
     def SetLastSettingsUpdateTrigger(self, lastSettingsUpdateTrigger):
-        self.last_settings_update_trigger = lastSettingsUpdateTrigger
+        self.lastSettingsUpdateTrigger = lastSettingsUpdateTrigger
+
+    def GetConnectivityCheckInterval(self):
+        return self.connectivityCheckInterval
+
+    def UseSshControlMasterIfAvailable(self):
+        return self.useSshControlMasterIfAvailable
+
+    def SetUseSshControlMasterIfAvailable(self,
+                                          useSshControlMasterIfAvailable):
+        self.useSshControlMasterIfAvailable = useSshControlMasterIfAvailable

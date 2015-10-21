@@ -1,19 +1,23 @@
-import sys
+"""
+Represents the Verifications tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
 import traceback
-import threading
 import wx
 import wx.dataview as dv
 
-from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.dataviewmodels.verifications import ColumnType
-from mydata.models.verification import VerificationModel
 from mydata.logs import logger
 
 
 class VerificationsView(wx.Panel):
-
-    def __init__(self, parent, verificationsModel, foldersController):
-        wx.Panel.__init__(self, parent, -1)
+    """
+    Represents the Verifications tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
+    # pylint: disable=interface-not-implemented
+    def __init__(self, parent, verificationsModel):
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         # Create a dataview control
         self.verificationsDataViewControl = \
@@ -28,7 +32,6 @@ class VerificationsView(wx.Panel):
         self.verificationsDataViewControl.SetFont(smallFont)
 
         self.verificationsModel = verificationsModel
-        self.foldersController = foldersController
 
         self.verificationsDataViewControl.AssociateModel(
             self.verificationsModel)
@@ -62,26 +65,29 @@ class VerificationsView(wx.Panel):
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
-        c0 = self.verificationsDataViewControl.Columns[0]
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
+        firstColumn = self.verificationsDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
 
-    def OnCancelSelectedVerifications(self, evt):
+    def OnCancelSelectedVerifications(self, event):
         """
         Remove the selected row(s) from the model. The model will take
         care of notifying the view (and any other observers) that the
         change has happened.
         """
+        # pylint: disable=fixme
         # FIXME: Should warn the user if already-completed verifications
         # exist within the selection (in which case their datafiles
         # won't be deleted from the MyTardis server).
         # The OnCancelRemainingVerifications method is a bit smarter in
         # terms of only deleting incomplete verification rows from the view.
+
+        # pylint: disable=bare-except
         try:
             items = self.verificationsDataViewControl.GetSelections()
             rows = [self.verificationsModel.GetRow(item) for item in items]
@@ -116,17 +122,11 @@ class VerificationsView(wx.Panel):
                 self.verificationsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
-
-    def OnCancelRemainingVerifications(self, evt):
-        def shutDownVerificationThreads():
-            try:
-                wx.CallAfter(wx.BeginBusyCursor)
-                self.foldersController.ShutDownVerificationThreads()
-                wx.CallAfter(wx.EndBusyCursor)
-            except:
-                logger.error(traceback.format_exc())
-        thread = threading.Thread(target=shutDownVerificationThreads)
-        thread.start()
+        finally:
+            event.Skip()
 
     def GetVerificationsModel(self):
+        """
+        Return verifications model.
+        """
         return self.verificationsModel

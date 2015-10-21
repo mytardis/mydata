@@ -1,3 +1,16 @@
+# appveyor.yml
+# Configuration for continuous integration (CI).
+# http://www.appveyor.com/about
+# http://www.appveyor.com/docs/appveyor-yml
+
+# Remote Desktop access to the build worker seems
+# to require a paid AppVeyor account, rather than
+# a free open-source account.
+# http://www.appveyor.com/docs/how-to/rdp-to-build-worker
+
+init:
+- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 environment:
   global:
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
@@ -57,9 +70,10 @@ install:
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  # Build the compiled extension and run the project tests
-  # - "%CMD_IN_ENV% python setup.py nosetests"
-  - ECHO "WARNING. Not running any nosetests."
+  - "%CMD_IN_ENV% pip install pylint"
+  - "%CMD_IN_ENV% pylint --rcfile=.pylintrc mydata"
+
+  - "%CMD_IN_ENV% python setup.py nosetests"
 
 after_test:
   # If tests are successful, create binary packages for the project.
@@ -74,6 +88,5 @@ artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
   - path: dist\*.exe
 
-#on_success:
-#  - TODO: upload the content of dist/*.whl to a public wheelhouse
-#
+on_finish:
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

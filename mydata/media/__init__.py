@@ -1,16 +1,27 @@
+"""
+Module to determine paths to icons etc.
+"""
+
 import sys
 import os
 import wx
 
 
-class IconStyle():
+# pylint: disable=too-few-public-methods
+class IconStyle(object):
+    """
+    Types of icons.
+    """
     NORMAL = 0
     DISABLED = 1
     HOT = 2
     STRINGS = ['NORMAL', 'DISABLED', 'HOT']
 
 
-class Icons():
+class Icons(object):
+    """
+    Class to determine paths to icons etc.
+    """
     def __init__(self):
         self.mediaFolderName = "media"
         if hasattr(sys, "frozen"):
@@ -38,8 +49,12 @@ class Icons():
 
         self.iconsCache = {}
 
+    # pylint: disable=too-many-arguments
     def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
                 size=None, extension=None):
+        """
+        Get path to icon.
+        """
         if not size:
             size = self.defaultIconSize
         cacheKey = '%s-%s-%s' % (name, IconStyle.STRINGS[style], size)
@@ -69,4 +84,4 @@ class Icons():
                              wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         return self.iconsCache[cacheKey]
 
-MyDataIcons = Icons()
+MYDATA_ICONS = Icons()

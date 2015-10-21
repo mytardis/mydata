@@ -1,3 +1,10 @@
+"""
+Model class for a datafile upload, which appears as one row in
+the Uploads view of MyData's main window.
+"""
+
+# pylint: disable=missing-docstring
+
 import os
 import sys
 import signal
@@ -9,7 +16,12 @@ from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
 
-class UploadStatus:
+class UploadStatus(object):
+    """
+    Enumerated data type.
+    """
+    # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     NOT_STARTED = 0
     IN_PROGRESS = 1
     COMPLETED = 2
@@ -17,8 +29,13 @@ class UploadStatus:
     PAUSED = 4
 
 
-class UploadModel():
-
+class UploadModel(object):
+    """
+    Model class for a datafile upload, which appears as one row in
+    the Uploads view of MyData's main window.
+    """
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModel = folderModel
@@ -33,6 +50,7 @@ class UploadModel():
         self.progress = 0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
+        self.traceback = None
         self.bufferedReader = None
         self.scpUploadProcess = None
         self.fileSize = 0  # File size long integer in bytes
@@ -78,6 +96,12 @@ class UploadModel():
 
     def SetMessage(self, message):
         self.message = message
+
+    def GetTraceback(self):
+        return self.traceback
+
+    def SetTraceback(self, trace):
+        self.traceback = trace
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
@@ -133,18 +157,19 @@ class UploadModel():
                 try:
                     pid = self.scpUploadProcess.pid
                     # See if this throws psutil.NoSuchProcess:
-                    p = psutil.Process(int(pid))
+                    _ = psutil.Process(int(pid))
                     if sys.platform.startswith("win"):
+                        # pylint: disable=no-member
                         os.kill(pid, signal.CTRL_C_EVENT)
                     else:
-                        os.kill(pid, signal.SIGKILL)
+                        os.kill(pid, signal.SIGKILL)  # pylint: disable=no-member
                     logger.debug("Force killed SCP upload process for %s"
                                  % self.GetRelativePathToUpload())
                 except psutil.NoSuchProcess:
                     logger.debug("SCP upload process for %s was terminated "
                                  "gracefully."
                                  % self.GetRelativePathToUpload())
-        except:
+        except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
 
     def SetFileSize(self, fileSize):

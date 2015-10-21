@@ -1,20 +1,12 @@
-import threading
-
-# ENHANCEDSTATUSBAR wxPython IMPLEMENTATION
-# Python Code By:
-#
-# Andrea Gavana, @ 31 May 2005
-# Nitro, @ 21 September 2005
-# Latest Revision: 21 September 2005, 19.57.20 GMT+2
-
-""" Description:
-
+"""
 EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
 wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
 wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
 
-
+Based on Andrea Gavana's implementation.
 """
+
+import threading
 
 import wx
 
@@ -32,13 +24,16 @@ ESB_ALIGN_RIGHT = 13
 ESB_EXACT_FIT = 20
 
 
-# ---------------------------------------------------------------
-# Class EnhancedStatusBar
-# ---------------------------------------------------------------
-# This Is The Main Class Implementation. See The Demo For Details
-# ---------------------------------------------------------------
 class EnhancedStatusBarItem(object):
+    """
+    EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
+    wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
+    wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
 
+    Based on Andrea Gavana's implementation.
+    """
+    # pylint: disable=too-few-public-methods
+    # pylint: disable=unused-argument
     def __init__(self, widget, pos,
                  horizontalalignment=ESB_ALIGN_CENTER_HORIZONTAL,
                  verticalalignment=ESB_ALIGN_CENTER_VERTICAL):
@@ -46,21 +41,31 @@ class EnhancedStatusBarItem(object):
 
 
 class EnhancedStatusBar(wx.StatusBar):
+    """
+    EnhancedStatusBar Is A Slight Modification (Actually A Subclassing) Of
+    wx.StatusBar.  It Allows You To Add Almost Any Widget You Like To The
+    wx.StatusBar Of Your Main Frame Application And Also To Layout Them Properly.
 
-    def __init__(self, parent, id=wx.ID_ANY, style=wx.STB_SIZEGRIP,
+    Based on Andrea Gavana's implementation.
+    """
+
+    def __init__(self, parent, style=wx.STB_SIZEGRIP,
                  name="EnhancedStatusBar"):
         """Default Class Constructor.
 
-        EnhancedStatusBar.__init__(self, parent, id=wx.ID_ANY,
+        EnhancedStatusBar.__init__(self, parent,
                                    style=wx.STB_SIZEGRIP,
                                    name="EnhancedStatusBar")
         """
 
-        wx.StatusBar.__init__(self, parent, id, style, name)
+        wx.StatusBar.__init__(self, parent, wx.ID_ANY, style, name)
 
-        self._items = {}
-        self._curPos = 0
-        self._parent = parent
+        self._items = {}  # pylint: disable=invalid-name
+        self._curPos = 0  # pylint: disable=invalid-name
+        self._parent = parent  # pylint: disable=invalid-name
+
+        self.statusbarConnIcon = None
+        self.statusbarStaticText = None
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         if threading.current_thread().name == "MainThread":
@@ -69,7 +74,10 @@ class EnhancedStatusBar(wx.StatusBar):
             wx.CallAfter(self.OnSize, None)
 
     def SetStatusMessage(self, msg):
-        if not hasattr(self, "statusbarStaticText"):
+        """
+        Set status message.
+        """
+        if not self.statusbarStaticText:
             self.statusbarStaticText = wx.StaticText(self, wx.ID_ANY, "")
             self.AddWidget(self.statusbarStaticText, pos=0)
         self.statusbarStaticText.SetLabel(msg)
@@ -77,17 +85,24 @@ class EnhancedStatusBar(wx.StatusBar):
         self.OnSize(None)
 
     def SetStatusConnectionIcon(self, bitmap):
-        if not hasattr(self, "statusbarConnIcon"):
+        """
+        Set status connection icon.
+        """
+        if not self.statusbarConnIcon:
             self.statusbarConnIcon = wx.StaticBitmap(self, wx.ID_ANY)
             self.AddWidget(self.statusbarConnIcon, pos=1)
         self.statusbarConnIcon.SetBitmap(bitmap)
         self.OnSize(None)
 
     def OnSize(self, event):
-        """Handles The wx.EVT_SIZE Events For The StatusBar.
+        """
+        Handles The wx.EVT_SIZE Events For The StatusBar.
 
         Actually, All The Calculations Linked To HorizontalAlignment And
-        VerticalAlignment Are Done In This Function."""
+        VerticalAlignment Are Done In This Function.
+        """
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
 
         for pos, item in self._items.items():
             widget = item.widget
@@ -95,7 +110,6 @@ class EnhancedStatusBar(wx.StatusBar):
             verticalalignment = item.verticalalignment
 
             rect = self.GetFieldRect(pos)
-            widgetpos = widget.GetPosition()
             widgetsize = widget.GetSize()
 
             rect = self.GetFieldRect(pos)

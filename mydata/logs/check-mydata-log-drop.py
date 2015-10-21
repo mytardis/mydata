@@ -19,6 +19,8 @@ to stdout, which (if cron is configured correctly) will generate
 an email to the server admin.
 """
 
+# pylint: disable=invalid-name
+
 import requests
 import sys
 

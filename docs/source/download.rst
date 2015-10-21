@@ -13,5 +13,5 @@ Previous Version
 
 MyData Releases GitHub Page
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `MyData Releases <https://github.com/monash-merc/mydata/releases>`_
-
+* `MyData Releases <https://github.com/mytardis/mydata/releases>`_
+* `Old MyData Releases <https://github.com/monash-merc/mydata/releases>`_

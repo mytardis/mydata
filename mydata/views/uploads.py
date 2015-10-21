@@ -1,22 +1,28 @@
-import sys
+"""
+Represents the Uploads tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
+# pylint: disable=fixme
+# pylint: disable=missing-docstring
+
 import wx
 import wx.dataview as dv
 import traceback
 import threading
 
-from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.dataviewmodels.uploads import ColumnType
-from mydata.models.upload import UploadModel
-
 from mydata.logs import logger
 
 
 class UploadsView(wx.Panel):
-
+    """
+    Represents the Uploads tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, parent, uploadsModel, foldersController):
-        wx.Panel.__init__(self, parent, -1)
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
-        # Create a dataview control
         self.uploadsDataViewControl = dv.DataViewCtrl(self,
                                                       style=wx.BORDER_THEME
                                                       | dv.DV_ROW_LINES
@@ -59,16 +65,15 @@ class UploadsView(wx.Panel):
                                           mode=dv.DATAVIEW_CELL_INERT,
                                           flags=dv.DATAVIEW_COL_RESIZABLE)
 
-        c0 = self.uploadsDataViewControl.Columns[0]
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
+        firstColumn = self.uploadsDataViewControl.Columns[0]
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
-        # Add some buttons
         cancelSelectedUploadsButton = \
             wx.Button(self, label="Cancel Selected Upload(s)")
         self.Bind(wx.EVT_BUTTON, self.OnCancelSelectedUploads,
@@ -84,7 +89,7 @@ class UploadsView(wx.Panel):
         btnbox.Add(cancelRemainingUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
         self.Sizer.Add(btnbox, 0, wx.TOP | wx.BOTTOM, 5)
 
-    def OnCancelSelectedUploads(self, evt):
+    def OnCancelSelectedUploads(self, event):
         """
         Remove the selected row(s) from the model. The model will take
         care of notifying the view (and any other observers) that the
@@ -95,6 +100,7 @@ class UploadsView(wx.Panel):
         # won't be deleted from the MyTardis server).
         # The OnCancelRemainingUploads method is a bit smarter in
         # terms of only deleting incomplete upload rows from the view.
+        # pylint: disable=bare-except
         try:
             items = self.uploadsDataViewControl.GetSelections()
             rows = [self.uploadsModel.GetRow(item) for item in items]
@@ -126,26 +132,36 @@ class UploadsView(wx.Panel):
                 self.uploadsModel.DeleteRows(rows)
         except:
             logger.debug(traceback.format_exc())
+        finally:
+            event.Skip()
 
-    def OnCancelRemainingUploads(self, evt):
-        def shutDownUploadThreads():
+    def OnCancelRemainingUploads(self, event):
+        def ShutDownUploadThreads():
+            # pylint: disable=bare-except
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
 
-                def endBusyCursorIfRequired():
+                def EndBusyCursorIfRequired():
+                    # pylint: disable=no-member
+                    # Otherwise pylint complains about PyAssertionError.
+                    # pylint: disable=protected-access
                     try:
                         wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, e:
+                    except wx._core.PyAssertionError, err:
                         if "no matching wxBeginBusyCursor()" \
-                                not in str(e):
-                            logger.error(str(e))
+                                not in str(err):
+                            logger.error(str(err))
                             raise
-                wx.CallAfter(endBusyCursorIfRequired)
+                wx.CallAfter(EndBusyCursorIfRequired)
             except:
                 logger.error(traceback.format_exc())
-        thread = threading.Thread(target=shutDownUploadThreads)
+        thread = threading.Thread(target=ShutDownUploadThreads)
         thread.start()
+        event.Skip()
 
     def GetUploadsModel(self):
+        """
+        Returns the UploadsModel instance associated with the view.
+        """
         return self.uploadsModel
