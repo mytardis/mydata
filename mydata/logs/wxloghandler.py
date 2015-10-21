@@ -1,13 +1,18 @@
+"""
+A logging handler which can be used with a wx.TextCtrl.
+"""
+
 import wx
 import wx.lib.newevent
 
 import logging
 
 # create event type
+# pylint: disable=invalid-name
 wxLogEvent, EVT_WX_LOG_EVENT = wx.lib.newevent.NewEvent()
 
 
-class wxLogHandler(logging.Handler):
+class WxLogHandler(logging.Handler):
     """
     A handler class which sends log strings to a wx object
     """
@@ -31,6 +36,7 @@ class wxLogHandler(logging.Handler):
         Emit a record.
 
         """
+        # pylint: disable=bare-except
         try:
             msg = self.format(record)
             evt = wxLogEvent(message=msg, levelname=record.levelname)

@@ -1,5 +1,11 @@
+"""
+Model class for MyTardis API v1's DatasetResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
+# pylint: disable=missing-docstring
+
 import urllib
-import urllib2
 import requests
 import json
 import traceback
@@ -10,7 +16,7 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
 
 
-class DatasetModel():
+class DatasetModel(object):
     """
     Client-side model for caching results of querying
     MyTardis's dataset model.
@@ -19,6 +25,7 @@ class DatasetModel():
         self.settingsModel = settingsModel
         self.json = datasetJson
         self.datafiles = None
+        self.getDatasetFilesThreadingLock = threading.Lock()
 
     def GetJson(self):
         return self.json
@@ -29,7 +36,7 @@ class DatasetModel():
     def GetDescription(self):
         try:
             return self.json['description']
-        except:
+        except:  # pylint: disable=bare-except
             logger.error("self.json = " + str(self.json))
             logger.error(traceback.format_exc())
 
@@ -41,24 +48,22 @@ class DatasetModel():
 
     def GetDataFiles(self):
         if not self.datafiles:
-            if not hasattr(self, "getDatasetFilesThreadingLock"):
-                self.getDatasetFilesThreadingLock = threading.Lock()
             try:
                 self.getDatasetFilesThreadingLock.acquire()
                 if self.datafiles:
                     return self.datafiles
                 myTardisUrl = self.settingsModel.GetMyTardisUrl()
-                myTardisDefaultUsername = self.settingsModel.GetUsername()
-                myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+                myTardisUsername = self.settingsModel.GetUsername()
+                myTardisApiKey = self.settingsModel.GetApiKey()
 
                 # limit=0 can still encounter a limit of 1000 unless
                 # API_LIMIT_PER_PAGE is set to 0 in MyTardis's settings.py
                 limit = 0
                 url = "%s/api/v1/dataset/%d/files/?format=json&limit=%d" \
                     % (myTardisUrl, self.GetId(), limit)
-                headers = {"Authorization": "ApiKey %s:%s"
-                           % (myTardisDefaultUsername,
-                              myTardisDefaultUserApiKey)}
+                headers = {
+                    "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                       myTardisApiKey)}
                 logger.debug(url)
                 response = requests.get(headers=headers, url=url)
                 if response.status_code >= 200 and response.status_code < 300:
@@ -107,7 +112,7 @@ class DatasetModel():
                         message += "\n\n"
                         message += "Please ask your MyTardis administrator " \
                                    "to check the permissions of the \"%s\" " \
-                                   "user account." % myTardisDefaultUsername
+                                   "user account." % myTardisUsername
                         self.getDatasetFilesThreadingLock.release()
                         raise Unauthorized(message)
                     self.getDatasetFilesThreadingLock.release()
@@ -118,19 +123,22 @@ class DatasetModel():
 
     @staticmethod
     def CreateDatasetIfNecessary(folderModel):
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-locals
         description = folderModel.GetFolder()
         settingsModel = folderModel.settingsModel
 
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/dataset/?format=json" + \
             "&experiments__id=" + str(folderModel.GetExperiment().GetId())
         url = url + "&description=" + urllib.quote(description)
 
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey)}
 
         response = requests.get(headers=headers, url=url)
         existingMatchingDatasets = response.json()
@@ -154,10 +162,11 @@ class DatasetModel():
                 "experiments": [experimentUri],
                 "immutable": immutable}
             data = json.dumps(datasetJson)
-            headers = {"Authorization": "ApiKey " + myTardisDefaultUsername +
-                       ":" + myTardisDefaultUserApiKey,
-                       "Content-Type": "application/json",
-                       "Accept": "application/json"}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                   myTardisApiKey),
+                "Content-Type": "application/json",
+                "Accept": "application/json"}
             url = myTardisUrl + "/api/v1/dataset/"
             response = requests.post(headers=headers, url=url, data=data)
             if response.status_code >= 200 and response.status_code < 300:
@@ -175,7 +184,7 @@ class DatasetModel():
                     message += "\n\n"
                     message += "Please ask your MyTardis administrator to " \
                                "check the permissions of the \"%s\" user " \
-                               "account." % myTardisDefaultUsername
+                               "account." % myTardisUsername
                     raise Unauthorized(message)
                 elif response.status_code == 500:
                     message = "Couldn't create dataset \"%s\" " \
@@ -193,7 +202,7 @@ class DatasetModel():
                     try:
                         message += "ERROR: \"%s\"" \
                             % response.json()['error_message']
-                    except:
+                    except:  # pylint: disable=bare-except
                         message += response.text
                     raise InternalServerError(message)
                 raise Exception(response.text)

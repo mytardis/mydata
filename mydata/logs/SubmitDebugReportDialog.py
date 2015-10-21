@@ -1,47 +1,61 @@
+"""
+Dialog for submitting the current session's log via HTTP POST
+to a server.  The user can add their name, email and a comment.
+
+The dialog is launched from the "Submit debug log" button at
+the bottom of the Log tab within MyData's main window.
+"""
+
+# pylint: disable=missing-docstring
+
 import wx
 import os
 import sys
-import traceback
-import ConfigParser
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
 
 
 class SubmitDebugReportDialog(wx.Dialog):
-    def __init__(self, parent, id, title, debugLog, settingsModel):
-        wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+    """
+    Dialog for submitting the current session's log via HTTP POST
+    to a server.  The user can add their name, email and a comment.
+
+    The dialog is launched from the "Submit debug log" button at
+    the bottom of the Log tab within MyData's main window.
+    """
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self, parent, title, debugLog, settingsModel):
+        # pylint: disable=too-many-statements
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, title, wx.DefaultPosition)
 
         self.settingsModel = settingsModel
 
-        self.submitDebugReportDialogSizer = \
-            wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
-        self.SetSizer(self.submitDebugReportDialogSizer)
+        self.dialogSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
+        self.SetSizer(self.dialogSizer)
 
-        self.submitDebugReportDialogPanel = wx.Panel(self, wx.ID_ANY)
-        self.submitDebugReportDialogPanelSizer = \
-            wx.FlexGridSizer(10, 1, vgap=0, hgap=0)
-        self.submitDebugReportDialogPanel\
-            .SetSizer(self.submitDebugReportDialogPanelSizer)
+        self.dialogPanel = wx.Panel(self, wx.ID_ANY)
+        self.dialogPanelSizer = wx.FlexGridSizer(10, 1, vgap=0, hgap=0)
+        self.dialogPanel.SetSizer(self.dialogPanelSizer)
 
-        self.submitDebugReportDialogSizer\
-            .Add(self.submitDebugReportDialogPanel,
-                 flag=wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM, border=15)
+        self.dialogSizer.Add(self.dialogPanel,
+                             flag=wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM,
+                             border=15)
 
         # Instructions label
 
         instructionsText = \
             "You can submit a debug report to the MyData developers."
         self.instructionsLabel = \
-            wx.StaticText(self.submitDebugReportDialogPanel, wx.ID_ANY,
+            wx.StaticText(self.dialogPanel, wx.ID_ANY,
                           instructionsText)
         self.instructionsLabel.SetMinSize(wx.Size(600, wx.ID_ANY))
-        self.submitDebugReportDialogPanelSizer\
-            .Add(self.instructionsLabel, flag=wx.EXPAND | wx.BOTTOM, border=15)
+        self.dialogPanelSizer.Add(self.instructionsLabel,
+                                  flag=wx.EXPAND | wx.BOTTOM, border=15)
 
         # Contact details panel
 
-        self.contactDetailsPanel = wx.Panel(self.submitDebugReportDialogPanel,
+        self.contactDetailsPanel = wx.Panel(self.dialogPanel,
                                             wx.ID_ANY)
 
         self.contactDetailsGroupBox = \
@@ -66,10 +80,10 @@ class SubmitDebugReportDialog(wx.Dialog):
                                        wx.ID_ANY, "Name:")
         self.innerContactDetailsPanelSizer.Add(self.nameLabel)
 
-        contact_name = self.settingsModel.GetContactName()
+        contactName = self.settingsModel.GetContactName()
 
         self.nameField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
-        self.nameField.SetValue(contact_name)
+        self.nameField.SetValue(contactName)
         self.innerContactDetailsPanelSizer.Add(self.nameField, flag=wx.EXPAND)
 
         # Blank space
@@ -85,10 +99,10 @@ class SubmitDebugReportDialog(wx.Dialog):
                                         wx.ID_ANY, "Email address:")
         self.innerContactDetailsPanelSizer.Add(self.emailLabel)
 
-        contact_email = self.settingsModel.GetContactEmail()
+        contactEmail = self.settingsModel.GetContactEmail()
 
         self.emailField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
-        self.emailField.SetValue(contact_email)
+        self.emailField.SetValue(contactEmail)
         self.innerContactDetailsPanelSizer.Add(self.emailField, flag=wx.EXPAND)
 
         # Blank space
@@ -116,19 +130,15 @@ class SubmitDebugReportDialog(wx.Dialog):
                                              flag=wx.EXPAND)
         self.contactDetailsPanel.Fit()
 
-        self.submitDebugReportDialogPanelSizer.Add(self.contactDetailsPanel,
-                                                   flag=wx.EXPAND)
+        self.dialogPanelSizer.Add(self.contactDetailsPanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.submitDebugReportDialogPanelSizer\
-            .Add(wx.StaticText(self.submitDebugReportDialogPanel,
-                               wx.ID_ANY, ""))
+        self.dialogPanelSizer.Add(wx.StaticText(self.dialogPanel, wx.ID_ANY, ""))
 
         # Comments panel
 
-        self.commentsPanel = wx.Panel(self.submitDebugReportDialogPanel,
-                                      wx.ID_ANY)
+        self.commentsPanel = wx.Panel(self.dialogPanel, wx.ID_ANY)
 
         self.commentsGroupBox = wx.StaticBox(self.commentsPanel, wx.ID_ANY,
                                              label="Comments")
@@ -157,19 +167,14 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.commentsGroupBoxSizer.Add(self.innerCommentsPanel, flag=wx.EXPAND)
         self.commentsPanel.Fit()
 
-        self.submitDebugReportDialogPanelSizer.Add(self.commentsPanel,
-                                                   flag=wx.EXPAND)
-
+        self.dialogPanelSizer.Add(self.commentsPanel, flag=wx.EXPAND)
         # Blank space
 
-        self.submitDebugReportDialogPanelSizer\
-            .Add(wx.StaticText(self.submitDebugReportDialogPanel,
-                               wx.ID_ANY, ""))
+        self.dialogPanelSizer.Add(wx.StaticText(self.dialogPanel, wx.ID_ANY, ""))
 
         # Debug log panel
 
-        self.debugLogPanel = wx.Panel(self.submitDebugReportDialogPanel,
-                                      wx.ID_ANY)
+        self.debugLogPanel = wx.Panel(self.dialogPanel, wx.ID_ANY)
 
         self.debugLogGroupBox = wx.StaticBox(self.debugLogPanel, wx.ID_ANY,
                                              label="Debug log")
@@ -198,22 +203,16 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.debugLogGroupBoxSizer.Add(self.innerDebugLogPanel, flag=wx.EXPAND)
         self.debugLogPanel.Fit()
 
-        self.submitDebugReportDialogPanelSizer.Add(self.debugLogPanel,
-                                                   flag=wx.EXPAND)
+        self.dialogPanelSizer.Add(self.debugLogPanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.submitDebugReportDialogPanelSizer\
-            .Add(wx.StaticText(self.submitDebugReportDialogPanel,
-                               wx.ID_ANY, ""))
-        self.submitDebugReportDialogPanelSizer\
-            .Add(wx.StaticText(self.submitDebugReportDialogPanel,
-                               wx.ID_ANY, ""))
+        self.dialogPanelSizer.Add(wx.StaticText(self.dialogPanel, wx.ID_ANY, ""))
+        self.dialogPanelSizer.Add(wx.StaticText(self.dialogPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.submitDebugReportDialogPanel,
-                                     wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.dialogPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1, 5, hgap=10, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
 
@@ -228,23 +227,25 @@ class SubmitDebugReportDialog(wx.Dialog):
 
         self.buttonsPanel.Fit()
 
-        self.submitDebugReportDialogPanelSizer.Add(self.buttonsPanel,
-                                                   flag=wx.ALIGN_RIGHT)
+        self.dialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.submitDebugReportDialogPanel.Fit()
+        self.dialogPanel.Fit()
         self.Fit()
 
         self.CenterOnParent()
 
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
+        event.Skip()
 
     def OnSubmit(self, event):
         self.EndModal(wx.ID_OK)
+        event.Skip()
 
     def GetName(self):
+        # pylint: disable=arguments-differ
         return self.nameField.GetValue().strip()
 
     def GetEmail(self):

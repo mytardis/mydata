@@ -1,26 +1,41 @@
+"""
+Represents the Uploads tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
+# pylint: disable=missing-docstring
+
 import threading
 import traceback
 
-from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.logs import logger
-from mydata.media import MyDataIcons
-from mydata.media import IconStyle
+from mydata.media import MYDATA_ICONS
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
-class ColumnType:
+# pylint: disable=too-few-public-methods
+class ColumnType(object):
+    """
+    Enumerated data type.
+    """
     TEXT = 0
     BITMAP = 1
     PROGRESS = 2
 
 
 class UploadsModel(DataViewIndexListModel):
+    """
+    Represents the Uploads tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
     def __init__(self):
         self.uploadsData = []
 
@@ -48,21 +63,25 @@ class UploadsModel(DataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-        self.inProgressIcon = MyDataIcons.GetIcon("Refresh", size="16x16")
-        self.completedIcon = MyDataIcons.GetIcon("Apply", size="16x16")
-        self.failedIcon = MyDataIcons.GetIcon("Delete", size="16x16")
+        self.inProgressIcon = MYDATA_ICONS.GetIcon("Refresh", size="16x16")
+        self.completedIcon = MYDATA_ICONS.GetIcon("Apply", size="16x16")
+        self.failedIcon = MYDATA_ICONS.GetIcon("Delete", size="16x16")
 
     def Filter(self, searchString):
+        """
+        Only show uploads method query string.
+        """
+        # pylint: disable=too-many-branches
         self.searchString = searchString
-        q = self.searchString.lower()
+        query = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
             self.uud = list(self.uploadsData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            ud = self.uploadsData[row]
-            if q not in ud.GetFilename().lower():
-                self.fud.append(ud)
+            upload = self.uploadsData[row]
+            if query not in upload.GetFilename().lower():
+                self.fud.append(upload)
                 del self.uploadsData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
@@ -72,8 +91,8 @@ class UploadsModel(DataViewIndexListModel):
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fud = self.fud[filteredRow]
-            if q in fud.GetFilename().lower():
+            fud = self.fud[filteredRow]  # fud = filtered uploads data
+            if query in fud.GetFilename().lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -105,6 +124,7 @@ class UploadsModel(DataViewIndexListModel):
     # All of our columns are strings.  If the model or the renderers
     # in the view are other types then that should be reflected here.
     def GetColumnType(self, col):
+        # pylint: disable=arguments-differ
         if col == self.columnNames.index("Status"):
             return "wxBitmap"
         if col == self.columnNames.index("Progress"):
@@ -114,6 +134,7 @@ class UploadsModel(DataViewIndexListModel):
     # This method is called to provide the uploadsData object for a
     # particular row,col
     def GetValueByRow(self, row, col):
+        # pylint: disable=arguments-differ
         try:
             if col == self.columnNames.index("Status"):
                 icon = wx.NullBitmap
@@ -141,6 +162,7 @@ class UploadsModel(DataViewIndexListModel):
 
     def GetValuesForColname(self, colname):
         values = []
+        col = -1
         for col in range(0, self.GetColumnCount()):
             if self.GetColumnName(col) == colname:
                 break
@@ -160,29 +182,43 @@ class UploadsModel(DataViewIndexListModel):
     def GetDefaultColumnWidth(self, col):
         return self.defaultColumnWidths[col]
 
-    # Report how many rows this model provides data for.
     def GetRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.uploadsData)
 
-    # Report how many rows this model provides data for.
     def GetUnfilteredRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.uud)
 
-    # Report how many rows this model provides data for.
     def GetFilteredRowCount(self):
         return len(self.fud)
 
-    # Report how many columns this model provides data for.
     def GetColumnCount(self):
+        """
+        Report how many columns this model provides data for.
+        """
+        # pylint: disable=arguments-differ
         return len(self.columnNames)
 
-    # Report the number of rows in the model
     def GetCount(self):
+        """
+        Report the number of rows in the model
+        """
+        # pylint: disable=arguments-differ
         return len(self.uploadsData)
 
-    # Called to check if non-standard attributes should be used in the
-    # cell at (row, col)
     def GetAttrByRow(self, row, col, attr):
+        """
+        Called to check if non-standard attributes should be
+        used in the cell at (row, col)
+        """
+        # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
         return False
 
     # This is called to assist with sorting the data in the view.  The
@@ -192,6 +228,7 @@ class UploadsModel(DataViewIndexListModel):
     # data set and comparing them.  The return value is -1, 0, or 1,
     # just like Python's cmp() function.
     def Compare(self, item1, item2, col, ascending):
+        # pylint: disable=arguments-differ
         if not ascending:
             item2, item1 = item1, item2
         row1 = self.GetRow(item1)
@@ -257,7 +294,7 @@ class UploadsModel(DataViewIndexListModel):
 
     def Contains(self, filename):
         for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetFilename().strip() == name:
+            if self.uploadsData[row].GetFilename().strip() == filename:
                 return True
         return False
 
@@ -307,6 +344,7 @@ class UploadsModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def TryRowValueChanged(self, row, col):
+        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowValueChanged(row, col)
@@ -319,6 +357,7 @@ class UploadsModel(DataViewIndexListModel):
             logger.debug(traceback.format_exc())
 
     def TryRowDeleted(self, row):
+        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowDeleted(row)

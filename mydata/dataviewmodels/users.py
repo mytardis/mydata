@@ -1,21 +1,27 @@
+"""
+Represents the Users tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
+# pylint: disable=missing-docstring
+
 import os
 import threading
 
-from mydata.models.user import UserModel
-from mydata.models.group import GroupModel
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import InvalidFolderStructure
-
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
 class UsersModel(DataViewIndexListModel):
-
+    """
+    Represents the Users tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, settingsModel):
 
         self.settingsModel = settingsModel
@@ -43,16 +49,17 @@ class UsersModel(DataViewIndexListModel):
         self.foldersModel = foldersModel
 
     def Filter(self, searchString):
+        # pylint: disable=too-many-branches
         self.searchString = searchString
-        q = self.searchString.lower()
+        query = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
             self.unfilteredUsersData = list(self.usersData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if q not in self.usersData[row].GetUsername().lower() and \
-                    q not in self.usersData[row].GetName().lower() and \
-                    q not in self.usersData[row].GetEmail().lower():
+            if query not in self.usersData[row].GetUsername().lower() and \
+                    query not in self.usersData[row].GetName().lower() and \
+                    query not in self.usersData[row].GetEmail().lower():
                 self.filteredUsersData.append(self.usersData[row])
                 del self.usersData[row]
                 # notify the view(s) using this model that it has been removed
@@ -64,9 +71,9 @@ class UsersModel(DataViewIndexListModel):
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
             fud = self.filteredUsersData[filteredRow]
-            if q in fud.GetName().lower() or \
-                    q in fud.GetUsername().lower() or \
-                    q in fud.GetEmail().lower():
+            if query in fud.GetName().lower() or \
+                    query in fud.GetUsername().lower() or \
+                    query in fud.GetEmail().lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -96,19 +103,28 @@ class UsersModel(DataViewIndexListModel):
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
 
-    # All of our columns are strings.  If the model or the renderers
-    # in the view are other types then that should be reflected here.
     def GetColumnType(self, col):
+        """
+        All of our columns are strings.  If the model or the renderers
+        in the view are other types then that should be reflected here.
+        """
+        # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
         return "string"
 
-    # This method is called to provide the usersData object for a
-    # particular row, col
     def GetValueByRow(self, row, col):
+        """
+        This method is called to provide the usersData object
+        for a particular row, col
+        """
+        # pylint: disable=arguments-differ
         columnKey = self.GetColumnKeyName(col)
         return str(self.usersData[row].GetValueForKey(columnKey))
 
     def GetValuesForColname(self, colname):
         values = []
+        col = -1
         for col in range(0, self.GetColumnCount()):
             if self.GetColumnName(col) == colname:
                 break
@@ -128,29 +144,40 @@ class UsersModel(DataViewIndexListModel):
     def GetDefaultColumnWidth(self, col):
         return self.defaultColumnWidths[col]
 
-    # Report how many rows this model provides data for.
     def GetRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.usersData)
 
-    # Report how many rows this model provides data for.
     def GetUnfilteredRowCount(self):
         return len(self.unfilteredUsersData)
 
-    # Report how many rows this model provides data for.
     def GetFilteredRowCount(self):
         return len(self.filteredUsersData)
 
-    # Report how many columns this model provides data for.
     def GetColumnCount(self):
+        """
+        Report how many columns this model provides data for.
+        """
+        # pylint: disable=arguments-differ
         return len(self.columnNames)
 
-    # Report the number of rows in the model
     def GetCount(self):
+        """
+        Report the number of rows in the model
+        """
+        # pylint: disable=arguments-differ
         return len(self.usersData)
 
-    # Called to check if non-standard attributes should be used in the
-    # cell at (row, col)
     def GetAttrByRow(self, row, col, attr):
+        """
+        Called to check if non-standard attributes should be
+        used in the cell at (row, col)
+        """
+        # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
         return False
 
     # This is called to assist with sorting the data in the view.  The
@@ -160,6 +187,7 @@ class UsersModel(DataViewIndexListModel):
     # data set and comparing them.  The return value is -1, 0, or 1,
     # just like Python's cmp() function.
     def Compare(self, item1, item2, col, ascending):
+        # pylint: disable=arguments-differ
         # Swap sort order?
         if not ascending:
             item2, item1 = item1, item2
@@ -230,9 +258,9 @@ class UsersModel(DataViewIndexListModel):
                 return True
         return False
 
-    def GetUserById(self, id):
+    def GetUserById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
-            if self.unfilteredUsersData[row].GetId() == id:
+            if self.unfilteredUsersData[row].GetId() == dataViewId:
                 return self.unfilteredUsersData[row]
         return None
 

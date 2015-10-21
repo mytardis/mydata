@@ -1,6 +1,10 @@
+"""
+Model class for MyTardis API v1's ObjectACLResource.
+See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+"""
+
 import requests
 import json
-import urllib
 
 from mydata.logs import logger
 from .user import UserProfileModel
@@ -8,13 +12,19 @@ from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import DoesNotExist
 
 
-class ObjectAclModel():
-
+class ObjectAclModel(object):
+    """
+    Model class for MyTardis API v1's ObjectACLResource.
+    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
+    """
     def __init__(self, settingsModel=None, objectAclJson=None):
         self.settingsModel = settingsModel
         self.objectAclJson = objectAclJson
 
     def GetJson(self):
+        """
+        Return JSON representation.
+        """
         return self.objectAclJson
 
     @staticmethod
@@ -45,11 +55,11 @@ class ObjectAclModel():
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = {"Authorization": "ApiKey " +
-                   myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
+                                               myTardisDefaultUserApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(objectAclJson))
@@ -110,11 +120,11 @@ class ObjectAclModel():
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = {"Authorization": "ApiKey " +
-                   myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
+                                               myTardisDefaultUserApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(objectAclJson))

@@ -1,15 +1,21 @@
+"""
+Represents the Users tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
 import wx
 import wx.dataview as dv
 
-from mydata.dataviewmodels.users import UsersModel
-from mydata.models.user import UserModel
-
 
 class UsersView(wx.Panel):
+    """
+    Represents the Users tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, usersModel):
-        wx.Panel.__init__(self, parent, -1)
+        wx.Panel.__init__(self, parent, wx.ID_ANY)
 
-        # Create a dataview control
         self.usersDataViewControl = dv.DataViewCtrl(self,
                                                     style=wx.BORDER_THEME
                                                     | dv.DV_ROW_LINES
@@ -23,20 +29,7 @@ class UsersView(wx.Panel):
 
         self.usersModel = usersModel
 
-        # ...and associate it with the dataview control.  Models can
-        # be shared between multiple DataViewCtrls, so this does not
-        # assign ownership like many things in wx do.  There is some
-        # internal reference counting happening so you don't really
-        # need to hold a reference to it either, but we do for this
-        # example so we can fiddle with the model from the widget
-        # inspector or whatever.
         self.usersDataViewControl.AssociateModel(self.usersModel)
-
-        # Now we create some columns.  The second parameter is the
-        # column number within the model that the DataViewColumn will
-        # fetch the data from.  This means that you can have views
-        # using the same model that show different columns of data, or
-        # that they can be in a different order than in the model.
 
         for col in range(1, self.usersModel.GetColumnCount()):
             self.usersDataViewControl\
@@ -45,27 +38,25 @@ class UsersView(wx.Panel):
                                   .GetDefaultColumnWidth(col),
                                   mode=dv.DATAVIEW_CELL_INERT)
 
-        # The DataViewColumn object is returned from the Append and
-        # Prepend methods, and we can modify some of it's properties
-        # like this.
-        c0 = self.usersDataViewControl.PrependTextColumn("Id", 0, width=40)
-        c0.Alignment = wx.ALIGN_RIGHT
-        c0.Renderer.Alignment = wx.ALIGN_RIGHT
-        c0.MinWidth = 40
+        firstColumn = \
+            self.usersDataViewControl.PrependTextColumn("Id", 0, width=40)
+        firstColumn.Alignment = wx.ALIGN_RIGHT
+        firstColumn.Renderer.Alignment = wx.ALIGN_RIGHT
+        firstColumn.MinWidth = 40
 
-        # Through the magic of Python we can also access the columns
-        # as a list via the Columns property.  Here we'll mark them
-        # all as sortable and reorderable.
-        for c in self.usersDataViewControl.Columns:
-            c.Sortable = True
-            c.Reorderable = True
+        for col in self.usersDataViewControl.Columns:
+            col.Sortable = True
+            col.Reorderable = True
 
         # Let's change our minds and not let the first col be moved.
-        c0.Reorderable = False
+        firstColumn.Reorderable = False
 
-        # set the Sizer property (same as SetSizer)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.usersDataViewControl, 1, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        sizer.Add(self.usersDataViewControl, 1, wx.EXPAND)
 
     def GetUsersModel(self):
+        """
+        Returns the UsersModel instance associated with the view.
+        """
         return self.usersModel

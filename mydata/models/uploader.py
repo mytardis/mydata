@@ -68,6 +68,9 @@ important.  It means that files created within that directory by the "mydata"
 user will have a default group of "www-data" (inherited from the "receiving"
 directory), instead of having a default group of "mydata".
 """
+
+# pylint: disable=missing-docstring
+
 import requests
 import json
 import os
@@ -80,8 +83,6 @@ import re
 import pkgutil
 import urllib
 import traceback
-from datetime import datetime
-import wx
 import uuid
 import threading
 
@@ -95,20 +96,31 @@ from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
 from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
+from mydata.utils import BytesToHuman
 
 
-defaultStartupInfo = None
-defaultCreationFlags = 0
+DEFAULT_STARTUP_INFO = None
+DEFAULT_CREATION_FLAGS = 0
 if sys.platform.startswith("win"):
-    defaultStartupInfo = subprocess.STARTUPINFO()
-    defaultStartupInfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    defaultStartupInfo.wShowWindow = subprocess.SW_HIDE
+    DEFAULT_STARTUP_INFO = subprocess.STARTUPINFO()
+    # pylint: disable=protected-access
+    DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
+    # pylint: disable=import-error
     import win32process
-    defaultCreationFlags = win32process.CREATE_NO_WINDOW
+    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 
-class UploaderModel():
+class UploaderModel(object):
+    """
+    Model class for MyTardis API v1's UploaderAppResource.
+    See: https://github.com/wettenhj/mytardis-app-mydata/blob/master/api.py
+    """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, settingsModel):
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
         self.settingsModel = settingsModel
         self.interface = None
         self.responseJson = None
@@ -118,14 +130,25 @@ class UploaderModel():
             self.GenerateUuid()
             self.settingsModel.SetUuid(self.uuid)
 
-        intervalSinceLastConnectivityCheck = \
-            datetime.now() - wx.GetApp().GetLastNetworkConnectivityCheckTime()
+        self.osUsername = ""
+        self.cpus = 0
+        self.osPlatform = ""
+        self.hostname = ""
+        self.machine = ""
+        self.osVersion = ""
+        self.requestStagingAccessThreadLock = threading.Lock()
+        self.memory = ""
+        self.osSystem = ""
+        self.architecture = ""
+        self.osRelease = ""
+        self.processor = ""
+        self.architecture = ""
 
         # Here we check connectivity even if we've already done so, because
         # we need to ensure that we get the correct network interface for
         # self.interface, otherwise if the active interface changes,
         # we can get errors like this: KeyError: 'RTC'
-        # when accessing things like ipv4_address[self.interface]
+        # when accessing things like ipv4Address[self.interface]
 
         activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
         if len(activeInterfaces) == 0:
@@ -159,98 +182,99 @@ class UploaderModel():
             proc = subprocess.Popen(["ipconfig", "/all"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    startupinfo=defaultStartupInfo,
-                                    creationflags=defaultCreationFlags)
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = proc.communicate()
             if proc.returncode != 0:
                 raise Exception(stdout)
 
-            mac_address = {}
-            ipv4_address = {}
-            ipv6_address = {}
-            subnet_mask = {}
+            macAddress = {}
+            ipv4Address = {}
+            ipv6Address = {}
+            subnetMask = {}
             interface = ""
 
             for row in stdout.split("\n"):
-                m = re.match(r"^\S.*adapter (.*):\s*$", row)
-                if m:
-                    interface = m.groups()[0]
+                match = re.match(r"^\S.*adapter (.*):\s*$", row)
+                if match:
+                    interface = match.groups()[0]
                 if interface == self.interface:
                     if ': ' in row:
                         key, value = row.split(': ')
                         if key.strip(' .') == "Physical Address":
-                            mac_address[interface] = value.strip()
+                            macAddress[interface] = value.strip()
                         if "IPv4 Address" in key.strip(' .'):
-                            ipv4_address[interface] = \
+                            ipv4Address[interface] = \
                                 value.strip().replace("(Preferred)", "")
                         if "IPv6 Address" in key.strip(' .'):
-                            ipv6_address[interface] = \
+                            ipv6Address[interface] = \
                                 value.strip().replace("(Preferred)", "")
                         if "Subnet Mask" in key.strip(' .'):
-                            subnet_mask[interface] = value.strip()
+                            subnetMask[interface] = value.strip()
         else:
             proc = subprocess.Popen(["ifconfig", self.interface],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    startupinfo=defaultStartupInfo,
-                                    creationflags=defaultCreationFlags)
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = proc.communicate()
             if proc.returncode != 0:
                 raise Exception(stdout)
 
-            mac_address = {}
-            ipv4_address = {}
-            ipv6_address = {}
-            subnet_mask = {}
+            macAddress = {}
+            ipv4Address = {}
+            ipv6Address = {}
+            subnetMask = {}
 
             for row in stdout.split("\n"):
-                m = re.match(r"\s+ether (\S*)\s*$", row)
-                if m:
-                    mac_address[self.interface] = m.groups()[0]
-                m = re.match(r"\s+inet (\S*)\s+netmask\s+(\S*)\s+.*$", row)
-                if m:
-                    ipv4_address[self.interface] = m.groups()[0]
-                    subnet_mask[self.interface] = m.groups()[1]
-                m = re.match(r"\s+inet6 (\S*)\s+.*$", row)
-                if m:
-                    ipv6_address[self.interface] = m.groups()[0]
+                match = re.match(r"\s+ether (\S*)\s*$", row)
+                if match:
+                    macAddress[self.interface] = match.groups()[0]
+                match = re.match(r"\s+inet (\S*)\s+netmask\s+(\S*)\s+.*$", row)
+                if match:
+                    ipv4Address[self.interface] = match.groups()[0]
+                    subnetMask[self.interface] = match.groups()[1]
+                match = re.match(r"\s+inet6 (\S*)\s+.*$", row)
+                if match:
+                    ipv6Address[self.interface] = match.groups()[0]
 
-        self.mac_address = mac_address[self.interface]
-        if self.interface in ipv4_address:
-            self.ipv4_address = ipv4_address[self.interface]
+        self.macAddress = macAddress[self.interface]
+        if self.interface in ipv4Address:
+            self.ipv4Address = ipv4Address[self.interface]
         else:
-            self.ipv4_address = ""
-        if self.interface in ipv6_address:
-            self.ipv6_address = ipv6_address[self.interface]
+            self.ipv4Address = ""
+        if self.interface in ipv6Address:
+            self.ipv6Address = ipv6Address[self.interface]
         else:
-            self.ipv6_address = ""
-        if self.interface in subnet_mask:
-            self.subnet_mask = subnet_mask[self.interface]
+            self.ipv6Address = ""
+        if self.interface in subnetMask:
+            self.subnetMask = subnetMask[self.interface]
         else:
-            self.subnet_mask = ""
+            self.subnetMask = ""
 
         logger.info("The active network interface is: " + str(self.interface))
 
         self.name = self.settingsModel.GetInstrumentName()
-        self.contact_name = self.settingsModel.GetContactName()
-        self.contact_email = self.settingsModel.GetContactEmail()
+        self.contactName = self.settingsModel.GetContactName()
+        self.contactEmail = self.settingsModel.GetContactEmail()
 
-        self.user_agent_name = "MyData"
-        self.user_agent_version = VERSION
-        self.user_agent_install_location = ""
+        self.userAgentName = "MyData"
+        self.userAgentVersion = VERSION
+        self.userAgentInstallLocation = ""
 
+        # pylint: disable=bare-except
         if hasattr(sys, 'frozen'):
-            self.user_agent_install_location = os.path.dirname(sys.executable)
+            self.userAgentInstallLocation = os.path.dirname(sys.executable)
         else:
             try:
-                self.user_agent_install_location = \
+                self.userAgentInstallLocation = \
                     os.path.dirname(pkgutil.get_loader("MyData").filename)
             except:
-                self.user_agent_install_location = os.getcwd()
+                self.userAgentInstallLocation = os.getcwd()
 
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
-        disk_usage = (fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
-                             "Mount"))
+        diskUsage = (fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
+                            "Mount"))
 
         for part in psutil.disk_partitions(all=False):
             if os.name == 'nt':
@@ -260,96 +284,92 @@ class UploaderModel():
                     # partition or just hang.
                     continue
             usage = psutil.disk_usage(part.mountpoint)
-            disk_usage = disk_usage + (fmt % (
+            diskUsage = diskUsage + (fmt % (
                 part.device,
-                self._bytes2human(usage.total),
-                self._bytes2human(usage.used),
-                self._bytes2human(usage.free),
+                BytesToHuman(usage.total),
+                BytesToHuman(usage.used),
+                BytesToHuman(usage.free),
                 int(usage.percent),
                 part.fstype,
                 part.mountpoint))
 
-        self.disk_usage = disk_usage.strip()
-        self.data_path = self.settingsModel.GetDataDirectory()
-        self.default_user = self.settingsModel.GetUsername()
-
-    def _bytes2human(self, n):
-        symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-        prefix = {}
-        for i, s in enumerate(symbols):
-            prefix[s] = 1 << (i + 1) * 10
-        for s in reversed(symbols):
-            if n >= prefix[s]:
-                value = float(n) / prefix[s]
-                return '%.1f%s' % (value, s)
-        return "%sB" % n
+        self.diskUsage = diskUsage.strip()
+        self.dataPath = self.settingsModel.GetDataDirectory()
+        self.defaultUser = self.settingsModel.GetUsername()
 
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
+        # pylint: disable=too-many-statements
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = self.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&uuid=" + urllib.quote(self.uuid)
-
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
 
         try:
             response = requests.get(headers=headers, url=url)
-        except Exception, e:
-            logger.error(str(e))
+        except Exception, err:
+            logger.error(str(err))
             raise
         if response.status_code == 404:
             message = "The MyData app is missing from the MyTardis server."
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        existingMatchingUploaderRecords = response.json()
-        numExistingMatchingUploaderRecords = \
-            existingMatchingUploaderRecords['meta']['total_count']
-        if numExistingMatchingUploaderRecords > 0:
-            uploader_id = existingMatchingUploaderRecords['objects'][0]['id']
+        if response.status_code >= 200 and response.status_code < 300:
+            existingUploaderRecords = response.json()
+        else:
+            logger.error("An error occurred while retrieving uploader info.")
+            logger.error("Status code = " + str(response.status_code))
+            logger.error(response.text)
+            raise Exception(response.text)
+        numExistingUploaderRecords = \
+            existingUploaderRecords['meta']['total_count']
+        if numExistingUploaderRecords > 0:
+            uploaderId = existingUploaderRecords['objects'][0]['id']
 
         logger.info("Uploading uploader info to MyTardis...")
 
-        if numExistingMatchingUploaderRecords > 0:
-            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % (uploader_id)
+        if numExistingUploaderRecords > 0:
+            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % uploaderId
         else:
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
-        self.os_platform = sys.platform
-        self.os_system = platform.system()
-        self.os_release = platform.release()
-        self.os_version = platform.version()
-        self.os_username = getpass.getuser()
+        self.osPlatform = sys.platform
+        self.osSystem = platform.system()
+        self.osRelease = platform.release()
+        self.osVersion = platform.version()
+        self.osUsername = getpass.getuser()
 
         self.machine = platform.machine()
         self.architecture = str(platform.architecture())
         self.processor = platform.processor()
-        self.memory = self._bytes2human(psutil.virtual_memory().total)
+        self.memory = BytesToHuman(psutil.virtual_memory().total)
         self.cpus = psutil.cpu_count()
 
         self.hostname = platform.node()
 
         uploaderJson = {"uuid": self.uuid,
                         "name": self.name,
-                        "contact_name": self.contact_name,
-                        "contact_email": self.contact_email,
+                        "contact_name": self.contactName,
+                        "contact_email": self.contactEmail,
 
-                        "user_agent_name": self.user_agent_name,
-                        "user_agent_version": self.user_agent_version,
+                        "user_agent_name": self.userAgentName,
+                        "user_agent_version": self.userAgentVersion,
                         "user_agent_install_location":
-                            self.user_agent_install_location,
+                            self.userAgentInstallLocation,
 
-                        "os_platform": self.os_platform,
-                        "os_system": self.os_system,
-                        "os_release": self.os_release,
-                        "os_version": self.os_version,
-                        "os_username": self.os_username,
+                        "os_platform": self.osPlatform,
+                        "os_system": self.osSystem,
+                        "os_release": self.osRelease,
+                        "os_version": self.osVersion,
+                        "os_username": self.osUsername,
 
                         "machine": self.machine,
                         "architecture": self.architecture,
@@ -357,15 +377,15 @@ class UploaderModel():
                         "memory": self.memory,
                         "cpus": self.cpus,
 
-                        "disk_usage": self.disk_usage,
-                        "data_path": self.data_path,
-                        "default_user": self.default_user,
+                        "disk_usage": self.diskUsage,
+                        "data_path": self.dataPath,
+                        "default_user": self.defaultUser,
 
                         "interface": self.interface,
-                        "mac_address": self.mac_address,
-                        "ipv4_address": self.ipv4_address,
-                        "ipv6_address": self.ipv6_address,
-                        "subnet_mask": self.subnet_mask,
+                        "mac_address": self.macAddress,
+                        "ipv4_address": self.ipv4Address,
+                        "ipv6_address": self.ipv6Address,
+                        "subnet_mask": self.subnetMask,
 
                         "hostname": self.hostname,
 
@@ -374,7 +394,7 @@ class UploaderModel():
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
-        if numExistingMatchingUploaderRecords > 0:
+        if numExistingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data)
         else:
             response = requests.post(headers=headers, url=url, data=data)
@@ -389,24 +409,25 @@ class UploaderModel():
 
     def ExistingUploadToStagingRequest(self):
         try:
-            # FIXME: For now, the private key file path has to be ~/.ssh/MyData
+            # The private key file path must be ~/.ssh/MyData
             keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = self.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + self.uuid + \
             "&requester_key_fingerprint=" + \
             urllib.quote(keyPair.GetFingerprint())
         logger.debug(url)
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         response = requests.get(headers=headers, url=url)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
@@ -416,15 +437,16 @@ class UploaderModel():
             response.close()
             raise Exception(message)
         logger.debug(response.text)
-        existingMatchingUploaderRecords = response.json()
-        numExistingMatchingUploaderRecords = \
-            existingMatchingUploaderRecords['meta']['total_count']
-        if numExistingMatchingUploaderRecords > 0:
-            approval_json = existingMatchingUploaderRecords['objects'][0]
+        existingUploaderRecords = response.json()
+        numExistingUploaderRecords = \
+            existingUploaderRecords['meta']['total_count']
+        if numExistingUploaderRecords > 0:
+            approvalJson = existingUploaderRecords['objects'][0]
             logger.info("A request already exists for this uploader.")
             response.close()
             return UploaderRegistrationRequest(
-                settingsModel=self.settingsModel, json=approval_json)
+                settingsModel=self.settingsModel,
+                uploaderRegRequestJson=approvalJson)
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
@@ -443,18 +465,19 @@ class UploaderModel():
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = self.settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = self.settingsModel.GetApiKey()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
-        headers = {"Authorization": "ApiKey " + myTardisDefaultUsername + ":" +
-                   myTardisDefaultUserApiKey,
-                   "Content-Type": "application/json",
-                   "Accept": "application/json"}
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
         uploaderRegistrationRequestJson = \
             {"uploader": self.responseJson['resource_uri'],
              "name": self.name,
-             "requester_name": self.contact_name,
-             "requester_email": self.contact_email,
+             "requester_name": self.contactName,
+             "requester_email": self.contactEmail,
              "requester_public_key": keyPair.GetPublicKey(),
              "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
@@ -463,7 +486,8 @@ class UploaderModel():
             responseJson = response.json()
             response.close()
             return UploaderRegistrationRequest(
-                settingsModel=self.settingsModel, json=responseJson)
+                settingsModel=self.settingsModel,
+                uploaderRegRequestJson=responseJson)
         else:
             if response.status_code == 404:
                 response.close()
@@ -479,9 +503,7 @@ class UploaderModel():
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        if not hasattr(self, "requestStagingAccessThreadingLock"):
-            self.requestStagingAccessThreadingLock = threading.Lock()
-        if self.requestStagingAccessThreadingLock.acquire(False):
+        if self.requestStagingAccessThreadLock.acquire(False):
             try:
                 try:
                     self.UploadUploaderInfo()
@@ -514,10 +536,11 @@ class UploaderModel():
                 logger.error(traceback.format_exc())
                 raise
             finally:
-                self.requestStagingAccessThreadingLock.release()
+                self.requestStagingAccessThreadLock.release()
 
     @staticmethod
     def GetActiveNetworkInterfaces():
+        # pylint: disable=too-many-branches
         logger.info("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
@@ -525,31 +548,31 @@ class UploaderModel():
                                      "show", "interface"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    startupinfo=defaultStartupInfo,
-                                    creationflags=defaultCreationFlags)
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = proc.communicate()
             if proc.returncode != 0:
                 raise Exception(stdout)
 
             for row in stdout.split("\n"):
-                m = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)"
-                             "\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
-                             row)
-                if m:
-                    adminState = m.groups()[0]
-                    state = m.groups()[1]
-                    interfaceType = m.groups()[2]
-                    interface = m.groups()[3].strip()
+                match = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)"
+                                 r"\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
+                                 row)
+                if match:
+                    adminState = match.groups()[0]
+                    state = match.groups()[1]
+                    interfaceType = match.groups()[2]
+                    interface = match.groups()[3].strip()
                     if adminState == "Enabled" and state == "Connected" \
                             and interfaceType == "Dedicated":
                         activeInterfaces.append(interface)
                 # On Windows XP, the state may be blank:
-                m = re.match(r"^(Enabled|Disabled)\s*"
-                             "(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
-                if m:
-                    adminState = m.groups()[0]
-                    interfaceType = m.groups()[1]
-                    interface = m.groups()[2].strip()
+                match = re.match(r"^(Enabled|Disabled)\s*"
+                                 r"(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
+                if match:
+                    adminState = match.groups()[0]
+                    interfaceType = match.groups()[1]
+                    interface = match.groups()[2].strip()
                     if adminState == "Enabled" and \
                             interfaceType == "Dedicated":
                         activeInterfaces.append(interface)
@@ -565,34 +588,34 @@ class UploaderModel():
             proc = subprocess.Popen(["ifconfig"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    startupinfo=defaultStartupInfo,
-                                    creationflags=defaultCreationFlags)
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = proc.communicate()
             if proc.returncode != 0:
                 raise Exception(stdout)
 
             currentInterface = None
             for line in stdout.split("\n"):
-                m = re.match(r"^(\S+): flags=.*", line)
-                if m:
-                    currentInterface = m.groups()[0].strip()
-                m = re.match(r"^\s+status: active", line)
-                if m and currentInterface:
+                match = re.match(r"^(\S+): flags=.*", line)
+                if match:
+                    currentInterface = match.groups()[0].strip()
+                match = re.match(r"^\s+status: active", line)
+                if match and currentInterface:
                     activeInterfaces.append(currentInterface)
         elif sys.platform.startswith("linux"):
             proc = subprocess.Popen(["route"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    startupinfo=defaultStartupInfo,
-                                    creationflags=defaultCreationFlags)
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = proc.communicate()
             if proc.returncode != 0:
                 raise Exception(stdout)
 
             for line in stdout.split("\n"):
-                m = re.match(r"^default.*\s+(\S+)\s*$", line)
-                if m:
-                    interface = m.groups()[0].strip()
+                match = re.match(r"^default.*\s+(\S+)\s*$", line)
+                if match:
+                    interface = match.groups()[0].strip()
                     activeInterfaces.append(interface)
 
         return activeInterfaces
@@ -617,19 +640,24 @@ class UploaderModel():
         return self.hostname
 
 
-class UploaderRegistrationRequest():
-    def __init__(self, settingsModel=None, json=None):
+class UploaderRegistrationRequest(object):
+    """
+    Model class for MyTardis API v1's UploaderRegistrationRequestAppResource.
+    See: https://github.com/wettenhj/mytardis-app-mydata/blob/master/api.py
+    """
+    def __init__(self, settingsModel=None, uploaderRegRequestJson=None):
         self.settingsModel = settingsModel
-        self.json = json
+        self.uploaderRegRequestJson = uploaderRegRequestJson
 
     def GetJson(self):
-        return self.json
+        return self.uploaderRegRequestJson
 
     def IsApproved(self):
-        return self.json['approved']
+        return self.uploaderRegRequestJson['approved']
 
     def GetApprovedStorageBox(self):
-        return StorageBox(storageBoxJson=self.json['approved_storage_box'])
+        storageBoxJson = self.uploaderRegRequestJson['approved_storage_box']
+        return StorageBox(storageBoxJson=storageBoxJson)
 
     def GetScpUsername(self):
         storageBox = self.GetApprovedStorageBox()
@@ -646,6 +674,14 @@ class UploaderRegistrationRequest():
             if attribute.GetKey() == "scp_hostname":
                 return attribute.GetValue()
         raise StorageBoxAttributeNotFound(storageBox, "scp_hostname")
+
+    def GetScpPort(self):
+        storageBox = self.GetApprovedStorageBox()
+        attributes = storageBox.GetAttributes()
+        for attribute in attributes:
+            if attribute.GetKey() == "scp_port":
+                return attribute.GetValue()
+        return "22"
 
     def GetLocation(self):
         storageBox = self.GetApprovedStorageBox()

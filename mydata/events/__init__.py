@@ -1,3 +1,6 @@
+"""
+Custom events for MyData.
+"""
 import wx
 import threading
 import os
@@ -17,7 +20,7 @@ MYDATA_EVENT_BINDER = wx.PyEventBinder(MYDATA_EVENT_TYPE, 1)
 
 EVT_SHUTDOWN_FOR_REFRESH = wx.NewId()
 EVT_SHUTDOWN_FOR_REFRESH_COMPLETE = wx.NewId()
-EVT_SETTINGS_VALIDATION_FOR_REFRESH = wx.NewId()
+EVT_VALIDATE_SETTINGS_FOR_REFRESH = wx.NewId()
 EVT_CHECK_CONNECTIVITY = wx.NewId()
 EVT_INSTRUMENT_NAME_MISMATCH = wx.NewId()
 EVT_RENAME_INSTRUMENT = wx.NewId()
@@ -27,22 +30,33 @@ EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE = wx.NewId()
 EVT_START_DATA_UPLOADS = wx.NewId()
 
 
-def endBusyCursorIfRequired(event):
+def EndBusyCursorIfRequired(event):
+    """
+    The built in wx.EndBusyCursor raises an ugly exception if the
+    busy cursor has already been stopped.
+    """
+    # pylint: disable=no-member
+    # Otherwise pylint complains about PyAssertionError.
+    # pylint: disable=protected-access
     try:
         wx.EndBusyCursor()
-        if hasattr(event, "settingsDialog"):
+        if event.settingsDialog:
             if wx.version().startswith("3.0.3.dev"):
                 arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-    except wx._core.PyAssertionError, e:
-        if "no matching wxBeginBusyCursor()" not in str(e):
-            logger.error(str(e))
+    except wx._core.PyAssertionError, err:
+        if "no matching wxBeginBusyCursor()" not in str(err):
+            logger.error(str(err))
             raise
 
 
-class MyDataEvents():
+class MyDataEvents(object):
+    """
+    Custom events for MyData.
+    """
+    # pylint: disable=too-few-public-methods
     def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
@@ -50,7 +64,7 @@ class MyDataEvents():
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
                           MyDataEvent.ShutdownForRefreshComplete)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
-                          MyDataEvent.SettingsValidationForRefresh)
+                          MyDataEvent.ValidateSettingsForRefresh)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
                           MyDataEvent.CheckConnectivity)
         notifyWindow.Bind(MYDATA_EVENT_BINDER,
@@ -67,11 +81,17 @@ class MyDataEvents():
                           MyDataEvent.StartDataUploads)
 
     def GetNotifyWindow(self):
+        """
+        Returns the wx.Frame which propagates events,
+        which is MyData's main frame..
+        """
         return self.notifyWindow
 
 
-class MyDataThreads():
-
+class MyDataThreads(object):
+    """
+    Thread pool for MyData.
+    """
     def __init__(self):
         self.threads = []
 
@@ -79,38 +99,67 @@ class MyDataThreads():
         return str(self.threads)
 
     def Add(self, thread):
+        """
+        Register additional thread.
+        """
         self.threads.append(thread)
 
     def Join(self):
+        """
+        Join threads.
+        """
         for thread in self.threads:
             thread.join()
             print "\tJoined " + thread.name
 
-myDataThreads = MyDataThreads()
+MYDATA_THREADS = MyDataThreads()
 
 
 class MyDataEvent(wx.PyCommandEvent):
-
-    def __init__(self, id, **kwargs):
-        wx.PyCommandEvent.__init__(self, MYDATA_EVENT_TYPE, id)
-        self.id = id
+    """
+    Custom event class for MyData.
+    """
+    def __init__(self, eventId, **kwargs):
+        wx.PyCommandEvent.__init__(self, MYDATA_EVENT_TYPE, eventId)
+        self.eventId = eventId
+        # Optional event attributes:
+        self.settingsModel = None
+        self.settingsDialog = None
+        self.oldInstrumentName = None
+        self.newInstrumentName = None
+        self.facilityName = None
+        self.nextEvent = None
         for key in kwargs:
             self.__dict__[key] = kwargs[key]
 
+    def GetEventId(self):
+        """
+        Return event ID.
+        """
+        return self.eventId
+
+    @staticmethod
     def CheckConnectivity(event):
-        if event.id != EVT_CHECK_CONNECTIVITY:
+        """
+        Checks network connectivity.
+        """
+        if event.GetEventId() != EVT_CHECK_CONNECTIVITY:
             event.Skip()
             return
 
-        def checkConnectivityWorker():
+        def CheckConnectivityWorker():
+            """
+            Checks network connectivity in separate thread.
+            """
             wx.CallAfter(wx.BeginBusyCursor)
+            # pylint: disable=broad-except
             try:
                 activeNetworkInterfaces = \
                     UploaderModel.GetActiveNetworkInterfaces()
-            except Exception, e:
+            except Exception, err:
                 logger.error(traceback.format_exc())
-                if type(e).__name__ == "WindowsError" and \
-                        "The handle is invalid" in str(e):
+                if type(err).__name__ == "WindowsError" and \
+                        "The handle is invalid" in str(err):
                     message = "An error occurred, suggesting " \
                         "that you have launched MyData.exe from a " \
                         "Command Prompt window.  Please launch it " \
@@ -119,47 +168,57 @@ class MyDataEvent(wx.PyCommandEvent):
                         "\n" \
                         "See: https://bugs.python.org/issue3905"
 
-                    def showErrorDialog(message):
+                    def ShowErrorDialog(message):
+                        """
+                        Show error dialog in main thread.
+                        """
                         dlg = wx.MessageDialog(None, message, "MyData",
                                                wx.OK | wx.ICON_ERROR)
                         dlg.ShowModal()
-                    wx.CallAfter(showErrorDialog, message)
-            wx.CallAfter(endBusyCursorIfRequired, event)
+                    wx.CallAfter(ShowErrorDialog, message)
+            wx.CallAfter(EndBusyCursorIfRequired, event)
             if len(activeNetworkInterfaces) > 0:
                 logger.debug("Found at least one active network interface: %s."
                              % activeNetworkInterfaces[0])
-                wx.GetApp().SetLastNetworkConnectivityCheckSuccess(True)
-                wx.GetApp().SetLastNetworkConnectivityCheckTime(datetime.now())
+                wx.GetApp().SetLastConnectivityCheckSuccess(True)
+                wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
                 wx.GetApp()\
                     .SetActiveNetworkInterface(activeNetworkInterfaces[0])
-                if hasattr(event, "nextEvent"):
+                if event.nextEvent:
                     wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             else:
-                wx.GetApp().SetLastNetworkConnectivityCheckSuccess(False)
-                wx.GetApp().SetLastNetworkConnectivityCheckTime(datetime.now())
+                wx.GetApp().SetLastConnectivityCheckSuccess(False)
+                wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
                 wx.GetApp().SetActiveNetworkInterface(None)
                 message = "No active network interfaces." \
                     "\n\n" \
                     "Please ensure that you have an active " \
                     "network interface (e.g. Ethernet or WiFi)."
 
-                def showDialog():
+                def ShowDialog():
+                    """
+                    Show error dialog in main thread.
+                    """
                     dlg = wx.MessageDialog(None, message, "MyData",
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
                     wx.GetApp().GetMainFrame().SetStatusMessage("")
                     wx.GetApp().GetMainFrame().SetConnected(
                         event.settingsModel.GetMyTardisUrl(), False)
-                wx.CallAfter(showDialog)
+                wx.CallAfter(ShowDialog)
 
         checkConnectivityThread = \
-            threading.Thread(target=checkConnectivityWorker,
+            threading.Thread(target=CheckConnectivityWorker,
                              name="CheckConnectivityThread")
-        myDataThreads.Add(checkConnectivityThread)
+        MYDATA_THREADS.Add(checkConnectivityThread)
         checkConnectivityThread.start()
 
+    @staticmethod
     def InstrumentNameMismatch(event):
-        if event.id != EVT_INSTRUMENT_NAME_MISMATCH:
+        """
+        Responds to instrument name mismatch in Settings dialog.
+        """
+        if event.GetEventId() != EVT_INSTRUMENT_NAME_MISMATCH:
             event.Skip()
             return
         message = "A previous instrument name of \"%s\" " \
@@ -208,13 +267,14 @@ class MyDataEvent(wx.PyCommandEvent):
                     MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
                                 settingsDialog=event.settingsDialog,
                                 settingsModel=event.settingsModel)
-                intervalSinceLastConnectivityCheck = \
+                intervalSinceLastCheck = \
                     datetime.now() - \
-                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
-                # FIXME: Magic number of 30 seconds below:
-                if intervalSinceLastConnectivityCheck.total_seconds() >= 30 \
+                    wx.GetApp().GetLastConnectivityCheckTime()
+                checkInterval = \
+                    event.settingsModel.GetConnectivityCheckInterval()
+                if intervalSinceLastCheck.total_seconds() >= checkInterval \
                         or not wx.GetApp()\
-                        .GetLastNetworkConnectivityCheckSuccess():
+                        .GetLastConnectivityCheckSuccess():
                     checkConnectivityEvent = \
                         MyDataEvent(EVT_CHECK_CONNECTIVITY,
                                     settingsModel=event.settingsModel,
@@ -225,12 +285,19 @@ class MyDataEvent(wx.PyCommandEvent):
                     wx.PostEvent(wx.GetApp().GetMainFrame(),
                                  settingsDialogValidationEvent)
 
+    @staticmethod
     def RenameInstrument(event):
-        if event.id != EVT_RENAME_INSTRUMENT:
+        """
+        Responds to instrument rename request from Settings dialog.
+        """
+        if event.GetEventId() != EVT_RENAME_INSTRUMENT:
             event.Skip()
             return
 
-        def renameInstrumentWorker():
+        def RenameInstrumentWorker():
+            """
+            Renames instrument in separate thread.
+            """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             try:
@@ -240,13 +307,16 @@ class MyDataEvent(wx.PyCommandEvent):
                     event.oldInstrumentName,
                     event.newInstrumentName)
 
-                wx.CallAfter(endBusyCursorIfRequired, event)
-                if hasattr(event, "nextEvent"):
+                wx.CallAfter(EndBusyCursorIfRequired, event)
+                if event.nextEvent:
                     wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             except DuplicateKey:
-                wx.CallAfter(endBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
 
-                def notifyUserOfDuplicateInstrumentName():
+                def NotifyUserOfDuplicateInstrumentName():
+                    """
+                    Notifies user of duplicate instrument name.
+                    """
                     message = "Instrument name \"%s\" already exists in " \
                         "facility \"%s\"." \
                         % (event.newInstrumentName,
@@ -256,38 +326,44 @@ class MyDataEvent(wx.PyCommandEvent):
                     dlg.ShowModal()
                     event.settingsDialog.instrumentNameField.SetFocus()
                     event.settingsDialog.instrumentNameField.SelectAll()
-                wx.CallAfter(notifyUserOfDuplicateInstrumentName)
+                wx.CallAfter(NotifyUserOfDuplicateInstrumentName)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
         renameInstrumentThread = \
-            threading.Thread(target=renameInstrumentWorker,
+            threading.Thread(target=RenameInstrumentWorker,
                              name="RenameInstrumentThread")
-        myDataThreads.Add(renameInstrumentThread)
+        MYDATA_THREADS.Add(renameInstrumentThread)
         logger.debug("Starting thread %s" % renameInstrumentThread.name)
         renameInstrumentThread.start()
         logger.debug("Started thread %s" % renameInstrumentThread.name)
 
+    @staticmethod
     def SettingsDialogValidation(event):
-        if event.id != EVT_SETTINGS_DIALOG_VALIDATION:
+        """
+        Handles settings validation request from Settings dialog.
+        """
+        if event.GetEventId() != EVT_SETTINGS_DIALOG_VALIDATION:
             event.Skip()
             return
+        # pylint: disable=bare-except
         try:
             event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                      saveToDisk=False)
         except:
             logger.error(traceback.format_exc())
 
-        def validate(settingsModel):
+        def Validate(settingsModel):
+            """
+            Performs settings validation in separate thread.
+            """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 if sys.platform.startswith("win"):
-                    """
-                    BeginBusyCursor should update the cursor on everything,
-                    but it doesn't always work on Windows.
-                    """
+                    # BeginBusyCursor should update the cursor everywhere,
+                    # but it doesn't always work on Windows.
                     if wx.version().startswith("3.0.3.dev"):
                         busyCursor = wx.Cursor(wx.CURSOR_WAIT)
                     else:
@@ -296,12 +372,13 @@ class MyDataEvent(wx.PyCommandEvent):
                                  busyCursor)
                 wx.CallAfter(event.settingsDialog.okButton.Disable)
 
-                intervalSinceLastConnCheck = datetime.now() - \
-                    wx.GetApp().GetLastNetworkConnectivityCheckTime()
-                # FIXME: Magic number of 30 secs since last connectivity check.
-                if intervalSinceLastConnCheck.total_seconds() >= 30 or \
+                intervalSinceLastCheck = datetime.now() - \
+                    wx.GetApp().GetLastConnectivityCheckTime()
+                checkInterval = \
+                    event.settingsModel.GetConnectivityCheckInterval()
+                if intervalSinceLastCheck.total_seconds() >= checkInterval or \
                         not wx.GetApp()\
-                        .GetLastNetworkConnectivityCheckSuccess():
+                        .GetLastConnectivityCheckSuccess():
                     settingsDialogValidationEvent = \
                         MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
                                     settingsDialog=event.settingsDialog,
@@ -317,26 +394,35 @@ class MyDataEvent(wx.PyCommandEvent):
                     return
 
                 def SetStatusMessage(message):
+                    """
+                    Updates status bar.
+                    """
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  message)
                 settingsModel.Validate(SetStatusMessage)
-                wx.CallAfter(endBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
                 if settingsModel.IsIncompatibleMyTardisVersion():
                     wx.CallAfter(event.settingsDialog.okButton.Enable)
                     return
-                provideSettingsValidationResultsEvent = MyDataEvent(
+                provideValidationResultsEvent = MyDataEvent(
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
                     settingsDialog=event.settingsDialog,
                     settingsModel=event.settingsModel)
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
-                             provideSettingsValidationResultsEvent)
-            except IncompatibleMyTardisVersion as e:
+                             provideValidationResultsEvent)
+            except IncompatibleMyTardisVersion as err:
                 logger.debug("Finished running settingsModel.Validate() 3")
 
-                wx.CallAfter(endBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
 
-                def showDialog(message):
+                def ShowDialog(message):
+                    """
+                    Show error dialog in main thread.
+                    """
                     logger.error(message)
+                    # pylint: disable=no-member
+                    # Otherwise pylint complains about PyAssertionError.
+                    # pylint: disable=protected-access
                     try:
                         wx.EndBusyCursor()
                         if wx.version().startswith("3.0.3.dev"):
@@ -344,38 +430,42 @@ class MyDataEvent(wx.PyCommandEvent):
                         else:
                             arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
                         event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-                    except wx._core.PyAssertionError, e:
+                    except wx._core.PyAssertionError, err:
                         if "no matching wxBeginBusyCursor()" \
-                                not in str(e):
-                            logger.error(str(e))
+                                not in str(err):
+                            logger.error(str(err))
                             raise
                     dlg = wx.MessageDialog(None, message, "MyData",
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
-                message = str(e)
-                wx.CallAfter(showDialog, message)
+                message = str(err)
+                wx.CallAfter(ShowDialog, message)
             finally:
                 wx.CallAfter(event.settingsDialog.okButton.Enable)
-                wx.CallAfter(endBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
 
             logger.debug("Finished running settingsModel.Validate() 4")
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
-        thread = threading.Thread(target=validate,
+        thread = threading.Thread(target=Validate,
                                   args=(event.settingsModel,),
                                   name="SettingsModelValidationThread")
         logger.debug("Starting thread %s" % thread.name)
         thread.start()
         logger.debug("Started thread %s" % thread.name)
 
+    @staticmethod
     def ProvideSettingsValidationResults(event):
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
+        # Needs refactoring.
         """
         Only called after settings dialog has been shown.
         Not called if settings validation was triggered by
         a background task.
         """
-        if event.id != EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS:
+        if event.GetEventId() != EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS:
             event.Skip()
             return
         settingsValidation = event.settingsModel.GetValidation()
@@ -480,6 +570,7 @@ class MyDataEvent(wx.PyCommandEvent):
 
         logger.debug("Settings were valid, so we'll save the settings "
                      "to disk and close the Settings dialog.")
+        # pylint: disable=bare-except
         try:
             # Now is a good time to define the MyData instances's uploader
             # model object, which will generate a UUID if necessary.
@@ -502,27 +593,37 @@ class MyDataEvent(wx.PyCommandEvent):
         except:
             logger.debug(traceback.format_exc())
 
+    @staticmethod
     def ShutdownForRefresh(event):
-        if event.id != EVT_SHUTDOWN_FOR_REFRESH:
+        """
+        Shuts down upload threads before restarting them.
+        """
+        if event.GetEventId() != EVT_SHUTDOWN_FOR_REFRESH:
             event.Skip()
             return
 
-        def shutdownForRefreshWorker():
+        def ShutdownForRefreshWorker():
+            """
+            Shuts down upload threads (in dedicated worker thread)
+            before restarting them.
+            """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             logger.debug("Shutting down for refresh from %s."
                          % threading.current_thread().name)
+            # pylint: disable=bare-except
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
-                wx.GetApp().tasksModel.DeleteAllRows()
-                wx.GetApp().ApplySchedule(event)
+                app = wx.GetApp()
+                app.tasksModel.DeleteAllRows()
+                app.GetScheduleController().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
                 shutdownForRefreshCompleteEvent = MyDataEvent(
                     EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
                     shutdownSuccessful=True)
-                wx.PostEvent(wx.GetApp().GetMainFrame(),
+                wx.PostEvent(app.GetMainFrame(),
                              shutdownForRefreshCompleteEvent)
-                wx.CallAfter(endBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
             except:
                 logger.debug(traceback.format_exc())
                 message = "An error occurred while trying to shut down " \
@@ -531,49 +632,74 @@ class MyDataEvent(wx.PyCommandEvent):
                     "See the Log tab for details of the error."
                 logger.error(message)
 
-                def showDialog():
+                def ShowDialog():
+                    """
+                    Show error dialog in main thread.
+                    """
                     dlg = wx.MessageDialog(None, message, "MyData",
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
-                wx.CallAfter(showDialog)
+                wx.CallAfter(ShowDialog)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
         shutdownForRefreshThread = \
-            threading.Thread(target=shutdownForRefreshWorker,
+            threading.Thread(target=ShutdownForRefreshWorker,
                              name="ShutdownForRefreshThread")
-        myDataThreads.Add(shutdownForRefreshThread)
+        MYDATA_THREADS.Add(shutdownForRefreshThread)
         logger.debug("Starting thread %s" % shutdownForRefreshThread.name)
         shutdownForRefreshThread.start()
         logger.debug("Started thread %s" % shutdownForRefreshThread.name)
 
+    @staticmethod
     def ShutdownForRefreshComplete(event):
-        if event.id != EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
+        """
+        Respond to completion of shutdown for refresh.
+        """
+        if event.GetEventId() != EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
             event.Skip()
             return
         wx.GetApp().OnRefresh(event)
 
-    def SettingsValidationForRefresh(event):
-        if event.id != EVT_SETTINGS_VALIDATION_FOR_REFRESH:
+    @staticmethod
+    def ValidateSettingsForRefresh(event):
+        """
+        Call MyDataApp's OnRefresh (again) to trigger
+        settings validation.
+        """
+        if event.GetEventId() != EVT_VALIDATE_SETTINGS_FOR_REFRESH:
             event.Skip()
             return
         wx.GetApp().OnRefresh(event)
 
+    @staticmethod
     def SettingsValidationForRefreshComplete(event):
-        if event.id != EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
+        """
+        Call MyDataApp's OnRefresh (again) to proceed
+        with starting up the data folder scans once
+        the settings validation has been completed.
+        """
+        if event.GetEventId() != EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
             event.Skip()
             return
         wx.GetApp().OnRefresh(event)
 
+    @staticmethod
     def StartDataUploads(event):
-        if event.id != EVT_START_DATA_UPLOADS:
+        """
+        Start the data uploads.
+        """
+        if event.GetEventId() != EVT_START_DATA_UPLOADS:
             event.Skip()
             return
 
-        def startDataUploadsWorker():
+        def StartDataUploadsWorker():
+            """
+            Start the data uploads in a dedicated thread.
+            """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
-            logger.debug("startDataUploadsWorker")
+            logger.debug("StartDataUploadsWorker")
             wx.CallAfter(wx.BeginBusyCursor)
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                          "Checking for data files on MyTardis and uploading "
@@ -582,14 +708,14 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
             wx.GetApp().SetPerformingLookupsAndUploads(True)
             event.foldersController.StartDataUploads()
-            wx.CallAfter(endBusyCursorIfRequired, event)
+            wx.CallAfter(EndBusyCursorIfRequired, event)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
         startDataUploadsThread = \
-            threading.Thread(target=startDataUploadsWorker,
+            threading.Thread(target=StartDataUploadsWorker,
                              name="StartDataUploadsThread")
-        myDataThreads.Add(startDataUploadsThread)
+        MYDATA_THREADS.Add(startDataUploadsThread)
         logger.debug("Starting thread %s" % startDataUploadsThread.name)
         startDataUploadsThread.start()
         logger.debug("Started thread %s" % startDataUploadsThread.name)

@@ -1,3 +1,12 @@
+"""
+Custom logging for MyData allows logging to the Log view of MyData's
+main window, and to ~/.MyData_debug_log.txt.  Logs can be submitted
+via HTTP POST for analysis by developers / sys admins.
+"""
+
+# pylint: disable=missing-docstring
+# pylint: disable=fixme
+
 import threading
 import wx
 import logging
@@ -13,16 +22,17 @@ import inspect
 import pkgutil
 import traceback
 
-from SubmitDebugReportDialog import SubmitDebugReportDialog
-from mydata.logs.wxloghandler import wxLogHandler
+from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
+from mydata.logs.wxloghandler import WxLogHandler
 from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
 
-class Logger():
+class Logger(object):
     """
     Allows logger.debug(...), logger.info(...) etc. to write to MyData's
     Log window and to ~/.MyData_debug_log.txt
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, name):
         self.name = name
         self.loggerObject = None
@@ -34,13 +44,18 @@ class Logger():
         if not hasattr(sys, "frozen"):
             self.appRootDir = \
                 os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
+        self.logTextCtrl = None
+        self.pleaseContactMe = False
+        self.contactName = ""
+        self.contactEmail = ""
+        self.comments = ""
 
     def SetMyDataConfigPath(self, myDataConfigPath):
         self.myDataConfigPath = myDataConfigPath
 
     def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
         self.logTextCtrl = logTextCtrl
-        logWindowHandler = wxLogHandler(self.logTextCtrl)
+        logWindowHandler = WxLogHandler(self.logTextCtrl)
         logWindowHandler.setLevel(self.level)
         logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
@@ -62,10 +77,7 @@ class Logger():
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
-        try:
-            stringHandler = logging.StreamHandler(stream=self.loggerOutput)
-        except:
-            stringHandler = logging.StreamHandler(strm=self.loggerOutput)
+        stringHandler = logging.StreamHandler(stream=self.loggerOutput)
         stringHandler.setLevel(self.level)
         stringHandler.setFormatter(logging.Formatter(self.logFormatString))
         self.loggerObject.addHandler(stringHandler)
@@ -96,9 +108,11 @@ class Logger():
             handler.setLevel(self.level)
 
     def debug(self, message):
+        # pylint: disable=invalid-name
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
+            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -115,9 +129,11 @@ class Logger():
             wx.CallAfter(self.loggerObject.debug, message, extra=extra)
 
     def error(self, message):
+        # pylint: disable=invalid-name
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
+            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -134,9 +150,11 @@ class Logger():
             wx.CallAfter(self.loggerObject.error, message, extra=extra)
 
     def warning(self, message):
+        # pylint: disable=invalid-name
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
+            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -153,9 +171,11 @@ class Logger():
             wx.CallAfter(self.loggerObject.warning, message, extra=extra)
 
     def info(self, message):
+        # pylint: disable=invalid-name
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
+            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -172,6 +192,8 @@ class Logger():
             wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         logger.debug("Logger.DumpLog: Flushing "
                      "self.loggerObject.handlers[0], which is of class: " +
                      self.loggerObject.handlers[0].__class__.__name__)
@@ -185,8 +207,8 @@ class Logger():
         self.contactName = settingsModel.GetContactName()
         self.contactEmail = settingsModel.GetContactEmail()
 
-        def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(myDataMainFrame, wx.ID_ANY,
+        def ShowSubmitDebugLogDialog():
+            dlg = SubmitDebugReportDialog(myDataMainFrame,
                                           "MyData - Submit Debug Log",
                                           self.loggerOutput.getvalue(),
                                           settingsModel)
@@ -213,9 +235,9 @@ class Logger():
 
         if submitDebugLog:
             if threading.current_thread().name == "MainThread":
-                showSubmitDebugLogDialog()
+                ShowSubmitDebugLogDialog()
             else:
-                wx.CallAfter(showSubmitDebugLogDialog)
+                wx.CallAfter(ShowSubmitDebugLogDialog)
                 while not myDataMainFrame.submitDebugLogDialogCompleted:
                     # FIXME: Remove sleeps and use events instead.
                     time.sleep(0.1)
@@ -285,4 +307,4 @@ class Logger():
         self.logTextCtrl.AppendText(msg)
         event.Skip()
 
-logger = Logger("MyData")
+logger = Logger("MyData")  # pylint: disable=invalid-name

@@ -1,3 +1,8 @@
+"""
+Represents the Folders tab of MyData's main window,
+and the tabular data displayed on that tab view.
+"""
+
 import threading
 import os
 import sys
@@ -8,20 +13,24 @@ from glob import glob
 from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
 from mydata.models.group import GroupModel
-from mydata.models.experiment import ExperimentModel
 from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
 class FoldersModel(DataViewIndexListModel):
-
+    """
+    Represents the Folders tab of MyData's main window,
+    and the tabular data displayed on that tab view.
+    """
     def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
@@ -55,7 +64,15 @@ class FoldersModel(DataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
+        self.ignoreIntervalSeconds = 0
+        self.ignoreOldDatasets = False
+        self.ignoreIntervalNumber = 0
+        self.ignoreIntervalUnit = "months"
+
     def DeleteAllRows(self):
+        """
+        Delete all rows.
+        """
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.foldersData[row]
@@ -73,35 +90,45 @@ class FoldersModel(DataViewIndexListModel):
         self.maxDataViewId = 0
 
     def GetFolderRecord(self, row):
+        """
+        Return the folder model at a given row number (starting with row 0).
+        """
         return self.foldersData[row]
 
     def CleanUp(self):
-        logger.debug("Joining FoldersModel's UploadDataThread...")
-        self.uploadDataThread.join()
-        logger.debug("Joined FoldersModel's UploadDataThread.")
-
+        """
+        Perform clean up actions on each each folder model.
+        """
         logger.debug("Cleaning up each FolderModel record's threads...")
         for row in range(0, self.GetRowCount()):
             self.foldersData[row].CleanUp()
         logger.debug("Cleaned up each FolderModel record's threads...")
 
     def GetSettingsModel(self):
+        """
+        Returns settings model.
+        """
         return self.settingsModel
 
+    # pylint: disable=too-many-branches
     def Filter(self, searchString):
+        """
+        Only show folders matching the query string, typed in the search box
+        in the upper-right corner of the main window.
+        """
         self.searchString = searchString
-        q = self.searchString.lower()
+        query = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
             self.ufd = list(self.foldersData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            fd = self.foldersData[row]
-            if q not in fd.GetFolder().lower() and \
-                    q not in fd.GetLocation().lower() and \
-                    q not in fd.GetOwner().GetUsername().lower() and \
-                    q not in fd.GetExperimentTitle():
-                self.ffd.append(fd)
+            fdata = self.foldersData[row]
+            if query not in fdata.GetFolder().lower() and \
+                    query not in fdata.GetLocation().lower() and \
+                    query not in fdata.GetOwner().GetUsername().lower() and \
+                    query not in fdata.GetExperimentTitle():
+                self.ffd.append(fdata)
                 del self.foldersData[row]
                 # Notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
@@ -112,20 +139,19 @@ class FoldersModel(DataViewIndexListModel):
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
             ffd = self.ffd[filteredRow]
-            if q in ffd.GetFolder().lower() or \
-                    q in ffd.GetLocation().lower() or \
-                    q in ffd.GetOwner().GetUsername().lower() or \
-                    q in ffd.GetExperimentTitle():
+            if query in ffd.GetFolder().lower() or \
+                    query in ffd.GetLocation().lower() or \
+                    query in ffd.GetOwner().GetUsername().lower() or \
+                    query in ffd.GetExperimentTitle():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
                 col = 0
                 ascending = True  # Need to get current sort direction
                 while row < self.GetRowCount() and \
-                        self.CompareFolderRecords(
-                            self.foldersData[row],
-                            self.ffd[filteredRow],
-                            col, ascending) < 0:
+                        self.CompareFolderRecords(self.foldersData[row],
+                                                  self.ffd[filteredRow],
+                                                  col, ascending) < 0:
                     row = row + 1
 
                 if row == self.GetRowCount():
@@ -150,14 +176,22 @@ class FoldersModel(DataViewIndexListModel):
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
 
-    # All of our columns are strings.  If the model or the renderers
-    # in the view are other types then that should be reflected here.
+    # pylint: disable=unused-argument
+    # pylint: disable=arguments-differ
     def GetColumnType(self, col):
+        """
+        All of our columns are strings.  If the model or the renderers
+        in the view are other types then that should be reflected here.
+        """
+        # pylint: disable=no-self-use
         return "string"
 
-    # This method is called to provide the foldersData object for a
-    # particular row,col
+    # pylint: disable=arguments-differ
     def GetValueByRow(self, row, col):
+        """
+        This method is called to provide the foldersData object for a
+        particular row,col
+        """
         columnKey = self.GetColumnKeyName(col)
         if columnKey.startswith("owner."):
             ownerKey = columnKey.split("owner.")[1]
@@ -175,63 +209,96 @@ class FoldersModel(DataViewIndexListModel):
                 return ""
         return str(self.foldersData[row].GetValueForKey(columnKey))
 
-    # This method is called to provide the foldersData object for a
-    # particular row,columnKeyName
     def GetValueForRowColumnKeyName(self, row, columnKeyName):
+        """
+        This method is called to provide the foldersData object for a
+        particular row,columnKeyName
+        """
         for col in range(0, self.GetColumnCount()):
             if self.GetColumnKeyName(col) == columnKeyName:
                 return self.GetValueByRow(row, col)
         return None
 
+    # pylint: disable=arguments-differ
     def GetColumnName(self, col):
+        """
+        Get column name.
+        """
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
+        """
+        Get column key name.
+        """
         return self.columnKeys[col]
 
     def GetDefaultColumnWidth(self, col):
+        """
+        Get default column width.
+        """
         return self.defaultColumnWidths[col]
 
     def GetFolderPath(self, row):
+        """
+        Get folder path.
+        """
         return os.path.join(self.foldersData[row].GetLocation(),
                             self.foldersData[row].GetFolder())
 
-    # Report how many rows this model provides data for.
+    # pylint: disable=arguments-differ
     def GetRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.foldersData)
 
-    # Report how many rows this model provides data for.
     def GetUnfilteredRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.ufd)
 
-    # Report how many rows this model provides data for.
     def GetFilteredRowCount(self):
+        """
+        Report how many rows this model provides data for.
+        """
         return len(self.ffd)
 
-    # Report how many columns this model provides data for.
+    # pylint: disable=arguments-differ
     def GetColumnCount(self):
+        """
+        Report how many columns this model provides data for.
+        """
         return len(self.columnNames)
 
-    # Report the number of rows in the model
     def GetCount(self):
+        """
+        Report the number of rows in the model
+        """
         return len(self.foldersData)
 
-    # Called to check if non-standard attributes should be used in the
-    # cell at (row, col)
+    # pylint: disable=unused-argument
     def GetAttrByRow(self, row, col, attr):
+        """
+        Called to check if non-standard attributes
+        should be used in the cell at (row, col)
+        """
+        # pylint: disable=no-self-use
         if col == 4:
             attr.SetColour('blue')
             attr.SetBold(True)
             return True
         return False
 
-    # This is called to assist with sorting the data in the view.  The
-    # first two args are instances of the DataViewItem class, so we
-    # need to convert them to row numbers with the GetRow method.
-    # Then it's just a matter of fetching the right values from our
-    # data set and comparing them.  The return value is -1, 0, or 1,
-    # just like Python's cmp() function.
     def Compare(self, item1, item2, col, ascending):
+        """
+        This is called to assist with sorting the data in the view.  The
+        first two args are instances of the DataViewItem class, so we
+        need to convert them to row numbers with the GetRow method.
+        Then it's just a matter of fetching the right values from our
+        data set and comparing them.  The return value is -1, 0, or 1,
+        just like Python's cmp() function.
+        """
         if not ascending:  # swap sort order?
             item2, item1 = item1, item2
         row1 = self.GetRow(item1)
@@ -243,10 +310,12 @@ class FoldersModel(DataViewIndexListModel):
             return cmp(self.GetValueByRow(row1, col),
                        self.GetValueByRow(row2, col))
 
-    # Unlike the previous Compare method, in this case, the folder records
-    # don't need to be visible in the current (possibly filtered) data view.
     def CompareFolderRecords(self, folderRecord1, folderRecord2,
                              col, ascending):
+        """
+        Unlike the previous Compare method, in this case, the folder records
+        don't need to be visible in the current (possibly filtered) data view.
+        """
         if not ascending:  # swap sort order?
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
@@ -257,6 +326,9 @@ class FoldersModel(DataViewIndexListModel):
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteRows(self, rows):
+        """
+        Delete rows.
+        """
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
@@ -274,12 +346,15 @@ class FoldersModel(DataViewIndexListModel):
             else:
                 wx.CallAfter(self.RowDeleted, row)
 
-    def DeleteFolderById(self, id):
+    def DeleteFolderById(self, dataViewId):
+        """
+        Delete folder by ID.
+        """
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
 
         for row in range(0, self.GetRowCount()):
-            if self.foldersData[row].GetId() == id:
+            if self.foldersData[row].GetId() == dataViewId:
                 del self.foldersData[row]
                 # notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
@@ -289,12 +364,19 @@ class FoldersModel(DataViewIndexListModel):
                 return
 
     def Contains(self, path):
+        """
+        Check if folders model contains a folder model
+        matching the specified path.
+        """
         for row in range(0, self.GetCount()):
             if path == self.GetFolderPath(row):
                 return True
         return False
 
     def GetMaxDataViewIdFromExistingRows(self):
+        """
+        Get maximum dataview ID from existing rows.
+        """
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
             if self.foldersData[row].GetDataViewId() > maxDataViewId:
@@ -302,11 +384,17 @@ class FoldersModel(DataViewIndexListModel):
         return maxDataViewId
 
     def GetMaxDataViewId(self):
+        """
+        Get maximum dataview ID.
+        """
         if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
     def AddRow(self, value):
+        """
+        Add folder model to folders model and notify view.
+        """
         self.Filter("")
         self.foldersData.append(value)
         # Notify views
@@ -320,6 +408,9 @@ class FoldersModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def FolderStatusUpdated(self, folderModel):
+        """
+        Ensure that updated folder status is reflected in the view.
+        """
         for row in range(0, self.GetCount()):
             if self.foldersData[row] == folderModel:
                 col = self.columnNames.index("Status")
@@ -329,6 +420,9 @@ class FoldersModel(DataViewIndexListModel):
                     wx.CallAfter(self.RowValueChanged, row, col)
 
     def ScanFolders(self, incrementProgressDialog, shouldAbort):
+        """
+        Scan dataset folders.
+        """
         if self.GetCount() > 0:
             self.DeleteAllRows()
         if self.usersModel.GetCount() > 0:
@@ -364,12 +458,18 @@ class FoldersModel(DataViewIndexListModel):
         else:
             raise InvalidFolderStructure("Unknown folder structure.")
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def ScanForUserFolders(self, incrementProgressDialog, shouldAbort):
+        """
+        Scan for user folders.
+        """
         dataDir = self.settingsModel.GetDataDirectory()
         userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
         folderStructure = self.settingsModel.GetFolderStructure()
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for userFolderName in userFolderNames:
             if shouldAbort():
@@ -466,10 +566,13 @@ class FoldersModel(DataViewIndexListModel):
                 wx.CallAfter(incrementProgressDialog)
 
     def ScanForGroupFolders(self, incrementProgressDialog, shouldAbort):
+        """
+        Scan for group folders.
+        """
         dataDir = self.settingsModel.GetDataDirectory()
         userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         groupFolderNames = [os.path.basename(d) for d in dirsDepth1]
         for groupFolderName in groupFolderNames:
             if shouldAbort():
@@ -511,13 +614,17 @@ class FoldersModel(DataViewIndexListModel):
                 wx.CallAfter(incrementProgressDialog)
 
     def ScanForDatasetFolders(self, pathToScan, owner, userFolderName):
+        """
+        Scan for dataset folders.
+        """
+        # pylint: disable=bare-except
         try:
             logger.debug("Scanning " + pathToScan +
                          " for dataset folders...")
             datasetFilterString = \
                 '*%s*' % self.settingsModel.GetDatasetFilter()
             filesDepth1 = glob(os.path.join(pathToScan, datasetFilterString))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
@@ -556,25 +663,25 @@ class FoldersModel(DataViewIndexListModel):
                         experimentTitle = "%s - %s" \
                             % (self.settingsModel.GetInstrumentName(),
                                owner.GetUsername())
-                elif owner.GetName() != UserModel.USER_NOT_FOUND_STRING:
+                elif owner.GetName() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetName(),
-                           UserModel.USER_NOT_FOUND_STRING)
-                elif owner.GetUsername() != UserModel.USER_NOT_FOUND_STRING:
+                           UserModel.userNotFoundString)
+                elif owner.GetUsername() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetUsername(),
-                           UserModel.USER_NOT_FOUND_STRING)
-                elif owner.GetEmail() != UserModel.USER_NOT_FOUND_STRING:
+                           UserModel.userNotFoundString)
+                elif owner.GetEmail() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
                         % (self.settingsModel.GetInstrumentName(),
                            owner.GetEmail(),
-                           UserModel.USER_NOT_FOUND_STRING)
+                           UserModel.userNotFoundString)
                 else:
                     experimentTitle = "%s - %s" \
                         % (self.settingsModel.GetInstrumentName(),
-                            UserModel.USER_NOT_FOUND_STRING)
+                           UserModel.userNotFoundString)
                 folderModel.SetExperimentTitle(experimentTitle)
                 self.AddRow(folderModel)
         except:
@@ -587,13 +694,13 @@ class FoldersModel(DataViewIndexListModel):
         datasetFilterString = '*%s*' % self.settingsModel.GetDatasetFilter()
         expFilterString = '*%s*' % self.settingsModel.GetExperimentFilter()
         filesDepth1 = glob(os.path.join(pathToScan, expFilterString))
-        dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+        dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         expFolders = [os.path.basename(d) for d in dirsDepth1]
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
             filesDepth1 = glob(os.path.join(expFolderPath,
                                             datasetFilterString))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
@@ -626,8 +733,9 @@ class FoldersModel(DataViewIndexListModel):
     def ImportGroupFolders(self, groupFolderPath, groupModel):
         """
         Scan folders within a user group folder,
-        e.g. D:\Data\Smith-Lab\
+        e.g. D:\\Data\\Smith-Lab\\
         """
+        # pylint: disable=bare-except
         try:
             logger.debug("Scanning " + groupFolderPath +
                          " for instrument folders...")
@@ -635,7 +743,7 @@ class FoldersModel(DataViewIndexListModel):
                 '*%s*' % self.settingsModel.GetDatasetFilter()
             instrumentName = self.settingsModel.GetInstrumentName()
             filesDepth1 = glob(os.path.join(groupFolderPath, instrumentName))
-            dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             instrumentFolders = [os.path.basename(d) for d in dirsDepth1]
 
             if len(instrumentFolders) > 1:
@@ -680,7 +788,7 @@ class FoldersModel(DataViewIndexListModel):
                              " for dataset folders...")
                 filesDepth1 = glob(os.path.join(userFolderPath,
                                                 datasetFilterString))
-                dirsDepth1 = filter(lambda f: os.path.isdir(f), filesDepth1)
+                dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
                 datasetFolders = [os.path.basename(d) for d in dirsDepth1]
                 for datasetFolderName in datasetFolders:
                     if self.ignoreOldDatasets:
@@ -721,6 +829,9 @@ class FoldersModel(DataViewIndexListModel):
             logger.error(traceback.format_exc())
 
     def GetTotalNumFiles(self):
+        """
+        Get total number of files.
+        """
         total = 0
         for folderModel in self.foldersData:
             total += folderModel.GetNumFiles()
