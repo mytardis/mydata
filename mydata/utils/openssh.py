@@ -910,6 +910,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
+    remoteFilePath = remoteFilePath.replace('&', '^&')
+
     remoteRemoveDatafileCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteFilePath)
     rmCommandString = \
@@ -1039,6 +1041,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
     remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
                                         os.path.basename(remoteFilePath))
+    remoteChunkPath = remoteChunkPath.replace('&', '^&')
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
