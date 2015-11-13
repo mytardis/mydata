@@ -145,7 +145,7 @@ class SettingsModel(object):
         self.group_prefix = ""
         self.validate_folder_structure = True
         self.max_upload_threads = 5
-        self.max_upload_retries = 5
+        self.max_upload_retries = 1
         self.start_automatically_on_login = True
 
         self.locked = False
