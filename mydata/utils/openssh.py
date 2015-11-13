@@ -662,6 +662,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     So we upload the chunk to its own file on the remote server first,
     and then append the chunk onto the remote (partial) datafile.
     """
+    remoteFilePath = remoteFilePath.replace('`', r'\`')
     remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
                                         os.path.basename(remoteFilePath))
 
@@ -910,6 +911,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
+    remoteFilePath = remoteFilePath.replace('`', r'\`')
+
     remoteRemoveDatafileCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteFilePath)
     rmCommandString = \
@@ -1010,6 +1013,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     and then append the chunk onto the remote (partial) datafile.
     """
 
+    remoteFilePath = remoteFilePath.replace('`', r'\`')
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuote(remoteDir)
     mkdirCmdAndArgs = \
