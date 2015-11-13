@@ -69,7 +69,7 @@ class OpenSSH(object):
         return '"' + string.replace('"', r'\"') + '"'
 
     def DoubleQuoteRemotePath(self, string):
-        return '"' + string.replace('"', r'\"').replace('`', r'\\\`') + '"'
+        return '"' + string.replace('"', r'\"').replace('`', r'\\`') + '"'
 
     def __init__(self):
         """
@@ -698,7 +698,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
-         OPENSSH.DoubleQuoteRemotePath("mkdir -p %s" % quotedRemoteDir)]
+         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
     mkdirCmdString = " ".join(mkdirCmdAndArgs)
     logger.debug(mkdirCmdString)
     mkdirProcess = \
@@ -727,7 +727,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
            privateKeyFilePath, OPENSSH.cipher,
            sshControlPathOptionValuePair,
            username, host,
-           OPENSSH.DoubleQuoteRemotePath(remoteRemoveChunkCommand))
+           OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
     logger.debug(rmCommandString)
     removeRemoteChunkProcess = \
         subprocess.Popen(rmCommandString,
@@ -813,8 +813,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
-               OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
-               .replace('`', r'\\\`'))
+               remoteChunkPath.replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -862,7 +861,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                OPENSSH.cipher,
                sshControlPathOptionValuePair,
                username, host,
-               OPENSSH.DoubleQuoteRemotePath(remoteCatCommand))
+               OPENSSH.DoubleQuote(remoteCatCommand))
         # logger.debug(catCommandString)
         appendChunkProcess = subprocess.Popen(
             catCommandString,
@@ -895,7 +894,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
            privateKeyFilePath, OPENSSH.cipher,
            sshControlPathOptionValuePair,
            username, host,
-           OPENSSH.DoubleQuoteRemotePath(remoteRemoveChunkCommand))
+           OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
     # logger.debug(rmCommandString)
     removeRemoteChunkProcess = \
         subprocess.Popen(rmCommandString,
@@ -928,7 +927,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
            OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
            OPENSSH.cipher,
            username, host,
-           OPENSSH.DoubleQuoteRemotePath(remoteRemoveDatafileCommand))
+           OPENSSH.DoubleQuote(remoteRemoveDatafileCommand))
     # logger.debug(rmCommandString)
     removeRemoteDatafileProcess = subprocess.Popen(
         rmCommandString,
@@ -956,7 +955,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
-         OPENSSH.DoubleQuoteRemotePath("mkdir -p %s" % quotedRemoteDir)]
+         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
     mkdirCmdString = " ".join(mkdirCmdAndArgs)
     logger.debug(mkdirCmdString)
     mkdirProcess = \
@@ -982,7 +981,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
            OPENSSH.cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
-           quotedRemoteDir.replace('&', '^&').replace('`', r'\\\`'))
+           remoteDir.replace('&', '^&').replace('`', r'\\`'))
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
@@ -1032,7 +1031,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
          "-oStrictHostKeyChecking=no",
          "-l", username,
          host,
-         OPENSSH.DoubleQuoteRemotePath("mkdir -p %s" % quotedRemoteDir)]
+         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
     mkdirCmdString = " ".join(mkdirCmdAndArgs)
     logger.debug(mkdirCmdString)
     mkdirProcess = \
@@ -1111,9 +1110,9 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
+               remoteChunkPath
                .replace('&', '^&')
-               .replace('`', r'\\\`'))
+               .replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -1154,7 +1153,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                OPENSSH.cipher,
                username, host,
-               OPENSSH.DoubleQuoteRemotePath(remoteCatCommand))
+               OPENSSH.DoubleQuote(remoteCatCommand))
         # logger.debug(catCommandString)
         appendChunkProcess = subprocess.Popen(
             catCommandString,
