@@ -19,6 +19,7 @@ import poster
 
 from mydata.utils.openssh import UploadFile
 
+from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
 from mydata.utils import ConnectionStatus
@@ -48,17 +49,20 @@ class UploadMethod(object):
 class UploadDatafileRunnable(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
-                 dataFileIndex, uploadsModel, uploadModel, settingsModel,
-                 existingUnverifiedDatafile):
+                 dataFileIndex, uploadsModel, settingsModel,
+                 existingUnverifiedDatafile, verificationModel,
+                 bytesUploadedPreviously=0):
         # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.uploadsModel = uploadsModel
-        self.uploadModel = uploadModel
+        self.uploadModel = None
         self.settingsModel = settingsModel
         self.existingUnverifiedDatafile = existingUnverifiedDatafile
+        self.verificationModel = verificationModel
+        self.bytesUploadedPreviously = bytesUploadedPreviously
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -71,12 +75,18 @@ class UploadDatafileRunnable(object):
         # pylint: disable=too-many-return-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
-        if self.uploadModel.Canceled():
-            # self.foldersController.SetCanceled()
-            logger.debug("Upload for \"%s\" was canceled "
-                         "before it began uploading." %
-                         self.uploadModel.GetRelativePathToUpload())
-            return
+
+        self.foldersController.uploadsThreadingLock.acquire()
+        uploadDataViewId = self.uploadsModel.GetMaxDataViewId() + 1
+        self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
+                                       folderModel=self.folderModel,
+                                       dataFileIndex=self.dataFileIndex)
+        self.uploadsModel.AddRow(self.uploadModel)
+        self.foldersController.uploadsThreadingLock.release()
+        self.uploadModel.SetBytesUploadedToStaging(
+            self.bytesUploadedPreviously)
+        self.uploadModel.SetVerificationModel(self.verificationModel)
+
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         dataFileDirectory = \

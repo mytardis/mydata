@@ -283,7 +283,6 @@ class VerificationsModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def TryRowValueChanged(self, row, col):
-        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowValueChanged(row, col)
@@ -292,8 +291,8 @@ class VerificationsModel(DataViewIndexListModel):
                                "row=%d, self.GetRowCount()=%d" %
                                (row, self.GetRowCount()))
                 self.RowValueChanged(row, col)
-        except:
-            logger.debug(traceback.format_exc())
+        except wx.PyAssertionError:
+            logger.warning(traceback.format_exc())
 
     def VerificationMessageUpdated(self, verificationModel):
         for row in range(0, self.GetCount()):

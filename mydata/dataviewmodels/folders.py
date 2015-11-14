@@ -391,6 +391,25 @@ class FoldersModel(DataViewIndexListModel):
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
+    def TryRowValueChanged(self, row, col):
+        """
+        Use try/except when calling RowValueChanged, because
+        sometimes there are timing issues which raise wx
+        assertions suggesting that the row index we are trying
+        to report a change on is greater than or equal to the
+        total number of rows in the model.
+        """
+        try:
+            if row < self.GetCount():
+                self.RowValueChanged(row, col)
+            else:
+                logger.warning("TryRowValueChanged called with "
+                               "row=%d, self.GetRowCount()=%d" %
+                               (row, self.GetRowCount()))
+                self.RowValueChanged(row, col)
+        except wx.PyAssertionError:
+            logger.warning(traceback.format_exc())
+
     def AddRow(self, value):
         """
         Add folder model to folders model and notify view.
@@ -415,9 +434,9 @@ class FoldersModel(DataViewIndexListModel):
             if self.foldersData[row] == folderModel:
                 col = self.columnNames.index("Status")
                 if threading.current_thread().name == "MainThread":
-                    self.RowValueChanged(row, col)
+                    self.TryRowValueChanged(row, col)
                 else:
-                    wx.CallAfter(self.RowValueChanged, row, col)
+                    wx.CallAfter(self.TryRowValueChanged, row, col)
 
     def ScanFolders(self, incrementProgressDialog, shouldAbort):
         """

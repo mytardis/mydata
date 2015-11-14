@@ -11,7 +11,6 @@ import threading
 import requests
 import Queue
 import traceback
-from datetime import datetime
 import subprocess
 import hashlib
 
@@ -20,7 +19,6 @@ from mydata.utils import ConnectionStatus
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
-from mydata.models.upload import UploadModel
 from mydata.controllers.uploads import UploadMethod
 from mydata.controllers.uploads import UploadDatafileRunnable
 from mydata.controllers.verifications import VerifyDatafileRunnable
@@ -217,6 +215,9 @@ class FoldersController(object):
 
     def UploadDatafile(self, event):
         """
+        Called in response to didntFindDatafileOnServerEvent or
+        unverifiedDatafileOnServerEvent.
+
         This method runs in the main thread, so it shouldn't do anything
         time-consuming or blocking, unless it launches another thread.
         Because this method adds upload tasks to a queue, it is important
@@ -224,48 +225,24 @@ class FoldersController(object):
         add something to the queue could block the GUI thread, making the
         application appear unresponsive.
         """
-        if self.IsShuttingDown():
-            return
-        before = datetime.now()
         folderModel = event.folderModel
-        foldersController = event.foldersController
         dfi = event.dataFileIndex
-        uploadsModel = foldersController.uploadsModel
 
-        if folderModel not in foldersController.uploadDatafileRunnable:
-            foldersController.uploadDatafileRunnable[folderModel] = {}
+        if folderModel not in self.uploadDatafileRunnable:
+            self.uploadDatafileRunnable[folderModel] = {}
 
-        self.uploadsThreadingLock.acquire()
-        uploadDataViewId = uploadsModel.GetMaxDataViewId() + 1
-        uploadModel = UploadModel(dataViewId=uploadDataViewId,
-                                  folderModel=folderModel,
-                                  dataFileIndex=dfi)
-        uploadsModel.AddRow(uploadModel)
-        self.uploadsThreadingLock.release()
-        if hasattr(event, "bytesUploadedToStaging"):
-            uploadModel.SetBytesUploadedToStaging(event.bytesUploadedToStaging)
-        uploadModel.SetVerificationModel(event.verificationModel)
-        if self.IsShuttingDown():
-            return
-        existingUnverifiedDatafile = False
-        if hasattr(event, "existingUnverifiedDatafile"):
-            existingUnverifiedDatafile = event.existingUnverifiedDatafile
-        foldersController.uploadDatafileRunnable[folderModel][dfi] = \
+        existingUnverifiedDatafile = \
+            getattr(event, "existingUnverifiedDatafile", False)
+        bytesUploadedPreviously = getattr(event, "bytesUploadedToStaging", 0)
+        verificationModel = getattr(event, "verificationModel", None)
+        self.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,
-                                   dfi, self.uploadsModel, uploadModel,
+                                   dfi, self.uploadsModel,
                                    self.settingsModel,
-                                   existingUnverifiedDatafile)
-        if self.IsShuttingDown():
-            return
-        self.uploadsQueue.put(foldersController
-                              .uploadDatafileRunnable[folderModel][dfi])
-        after = datetime.now()
-        duration = after - before
-        if duration.total_seconds() >= 1:
-            logger.warning("UploadDatafile for " +
-                           folderModel.GetDataFileName(dfi) +
-                           " blocked the main GUI thread for %d seconds." +
-                           duration.total_seconds())
+                                   existingUnverifiedDatafile,
+                                   verificationModel,
+                                   bytesUploadedPreviously)
+        self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
 
     def StartDataUploads(self):
         # pylint: disable=too-many-return-statements
