@@ -344,7 +344,6 @@ class UploadsModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def TryRowValueChanged(self, row, col):
-        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowValueChanged(row, col)
@@ -353,8 +352,8 @@ class UploadsModel(DataViewIndexListModel):
                                "row=%d, self.GetRowCount()=%d" %
                                (row, self.GetRowCount()))
                 self.RowValueChanged(row, col)
-        except:
-            logger.debug(traceback.format_exc())
+        except wx.PyAssertionError:
+            logger.warning(traceback.format_exc())
 
     def TryRowDeleted(self, row):
         # pylint: disable=bare-except
