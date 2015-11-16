@@ -66,7 +66,10 @@ class OpenSSH(object):
 
     # pylint: disable=no-self-use
     def DoubleQuote(self, string):
-        return '"' + string.replace('"', '\\"') + '"'
+        return '"' + string.replace('"', r'\"') + '"'
+
+    def DoubleQuoteRemotePath(self, string):
+        return '"' + string.replace('"', r'\"').replace('`', r'\\`') + '"'
 
     def __init__(self):
         """
@@ -440,13 +443,14 @@ def SshServerIsReady(username, privateKeyFilePath,
         logger.debug(stdout)
     return proc.returncode == 0
 
+
 def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                               host, port, settingsModel):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
-    quotedRemoteFilePath = OPENSSH.DoubleQuote(remoteFilePath)
+    quotedRemoteFilePath = OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
 
     if sys.platform.startswith("win"):
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
@@ -460,7 +464,8 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
                       host,
-                      OPENSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
+                      OPENSSH.DoubleQuoteRemotePath(
+                          "wc -c %s" % quotedRemoteFilePath)]
     else:
         if settingsModel.UseSshControlMasterIfAvailable():
             sshControlMasterPool = \
@@ -488,7 +493,8 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-l", username,
                       sshControlPathOptionValuePair,
                       host,
-                      OPENSSH.DoubleQuote("wc -c %s" % quotedRemoteFilePath)]
+                      OPENSSH.DoubleQuoteRemotePath(
+                          "wc -c %s" % quotedRemoteFilePath)]
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
@@ -529,10 +535,10 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                 "could have been flagged as suspicious, and your IP " \
                 "address could have been temporarily banned." \
                 "\n\n" \
-                "4. MyData could be running more simultaneous upload threads " \
-                "than your staging server can handle.  Ask your staging server " \
-                "administrator to check the values of MaxStartups and MaxSessions " \
-                "in the server's /etc/ssh/sshd_config" \
+                "4. MyData could be running more simultaneous upload " \
+                "threads than your staging server can handle.  Ask your " \
+                "server administrator to check the values of MaxStartups " \
+                "and MaxSessions in the server's /etc/ssh/sshd_config" \
                 "\n\n" \
                 "In any of these cases, it is best to contact your " \
                 "MyTardis administrator for assistance." % host
@@ -679,7 +685,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         sshControlPathOptionValuePair = ""
 
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuote(remoteDir)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
@@ -709,7 +715,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         raise SshException(stdout, mkdirProcess.returncode)
 
     remoteRemoveChunkCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteChunkPath)
+        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
         "%s -p %s -i %s -c %s %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
@@ -807,7 +813,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
-               remoteChunkPath)
+               remoteChunkPath.replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -841,9 +847,9 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         else:
             redirect = ">"
         remoteCatCommand = \
-            "cat %s %s %s" % (OPENSSH.DoubleQuote(remoteChunkPath),
+            "cat %s %s %s" % (OPENSSH.DoubleQuoteRemotePath(remoteChunkPath),
                               redirect,
-                              OPENSSH.DoubleQuote(remoteFilePath))
+                              OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
         catCommandString = \
             "%s -p %s -i %s -c %s %s " \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
@@ -877,7 +883,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             return
 
     remoteRemoveChunkCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteChunkPath)
+        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
         "%s -p %s -i %s -c %s %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
@@ -910,10 +916,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
-    remoteFilePath = remoteFilePath.replace('&', '^&')
-
     remoteRemoveDatafileCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuote(remoteFilePath)
+        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
     rmCommandString = \
         "%s -p %s -n -i %s -c %s " \
         "-oNoHostAuthenticationForLocalhost=yes " \
@@ -938,7 +942,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     bytesUploaded = 0
 
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuote(remoteDir)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
@@ -965,6 +969,8 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
 
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     scpCommandString = \
         '%s -v -P %s -i %s -c %s ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \
@@ -975,7 +981,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
            OPENSSH.cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
-           os.path.dirname(remoteFilePath))
+           remoteDir.replace('&', '^&').replace('`', r'\\`'))
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
@@ -1012,7 +1018,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     """
 
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuote(remoteDir)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
@@ -1039,9 +1045,22 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
 
-    remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
-                                        os.path.basename(remoteFilePath))
-    remoteChunkPath = remoteChunkPath.replace('&', '^&')
+    # It might seem simpler to let Python's tempfile module determine the
+    # filename of the local chunk file (e.g. "tmp123"), and then assign
+    # the correct name when transferring the file with scp, e.g.
+
+    # scp tmp123 mydata@remotehost:/some/dir/.datafile001.jpg.chunk
+
+    # However if the datafile name contains an ampersand, then escaping the
+    # ampersand in the remote file path supplied to scp becomes a nightmare
+    # on Windows, so it is easier to set the filename locally and only
+    # specify the remote directory for scp.
+
+    remoteChunkDir = os.path.dirname(remoteFilePath)
+    chunkFilename = ".%s.chunk" % os.path.basename(remoteFilePath)
+    remoteChunkPath = "%s/%s" % (remoteChunkDir, chunkFilename)
+    tempChunkDir = tempfile.mkdtemp()
+    chunkFilePath = os.path.join(tempChunkDir, chunkFilename)
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
@@ -1074,7 +1093,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         # smallChunkSize (e.g. 8 MB) is for extracting a large chunk
         # from a datafile a little bit at a time (not wasting memory).
         with open(filePath, 'rb') as datafile:
-            with tempfile.NamedTemporaryFile(delete=False) as chunkFile:
+            with open(chunkFilePath, 'wb') as chunkFile:
+                logger.info("Writing chunk to %s" % chunkFilePath)
                 datafile.seek(skip * chunkSize)
                 bytesTransferred = 0
                 smallChunkSize = chunkSize
@@ -1099,13 +1119,15 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             '%s -v -P %s -i %s -c %s ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-            '%s "%s@%s:\\"%s\\""' \
+            '%s "%s@%s:\\"%s/\\""' \
             % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
                OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               remoteChunkPath)
+               remoteChunkDir
+               .replace('&', '^&')
+               .replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -1120,7 +1142,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                                scpCommandString,
                                scpUploadChunkProcess.returncode)
         try:
-            os.unlink(chunkFile.name)
+            os.unlink(chunkFilePath)
         except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
         # Append chunk to remote datafile.
@@ -1134,9 +1156,9 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         else:
             redirect = ">"
         remoteCatCommand = \
-            "cat %s %s %s" % (OPENSSH.DoubleQuote(remoteChunkPath),
+            "cat %s %s %s" % (OPENSSH.DoubleQuoteRemotePath(remoteChunkPath),
                               redirect,
-                              OPENSSH.DoubleQuote(remoteFilePath))
+                              OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
         catCommandString = \
             "%s -p %s -n -i %s -c %s " \
             "-oNoHostAuthenticationForLocalhost=yes " \
@@ -1165,6 +1187,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             logger.debug("UploadLargeFileFromWindows 3: "
                          "Aborting upload for %s" % filePath)
             return
+
+    try:
+        os.rmdir(tempChunkDir)
+    except:  # pylint: disable=bare-except
+        logger.error(traceback.format_exc())
 
 
 def GetCygwinPath(path):
