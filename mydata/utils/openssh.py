@@ -1045,8 +1045,22 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
 
-    remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
-                                        os.path.basename(remoteFilePath))
+    # It might seem simpler to let Python's tempfile module determine the
+    # filename of the local chunk file (e.g. "tmp123"), and then assign
+    # the correct name when transferring the file with scp, e.g.
+
+    # scp tmp123 mydata@remotehost:/some/dir/.datafile001.jpg.chunk
+
+    # However if the datafile name contains an ampersand, then escaping the
+    # ampersand in the remote file path supplied to scp becomes a nightmare
+    # on Windows, so it is easier to set the filename locally and only
+    # specify the remote directory for scp.
+
+    remoteChunkDir = os.path.dirname(remoteFilePath)
+    chunkFilename = ".%s.chunk" % os.path.basename(remoteFilePath)
+    remoteChunkPath = "%s/%s" % (remoteChunkDir, chunkFilename)
+    tempChunkDir = tempfile.mkdtemp()
+    chunkFilePath = os.path.join(tempChunkDir, chunkFilename)
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
@@ -1079,7 +1093,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         # smallChunkSize (e.g. 8 MB) is for extracting a large chunk
         # from a datafile a little bit at a time (not wasting memory).
         with open(filePath, 'rb') as datafile:
-            with tempfile.NamedTemporaryFile(delete=False) as chunkFile:
+            with open(chunkFilePath, 'wb') as chunkFile:
+                logger.info("Writing chunk to %s" % chunkFilePath)
                 datafile.seek(skip * chunkSize)
                 bytesTransferred = 0
                 smallChunkSize = chunkSize
@@ -1104,13 +1119,13 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             '%s -v -P %s -i %s -c %s ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-            '%s "%s@%s:\\"%s\\""' \
+            '%s "%s@%s:\\"%s/\\""' \
             % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
                OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               remoteChunkPath
+               remoteChunkDir
                .replace('&', '^&')
                .replace('`', r'\\`'))
         logger.debug(scpCommandString)
@@ -1127,7 +1142,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                                scpCommandString,
                                scpUploadChunkProcess.returncode)
         try:
-            os.unlink(chunkFile.name)
+            os.unlink(chunkFilePath)
         except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
         # Append chunk to remote datafile.
@@ -1172,6 +1187,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             logger.debug("UploadLargeFileFromWindows 3: "
                          "Aborting upload for %s" % filePath)
             return
+
+    try:
+        os.rmdir(tempChunkDir)
+    except:  # pylint: disable=bare-except
+        logger.error(traceback.format_exc())
 
 
 def GetCygwinPath(path):
