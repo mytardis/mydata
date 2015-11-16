@@ -674,7 +674,7 @@ class SettingsDialog(wx.Dialog):
 
         self.maxUploadRetriesSpinCtrl = \
             wx.SpinCtrl(self.maxUploadRetriesPanel, wx.ID_ANY,
-                        "5", min=0, max=99)
+                        "1", min=0, max=99)
         self.maxUploadRetriesPanelSizer.Add(self.maxUploadRetriesSpinCtrl,
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadRetriesPanel,
