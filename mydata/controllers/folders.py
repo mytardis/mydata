@@ -225,6 +225,7 @@ class FoldersController(object):
         add something to the queue could block the GUI thread, making the
         application appear unresponsive.
         """
+        self.CountCompletedUploadsAndVerifications(event=None)
         folderModel = event.folderModel
         dfi = event.dataFileIndex
 
@@ -498,10 +499,22 @@ class FoldersController(object):
         # pylint: disable=unused-argument
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
-        uploadsToBePerformed = self.uploadsModel.GetRowCount()
+        uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
+            self.uploadsQueue.qsize()
         uploadsCompleted = self.uploadsModel.GetCompletedCount()
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
+
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            if numVerificationsCompleted == self.numVerificationsToBePerformed \
+                    and uploadsToBePerformed > 0:
+                message = "Uploaded %d of %d files." % \
+                    (uploadsCompleted, uploadsToBePerformed)
+            else:
+                message = "Looked up %d of %d files on server." % \
+                    (numVerificationsCompleted,
+                     self.numVerificationsToBePerformed)
+            wx.GetApp().GetMainFrame().SetStatusMessage(message)
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and self.finishedCountingVerifications.isSet() \
