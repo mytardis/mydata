@@ -411,6 +411,11 @@ class FoldersController(object):
                 if self.IsShuttingDown():
                     return
             fc.finishedCountingVerifications.set()
+            if self.foldersModel.GetRowCount() == 0:
+                # For the case of zero folders, we can't use the
+                # usual triggers (e.g. datafile upload complete)
+                # to determine when to check if we have finished.
+                self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
