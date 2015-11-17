@@ -143,7 +143,12 @@ The "mytardis" web user should have read access to the staging data, but the
 One way to implement this is to set ownership of the staging directory to
 "mytardis:www-data", use the "setgid" bit (chmod g+s) on the staging directory
 so that subdirectories inherit the "www-data" group, and set "umask 0007" in
-the mydata user's ~/.bashrc.
+the mydata user's ~/.bashrc.  It is important that the umask setting is
+applied when running remote commands without an interactive shell, e.g.
+"ssh -i ~/.ssh/MyData mydata@hostname umask".  Some ~/.bashrc
+files are configured to exit partway through if not running an interactive
+shell, so it may be necessary to insert the umask directive near the
+beginning of the ~/.basrhc file..
 
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
