@@ -12,7 +12,6 @@ import requests
 import Queue
 import traceback
 import subprocess
-import hashlib
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
@@ -657,32 +656,3 @@ class FoldersController(object):
             logger.debug("sys.platform = " + sys.platform)
 
         OpenFolder(path)
-
-    def CalculateMd5Sum(self, filePath, fileSize, uploadModel,
-                        progressCallback=None):
-        """
-        Calculate MD5 checksum.
-        """
-        md5 = hashlib.md5()
-
-        defaultChunkSize = 128 * 1024
-        maxChunkSize = 16 * 1024 * 1024
-        chunkSize = defaultChunkSize
-        while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
-            chunkSize = chunkSize * 2
-        bytesProcessed = 0
-        with open(filePath, 'rb') as fileHandle:
-            # Note that the iter() func needs an empty byte string
-            # for the returned iterator to halt at EOF, since read()
-            # returns b'' (not just '').
-            for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
-                if self.IsShuttingDown() or uploadModel.Canceled():
-                    logger.debug("Aborting MD5 calculation for "
-                                 "%s" % filePath)
-                    return None
-                md5.update(chunk)
-                bytesProcessed += len(chunk)
-                del chunk
-                if progressCallback:
-                    progressCallback(bytesProcessed)
-        return md5.hexdigest()
