@@ -124,6 +124,7 @@ class MyDataFrame(wx.Frame):
         Update status bar's message.
         """
         self.statusbar.SetStatusMessage(msg)
+        wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
 
     def SetConnected(self, myTardisUrl, connected):
         """
@@ -276,8 +277,6 @@ class MyData(wx.App):
             elif args.loglevel == "ERROR":
                 logger.SetLevel(logging.ERROR)
 
-        self.CheckIfAlreadyRunning(appdirPath)
-
         if sys.platform.startswith("darwin"):
             self.CreateMacMenu()
 
@@ -402,34 +401,6 @@ class MyData(wx.App):
 
         return True
 
-    def CheckIfAlreadyRunning(self, appdirPath):
-        """
-        Using wx.SingleInstanceChecker to check whether MyData is already
-        running.
-        Running MyData --version is allowed when MyData is already running.
-        A workaround for the 'Deleted stale lock file' issue with
-        SingleInstanceChecker on Mac OS X is to lower the wx logging level.
-        MyData doesn't use wx.Log
-        """
-        wx.Log.SetLogLevel(wx.LOG_Error)
-        instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
-        if instance.IsAnotherRunning():
-            logger.warning("Another MyData instance is already running.")
-            if sys.platform.startswith("darwin"):
-                applescript = (
-                    'tell application "System Events"\n'
-                    '        set theprocs to every process whose name is '
-                    '"MyData"\n'
-                    '        repeat with proc in theprocs\n'
-                    '                set the frontmost of proc to true\n'
-                    '        end repeat\n'
-                    'end tell')
-                os.system("osascript -e '%s'" % applescript)
-                sys.exit(0)
-            else:
-                wx.MessageBox("MyData is already running!", "MyData",
-                              wx.ICON_ERROR)
-                sys.exit(1)
 
     def CreateMacMenu(self):
         """

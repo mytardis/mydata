@@ -6,6 +6,7 @@ and the tabular data displayed on that tab view.
 # pylint: disable=missing-docstring
 
 import threading
+import traceback
 from datetime import datetime
 from datetime import timedelta
 
@@ -289,6 +290,19 @@ class TasksModel(DataViewIndexListModel):
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
+    def TryRowValueChanged(self, row, col):
+        # pylint: disable=bare-except
+        try:
+            if row < self.GetCount():
+                self.RowValueChanged(row, col)
+            else:
+                logger.warning("TryRowValueChanged called with "
+                               "row=%d, self.GetRowCount()=%d" %
+                               (row, self.GetRowCount()))
+                self.RowValueChanged(row, col)
+        except wx.PyAssertionError:
+            logger.warning(traceback.format_exc())
+
     def AddRow(self, taskModel):
         self.Filter("")
         self.tasksData.append(taskModel)
@@ -312,7 +326,7 @@ class TasksModel(DataViewIndexListModel):
                 title = "Finished"
                 message = taskModel.GetJobDesc()
                 Notification.Notify(message, title=title)
-                wx.CallAfter(tasksModel.RowValueChanged, row, col)
+                wx.CallAfter(tasksModel.TryRowValueChanged, row, col)
                 scheduleType = taskModel.GetScheduleType()
                 if scheduleType == "Timer":
                     intervalMinutes = taskModel.GetIntervalMinutes()
