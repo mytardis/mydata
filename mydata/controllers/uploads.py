@@ -16,9 +16,11 @@ import traceback
 import mimetypes
 import time
 import poster
+import hashlib
 
 from mydata.utils.openssh import UploadFile
 
+from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
 from mydata.utils import ConnectionStatus
@@ -48,17 +50,20 @@ class UploadMethod(object):
 class UploadDatafileRunnable(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
-                 dataFileIndex, uploadsModel, uploadModel, settingsModel,
-                 existingUnverifiedDatafile):
+                 dataFileIndex, uploadsModel, settingsModel,
+                 existingUnverifiedDatafile, verificationModel,
+                 bytesUploadedPreviously=0):
         # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.uploadsModel = uploadsModel
-        self.uploadModel = uploadModel
+        self.uploadModel = None
         self.settingsModel = settingsModel
         self.existingUnverifiedDatafile = existingUnverifiedDatafile
+        self.verificationModel = verificationModel
+        self.bytesUploadedPreviously = bytesUploadedPreviously
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -71,12 +76,18 @@ class UploadDatafileRunnable(object):
         # pylint: disable=too-many-return-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
-        if self.uploadModel.Canceled():
-            # self.foldersController.SetCanceled()
-            logger.debug("Upload for \"%s\" was canceled "
-                         "before it began uploading." %
-                         self.uploadModel.GetRelativePathToUpload())
-            return
+
+        self.foldersController.uploadsThreadingLock.acquire()
+        uploadDataViewId = self.uploadsModel.GetMaxDataViewId() + 1
+        self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
+                                       folderModel=self.folderModel,
+                                       dataFileIndex=self.dataFileIndex)
+        self.uploadsModel.AddRow(self.uploadModel)
+        self.foldersController.uploadsThreadingLock.release()
+        self.uploadModel.SetBytesUploadedToStaging(
+            self.bytesUploadedPreviously)
+        self.uploadModel.SetVerificationModel(self.verificationModel)
+
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         dataFileDirectory = \
@@ -152,8 +163,7 @@ class UploadDatafileRunnable(object):
                         myTardisUrl=myTardisUrl,
                         connectionStatus=ConnectionStatus.CONNECTED))
             dataFileMd5Sum = \
-                self.foldersController\
-                    .CalculateMd5Sum(dataFilePath, dataFileSize,
+                self.CalculateMd5Sum(dataFilePath, dataFileSize,
                                      self.uploadModel,
                                      progressCallback=Md5ProgressCallback)
 
@@ -684,3 +694,33 @@ class UploadDatafileRunnable(object):
                 self.uploadModel.GetBufferedReader().close()
             except:
                 logger.error(traceback.format_exc())
+
+    def CalculateMd5Sum(self, filePath, fileSize, uploadModel,
+                        progressCallback=None):
+        """
+        Calculate MD5 checksum.
+        """
+        md5 = hashlib.md5()
+
+        defaultChunkSize = 128 * 1024
+        maxChunkSize = 16 * 1024 * 1024
+        chunkSize = defaultChunkSize
+        while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+            chunkSize = chunkSize * 2
+        bytesProcessed = 0
+        with open(filePath, 'rb') as fileHandle:
+            # Note that the iter() func needs an empty byte string
+            # for the returned iterator to halt at EOF, since read()
+            # returns b'' (not just '').
+            for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
+                if self.foldersController.IsShuttingDown() or \
+                        uploadModel.Canceled():
+                    logger.debug("Aborting MD5 calculation for "
+                                 "%s" % filePath)
+                    return None
+                md5.update(chunk)
+                bytesProcessed += len(chunk)
+                del chunk
+                if progressCallback:
+                    progressCallback(bytesProcessed)
+        return md5.hexdigest()

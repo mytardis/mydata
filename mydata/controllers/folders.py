@@ -11,16 +11,13 @@ import threading
 import requests
 import Queue
 import traceback
-from datetime import datetime
 import subprocess
-import hashlib
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
-from mydata.models.upload import UploadModel
 from mydata.controllers.uploads import UploadMethod
 from mydata.controllers.uploads import UploadDatafileRunnable
 from mydata.controllers.verifications import VerifyDatafileRunnable
@@ -217,6 +214,9 @@ class FoldersController(object):
 
     def UploadDatafile(self, event):
         """
+        Called in response to didntFindDatafileOnServerEvent or
+        unverifiedDatafileOnServerEvent.
+
         This method runs in the main thread, so it shouldn't do anything
         time-consuming or blocking, unless it launches another thread.
         Because this method adds upload tasks to a queue, it is important
@@ -224,48 +224,25 @@ class FoldersController(object):
         add something to the queue could block the GUI thread, making the
         application appear unresponsive.
         """
-        if self.IsShuttingDown():
-            return
-        before = datetime.now()
+        self.CountCompletedUploadsAndVerifications(event=None)
         folderModel = event.folderModel
-        foldersController = event.foldersController
         dfi = event.dataFileIndex
-        uploadsModel = foldersController.uploadsModel
 
-        if folderModel not in foldersController.uploadDatafileRunnable:
-            foldersController.uploadDatafileRunnable[folderModel] = {}
+        if folderModel not in self.uploadDatafileRunnable:
+            self.uploadDatafileRunnable[folderModel] = {}
 
-        self.uploadsThreadingLock.acquire()
-        uploadDataViewId = uploadsModel.GetMaxDataViewId() + 1
-        uploadModel = UploadModel(dataViewId=uploadDataViewId,
-                                  folderModel=folderModel,
-                                  dataFileIndex=dfi)
-        uploadsModel.AddRow(uploadModel)
-        self.uploadsThreadingLock.release()
-        if hasattr(event, "bytesUploadedToStaging"):
-            uploadModel.SetBytesUploadedToStaging(event.bytesUploadedToStaging)
-        uploadModel.SetVerificationModel(event.verificationModel)
-        if self.IsShuttingDown():
-            return
-        existingUnverifiedDatafile = False
-        if hasattr(event, "existingUnverifiedDatafile"):
-            existingUnverifiedDatafile = event.existingUnverifiedDatafile
-        foldersController.uploadDatafileRunnable[folderModel][dfi] = \
+        existingUnverifiedDatafile = \
+            getattr(event, "existingUnverifiedDatafile", False)
+        bytesUploadedPreviously = getattr(event, "bytesUploadedToStaging", 0)
+        verificationModel = getattr(event, "verificationModel", None)
+        self.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,
-                                   dfi, self.uploadsModel, uploadModel,
+                                   dfi, self.uploadsModel,
                                    self.settingsModel,
-                                   existingUnverifiedDatafile)
-        if self.IsShuttingDown():
-            return
-        self.uploadsQueue.put(foldersController
-                              .uploadDatafileRunnable[folderModel][dfi])
-        after = datetime.now()
-        duration = after - before
-        if duration.total_seconds() >= 1:
-            logger.warning("UploadDatafile for " +
-                           folderModel.GetDataFileName(dfi) +
-                           " blocked the main GUI thread for %d seconds." +
-                           duration.total_seconds())
+                                   existingUnverifiedDatafile,
+                                   verificationModel,
+                                   bytesUploadedPreviously)
+        self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
 
     def StartDataUploads(self):
         # pylint: disable=too-many-return-statements
@@ -434,6 +411,11 @@ class FoldersController(object):
                 if self.IsShuttingDown():
                     return
             fc.finishedCountingVerifications.set()
+            if self.foldersModel.GetRowCount() == 0:
+                # For the case of zero folders, we can't use the
+                # usual triggers (e.g. datafile upload complete)
+                # to determine when to check if we have finished.
+                self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
@@ -516,10 +498,22 @@ class FoldersController(object):
         # pylint: disable=unused-argument
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
-        uploadsToBePerformed = self.uploadsModel.GetRowCount()
+        uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
+            self.uploadsQueue.qsize()
         uploadsCompleted = self.uploadsModel.GetCompletedCount()
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
+
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            if numVerificationsCompleted == self.numVerificationsToBePerformed \
+                    and uploadsToBePerformed > 0:
+                message = "Uploaded %d of %d files." % \
+                    (uploadsCompleted, uploadsToBePerformed)
+            else:
+                message = "Looked up %d of %d files on server." % \
+                    (numVerificationsCompleted,
+                     self.numVerificationsToBePerformed)
+            wx.GetApp().GetMainFrame().SetStatusMessage(message)
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and self.finishedCountingVerifications.isSet() \
@@ -662,32 +656,3 @@ class FoldersController(object):
             logger.debug("sys.platform = " + sys.platform)
 
         OpenFolder(path)
-
-    def CalculateMd5Sum(self, filePath, fileSize, uploadModel,
-                        progressCallback=None):
-        """
-        Calculate MD5 checksum.
-        """
-        md5 = hashlib.md5()
-
-        defaultChunkSize = 128 * 1024
-        maxChunkSize = 16 * 1024 * 1024
-        chunkSize = defaultChunkSize
-        while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
-            chunkSize = chunkSize * 2
-        bytesProcessed = 0
-        with open(filePath, 'rb') as fileHandle:
-            # Note that the iter() func needs an empty byte string
-            # for the returned iterator to halt at EOF, since read()
-            # returns b'' (not just '').
-            for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
-                if self.IsShuttingDown() or uploadModel.Canceled():
-                    logger.debug("Aborting MD5 calculation for "
-                                 "%s" % filePath)
-                    return None
-                md5.update(chunk)
-                bytesProcessed += len(chunk)
-                del chunk
-                if progressCallback:
-                    progressCallback(bytesProcessed)
-        return md5.hexdigest()
