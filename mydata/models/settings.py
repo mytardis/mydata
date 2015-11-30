@@ -213,7 +213,7 @@ class SettingsModel(object):
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
         self.max_upload_threads = 5
-        self.max_upload_retries = 5
+        self.max_upload_retries = 1
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
 
