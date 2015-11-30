@@ -13,6 +13,10 @@ import traceback
 import subprocess
 import requests
 
+import wx
+import wx.lib.newevent
+import wx.dataview
+
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
 
@@ -23,10 +27,6 @@ from mydata.controllers.uploads import UploadDatafileRunnable
 from mydata.controllers.verifications import VerifyDatafileRunnable
 
 from mydata.logs import logger
-
-import wx
-import wx.lib.newevent
-import wx.dataview
 
 
 class FoldersController(object):

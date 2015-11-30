@@ -34,6 +34,10 @@ import threading
 import time
 import pkgutil
 
+if sys.platform.startswith("win"):
+    # pylint: disable=import-error
+    import win32process
+
 from mydata.logs import logger
 from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
@@ -52,9 +56,6 @@ if sys.platform.startswith("win"):
     # pylint: disable=protected-access
     DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    # pylint: disable=import-error
-    # pylint: disable=wrong-import-position
-    import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 

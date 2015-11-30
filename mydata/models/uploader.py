@@ -87,6 +87,10 @@ import threading
 import psutil
 import requests
 
+if sys.platform.startswith("win"):
+    # pylint: disable=import-error
+    import win32process
+
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
 from mydata.logs import logger
@@ -99,7 +103,6 @@ from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils import BytesToHuman
 
-
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
 if sys.platform.startswith("win"):
@@ -107,9 +110,6 @@ if sys.platform.startswith("win"):
     # pylint: disable=protected-access
     DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    # pylint: disable=import-error
-    # pylint: disable=wrong-import-position
-    import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 
