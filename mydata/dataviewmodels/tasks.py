@@ -10,15 +10,15 @@ import traceback
 from datetime import datetime
 from datetime import timedelta
 
-from mydata.models.task import TaskModel
-from mydata.utils.notification import Notification
-from mydata.logs import logger
-
 import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from mydata.models.task import TaskModel
+from mydata.utils.notification import Notification
+from mydata.logs import logger
 
 
 class TasksModel(DataViewIndexListModel):

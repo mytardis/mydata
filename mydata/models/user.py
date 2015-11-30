@@ -2,9 +2,9 @@
 Model class for MyTardis API v1's UserResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import requests
 import traceback
 import urllib2
+import requests
 
 from .group import GroupModel
 from mydata.utils.exceptions import IncompatibleMyTardisVersion

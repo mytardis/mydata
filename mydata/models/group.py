@@ -5,8 +5,8 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 # pylint: disable=missing-docstring
 
-import requests
 import urllib
+import requests
 
 from mydata.logs import logger
 from mydata.utils.exceptions import DoesNotExist

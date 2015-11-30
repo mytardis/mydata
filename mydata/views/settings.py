@@ -7,20 +7,21 @@ Classes for MyData's settings dialog.
 # pylint: disable=too-many-lines
 # pylint: disable=no-member
 
-import wx
-
-try:
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
-except ImportError:
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-import wx.lib.masked
 from datetime import datetime
 from datetime import timedelta
 import sys
 import os
 import traceback
+
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    import wx.lib.masked
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+else:
+    import wx.lib.masked
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
 
 from mydata.logs import logger
 import mydata.events as mde
@@ -1253,6 +1254,7 @@ class SettingsDialog(wx.Dialog):
         Handles drag and drop of a MyData.cfg file
         onto the settings dialog.
         """
+        # pylint: disable=too-many-branches
         if self.Locked():
             message = \
                 "Please unlock MyData's settings before importing " \
@@ -1293,6 +1295,10 @@ class SettingsDialog(wx.Dialog):
         return True
 
     def OnLockOrUnlockSettings(self, event):
+        """
+        Lock or unlock settings.
+        """
+        # pylint: disable=too-many-branches
         if self.lockOrUnlockButton.GetLabel() == "Lock":
             message = "Once settings have been locked, only an " \
                 "administrator will be able to unlock them.\n\n" \

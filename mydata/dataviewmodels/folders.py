@@ -10,18 +10,18 @@ import traceback
 from datetime import datetime
 from glob import glob
 
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
+else:
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
 from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
 from mydata.models.group import GroupModel
 from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
-
-import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
 # pylint: disable=too-many-instance-attributes

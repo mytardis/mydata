@@ -6,10 +6,10 @@ and the tabular data displayed on that tab view.
 # pylint: disable=fixme
 # pylint: disable=missing-docstring
 
-import wx
-import wx.dataview as dv
 import traceback
 import threading
+import wx
+import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.logs import logger

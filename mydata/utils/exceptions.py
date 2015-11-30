@@ -156,7 +156,6 @@ class ScpException(SshException):
         self.returncode = returncode
 
 
-# pylint: disable=interface-not-implemented
 class NoActiveNetworkInterface(Exception):
     """
     No active network interface exception.

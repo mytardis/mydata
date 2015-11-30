@@ -15,7 +15,6 @@ class VerificationsView(wx.Panel):
     Represents the Verifications tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=interface-not-implemented
     def __init__(self, parent, verificationsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 

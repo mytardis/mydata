@@ -3,8 +3,8 @@ Model class for MyTardis API v1's ObjectACLResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
-import requests
 import json
+import requests
 
 from mydata.logs import logger
 from .user import UserProfileModel
@@ -78,7 +78,7 @@ class ObjectAclModel(object):
                 message += "Please ask your MyTardis administrator " \
                            "to check the permissions of the \"%s\" " \
                            "user account." % myTardisDefaultUsername
-                raise Unauthorized(message)
+                raise Unauthorized(message)  # pylint: disable=misplaced-bare-raise
             elif response.status_code == 404:
                 message = "Couldn't create ObjectACL for " \
                           "experiment \"%s\"." % experiment.GetTitle()
@@ -89,8 +89,7 @@ class ObjectAclModel(object):
                            "to check that a User Profile record " \
                            "exists for the \"%s\" user account." \
                            % myTardisDefaultUsername
-                raise DoesNotExist(message, modelClass=UserProfileModel)
-            raise
+                raise DoesNotExist(message, modelClass=UserProfileModel)  # pylint: disable=misplaced-bare-raise
 
     @staticmethod
     def ShareExperimentWithGroup(experiment, group):
@@ -155,4 +154,3 @@ class ObjectAclModel(object):
                            "exists for the \"%s\" user account." \
                            % myTardisDefaultUsername
                 raise DoesNotExist(message, modelClass=UserProfileModel)
-            raise

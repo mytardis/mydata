@@ -8,7 +8,6 @@ via HTTP POST for analysis by developers / sys admins.
 # pylint: disable=fixme
 
 import threading
-import wx
 import logging
 from StringIO import StringIO
 from ConfigParser import ConfigParser
@@ -17,10 +16,12 @@ import os
 import time
 import subprocess
 import sys
-import requests
 import inspect
 import pkgutil
 import traceback
+
+import requests
+import wx
 
 from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
 from mydata.logs.wxloghandler import WxLogHandler

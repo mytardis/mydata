@@ -8,15 +8,15 @@ and the tabular data displayed on that tab view.
 import threading
 import traceback
 
-from mydata.models.upload import UploadStatus
-from mydata.logs import logger
-from mydata.media import MYDATA_ICONS
-
 import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from mydata.models.upload import UploadStatus
+from mydata.logs import logger
+from mydata.media import MYDATA_ICONS
 
 
 # pylint: disable=too-few-public-methods
