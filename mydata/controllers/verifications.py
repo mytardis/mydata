@@ -11,6 +11,8 @@ import os
 import threading
 import traceback
 
+import wx
+
 from mydata.utils.openssh import GetBytesUploadedToStaging
 
 from mydata.models.verification import VerificationModel
@@ -25,8 +27,6 @@ from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 
 from mydata.logs import logger
-
-import wx
 
 
 class VerifyDatafileRunnable(object):

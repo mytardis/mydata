@@ -19,6 +19,8 @@ import hashlib
 import poster
 import requests
 
+import wx
+
 from mydata.utils.openssh import UploadFile
 
 from mydata.models.upload import UploadModel
@@ -37,8 +39,6 @@ from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
-
-import wx
 
 
 class UploadMethod(object):
