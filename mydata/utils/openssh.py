@@ -53,6 +53,7 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     # pylint: disable=import-error
+    # pylint: disable=wrong-import-position
     import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
@@ -505,14 +506,14 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                             creationflags=DEFAULT_CREATION_FLAGS)
     stdout, _ = proc.communicate()
     lines = stdout.splitlines()
-    bytesUploaded = 0
+    bytesUploaded = long(0)
     for line in lines:
         match = re.search(r"^(\d+)\s+\S+", line)
         if match:
             bytesUploaded = long(match.groups()[0])
             return bytesUploaded
         elif "No such file or directory" in line:
-            bytesUploaded = 0
+            bytesUploaded = long(0)
             return bytesUploaded
         elif line == "ssh_exchange_identification: read: " \
                 "Connection reset by peer" or \
@@ -591,7 +592,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     task which does the final check.
     """
 
-    bytesUploaded = 0
+    bytesUploaded = long(0)
     largeFileSize = 10 * 1024 * 1024  # FIXME: Magic number
 
     if fileSize > largeFileSize:
@@ -757,7 +758,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         progressCallback(bytesUploaded, fileSize)
     else:
         # Overwrite staging file if it is bigger that local file:
-        bytesUploaded = 0
+        bytesUploaded = long(0)
 
     # FIXME: Handle exception where socket for ssh control path
     # is missing, then we need to create a new master connection.
@@ -793,7 +794,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                             ddCommandString,
                             ddProcess.returncode)
         lines = stdout.splitlines()
-        bytesTransferred = 0
+        bytesTransferred = long(0)
         for line in lines:
             match = re.search(r"^(\d+)\s+bytes\s+transferred.*$", line)
             if match:
@@ -939,7 +940,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     if removeRemoteDatafileProcess.returncode != 0:
         raise SshException(stdout, removeRemoteDatafileProcess.returncode)
 
-    bytesUploaded = 0
+    bytesUploaded = long(0)
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
@@ -1082,7 +1083,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         logger.debug("Setting bytesUploaded to 0, because the size of the "
                      "partially uploaded file in MyTardis's staging area "
                      "is not a whole number of chunks.")
-        bytesUploaded = 0
+        bytesUploaded = long(0)
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
             logger.debug("UploadLargeFileFromWindows 1: "
@@ -1096,7 +1097,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             with open(chunkFilePath, 'wb') as chunkFile:
                 logger.info("Writing chunk to %s" % chunkFilePath)
                 datafile.seek(skip * chunkSize)
-                bytesTransferred = 0
+                bytesTransferred = long(0)
                 smallChunkSize = chunkSize
                 count = 1
                 while (smallChunkSize > 8 * 1024 * 1024) and \

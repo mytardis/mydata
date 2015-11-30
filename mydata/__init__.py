@@ -1,14 +1,15 @@
 """
 mydata/__init__.py
 """
+import sys
 
 __version__ = "0.5.0rc1"
 
-import sys
 
 try:
     if hasattr(sys, "frozen"):
         # pylint: disable=import-error
+        # pylint: disable=wrong-import-position
         from mydata.commitdef import LATEST_COMMIT
     else:
         line = None  # pylint: disable=invalid-name

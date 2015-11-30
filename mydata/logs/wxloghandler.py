@@ -2,10 +2,10 @@
 A logging handler which can be used with a wx.TextCtrl.
 """
 
+import logging
+
 import wx
 import wx.lib.newevent
-
-import logging
 
 # create event type
 # pylint: disable=invalid-name

@@ -1,12 +1,12 @@
 """
 Custom events for MyData.
 """
-import wx
 import threading
 import os
 from datetime import datetime
 import traceback
 import sys
+import wx
 
 from mydata.models.settings import SettingsModel
 from mydata.models.uploader import UploaderModel

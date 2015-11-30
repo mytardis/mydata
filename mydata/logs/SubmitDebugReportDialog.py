@@ -8,9 +8,9 @@ the bottom of the Log tab within MyData's main window.
 
 # pylint: disable=missing-docstring
 
-import wx
 import os
 import sys
+import wx
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))

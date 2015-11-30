@@ -7,8 +7,13 @@ Classes for MyData's settings dialog.
 # pylint: disable=too-many-lines
 # pylint: disable=no-member
 
-import wx
+from datetime import datetime
+from datetime import timedelta
+import sys
+import os
+import traceback
 
+import wx
 try:
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
@@ -16,11 +21,6 @@ except ImportError:
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
 import wx.lib.masked
-from datetime import datetime
-from datetime import timedelta
-import sys
-import os
-import traceback
 
 from mydata.logs import logger
 import mydata.events as mde

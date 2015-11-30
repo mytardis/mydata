@@ -3,8 +3,8 @@ Model class for MyTardis API v1's DataFileResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
-import requests
 import urllib
+import requests
 
 from mydata.logs import logger
 from .replica import ReplicaModel
