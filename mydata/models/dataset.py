@@ -6,10 +6,10 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 # pylint: disable=missing-docstring
 
 import urllib
-import requests
 import json
 import traceback
 import threading
+import requests
 
 from mydata.logs import logger
 from mydata.utils.exceptions import Unauthorized
@@ -47,6 +47,7 @@ class DatasetModel(object):
         return "dataset/%d" % (self.GetId(),)
 
     def GetDataFiles(self):
+        # pylint: disable=too-many-nested-blocks
         if not self.datafiles:
             try:
                 self.getDatasetFilesThreadingLock.acquire()

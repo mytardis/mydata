@@ -8,10 +8,10 @@ and uploads from each of the folders in the Folders view.
 import os
 import sys
 import threading
-import requests
 import Queue
 import traceback
 import subprocess
+import requests
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus

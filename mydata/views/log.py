@@ -2,8 +2,8 @@
 Represents the Log tab of MyData's main window,
 and the log text displayed within that tab view.
 """
-import wx
 import sys
+import wx
 
 from mydata.logs import logger
 

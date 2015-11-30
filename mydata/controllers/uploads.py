@@ -9,14 +9,15 @@ class.
 
 import os
 import urllib2
-import requests
 import json
 import io
 import traceback
 import mimetypes
 import time
-import poster
 import hashlib
+
+import poster
+import requests
 
 from mydata.utils.openssh import UploadFile
 
@@ -280,6 +281,7 @@ class UploadDatafileRunnable(object):
         request = None
         response = None
         # pylint: disable=broad-except
+        # pylint: disable=too-many-nested-blocks
         try:
             if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
                 request = urllib2.Request(url, datagen, headers)

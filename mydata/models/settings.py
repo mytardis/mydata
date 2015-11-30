@@ -12,19 +12,20 @@ and saved to disk in MyData.cfg
 # pylint: disable=too-many-instance-attributes
 
 import sys
-import requests
 import traceback
 import subprocess
 import os
-import psutil
 import getpass
 from glob import glob
 from ConfigParser import ConfigParser
-from validate_email import validate_email
 from datetime import datetime
 from datetime import timedelta
 import threading
 import tempfile
+
+import psutil
+import requests
+from validate_email import validate_email
 
 from mydata.logs import logger
 from mydata.models.user import UserModel
@@ -43,6 +44,7 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     # pylint: disable=import-error
+    # pylint: disable=wrong-import-position
     import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
@@ -1035,10 +1037,10 @@ Else
 End If
                     """
                     vbScript.write(script)
-                cmd = ['cscript', '//Nologo', vbScript.name]
+                cmdList = ['cscript', '//Nologo', vbScript.name]
                 logger.info("Checking for MyData shortcut in user "
                             "startup items.")
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, shell=False,
                                         startupinfo=DEFAULT_STARTUP_INFO,
                                         creationflags=DEFAULT_CREATION_FLAGS)
@@ -1057,10 +1059,10 @@ End If
                         as vbScript:
                     script = script.replace("Startup", "AllUsersStartup")
                     vbScript.write(script)
-                cmd = ['cscript', '//Nologo', vbScript.name]
+                cmdList = ['cscript', '//Nologo', vbScript.name]
                 logger.info("Checking for MyData shortcut in common "
                             "startup items.")
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, shell=False,
                                         startupinfo=DEFAULT_STARTUP_INFO,
                                         creationflags=DEFAULT_CREATION_FLAGS)
@@ -1099,10 +1101,10 @@ oLink.TargetPath = "%s"
 oLink.Save
                         """ % pathToMyDataExe
                         vbScript.write(script)
-                    cmd = ['cscript', '//Nologo', vbScript.name]
+                    cmdList = ['cscript', '//Nologo', vbScript.name]
                     logger.info("Adding MyData shortcut to user "
                                 "startup items.")
-                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                    proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             shell=False,
                                             startupinfo=DEFAULT_STARTUP_INFO,
@@ -1129,8 +1131,8 @@ sLinkFile = startupFolder & "\" & "MyData.lnk"
 oFS.DeleteFile sLinkFile
                         """
                         vbScript.write(script)
-                    cmd = ['cscript', '//Nologo', vbScript.name]
-                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                    cmdList = ['cscript', '//Nologo', vbScript.name]
+                    proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             shell=False,
                                             startupinfo=DEFAULT_STARTUP_INFO,
@@ -1155,8 +1157,9 @@ oFS.DeleteFile sLinkFile
                 applescript = \
                     'tell application "System Events" ' \
                     'to get the name of every login item'
-                cmd = "osascript -e '%s'" % applescript
-                loginItemsString = subprocess.check_output(cmd, shell=True)
+                cmdString = "osascript -e '%s'" % applescript
+                loginItemsString = subprocess.check_output(cmdString,
+                                                           shell=True)
                 loginItems = [item.strip() for item in
                               loginItemsString.split(',')]
                 logger.info("Current login items: " + str(loginItems))
@@ -1175,22 +1178,22 @@ oFS.DeleteFile sLinkFile
                         'tell application "System Events" ' \
                         'to make login item at end with properties ' \
                         '{path:"%s", hidden:false}' % pathToMyDataApp
-                    cmd = "osascript -e '%s'" % applescript
-                    exitCode = subprocess.call(cmd, shell=True)
+                    cmdString = "osascript -e '%s'" % applescript
+                    exitCode = subprocess.call(cmdString, shell=True)
                     if exitCode != 0:
                         logger.error("Received exit code %d from %s"
-                                     % (exitCode, cmd))
+                                     % (exitCode, cmdString))
                 elif 'MyData' in loginItems and \
                         not self.StartAutomaticallyOnLogin():
                     logger.info("Removing MyData from login items.")
                     applescript = \
                         'tell application "System Events" to ' \
                         'delete login item "MyData"'
-                    cmd = "osascript -e '%s'" % applescript
-                    exitCode = subprocess.call(cmd, shell=True)
+                    cmdString = "osascript -e '%s'" % applescript
+                    exitCode = subprocess.call(cmdString, shell=True)
                     if exitCode != 0:
                         logger.error("Received exit code %d from %s"
-                                     % (exitCode, cmd))
+                                     % (exitCode, cmdString))
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
