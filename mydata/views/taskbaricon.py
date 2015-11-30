@@ -46,6 +46,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         # self.Bind(wx.EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
 
         self.menu = None
+        self.aboutMyDataMenuItem = None
         self.myTardisSyncMenuItem = None
         self.myTardisMainWindowMenuItem = None
         self.myTardisSettingsMenuItem = None
@@ -58,6 +59,17 @@ class MyDataTaskBarIcon(TaskBarIcon):
         when the user clicks on MyData's system tray (or menubar) icon.
         """
         self.menu = wx.Menu()
+
+        self.aboutMyDataMenuItem = wx.MenuItem(
+            self.menu, wx.NewId(), "About MyData")
+        if wx.version().startswith("3.0.3.dev"):
+            self.menu.Append(self.aboutMyDataMenuItem)
+        else:
+            self.menu.AppendItem(self.aboutMyDataMenuItem)
+        self.Bind(wx.EVT_MENU, wx.GetApp().OnAbout,
+                  self.aboutMyDataMenuItem, self.aboutMyDataMenuItem.GetId())
+
+        self.menu.AppendSeparator()
 
         self.myTardisSyncMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyTardis Sync")
