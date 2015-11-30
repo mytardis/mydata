@@ -375,6 +375,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         # Read the file content from the SSH channel,
                         # and write it into the "scp -t" subprocess:
                         chunk_size = 1024
+                        # pylint: disable=unsubscriptable-object
                         previous_chunk = None
                         while True:
                             chunk = self.chan.recv(chunk_size)

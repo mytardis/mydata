@@ -8,15 +8,15 @@ and the tabular data displayed on that tab view.
 import threading
 import traceback
 
-from mydata.models.verification import VerificationStatus
-from mydata.dataviewmodels.uploads import ColumnType
-from mydata.logs import logger
-
 import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from mydata.models.verification import VerificationStatus
+from mydata.dataviewmodels.uploads import ColumnType
+from mydata.logs import logger
 
 
 class VerificationsModel(DataViewIndexListModel):

@@ -71,10 +71,8 @@ directory), instead of having a default group of "mydata".
 
 # pylint: disable=missing-docstring
 
-import requests
 import json
 import os
-import psutil
 import sys
 import platform
 import getpass
@@ -85,6 +83,13 @@ import urllib
 import traceback
 import uuid
 import threading
+
+import psutil
+import requests
+
+if sys.platform.startswith("win"):
+    # pylint: disable=import-error
+    import win32process
 
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
@@ -98,7 +103,6 @@ from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils import BytesToHuman
 
-
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
 if sys.platform.startswith("win"):
@@ -106,8 +110,6 @@ if sys.platform.startswith("win"):
     # pylint: disable=protected-access
     DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    # pylint: disable=import-error
-    import win32process
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 

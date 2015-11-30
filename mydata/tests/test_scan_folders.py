@@ -1,14 +1,15 @@
 """
 Test ability to scan folders.
 """
-import unittest
 import os
 import sys
 import time
 import logging
-import wx
 import subprocess
+import unittest
+
 import requests
+import wx
 
 from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel

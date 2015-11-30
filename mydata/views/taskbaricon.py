@@ -5,14 +5,10 @@ mydata/views/taskbaricon.py
 Provides a system tray icon (Windows)
 or menubar icon (Mac OS X) for MyData.
 """
-import wx
 import os
 import webbrowser
 
-from mydata.media import MYDATA_ICONS
-from mydata.logs import logger
-from mydata.models.settings import LastSettingsUpdateTrigger
-
+import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
     # pylint: disable=import-error
@@ -21,6 +17,10 @@ if wx.version().startswith("3.0.3.dev"):
 else:
     from wx import EmptyIcon
     from wx import TaskBarIcon
+
+from mydata.media import MYDATA_ICONS
+from mydata.logs import logger
+from mydata.models.settings import LastSettingsUpdateTrigger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):

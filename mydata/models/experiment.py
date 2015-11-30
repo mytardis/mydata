@@ -5,9 +5,9 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 # pylint: disable=missing-docstring
 
-import requests
 import json
 import urllib2
+import requests
 
 from mydata.logs import logger
 from mydata.utils.exceptions import Unauthorized
@@ -372,7 +372,6 @@ class ExperimentModel(object):
                                "mytardis-prerequisites.html"
                 raise DoesNotExist(message,
                                    modelClass=modelClassOfObjectNotFound)
-            raise
         return createdExperiment
 
     def GetJson(self):

@@ -11,15 +11,31 @@ in the parent directory of the directory containing MyData.py.
 # pylint: disable=too-many-lines
 
 import sys
-import wx
 import webbrowser
 import os
-import appdirs  # pylint: disable=import-error
 import traceback
 import threading
 import argparse
 from datetime import datetime
 import logging
+
+import appdirs  # pylint: disable=import-error
+
+import wx
+if wx.version().startswith("3.0.3.dev"):
+    from wx import Icon as EmptyIcon
+    # pylint: disable=import-error
+    from wx.adv import EVT_TASKBAR_LEFT_UP
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+else:
+    from wx import EmptyIcon
+    from wx import EVT_TASKBAR_LEFT_UP
+    # pylint: disable=import-error
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
 from mydata import __version__ as VERSION
 from mydata import LATEST_COMMIT
@@ -50,21 +66,6 @@ from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.controllers.schedule import ScheduleController
-
-if wx.version().startswith("3.0.3.dev"):
-    from wx import Icon as EmptyIcon
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-    # pylint: disable=import-error
-    from wx.adv import EVT_TASKBAR_LEFT_UP
-else:
-    from wx import EmptyIcon
-    # pylint: disable=import-error
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
-    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-    from wx import EVT_TASKBAR_LEFT_UP
 
 
 class NotebookTabs(object):

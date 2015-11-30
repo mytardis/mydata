@@ -11,6 +11,8 @@ import os
 import threading
 import traceback
 
+import wx
+
 from mydata.utils.openssh import GetBytesUploadedToStaging
 
 from mydata.models.verification import VerificationModel
@@ -25,8 +27,6 @@ from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 
 from mydata.logs import logger
-
-import wx
 
 
 class VerifyDatafileRunnable(object):
@@ -124,7 +124,7 @@ class VerifyDatafileRunnable(object):
                 # logger.debug(str(existingDatafile.GetJson()))
                 uploadToStagingRequest = self.settingsModel\
                     .GetUploadToStagingRequest()
-                bytesUploadedToStaging = 0
+                bytesUploadedToStaging = long(0)
                 if self.foldersController.uploadMethod == \
                         UploadMethod.VIA_STAGING and \
                         uploadToStagingRequest is not None and \
@@ -167,7 +167,7 @@ class VerifyDatafileRunnable(object):
                     location = uploadToStagingRequest.GetLocation()
                     remoteFilePath = "%s/%s" % (location.rstrip('/'),
                                                 replicas[0].GetUri())
-                    bytesUploadedToStaging = 0
+                    bytesUploadedToStaging = long(0)
                     try:
                         bytesUploadedToStaging = \
                             GetBytesUploadedToStaging(
@@ -206,7 +206,7 @@ class VerifyDatafileRunnable(object):
                         self.verificationModel.SetComplete()
                         return
                     if bytesUploadedToStaging == \
-                            int(existingDatafile.GetSize()):
+                            long(existingDatafile.GetSize()):
                         self.verificationModel\
                             .SetMessage("Found unverified full-size datafile "
                                         "on staging server.")
@@ -243,7 +243,7 @@ class VerifyDatafileRunnable(object):
                                      "but it should be %d bytes."
                                      % (dataFilePath,
                                         bytesUploadedToStaging,
-                                        int(existingDatafile.GetSize())))
+                                        long(existingDatafile.GetSize())))
                     wx.PostEvent(
                         self.foldersController.notifyWindow,
                         self.foldersController.unverifiedDatafileOnServerEvent(
