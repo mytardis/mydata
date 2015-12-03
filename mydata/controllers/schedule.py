@@ -159,7 +159,7 @@ class ScheduleController(object):
             Task to run when the user manually asks MyData to being the
             data folder scans and uploads, usually by clicking the Refresh
             toolbar icon, or by selecting the task bar icon menu's
-            "MyTardis Sync" menu item.
+            "Sync Now" menu item.
             """
             app = wx.GetApp()
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),

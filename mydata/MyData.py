@@ -965,7 +965,7 @@ class MyData(wx.App):
         elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
                 event.GetId() == \
                 self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
-            logger.debug("OnRefresh triggered by 'MyTardis Sync' "
+            logger.debug("OnRefresh triggered by 'Sync Now' "
                          "task bar menu item.")
         elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
             logger.debug("OnRefresh called from "
