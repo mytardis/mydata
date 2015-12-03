@@ -72,7 +72,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu.AppendSeparator()
 
         self.myTardisSyncMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "MyTardis Sync")
+            self.menu, wx.NewId(), "Sync Now")
         if wx.version().startswith("3.0.3.dev"):
             self.menu.Append(self.myTardisSyncMenuItem)
         else:
@@ -124,7 +124,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
     def GetMyTardisSyncMenuItem(self):
         """
-        Returns the "MyTardis Sync" menu item.
+        Returns the "Sync Now" menu item.
         """
         if hasattr(self, "myTardisSyncMenuItem"):
             return self.myTardisSyncMenuItem
@@ -153,11 +153,11 @@ class MyDataTaskBarIcon(TaskBarIcon):
     # pylint: disable=no-self-use
     def OnMyTardisSync(self, event):
         """
-        Called when the "MyTardis Sync" menu item is
+        Called when the "Sync Now" menu item is
         selected from MyData's system tray / menu bar icon menu.
         """
         # wx.GetApp().OnRefresh(event)
-        logger.debug("MyTardis Sync called from task bar menu item.")
+        logger.debug("Sync Now called from task bar menu item.")
         app = wx.GetApp()
         app.tasksModel.DeleteAllRows()
         app.settingsModel.SetScheduleType("Manually")
