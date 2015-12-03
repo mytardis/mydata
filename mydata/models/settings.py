@@ -1163,7 +1163,6 @@ oFS.DeleteFile sLinkFile
                                                            shell=True)
                 loginItems = [item.strip() for item in
                               loginItemsString.split(',')]
-                logger.info("Current login items: " + str(loginItems))
                 if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
                     logger.info("MyData is already set to start automatically "
                                 "on login.")

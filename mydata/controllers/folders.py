@@ -224,7 +224,6 @@ class FoldersController(object):
         add something to the queue could block the GUI thread, making the
         application appear unresponsive.
         """
-        self.CountCompletedUploadsAndVerifications(event=None)
         folderModel = event.folderModel
         dfi = event.dataFileIndex
 
@@ -243,6 +242,7 @@ class FoldersController(object):
                                    verificationModel,
                                    bytesUploadedPreviously)
         self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
+        self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartDataUploads(self):
         # pylint: disable=too-many-return-statements

@@ -87,7 +87,7 @@ Schedule
 **Schedule type - Manually**
     Only run the folder scans and uploads in response to user interaction -
     either by clicking the Refresh icon on the toolbar, or by clicking the
-    "MyTardis Sync" menu item in the system tray menu.
+    "Sync Now" menu item in the system tray menu.
 
 **Schedule type - Once**
     Run the folder scans and uploads once, on the date specified by the Date
