@@ -56,7 +56,7 @@ exiting will prevent MyData from being able to run scheduled tasks.
   .. image:: images/SystemTrayIcon.PNG
 
 Clicking on MyData's System Tray icon will bring up a menu, allowing you to
-restore MyData's main window (the "Control Panel") or force a "MyTardis Sync"
+restore MyData's main window (the "Control Panel") or "Sync Now"
 to ensure that new data is uploaded promptly:
 
   .. image:: images/SystemTrayMenu.PNG
