@@ -43,7 +43,7 @@ $ echo "ssh-rsa AAAAB3NzaC... MyData Key" > /home/mydata/.ssh/authorized_keys
 $ chown -R mydata:mydata /home/mydata/.ssh/
 $ chmod 700 /home/mydata/.ssh/
 $ chmod 600 /home/mydata/.ssh/authorized_keys
-$ usermod -a -G www-data mydata
+$ usermod -a -G mytardis mydata
 
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
@@ -54,18 +54,18 @@ $ ssh -i ~/.ssh/MyData mydata@118.138.241.33
 [mydata@118.138.241.33 ~]$ groups
 mydata mytardis
 [mydata@118.138.241.33 ~]$ ls -lh /var/lib/mytardis | grep receiving
-drwxrws--- 8 mytardis www-data 4096 May 15 13:30 receiving
+drwxrws--- 8 mytardis mytardis 4096 May 15 13:30 receiving
 [mydata@118.138.241.33 ~]$ touch /var/lib/mytardis/receiving/test123.txt
 [mydata@118.138.241.33 ~]$ ls -l /var/lib/mytardis/receiving/test123.txt
--rw-rw-r-- 1 mydata www-data 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
+-rw-rw-r-- 1 mydata mytardis 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
 
-Note the permissions above - being part of the "www-data" group on this staging
+Note the permissions above - being part of the "mytardis" group on this staging
 host allows the "mydata" user to write to the staging (receiving) directory, but
 not to MyTardis's permanent storage location.
 
 The 's' in the "receiving" directory's permissions (set with 'chmod g+s') is
 important.  It means that files created within that directory by the "mydata"
-user will have a default group of "www-data" (inherited from the "receiving"
+user will have a default group of "mytardis" (inherited from the "receiving"
 directory), instead of having a default group of "mydata".
 """
 
