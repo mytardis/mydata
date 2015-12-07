@@ -134,15 +134,15 @@ Ran the following as root on the staging host (118.138.241.33) :
   $ chown -R mydata:mydata /home/mydata/.ssh/
   $ chmod 700 /home/mydata/.ssh/
   $ chmod 600 /home/mydata/.ssh/authorized_keys
-  $ usermod -a -G www-data mydata
+  $ usermod -a -G mytardis mydata
 
 The MyData client will need to create subdirectories within the MyTardis
 staging area, and it will need to be able to write within those subdirectories.
 The "mytardis" web user should have read access to the staging data, but the
 "mydata" user should not have write access to the permanent storage location.
 One way to implement this is to set ownership of the staging directory to
-"mytardis:www-data", use the "setgid" bit (chmod g+s) on the staging directory
-so that subdirectories inherit the "www-data" group, and set "umask 0007" in
+"mytardis:mytardis", use the "setgid" bit (chmod g+s) on the staging directory
+so that subdirectories inherit the "mytardis" group, and set "umask 0007" in
 the mydata user's ~/.bashrc.  It is important that the umask setting is
 applied when running remote commands without an interactive shell, e.g.
 "ssh -i ~/.ssh/MyData mydata@hostname umask".  Some ~/.bashrc
@@ -166,16 +166,16 @@ key which MyData generated in ~/.ssh/:
   [mydata@118.138.241.33 ~]$ groups
   mydata mytardis
   [mydata@118.138.241.33 ~]$ ls -lh /mnt/sonas/market | grep MYTARDIS
-  drwx------ 403 mytardis www-data 128K Nov 12 14:33 MYTARDIS_FILE_STORE
-  drwxrws---   3 mytardis www-data  32K Nov 13 15:36 MYTARDIS_STAGING
+  drwx------ 403 mytardis mytardis 128K Nov 12 14:33 MYTARDIS_FILE_STORE
+  drwxrws---   3 mytardis mytardis  32K Nov 13 15:36 MYTARDIS_STAGING
   [mydata@118.138.241.33 ~]$ touch /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
   [mydata@118.138.241.33 ~]$ rm /mnt/sonas/market/MYTARDIS_STAGING/test123.txt
 
-Note the permissions above - being part of the "www-data" group on this staging
+Note the permissions above - being part of the "mytardis" group on this staging
 host allows the "mydata" user to write to the MYTARDIS_STAGING directory, but
 not to the MYTARDIS_FILE_STORE directory.  The 's' in the "MYTARDIS_STAGING"
 directory permission ensures that all subdirectories created by the "mydata"
-user will inherit the MYTARDIS_STAGING directory's group ("www-data"), instead
+user will inherit the MYTARDIS_STAGING directory's group ("mytardis"), instead
 of the mydata user's default group ("mydata").
   
 Once uploads to staging have been approved, MyData can manage multiple uploads
