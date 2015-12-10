@@ -180,15 +180,6 @@ class UploadDatafileRunnable(object):
 
         self.uploadModel.SetProgress(0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-        if dataFileSize == 0:
-            self.uploadsModel.UploadFileSizeUpdated(self.uploadModel)
-            self.uploadModel.SetMessage("MyTardis will not accept a "
-                                        "data file with a size of zero.")
-            logger.warning("Not uploading zero-size file: %s", dataFilePath)
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
-            return
 
         if self.foldersController.IsShuttingDown():
             return
