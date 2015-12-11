@@ -909,6 +909,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     if removeRemoteChunkProcess.returncode != 0:
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
+REMOTE_DIRS_CREATED = dict()
 
 def UploadSmallFileFromWindows(filePath, fileSize, username,
                                privateKeyFilePath, host, port, remoteFilePath,
@@ -918,58 +919,37 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
-    remoteRemoveDatafileCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
-    rmCommandString = \
-        "%s -p %s -n -i %s -c %s " \
-        "-oNoHostAuthenticationForLocalhost=yes " \
-        "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
-        "%s@%s %s" \
-        % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-           OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-           OPENSSH.cipher,
-           username, host,
-           OPENSSH.DoubleQuote(remoteRemoveDatafileCommand))
-    # logger.debug(rmCommandString)
-    removeRemoteDatafileProcess = subprocess.Popen(
-        rmCommandString,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS)
-    stdout, _ = removeRemoteDatafileProcess.communicate()
-    if removeRemoteDatafileProcess.returncode != 0:
-        raise SshException(stdout, removeRemoteDatafileProcess.returncode)
-
     bytesUploaded = long(0)
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    mkdirCmdAndArgs = \
-        [OPENSSH.DoubleQuote(OPENSSH.ssh),
-         "-p", port,
-         "-n",
-         "-c", OPENSSH.cipher,
-         "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-         "-oIdentitiesOnly=yes",
-         "-oPasswordAuthentication=no",
-         "-oNoHostAuthenticationForLocalhost=yes",
-         "-oStrictHostKeyChecking=no",
-         "-l", username,
-         host,
-         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-    mkdirCmdString = " ".join(mkdirCmdAndArgs)
-    logger.debug(mkdirCmdString)
-    mkdirProcess = \
-        subprocess.Popen(mkdirCmdString,
-                         shell=OPENSSH.preferToUseShellInSubprocess,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         startupinfo=DEFAULT_STARTUP_INFO,
-                         creationflags=DEFAULT_CREATION_FLAGS)
-    stdout, _ = mkdirProcess.communicate()
-    if mkdirProcess.returncode != 0:
-        raise SshException(stdout, mkdirProcess.returncode)
+    if remoteDir not in REMOTE_DIRS_CREATED:
+        mkdirCmdAndArgs = \
+            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+             "-p", port,
+             "-n",
+             "-c", OPENSSH.cipher,
+             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-oIdentitiesOnly=yes",
+             "-oPasswordAuthentication=no",
+             "-oNoHostAuthenticationForLocalhost=yes",
+             "-oStrictHostKeyChecking=no",
+             "-l", username,
+             host,
+             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdString = " ".join(mkdirCmdAndArgs)
+        logger.debug(mkdirCmdString)
+        mkdirProcess = \
+            subprocess.Popen(mkdirCmdString,
+                             shell=OPENSSH.preferToUseShellInSubprocess,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             startupinfo=DEFAULT_STARTUP_INFO,
+                             creationflags=DEFAULT_CREATION_FLAGS)
+        stdout, _ = mkdirProcess.communicate()
+        if mkdirProcess.returncode != 0:
+            raise SshException(stdout, mkdirProcess.returncode)
+        REMOTE_DIRS_CREATED[remoteDir] = True
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
