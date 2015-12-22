@@ -127,6 +127,7 @@ class UploaderModel(object):
         self.interface = None
         self.responseJson = None
 
+        self.id = None  # pylint: disable=invalid-name
         self.uuid = self.settingsModel.GetUuid()
         if self.uuid is None:
             self.GenerateUuid()
@@ -334,12 +335,12 @@ class UploaderModel(object):
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
-            uploaderId = existingUploaderRecords['objects'][0]['id']
+            self.id = existingUploaderRecords['objects'][0]['id']
 
         logger.info("Uploading uploader info to MyTardis...")
 
         if numExistingUploaderRecords > 0:
-            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % uploaderId
+            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.id
         else:
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
@@ -539,6 +540,59 @@ class UploaderModel(object):
                 raise
             finally:
                 self.requestStagingAccessThreadLock.release()
+
+    def UpdateSettings(self, settingsList):
+        """
+        Used to save uploader settings to the mytardis-app-mydata's
+        UploaderSettings model on the MyTardis server.
+        """
+        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+
+        if not self.id:
+            url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
+                                "&uuid=" + urllib.quote(self.uuid)
+            try:
+                response = requests.get(headers=headers, url=url)
+            except Exception, err:
+                logger.error(str(err))
+                raise
+            if response.status_code == 404:
+                message = "The MyData app is missing from the MyTardis server."
+                logger.error(url)
+                logger.error(message)
+                raise MissingMyDataAppOnMyTardisServer(message)
+            if response.status_code >= 200 and response.status_code < 300:
+                existingUploaderRecords = response.json()
+            else:
+                logger.error("An error occurred while retrieving uploader id.")
+                logger.error("Status code = " + str(response.status_code))
+                logger.error(response.text)
+                raise Exception(response.text)
+            numExistingUploaderRecords = \
+                existingUploaderRecords['meta']['total_count']
+            if numExistingUploaderRecords > 0:
+                self.id = existingUploaderRecords['objects'][0]['id']
+
+        url = "%s/api/v1/mydata_uploader/%s/" % (myTardisUrl, self.id)
+
+        patchData = {
+            'settings': settingsList,
+            'uuid': self.uuid
+        }
+        response = requests.patch(headers=headers, url=url,
+                                  data=json.dumps(patchData))
+        if response.status_code != 202:
+            logger.error(url)
+            message = response.text
+            logger.error(message)
+            raise Exception(message)
 
     @staticmethod
     def GetActiveNetworkInterfaces():
