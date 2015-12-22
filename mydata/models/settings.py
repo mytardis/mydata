@@ -662,10 +662,14 @@ class SettingsModel(object):
                       "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login"]
+            settingsList = []
             for field in fields:
-                configParser.set("MyData", field, self.__dict__[field])
+                value = self.__dict__[field]
+                configParser.set("MyData", field, value)
+                settingsList.append(dict(key=field, value=str(value)))
             configParser.write(configFile)
         logger.info("Saved settings to " + configPath)
+        self.uploaderModel.UpdateSettings(settingsList)
 
     def SaveFieldsFromDialog(self, settingsDialog, configPath=None,
                              saveToDisk=True):
