@@ -963,14 +963,14 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
            OPENSSH.cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
-           remoteDir.replace('&', '^&').replace('`', r'\\`'))
+           remoteDir.replace('`', r'\\`'))
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS, shell=True)
+        creationflags=DEFAULT_CREATION_FLAGS)
     uploadModel.SetScpUploadProcess(scpUploadProcess)
 
     stdout, _ = scpUploadProcess.communicate()
@@ -1107,9 +1107,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               remoteChunkDir
-               .replace('&', '^&')
-               .replace('`', r'\\`'))
+               remoteChunkDir.replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
