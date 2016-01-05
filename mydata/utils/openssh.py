@@ -71,7 +71,10 @@ class OpenSSH(object):
         return '"' + string.replace('"', r'\"') + '"'
 
     def DoubleQuoteRemotePath(self, string):
-        return '"' + string.replace('"', r'\"').replace('`', r'\\`') + '"'
+        path = string.replace('"', r'\"')
+        path = path.replace('`', r'\\`')
+        path = path.replace('$', r'\\$')
+        return '"%s"' % path
 
     def __init__(self):
         """
@@ -815,7 +818,9 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
-               remoteChunkPath.replace('`', r'\\`'))
+               remoteChunkPath
+               .replace('`', r'\\`')
+               .replace('$', r'\\$'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -963,7 +968,9 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
            OPENSSH.cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
-           remoteDir.replace('`', r'\\`'))
+           remoteDir
+           .replace('`', r'\\`')
+           .replace('$', r'\\$'))
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
@@ -1107,7 +1114,9 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               remoteChunkDir.replace('`', r'\\`'))
+               remoteChunkDir
+               .replace('`', r'\\`')
+               .replace('$', r'\\$'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
