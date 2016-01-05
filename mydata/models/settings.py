@@ -346,6 +346,43 @@ class SettingsModel(object):
             except:
                 logger.error(traceback.format_exc())
 
+        if self.uuid:
+            # Check for updated settings on server.
+            uploaderModel = self.GetUploaderModel()
+            settingsFromServer = uploaderModel.GetSettings()
+            if settingsFromServer:
+                logger.debug("Settings were found on the server.")
+                for setting in settingsFromServer:
+                    self.__dict__[setting['key']] = setting['value']
+                    if setting['key'] in (
+                            "ignore_old_datasets",
+                            "validate_folder_structure",
+                            "start_automatically_on_login",
+                            "locked",
+                            "monday_checked", "tuesday_checked",
+                            "wednesday_checked", "thursday_checked",
+                            "friday_checked", "saturday_checked",
+                            "sunday_checked"):
+                        self.__dict__[setting['key']] = setting['value'] is "True"
+                    if setting['key'] in (
+                            "timer_minutes", "ignore_interval_number",
+                            "max_upload_threads", "max_upload_retries"):
+                        self.__dict__[setting['key']] = int(setting['value'])
+                    if setting['key'] in (
+                            "scheduled_date"):
+                        self.__dict__[setting['key']] = \
+                            datetime.date(datetime.strptime(setting['value'],
+                                                            "%Y-%m-%d"))
+                    if setting['key'] in (
+                            "scheduled_time", "timer_from_time", "timer_to_time"):
+                        self.__dict__[setting['key']] = \
+                            datetime.time(datetime.strptime(setting['value'],
+                                                            "%H:%M:%S"))
+
+                logger.debug("Updated local settings from server.")
+            else:
+                logger.debug("Settings were not found on the server.")
+
         self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
 
