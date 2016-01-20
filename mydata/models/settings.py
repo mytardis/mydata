@@ -162,7 +162,7 @@ class SettingsModel(object):
 
         self.LoadSettings()
 
-    def LoadSettings(self, configPath=None):
+    def LoadSettings(self, configPath=None, checkForUpdates=True):
         """
         Sets some default values for settings fields, then loads a settings
         file,
@@ -346,7 +346,7 @@ class SettingsModel(object):
             except:
                 logger.error(traceback.format_exc())
 
-        if self.uuid:
+        if self.uuid and checkForUpdates:
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
             settingsFromServer = uploaderModel.GetSettings()
@@ -363,7 +363,8 @@ class SettingsModel(object):
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
                             "sunday_checked"):
-                        self.__dict__[setting['key']] = setting['value'] is "True"
+                        self.__dict__[setting['key']] = \
+                            setting['value'] is "True"
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "max_upload_threads", "max_upload_retries"):
@@ -374,7 +375,8 @@ class SettingsModel(object):
                             datetime.date(datetime.strptime(setting['value'],
                                                             "%Y-%m-%d"))
                     if setting['key'] in (
-                            "scheduled_time", "timer_from_time", "timer_to_time"):
+                            "scheduled_time", "timer_from_time",
+                            "timer_to_time"):
                         self.__dict__[setting['key']] = \
                             datetime.time(datetime.strptime(setting['value'],
                                                             "%H:%M:%S"))
