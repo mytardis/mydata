@@ -58,7 +58,7 @@ install:
 
   - "%CMD_IN_ENV% pip install pypiwin32"
 
-  - "%CMD_IN_ENV% pip install --upgrade --pre http://wxpython.org/Phoenix/snapshot-builds/http://wxpython.org/Phoenix/snapshot-builds/wxPython_Phoenix-3.0.3.dev1964+f780b21-cp27-cp27m-win32.whl"
+  - "%CMD_IN_ENV% pip install --upgrade --pre http://wxpython.org/Phoenix/snapshot-builds/wxPython_Phoenix-3.0.3.dev1964+f780b21-cp27-cp27m-win32.whl"
 
   - "git submodule update --init --recursive"
 
