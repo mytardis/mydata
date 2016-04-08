@@ -43,7 +43,7 @@ $ echo "ssh-rsa AAAAB3NzaC... MyData Key" > /home/mydata/.ssh/authorized_keys
 $ chown -R mydata:mydata /home/mydata/.ssh/
 $ chmod 700 /home/mydata/.ssh/
 $ chmod 600 /home/mydata/.ssh/authorized_keys
-$ usermod -a -G www-data mydata
+$ usermod -a -G mytardis mydata
 
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
@@ -54,18 +54,18 @@ $ ssh -i ~/.ssh/MyData mydata@118.138.241.33
 [mydata@118.138.241.33 ~]$ groups
 mydata mytardis
 [mydata@118.138.241.33 ~]$ ls -lh /var/lib/mytardis | grep receiving
-drwxrws--- 8 mytardis www-data 4096 May 15 13:30 receiving
+drwxrws--- 8 mytardis mytardis 4096 May 15 13:30 receiving
 [mydata@118.138.241.33 ~]$ touch /var/lib/mytardis/receiving/test123.txt
 [mydata@118.138.241.33 ~]$ ls -l /var/lib/mytardis/receiving/test123.txt
--rw-rw-r-- 1 mydata www-data 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
+-rw-rw-r-- 1 mydata mytardis 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
 
-Note the permissions above - being part of the "www-data" group on this staging
+Note the permissions above - being part of the "mytardis" group on this staging
 host allows the "mydata" user to write to the staging (receiving) directory, but
 not to MyTardis's permanent storage location.
 
 The 's' in the "receiving" directory's permissions (set with 'chmod g+s') is
 important.  It means that files created within that directory by the "mydata"
-user will have a default group of "www-data" (inherited from the "receiving"
+user will have a default group of "mytardis" (inherited from the "receiving"
 directory), instead of having a default group of "mydata".
 """
 
@@ -127,6 +127,8 @@ class UploaderModel(object):
         self.interface = None
         self.responseJson = None
 
+        self.id = None  # pylint: disable=invalid-name
+        self.uploaderSettings = None
         self.uuid = self.settingsModel.GetUuid()
         if self.uuid is None:
             self.GenerateUuid()
@@ -334,12 +336,15 @@ class UploaderModel(object):
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
-            uploaderId = existingUploaderRecords['objects'][0]['id']
+            self.id = existingUploaderRecords['objects'][0]['id']
+            if 'settings' in existingUploaderRecords['objects'][0]:
+                self.uploaderSettings = \
+                    existingUploaderRecords['objects'][0]['settings']
 
         logger.info("Uploading uploader info to MyTardis...")
 
         if numExistingUploaderRecords > 0:
-            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % uploaderId
+            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.id
         else:
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
@@ -539,6 +544,105 @@ class UploaderModel(object):
                 raise
             finally:
                 self.requestStagingAccessThreadLock.release()
+
+    def UpdateSettings(self, settingsList):
+        """
+        Used to save uploader settings to the mytardis-app-mydata's
+        UploaderSettings model on the MyTardis server.
+        """
+        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+
+        if not self.id:
+            url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
+                                "&uuid=" + urllib.quote(self.uuid)
+            try:
+                response = requests.get(headers=headers, url=url)
+            except Exception, err:
+                logger.error(str(err))
+                raise
+            if response.status_code == 404:
+                message = "The MyData app is missing from the MyTardis server."
+                logger.error(url)
+                logger.error(message)
+                raise MissingMyDataAppOnMyTardisServer(message)
+            if response.status_code >= 200 and response.status_code < 300:
+                existingUploaderRecords = response.json()
+            else:
+                logger.error("An error occurred while retrieving uploader id.")
+                logger.error("Status code = " + str(response.status_code))
+                logger.error(response.text)
+                raise Exception(response.text)
+            numExistingUploaderRecords = \
+                existingUploaderRecords['meta']['total_count']
+            if numExistingUploaderRecords > 0:
+                self.id = existingUploaderRecords['objects'][0]['id']
+
+        url = "%s/api/v1/mydata_uploader/%s/" % (myTardisUrl, self.id)
+
+        patchData = {
+            'settings': settingsList,
+            'uuid': self.uuid
+        }
+        response = requests.patch(headers=headers, url=url,
+                                  data=json.dumps(patchData))
+        if response.status_code != 202:
+            logger.error(url)
+            message = response.text
+            logger.error(message)
+            raise Exception(message)
+
+    def GetSettings(self):
+        """
+        Used to retrieve uploader settings from the mytardis-app-mydata's
+        UploaderSettings model on the MyTardis server.
+        """
+        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisUsername = self.settingsModel.GetUsername()
+        myTardisApiKey = self.settingsModel.GetApiKey()
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+
+        url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
+                            "&uuid=" + urllib.quote(self.uuid)
+        try:
+            response = requests.get(headers=headers, url=url)
+        except Exception, err:
+            logger.error(str(err))
+            raise
+        if response.status_code == 404:
+            message = "The MyData app is missing from the MyTardis server."
+            logger.error(url)
+            logger.error(message)
+            raise MissingMyDataAppOnMyTardisServer(message)
+        if response.status_code >= 200 and response.status_code < 300:
+            existingUploaderRecords = response.json()
+        else:
+            logger.error("An error occurred while retrieving uploader.")
+            logger.error("Status code = " + str(response.status_code))
+            logger.error(response.text)
+            raise Exception(response.text)
+        numExistingUploaderRecords = \
+            existingUploaderRecords['meta']['total_count']
+        if numExistingUploaderRecords > 0:
+            if 'id' in existingUploaderRecords['objects'][0]:
+                self.id = existingUploaderRecords['objects'][0]['id']
+            if 'settings' in existingUploaderRecords['objects'][0]:
+                self.uploaderSettings = \
+                    existingUploaderRecords['objects'][0]['settings']
+            else:
+                self.uploaderSettings = None
+
+        return self.uploaderSettings
 
     @staticmethod
     def GetActiveNetworkInterfaces():

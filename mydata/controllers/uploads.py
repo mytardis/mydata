@@ -97,6 +97,7 @@ class UploadDatafileRunnable(object):
         thirtySeconds = 30
         if (time.time() - os.path.getmtime(dataFilePath)) <= thirtySeconds:
             message = "Not uploading file, in case it is still being modified."
+            logger.warning(message.replace('file', dataFilePath))
             self.uploadModel.SetMessage(message)
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             self.uploadModel.SetStatus(UploadStatus.FAILED)
@@ -179,14 +180,6 @@ class UploadDatafileRunnable(object):
 
         self.uploadModel.SetProgress(0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-        if dataFileSize == 0:
-            self.uploadsModel.UploadFileSizeUpdated(self.uploadModel)
-            self.uploadModel.SetMessage("MyTardis will not accept a "
-                                        "data file with a size of zero.")
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
-            return
 
         if self.foldersController.IsShuttingDown():
             return
@@ -609,11 +602,11 @@ class UploadDatafileRunnable(object):
                         myTardisUrl=self.settingsModel.GetMyTardisUrl(),
                         connectionStatus=ConnectionStatus.DISCONNECTED))
             if dataFileDirectory != "":
-                logger.debug("Upload failed for datafile " + dataFileName +
+                logger.error("Upload failed for datafile " + dataFileName +
                              " in subdirectory " + dataFileDirectory +
                              " of folder " + self.folderModel.GetFolder())
             else:
-                logger.debug("Upload failed for datafile " + dataFileName +
+                logger.error("Upload failed for datafile " + dataFileName +
                              " in folder " + self.folderModel.GetFolder())
             if not self.existingUnverifiedDatafile:
                 logger.debug(url)

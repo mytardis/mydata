@@ -1263,7 +1263,8 @@ class SettingsDialog(wx.Dialog):
                                    wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             return False
-        self.settingsModel.LoadSettings(configPath=filePaths[0])
+        self.settingsModel.LoadSettings(configPath=filePaths[0],
+                                        checkForUpdates=False)
         self.UpdateFieldsFromModel(self.settingsModel)
 
         folderStructure = self.folderStructureComboBox.GetValue()
