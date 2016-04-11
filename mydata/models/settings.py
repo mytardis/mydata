@@ -364,7 +364,7 @@ class SettingsModel(object):
                             "friday_checked", "saturday_checked",
                             "sunday_checked"):
                         self.__dict__[setting['key']] = \
-                            setting['value'] is "True"
+                            (setting['value'] == "True")
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "max_upload_threads", "max_upload_retries"):
