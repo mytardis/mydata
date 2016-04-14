@@ -164,6 +164,8 @@ class MyData(wx.App):
         self.name = "MyData"
         self.argv = argv
 
+        self.instance = None
+
         self.configPath = None
 
         self.frame = None
@@ -277,6 +279,9 @@ class MyData(wx.App):
                 logger.SetLevel(logging.WARN)
             elif args.loglevel == "ERROR":
                 logger.SetLevel(logging.ERROR)
+
+        if sys.platform.startswith("win"):
+            self.CheckIfAlreadyRunning(appdirPath)
 
         if sys.platform.startswith("darwin"):
             self.CreateMacMenu()
@@ -402,6 +407,17 @@ class MyData(wx.App):
 
         return True
 
+
+    def CheckIfAlreadyRunning(self, appdirPath):
+        """
+        Using wx.SingleInstanceChecker to check whether MyData is already
+        running.  Only used on Windows at present.
+        """
+        self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
+        if self.instance.IsAnotherRunning():
+            wx.MessageBox("MyData is already running!", "MyData",
+                          wx.ICON_ERROR)
+            sys.exit(1)
 
     def CreateMacMenu(self):
         """
