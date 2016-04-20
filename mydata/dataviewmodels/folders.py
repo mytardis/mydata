@@ -522,6 +522,7 @@ class FoldersModel(DataViewIndexListModel):
                 userRecord.SetDataViewId(usersDataViewId)
                 self.usersModel.AddRow(userRecord)
                 userFolderPath = os.path.join(dataDir, userFolderName)
+                logger.debug("Folder structure: " + folderStructure)
                 if folderStructure == 'Username / Dataset' or \
                         folderStructure == 'Email / Dataset':
                     self.ScanForDatasetFolders(userFolderPath, userRecord,
@@ -561,6 +562,11 @@ class FoldersModel(DataViewIndexListModel):
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  "Data uploads canceled")
                     return
+                if not self.settingsModel.UploadInvalidUserFolders():
+                    logger.warning("Skipping %s, because "
+                                   "'Upload invalid user folders' "
+                                   "setting is not checked." % userFolderName)
+                    continue
                 if folderStructure.startswith("Username"):
                     userRecord = UserModel(settingsModel=self.settingsModel,
                                            username=userFolderName,
@@ -646,6 +652,8 @@ class FoldersModel(DataViewIndexListModel):
             dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
+                logger.debug("Found folder assumed to be dataset: " +
+                             datasetFolderName)
                 if self.ignoreOldDatasets:
                     datasetFolderPath = os.path.join(pathToScan,
                                                      datasetFolderName)
@@ -704,7 +712,7 @@ class FoldersModel(DataViewIndexListModel):
                 folderModel.SetExperimentTitle(experimentTitle)
                 self.AddRow(folderModel)
         except:
-            print traceback.format_exc()
+            logger.error(traceback.format_exc())
 
     def ScanForExperimentFolders(self, pathToScan, owner, userFolderName):
         """

@@ -261,6 +261,13 @@ Advanced
     ~/Library/Preferences/com.apple.loginitems.plist which can be accessed from
     System Preferences, Users & Groups, Login Items.
 
+**Upload invalid user folders**
+    If MyData finds a user (or group) folder which doesn't match a user (or group) on
+    the MyTardis server, it can be configured to upload the data anyway (and assign it
+    to the facility role account) by leaving this checkbox ticked.  Or the checkbox can
+    be unticked if you want MyData to ignore user folders which can't be mapped to users
+    or groups on the MyTardis server.
+
 
 Locking and Unlocking MyData's Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

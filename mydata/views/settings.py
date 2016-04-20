@@ -573,7 +573,7 @@ class SettingsDialog(wx.Dialog):
 
         # Advanced tab
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=10, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -692,6 +692,19 @@ class SettingsDialog(wx.Dialog):
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer\
             .Add(self.startAutomaticallyCheckBox,
+                 flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        uploadInvalidUserFoldersLabel = \
+            wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                          "Upload invalid user folders:")
+        self.advancedPanelSizer.Add(uploadInvalidUserFoldersLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.uploadInvalidUserFoldersCheckBox = \
+            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer\
+            .Add(self.uploadInvalidUserFoldersCheckBox,
                  flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
@@ -1026,6 +1039,13 @@ class SettingsDialog(wx.Dialog):
         self.startAutomaticallyCheckBox.SetValue(
             startAutomaticallyOnLogin)
 
+    def UploadInvalidUserFolders(self):
+        return self.uploadInvalidUserFoldersCheckBox.GetValue()
+
+    def SetUploadInvalidUserFolders(self, uploadInvalidUserFolders):
+        self.uploadInvalidUserFoldersCheckBox.SetValue(
+            uploadInvalidUserFolders)
+
     def Locked(self):
         return self.lockOrUnlockButton.GetLabel() == "Unlock"
 
@@ -1140,6 +1160,8 @@ class SettingsDialog(wx.Dialog):
             settingsModel.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
             settingsModel.StartAutomaticallyOnLogin())
+        self.SetUploadInvalidUserFolders(
+            settingsModel.UploadInvalidUserFolders())
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
@@ -1444,6 +1466,7 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsSpinCtrl.Enable(enabled)
         self.maxUploadRetriesSpinCtrl.Enable(enabled)
         self.startAutomaticallyCheckBox.Enable(enabled)
+        self.uploadInvalidUserFoldersCheckBox.Enable(enabled)
         self.Update()
 
     def DisableFields(self):
