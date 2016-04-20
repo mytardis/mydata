@@ -882,10 +882,21 @@ class SettingsDialog(wx.Dialog):
 
     def GetScheduledTime(self):
         timeString = self.timeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetScheduledTime(self, time):
-        self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.timeCtrl.SetValue(time.strftime("%H:%M"))
 
     def GetTimerMinutes(self):
         return self.timerNumCtrl.GetValue()
@@ -896,17 +907,39 @@ class SettingsDialog(wx.Dialog):
 
     def GetTimerFromTime(self):
         timeString = self.fromTimeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerFromTime(self, time):
-        self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.fromTimeCtrl.SetValue(time.strftime("%H:%M"))
 
     def GetTimerToTime(self):
         timeString = self.toTimeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerToTime(self, time):
-        self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.toTimeCtrl.SetValue(time.strftime("%H:%M"))
 
     # Filters tab
 
