@@ -150,6 +150,7 @@ class SettingsModel(object):
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
+        self.upload_invalid_user_folders = True
 
         self.locked = False
         self.uuid = ""
@@ -216,6 +217,7 @@ class SettingsModel(object):
         self.max_upload_retries = 1
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
+        self.upload_invalid_user_folders = True
 
         self.locked = False
 
@@ -245,7 +247,8 @@ class SettingsModel(object):
                           "ignore_interval_unit", "max_upload_threads",
                           "max_upload_retries",
                           "validate_folder_structure", "locked", "uuid",
-                          "start_automatically_on_login"]
+                          "start_automatically_on_login",
+                          "upload_invalid_user_folders"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -280,6 +283,11 @@ class SettingsModel(object):
                     self.start_automatically_on_login = \
                         configParser.getboolean(configFileSection,
                                                 "start_automatically_on_login")
+                if configParser.has_option(configFileSection,
+                                           "upload_invalid_user_folders"):
+                    self.upload_invalid_user_folders = \
+                        configParser.getboolean(configFileSection,
+                                                "upload_invalid_user_folders")
                 if configParser.has_option(configFileSection,
                                            "locked"):
                     self.locked = configParser.getboolean(configFileSection,
@@ -358,6 +366,7 @@ class SettingsModel(object):
                             "ignore_old_datasets",
                             "validate_folder_structure",
                             "start_automatically_on_login",
+                            "upload_invalid_user_folders",
                             "locked",
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
@@ -568,6 +577,12 @@ class SettingsModel(object):
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
         self.start_automatically_on_login = startAutomaticallyOnLogin
 
+    def UploadInvalidUserFolders(self):
+        return self.upload_invalid_user_folders
+
+    def SetUploadInvalidUserFolders(self, uploadInvalidUserFolders):
+        self.upload_invalid_user_folders = uploadInvalidUserFolders
+
     def Locked(self):
         return self.locked
 
@@ -700,7 +715,8 @@ class SettingsModel(object):
                       "ignore_interval_unit", "max_upload_threads",
                       "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
-                      "start_automatically_on_login"]
+                      "start_automatically_on_login",
+                      "upload_invalid_user_folders"]
             settingsList = []
             for field in fields:
                 value = self.__dict__[field]
@@ -759,6 +775,8 @@ class SettingsModel(object):
             settingsDialog.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
             settingsDialog.StartAutomaticallyOnLogin())
+        self.SetUploadInvalidUserFolders(
+            settingsDialog.UploadInvalidUserFolders())
 
         self.SetLocked(settingsDialog.Locked())
 

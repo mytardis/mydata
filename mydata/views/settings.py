@@ -573,7 +573,7 @@ class SettingsDialog(wx.Dialog):
 
         # Advanced tab
 
-        self.advancedPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
+        self.advancedPanelSizer = wx.FlexGridSizer(rows=10, cols=3,
                                                    vgap=5, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
@@ -692,6 +692,19 @@ class SettingsDialog(wx.Dialog):
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         self.advancedPanelSizer\
             .Add(self.startAutomaticallyCheckBox,
+                 flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
+                                                  wx.ID_ANY, ""))
+
+        uploadInvalidUserFoldersLabel = \
+            wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                          "Upload invalid user folders:")
+        self.advancedPanelSizer.Add(uploadInvalidUserFoldersLabel,
+                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.uploadInvalidUserFoldersCheckBox = \
+            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer\
+            .Add(self.uploadInvalidUserFoldersCheckBox,
                  flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
@@ -882,10 +895,21 @@ class SettingsDialog(wx.Dialog):
 
     def GetScheduledTime(self):
         timeString = self.timeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetScheduledTime(self, time):
-        self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.timeCtrl.SetValue(time.strftime("%H:%M"))
 
     def GetTimerMinutes(self):
         return self.timerNumCtrl.GetValue()
@@ -896,17 +920,39 @@ class SettingsDialog(wx.Dialog):
 
     def GetTimerFromTime(self):
         timeString = self.fromTimeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerFromTime(self, time):
-        self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.fromTimeCtrl.SetValue(time.strftime("%H:%M"))
 
     def GetTimerToTime(self):
         timeString = self.toTimeCtrl.GetValue()
-        return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        try:
+            return datetime.time(datetime.strptime(timeString, "%I:%M %p"))
+        except ValueError:
+            return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerToTime(self, time):
-        self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        # NOTE: due to a problem with wx.DateTime, if the locale does not use
+        # 'AM/PM' for its values, the default format will automatically change
+        # to 24 hour format, and an AttributeError will be thrown if a non-24
+        # format is specified.
+        try:
+            self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
+        except AttributeError:
+            self.toTimeCtrl.SetValue(time.strftime("%H:%M"))
 
     # Filters tab
 
@@ -992,6 +1038,13 @@ class SettingsDialog(wx.Dialog):
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
         self.startAutomaticallyCheckBox.SetValue(
             startAutomaticallyOnLogin)
+
+    def UploadInvalidUserFolders(self):
+        return self.uploadInvalidUserFoldersCheckBox.GetValue()
+
+    def SetUploadInvalidUserFolders(self, uploadInvalidUserFolders):
+        self.uploadInvalidUserFoldersCheckBox.SetValue(
+            uploadInvalidUserFolders)
 
     def Locked(self):
         return self.lockOrUnlockButton.GetLabel() == "Unlock"
@@ -1107,6 +1160,8 @@ class SettingsDialog(wx.Dialog):
             settingsModel.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
             settingsModel.StartAutomaticallyOnLogin())
+        self.SetUploadInvalidUserFolders(
+            settingsModel.UploadInvalidUserFolders())
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
@@ -1411,6 +1466,7 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsSpinCtrl.Enable(enabled)
         self.maxUploadRetriesSpinCtrl.Enable(enabled)
         self.startAutomaticallyCheckBox.Enable(enabled)
+        self.uploadInvalidUserFoldersCheckBox.Enable(enabled)
         self.Update()
 
     def DisableFields(self):
