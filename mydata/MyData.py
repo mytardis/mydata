@@ -898,6 +898,7 @@ class MyData(wx.App):
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),
                 userOrGroup)
+            logger.debug(message)
             self.frame.SetStatusMessage(message)
 
         # SECTION 4: Start FoldersModel.ScanFolders(),
