@@ -583,6 +583,10 @@ class UploaderModel(object):
                 existingUploaderRecords['meta']['total_count']
             if numExistingUploaderRecords > 0:
                 self.id = existingUploaderRecords['objects'][0]['id']
+            else:
+                logger.debug("Uploader record doesn't exist yet, so "
+                             "we can't save settings to the server.")
+                return
 
         url = "%s/api/v1/mydata_uploader/%s/" % (myTardisUrl, self.id)
 
