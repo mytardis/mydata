@@ -98,6 +98,9 @@ class SettingsDialog(wx.Dialog):
 
         sizer.Add(self.dialogPanel, 1, wx.EXPAND | wx.ALL, 5)
 
+        if sys.platform.startswith("linux"):
+            self.SetMinSize(wx.Size(-1, 490))
+
         # General tab
 
         self.generalPanelSizer = wx.FlexGridSizer(rows=11, cols=3,
@@ -121,6 +124,8 @@ class SettingsDialog(wx.Dialog):
         self.instrumentNameField = wx.TextCtrl(self.generalPanel,
                                                wx.ID_ANY, "")
         if sys.platform.startswith("darwin"):
+            self.instrumentNameField.SetMinSize(wx.Size(290, -1))
+        elif sys.platform.startswith("linux"):
             self.instrumentNameField.SetMinSize(wx.Size(290, -1))
         else:
             self.instrumentNameField.SetMinSize(wx.Size(265, -1))
