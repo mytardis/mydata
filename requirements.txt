@@ -1,4 +1,4 @@
-altgraph==0.12
+# altgraph==0.12
 appdirs==1.4.0
 macholib==1.7
 modulegraph==0.12
