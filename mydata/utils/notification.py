@@ -24,6 +24,18 @@ class Notification(object):
         if sys.platform.startswith("win"):
             wx.GetApp().taskBarIcon.ShowBalloon(title, message)
             return
+        if sys.platform.startswith("linux"):
+            try:
+                args = ["MyData", message]
+                proc = subprocess.Popen(["notify-send"] + args,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT)
+                stdout, _ = proc.communicate()
+                if proc.returncode != 0:
+                    logger.error(stdout)
+            except:  # pylint: disable=bare-except
+                sys.stderr.write(message + "\n")
+            return
         path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
         executable = "MyData Notifications"
         args = ["-message", message, "-title", title, "-sound", "Purr"]
