@@ -800,7 +800,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         lines = stdout.splitlines()
         bytesTransferred = long(0)
         for line in lines:
-            match = re.search(r"^(\d+)\s+bytes\s+transferred.*$", line)
+            match = re.search(r"^(\d+)\s+bytes.*$", line)
             if match:
                 bytesTransferred = long(match.groups()[0])
         skip += 1

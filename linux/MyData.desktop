@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Name[en_US]=MyData
+Exec=/opt/mydata/MyData.sh
+Name=MyData
+Icon=/opt/mydata/bin/media/MyData.ico
+
