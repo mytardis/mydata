@@ -4,6 +4,7 @@
 setup.exe
 build/
 dist/
+rpmbuild/
 commitdef.py
 *.egg
 *~
