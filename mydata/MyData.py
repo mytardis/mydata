@@ -26,12 +26,14 @@ if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
     # pylint: disable=import-error
     from wx.adv import EVT_TASKBAR_LEFT_UP
+    from wx.adv import EVT_TASKBAR_LEFT_DOWN
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
     from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 else:
     from wx import EmptyIcon
     from wx import EVT_TASKBAR_LEFT_UP
+    from wx import EVT_TASKBAR_LEFT_DOWN
     # pylint: disable=import-error
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
@@ -299,7 +301,10 @@ class MyData(wx.App):
         self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
 
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
-        self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
+        if sys.platform.startswith("linux"):
+            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
+        else:
+            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
 
         self.frame.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
 

@@ -231,7 +231,10 @@ class UploaderModel(object):
             subnetMask = {}
 
             for row in stdout.split("\n"):
-                match = re.match(r"\s+ether (\S*)\s*$", row)
+                if sys.platform.startswith("darwin"):
+                    match = re.match(r"\s+ether (\S*)\s*$", row)
+                else:
+                    match = re.match(r".*\s+HWaddr (\S*)\s*$", row)
                 if match:
                     macAddress[self.interface] = match.groups()[0]
                 match = re.match(r"\s+inet (\S*)\s+netmask\s+(\S*)\s+.*$", row)
