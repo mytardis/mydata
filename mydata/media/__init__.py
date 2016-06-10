@@ -50,14 +50,13 @@ class Icons(object):
         self.iconsCache = {}
 
     # pylint: disable=too-many-arguments
-    def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
-                size=None, extension=None):
+    def GetIconPath(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
+                    size=None, extension=None):
         """
         Get path to icon.
         """
         if not size:
             size = self.defaultIconSize
-        cacheKey = '%s-%s-%s' % (name, IconStyle.STRINGS[style], size)
         if style == IconStyle.NORMAL:
             iconStyleFolderName = "png-normal"
         elif style == IconStyle.HOT:
@@ -67,21 +66,33 @@ class Icons(object):
         else:
             raise Exception("Unsupported icon style was requested: %s"
                             % IconStyle.STRINGS[style])
+        iconSubdir = "icons" + size
+        if vendor == "Aha-Soft":
+            return os.path.join(self.mediaPath, vendor, iconStyleFolderName,
+                                iconSubdir, "%s.png" % name)
+        else:
+            if not extension:
+                extension = "ico"
+            return os.path.join(self.mediaPath, "%s.%s" % (name, extension))
+
+    # pylint: disable=too-many-arguments
+    def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
+                size=None, extension=None):
+        """
+        Get icon, possibly from cache.
+        """
+        if not size:
+            size = self.defaultIconSize
+        cacheKey = '%s-%s-%s' % (name, IconStyle.STRINGS[style], size)
+        iconPath = self.GetIconPath(name, vendor, style, size, extension)
+
         if cacheKey not in self.iconsCache:
-            iconSubdir = "icons" + size
             if vendor == "Aha-Soft":
                 self.iconsCache[cacheKey] = \
-                    wx.Image(os.path.join(self.mediaPath, vendor,
-                                          iconStyleFolderName,
-                                          iconSubdir, "%s.png" % name),
-                             wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+                    wx.Image(iconPath, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
             else:
-                if not extension:
-                    extension = "ico"
                 self.iconsCache[cacheKey] = \
-                    wx.Image(os.path.join(self.mediaPath,
-                                          "%s.%s" % (name, extension)),
-                             wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                    wx.Image(iconPath, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         return self.iconsCache[cacheKey]
 
 MYDATA_ICONS = Icons()
