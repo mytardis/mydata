@@ -142,6 +142,8 @@ class SettingsModel(object):
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
+        self.ignore_new_files = True
+        self.ignore_new_files_minutes = 1
 
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = ""
@@ -208,6 +210,8 @@ class SettingsModel(object):
         self.ignore_old_datasets = False
         self.ignore_interval_number = 0
         self.ignore_interval_unit = "months"
+        self.ignore_new_files = True
+        self.ignore_new_files_minutes = 1
 
         # Advanced tab
         self.folder_structure = "Username / Dataset"
@@ -263,6 +267,16 @@ class SettingsModel(object):
                     self.ignore_interval_number = \
                         configParser.getint(configFileSection,
                                             "ignore_interval_number")
+                if configParser.has_option(configFileSection,
+                                           "ignore_new_files"):
+                    self.ignore_new_files = \
+                        configParser.getboolean(configFileSection,
+                                                "ignore_new_files")
+                if configParser.has_option(configFileSection,
+                                           "ignore_new_files_minutes"):
+                    self.ignore_new_files_minutes = \
+                        configParser.getint(configFileSection,
+                                            "ignore_new_files_minutes")
                 if configParser.has_option(configFileSection,
                                            "max_upload_threads"):
                     self.max_upload_threads = \
@@ -363,7 +377,7 @@ class SettingsModel(object):
                 for setting in settingsFromServer:
                     self.__dict__[setting['key']] = setting['value']
                     if setting['key'] in (
-                            "ignore_old_datasets",
+                            "ignore_old_datasets", "ignore_new_files",
                             "validate_folder_structure",
                             "start_automatically_on_login",
                             "upload_invalid_user_folders",
@@ -376,6 +390,7 @@ class SettingsModel(object):
                             (setting['value'] == "True")
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
+                            "ignore_new_files_minutes",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
                     if setting['key'] in (
@@ -638,6 +653,18 @@ class SettingsModel(object):
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
 
+    def IgnoreNewFiles(self):
+        return self.ignore_new_files
+
+    def SetIgnoreNewFiles(self, ignoreNewFiles):
+        self.ignore_new_files = ignoreNewFiles
+
+    def GetIgnoreNewFilesMinutes(self):
+        return self.ignore_new_files_minutes
+
+    def SetIgnoreNewFilesMinutes(self, ignoreNewFilesMinutes):
+        self.ignore_new_files_minutes = ignoreNewFilesMinutes
+
     def GetMaxUploadThreads(self):
         return self.max_upload_threads
 
@@ -712,8 +739,9 @@ class SettingsModel(object):
                       "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
-                      "ignore_interval_unit", "max_upload_threads",
-                      "max_upload_retries",
+                      "ignore_interval_unit",
+                      "ignore_new_files", "ignore_new_files_minutes",
+                      "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
@@ -764,8 +792,9 @@ class SettingsModel(object):
             settingsDialog.GetIgnoreOldDatasetIntervalNumber())
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsDialog.GetIgnoreOldDatasetIntervalUnit())
-        self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
-        self.SetMaxUploadRetries(settingsDialog.GetMaxUploadRetries())
+        self.SetIgnoreNewFiles(settingsDialog.IgnoreNewFiles())
+        self.SetIgnoreNewFilesMinutes(
+            settingsDialog.GetIgnoreNewFilesMinutes())
 
         # Advanced tab
         self.SetFolderStructure(settingsDialog.GetFolderStructure())
@@ -777,6 +806,8 @@ class SettingsModel(object):
             settingsDialog.StartAutomaticallyOnLogin())
         self.SetUploadInvalidUserFolders(
             settingsDialog.UploadInvalidUserFolders())
+        self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
+        self.SetMaxUploadRetries(settingsDialog.GetMaxUploadRetries())
 
         self.SetLocked(settingsDialog.Locked())
 

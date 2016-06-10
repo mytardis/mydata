@@ -133,6 +133,11 @@ Filters
   is advisable to instruct MyData to ignore old datasets so that it focus on
   uploading the recent datasets.
 
+**Ignore files newer than**
+  MyData can ignore recently modified files.  MyTardis does not yet support
+  file versioning, so once a file has been uploaded and verified, it will not
+  be replaced by a newer version.  Therefore, it is important to ensure that
+  a file doesn't get uploaded while it is still being modified.
 
 .. _settings-dialog-advanced:
 
