@@ -94,8 +94,13 @@ class UploadDatafileRunnable(object):
         dataFileDirectory = \
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
 
-        thirtySeconds = 30
-        if (time.time() - os.path.getmtime(dataFilePath)) <= thirtySeconds:
+        ignoreNewFiles = self.settingsModel.IgnoreNewFiles()
+        ignoreNewFilesMinutes = self.settingsModel.GetIgnoreNewFilesMinutes()
+        ignoreNewFilesSeconds = 0
+        if ignoreNewFiles:
+            ignoreNewFilesSeconds = ignoreNewFilesMinutes * 60
+        if (time.time() - os.path.getmtime(dataFilePath)) <= \
+                ignoreNewFilesSeconds:
             message = "Not uploading file, in case it is still being modified."
             logger.warning(message.replace('file', dataFilePath))
             self.uploadModel.SetMessage(message)
