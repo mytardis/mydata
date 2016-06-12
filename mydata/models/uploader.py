@@ -716,7 +716,7 @@ class UploaderModel(object):
                 if match and currentInterface:
                     activeInterfaces.append(currentInterface)
         elif sys.platform.startswith("linux"):
-            proc = subprocess.Popen(["route"],
+            proc = subprocess.Popen(["/sbin/route"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     startupinfo=DEFAULT_STARTUP_INFO,

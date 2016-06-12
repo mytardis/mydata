@@ -8,6 +8,7 @@ import os
 import wx
 
 from mydata.logs import logger
+from mydata.media import MYDATA_ICONS
 
 
 # pylint: disable=too-few-public-methods
@@ -26,7 +27,8 @@ class Notification(object):
             return
         if sys.platform.startswith("linux"):
             try:
-                args = ["MyData", message]
+                icon = MYDATA_ICONS.GetIconPath("favicon", vendor="MyTardis")
+                args = ["-i", icon, title, message]
                 proc = subprocess.Popen(["notify-send"] + args,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT)

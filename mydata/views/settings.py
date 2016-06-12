@@ -5,6 +5,7 @@ Classes for MyData's settings dialog.
 # Disabling some Pylint checks for now...
 # pylint: disable=missing-docstring
 # pylint: disable=too-many-lines
+# pylint: disable=too-many-statements
 # pylint: disable=no-member
 
 from datetime import datetime
@@ -573,6 +574,37 @@ class SettingsDialog(wx.Dialog):
         self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
                                                  wx.ID_ANY, ""))
 
+        self.ignoreFilesNewerThanCheckBox = \
+            wx.CheckBox(self.filtersPanel, wx.ID_ANY,
+                        "Ignore files newer than:")
+        self.Bind(wx.EVT_CHECKBOX, self.OnIgnoreNewFilesCheckBox,
+                  self.ignoreFilesNewerThanCheckBox)
+        self.filtersPanelSizer.Add(self.ignoreFilesNewerThanCheckBox,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.ignoreFilesIntervalPanel = wx.Panel(self.filtersPanel)
+        self.ignoreFilesPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.ignoreFilesIntervalPanel.SetSizer(self.ignoreFilesPanelSizer)
+
+        self.ignoreFilesNewerThanSpinCtrl = \
+            wx.SpinCtrl(self.ignoreFilesIntervalPanel, wx.ID_ANY,
+                        "1", min=0, max=999)
+        self.Bind(wx.EVT_SPINCTRL, self.OnIgnoreNewFilesSpinCtrl,
+                  self.ignoreFilesNewerThanSpinCtrl)
+        self.ignoreFilesNewerThanSpinCtrl.Enable(False)
+        self.ignoreFilesPanelSizer.Add(self.ignoreFilesNewerThanSpinCtrl,
+                                       flag=wx.EXPAND | wx.ALL, border=5)
+        self.showingSingularMinutes = True
+        self.ignoreFilesIntervalUnitLabel = \
+           wx.StaticText(self.ignoreFilesIntervalPanel, wx.ID_ANY, "minute")
+        self.ignoreFilesPanelSizer.Add(self.ignoreFilesIntervalUnitLabel,
+                                       flag=wx.EXPAND | wx.ALL, border=5)
+
+        self.filtersPanelSizer.Add(self.ignoreFilesIntervalPanel, flag=wx.EXPAND,
+                                   border=5)
+        self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
+                                                 wx.ID_ANY, ""))
+
         self.filtersPanel.Fit()
         self.settingsTabsNotebook.AddPage(self.filtersPanel, "Filters")
 
@@ -999,6 +1031,18 @@ class SettingsDialog(wx.Dialog):
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
         self.intervalUnitsComboBox.SetValue(ignoreOldDatasetIntervalUnit)
 
+    def IgnoreNewFiles(self):
+        return self.ignoreFilesNewerThanCheckBox.GetValue()
+
+    def SetIgnoreNewFiles(self, ignoreNewFiles):
+        self.ignoreFilesNewerThanCheckBox.SetValue(ignoreNewFiles)
+
+    def GetIgnoreNewFilesMinutes(self):
+        return self.ignoreFilesNewerThanSpinCtrl.GetValue()
+
+    def SetIgnoreNewFilesMinutes(self, ignoreNewFilesMinutes):
+        self.ignoreFilesNewerThanSpinCtrl.SetValue(ignoreNewFilesMinutes)
+
     # Advanced tab
 
     def GetFolderStructure(self):
@@ -1154,6 +1198,16 @@ class SettingsDialog(wx.Dialog):
             self.showingSingularUnits = True
         self.SetIgnoreOldDatasetIntervalUnit(
             settingsModel.GetIgnoreOldDatasetIntervalUnit())
+        self.SetIgnoreNewFiles(settingsModel.IgnoreNewFiles())
+        self.SetIgnoreNewFilesMinutes(settingsModel.GetIgnoreNewFilesMinutes())
+        if settingsModel.IgnoreNewFiles():
+            self.ignoreFilesNewerThanSpinCtrl.Enable(True)
+        if int(settingsModel.GetIgnoreNewFilesMinutes()) == 1:
+            self.showingSingularMinutes = True
+            self.ignoreFilesIntervalUnitLabel.SetLabel("minute")
+        else:
+            self.showingSingularMinutes = False
+            self.ignoreFilesIntervalUnitLabel.SetLabel("minutes")
 
         # Advanced tab
         self.SetFolderStructure(settingsModel.GetFolderStructure())
@@ -1252,6 +1306,32 @@ class SettingsDialog(wx.Dialog):
                     .AppendItems(self.intervalUnitsPlural)
                 self.intervalUnitsComboBox.SetValue(intervalUnitValue + 's')
                 self.showingSingularUnits = False
+        event.Skip()
+
+    def OnIgnoreNewFilesCheckBox(self, event):
+        if event.IsChecked():
+            self.ignoreFilesNewerThanSpinCtrl.SetValue(1)
+            self.ignoreFilesNewerThanSpinCtrl.Enable(True)
+            if not self.showingSingularMinutes:
+                self.showingSingularMinutes = True
+            self.ignoreFilesIntervalUnitLabel.SetLabel("minute")
+        else:
+            self.ignoreFilesNewerThanSpinCtrl.SetValue(0)
+            self.ignoreFilesNewerThanSpinCtrl.Enable(False)
+            if not self.showingSingularMinutes:
+                self.showingSingularMinutes = False
+            self.ignoreFilesIntervalUnitLabel.SetLabel("minutes")
+        event.Skip()
+
+    def OnIgnoreNewFilesSpinCtrl(self, event):
+        if event.GetInt() == 1:
+            if not self.showingSingularMinutes:
+                self.ignoreFilesIntervalUnitLabel.SetLabel("minute")
+                self.showingSingularMinutes = True
+        else:
+            if self.showingSingularMinutes:
+                self.ignoreFilesIntervalUnitLabel.SetLabel("minutes")
+                self.showingSingularMinutes = False
         event.Skip()
 
     # pylint: disable=no-self-use
