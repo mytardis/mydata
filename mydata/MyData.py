@@ -127,7 +127,8 @@ class MyDataFrame(wx.Frame):
         Update status bar's message.
         """
         self.statusbar.SetStatusMessage(msg)
-        wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
+        if sys.platform.startswith("win"):
+            wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
 
     def SetConnected(self, myTardisUrl, connected):
         """
