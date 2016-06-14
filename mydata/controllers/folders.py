@@ -496,6 +496,8 @@ class FoldersController(object):
         and if so, call ShutDownUploadThreads
         """
         # pylint: disable=unused-argument
+        if self.Completed() or self.Canceled():
+            return
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
         uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
