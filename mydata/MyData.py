@@ -953,9 +953,13 @@ class MyData(wx.App):
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              startDataUploadsEvent)
             else:
-                message = "No user/group folders to upload from."
+                message = "No folders were found to upload from."
                 logger.debug(message)
-                self.frame.SetStatusMessage(message)
+                wx.CallAfter(self.frame.SetStatusMessage, message)
+                wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
+                             False)
+                self.SetScanningFolders(False)
+                logger.info("Just set ScanningFolders to False")
 
             wx.CallAfter(EndBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"
