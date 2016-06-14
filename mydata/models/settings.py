@@ -1347,6 +1347,36 @@ oFS.DeleteFile sLinkFile
                 return self.validation
             else:
                 logger.warning(message)
+
+        seconds = {}
+        seconds['day'] = 24 * 60 * 60
+        seconds['week'] = 7 * seconds['day']
+        seconds['year'] = int(365.25 * seconds['day'])
+        seconds['month'] = seconds['year'] / 12
+        singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
+        ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
+        ignoreIntervalSeconds = \
+            self.ignore_interval_number * ignoreIntervalUnitSeconds
+
+        if self.GetFolderStructure() == 'Dataset':
+            if self.IgnoreOldDatasets():
+                datasetCount = 0
+                for folder in dirsDepth1:
+                    ctimestamp = os.path.getctime(folder)
+                    ctime = datetime.fromtimestamp(ctimestamp)
+                    age = datetime.now() - ctime
+                    if age.total_seconds() <= ignoreIntervalSeconds:
+                        datasetCount += 1
+            else:
+                datasetCount = len(dirsDepth1)
+
+        if self.GetFolderStructure() == 'Dataset':
+            logger.debug(
+                "SettingsModel folder structure validation succeeded!")
+            self.validation = SettingsValidation(True,
+                                                 datasetCount=datasetCount)
+            return self.validation
+
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
@@ -1395,6 +1425,10 @@ oFS.DeleteFile sLinkFile
                     'User Group / Instrument / Full Name / Dataset':
                 message = "Each user group folder should contain an " \
                     "instrument name folder."
+            elif self.GetFolderStructure() == 'Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within experiment folders." % \
+                    self.GetDataDirectory()
             if self.AlertUserAboutMissingFolders():
                 self.validation = SettingsValidation(False, message,
                                                      "data_directory")
@@ -1414,18 +1448,9 @@ oFS.DeleteFile sLinkFile
                         SettingsValidation(False, message, "data_directory")
                     return self.validation
 
-        seconds = {}
-        seconds['day'] = 24 * 60 * 60
-        seconds['week'] = 7 * seconds['day']
-        seconds['year'] = int(365.25 * seconds['day'])
-        seconds['month'] = seconds['year'] / 12
-        singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
-        ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
-        ignoreIntervalSeconds = \
-            self.ignore_interval_number * ignoreIntervalUnitSeconds
-
         if self.GetFolderStructure() == 'Username / Dataset' or \
-                self.GetFolderStructure() == 'Email / Dataset':
+                self.GetFolderStructure() == 'Email / Dataset' or \
+                self.GetFolderStructure() == 'Experiment / Dataset':
             if self.IgnoreOldDatasets():
                 datasetCount = 0
                 for folder in dirsDepth2:
@@ -1437,6 +1462,13 @@ oFS.DeleteFile sLinkFile
             else:
                 datasetCount = len(dirsDepth2)
 
+        if self.GetFolderStructure() == 'Experiment / Dataset':
+            logger.debug(
+                "SettingsModel folder structure validation succeeded!")
+            self.validation = SettingsValidation(True,
+                                                 datasetCount=datasetCount)
+            return self.validation
+
         if self.GetFolderStructure() == \
                 'User Group / Instrument / Full Name / Dataset':
             filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
@@ -1444,24 +1476,32 @@ oFS.DeleteFile sLinkFile
                                             self.GetInstrumentName(),
                                             '*'))
         else:
-            if self.GetFolderStructure() == 'Username / Dataset':
+            if self.GetFolderStructure() == 'Username / Dataset' or \
+                    self.GetFolderStructure() == 'Dataset':
                 filterString1 = datasetFilterString
                 filterString2 = '*'
             elif self.GetFolderStructure() == 'Email / Dataset':
                 filterString1 = datasetFilterString
                 filterString2 = '*'
             elif self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset':
+                    'Username / Experiment / Dataset' or \
+                    self.GetFolderStructure() == 'Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
             elif self.GetFolderStructure() == \
                     'Email / Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
-            filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
-                                            userOrGroupFilterString,
-                                            filterString1,
-                                            filterString2))
+            if self.GetFolderStructure().startswith("Username") or \
+                    self.GetFolderStructure().startswith("Email"):
+                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                                userOrGroupFilterString,
+                                                filterString1,
+                                                filterString2))
+            else:
+                filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
+                                                filterString1,
+                                                filterString2))
         dirsDepth3 = [item for item in filesDepth3 if os.path.isdir(item)]
         if len(dirsDepth3) == 0:
             if self.GetFolderStructure() == \

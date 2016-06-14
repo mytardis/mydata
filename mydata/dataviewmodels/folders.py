@@ -449,6 +449,7 @@ class FoldersModel(DataViewIndexListModel):
         if self.groupsModel.GetCount() > 0:
             self.groupsModel.DeleteAllRows()
         dataDir = self.settingsModel.GetDataDirectory()
+        defaultOwner = self.settingsModel.GetDefaultOwner()
         folderStructure = self.settingsModel.GetFolderStructure()
         self.ignoreOldDatasets = self.settingsModel.IgnoreOldDatasets()
         if self.ignoreOldDatasets:
@@ -474,6 +475,12 @@ class FoldersModel(DataViewIndexListModel):
             self.ScanForUserFolders(incrementProgressDialog, shouldAbort)
         elif folderStructure.startswith("User Group"):
             self.ScanForGroupFolders(incrementProgressDialog, shouldAbort)
+        elif folderStructure.startswith("Experiment"):
+            self.ScanForExperimentFolders(dataDir, defaultOwner,
+                                          defaultOwner.GetUsername())
+        elif folderStructure.startswith("Dataset"):
+            self.ScanForDatasetFolders(dataDir, defaultOwner,
+                                       defaultOwner.GetUsername())
         else:
             raise InvalidFolderStructure("Unknown folder structure.")
 

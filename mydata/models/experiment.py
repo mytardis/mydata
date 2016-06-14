@@ -148,10 +148,23 @@ class ExperimentModel(object):
                     % (uploaderName, userFolderName)
             if groupFolderName:
                 message += ", '%s'" % groupFolderName
+            logger.debug(message)
             raise DoesNotExist(message, modelClass=ExperimentModel)
-        if numExperimentsFound == 1:
-            message = "Found existing experiment for uploader \"" + \
-                uploaderName + "\" and user folder " + userFolderName
+        elif numExperimentsFound == 1 or \
+                folderModel.ExperimentTitleSetManually():
+            # When an experiment is created for a single MyData
+            # uploader instance, we shouldn't find any duplicates,
+            # but when MyData is instructed to add datasets to an
+            # existing experiment (e.g. the "Experiment / Data"
+            # folder structure), we don't raise a critical error
+            # for duplicate experiments - instead we just use the
+            # first one we find.
+            if folderModel.ExperimentTitleSetManually():
+                message = "Found existing experiment with title \"" + \
+                    experimentTitle + "\" and user folder " + userFolderName
+            else:
+                message = "Found existing experiment for uploader \"" + \
+                    uploaderName + "\" and user folder " + userFolderName
             if groupFolderName:
                 message += " and group folder " + groupFolderName
             logger.debug(message)
@@ -169,18 +182,11 @@ class ExperimentModel(object):
             if groupFolderName:
                 groupFolderString = ", and group folder \"%s\"" \
                     % groupFolderName
-            if folderModel.ExperimentTitleSetManually():
-                message = "Multiple experiments were found matching " \
-                          "uploader \"%s\", user folder \"%s\"%s and title " \
-                          "\"%s\" for folder \"%s\"." \
-                          % (uploaderName, userFolderName, groupFolderString,
-                             experimentTitle, folderModel.GetFolder())
-            else:
-                message = "Multiple experiments were found matching " \
-                          "uploader \"%s\" and user folder \"%s\"%s " \
-                          "for folder \"%s\"." \
-                          % (uploaderName, userFolderName, groupFolderString,
-                             folderModel.GetFolder())
+            message = "Multiple experiments were found matching " \
+                      "uploader \"%s\" and user folder \"%s\"%s " \
+                      "for folder \"%s\"." \
+                      % (uploaderName, userFolderName, groupFolderString,
+                         folderModel.GetFolder())
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
                        "MyTardis administrator to investigate."
@@ -279,9 +285,9 @@ class ExperimentModel(object):
                 raise DoesNotExist(message)
             raise
         if response.status_code == 201:
-            message = "Succeeded in creating experiment for uploader " \
+            message = "Succeeded in creating experiment '%s' for uploader " \
                 "\"%s\" and user folder \"%s\"" \
-                % (uploaderName, userFolderName)
+                % (experimentTitle, uploaderName, userFolderName)
             if groupFolderName:
                 message += " and group folder \"%s\"" % groupFolderName
             logger.debug(message)
