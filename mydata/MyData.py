@@ -741,7 +741,6 @@ class MyData(wx.App):
         The user pressed the Refresh icon on the main windows' toolbar.
         """
         logger.debug("OnRefreshFromToolbar")
-        self.tasksModel.DeleteAllRows()
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
