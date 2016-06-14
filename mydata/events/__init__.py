@@ -626,7 +626,6 @@ class MyDataEvent(wx.PyCommandEvent):
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 app = wx.GetApp()
-                app.tasksModel.DeleteAllRows()
                 app.GetScheduleController().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
                 shutdownForRefreshCompleteEvent = MyDataEvent(
