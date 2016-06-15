@@ -13,6 +13,9 @@ from distutils.command.bdist import bdist
 from distutils.command.install import install
 import distutils.dir_util
 
+# Ensure latest commit hash is recorded, so that
+# it is available in the About dialog when MyData
+# is frozen into a platform-specific bundle:
 import mydata
 
 if sys.platform.startswith("darwin"):
