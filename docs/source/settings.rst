@@ -229,6 +229,26 @@ Advanced
     (e.g. "D:\\Data\\SmithLab\\Nikon Microscope #1\\John Smith\\Dataset1")
     will be mapped to MyTardis datasets.
 
+**Folder Structure - Experiment / Dataset**
+    Folders immediately inside the main data directory
+    (e.g. "D:\\Data\\Experiment1") will be mapped to MyTardis experiments.
+    Folders inside each experiment folder
+    (e.g. "D:\\Data\\Experiment1\\Dataset1") will be mapped to MyTardis
+    datasets.  This folder structure is designed for a data collection
+    facility which is primarily staff-operated (not user-operated), so
+    instead of creating a folder for each user, an 'experiment' folder
+    is used to group datasets which should be accessible by the same
+    group of researchers.
+
+**Folder Structure - Dataset**
+    Folders immediately inside the main data directory
+    (e.g. "D:\\Data\\Dataset1") will be mapped to MyTardis datasets.
+    Datasets will be automatically grouped into MyTardis experiments according
+    to the "Experiment (Dataset Grouping)" field below.  This folder
+    structure is designed for a facility using inflexible data collection
+    software making it difficult to structure folders according to who should
+    have access to them.
+
 **Validate Folder Structure**
   When this is checked, MyData will ensure that the folders provided appear
   to be in the correct structure, and it will count the total number of

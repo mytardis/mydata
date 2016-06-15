@@ -590,6 +590,17 @@ class MyDataEvent(wx.PyCommandEvent):
             event.settingsDialog.Show(False)
             # event.settingsDialog.Destroy()
             logger.debug("Closed Settings dialog.")
+
+            if event.settingsModel.GetScheduleType() == "Manually":
+                message = \
+                     "MyData's schedule type is currently " \
+                     "set to 'manual', so you will need to click " \
+                     "the Refresh toolbar icon or the Sync Now " \
+                     "menu item to begin the data scans and uploads."
+                title = "Manual Schedule"
+                dlg = wx.MessageDialog(None, message, title,
+                                       wx.OK | wx.ICON_WARNING)
+                dlg.ShowModal()
         except:
             logger.debug(traceback.format_exc())
 
@@ -615,7 +626,6 @@ class MyDataEvent(wx.PyCommandEvent):
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 app = wx.GetApp()
-                app.tasksModel.DeleteAllRows()
                 app.GetScheduleController().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
                 shutdownForRefreshCompleteEvent = MyDataEvent(

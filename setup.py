@@ -13,6 +13,9 @@ from distutils.command.bdist import bdist
 from distutils.command.install import install
 import distutils.dir_util
 
+# Ensure latest commit hash is recorded, so that
+# it is available in the About dialog when MyData
+# is frozen into a platform-specific bundle:
 import mydata
 
 if sys.platform.startswith("darwin"):
@@ -153,6 +156,8 @@ class CustomBuildCommand(build):
             print "\nCreating dist/MyData.app using py2app...\n"
             os.system("rm -fr build/*")
             os.system("rm -fr dist/*")
+        elif sys.platform.startswith("linux"):
+            os.system("cd linux; ./package_linux_version.sh")
         else:
             print "Custom build command."
 
@@ -459,6 +464,8 @@ tell application "Finder"
             cmd = 'ls -lh "dist/%s.dmg"' % (final_dmg_name)
             print "\n" + cmd
             os.system(cmd)
+        elif sys.platform.startswith("linux"):
+            os.system("cd linux; ./package_centos_version.sh")
         else:
             print "Custom bdist command."
 
