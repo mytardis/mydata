@@ -159,7 +159,6 @@ class MyDataTaskBarIcon(TaskBarIcon):
         # wx.GetApp().OnRefresh(event)
         logger.debug("Sync Now called from task bar menu item.")
         app = wx.GetApp()
-        app.tasksModel.DeleteAllRows()
         app.settingsModel.SetScheduleType("Manually")
         app.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)

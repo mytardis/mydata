@@ -127,7 +127,8 @@ class MyDataFrame(wx.Frame):
         Update status bar's message.
         """
         self.statusbar.SetStatusMessage(msg)
-        wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
+        if sys.platform.startswith("win"):
+            wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
 
     def SetConnected(self, myTardisUrl, connected):
         """
@@ -740,7 +741,6 @@ class MyData(wx.App):
         The user pressed the Refresh icon on the main windows' toolbar.
         """
         logger.debug("OnRefreshFromToolbar")
-        self.tasksModel.DeleteAllRows()
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
@@ -952,9 +952,13 @@ class MyData(wx.App):
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              startDataUploadsEvent)
             else:
-                message = "No user/group folders to upload from."
+                message = "No folders were found to upload from."
                 logger.debug(message)
-                self.frame.SetStatusMessage(message)
+                wx.CallAfter(self.frame.SetStatusMessage, message)
+                wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
+                             False)
+                self.SetScanningFolders(False)
+                logger.info("Just set ScanningFolders to False")
 
             wx.CallAfter(EndBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"

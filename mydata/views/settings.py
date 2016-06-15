@@ -633,7 +633,9 @@ class SettingsDialog(wx.Dialog):
             'Username / Experiment / Dataset',
             'Email / Experiment / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
-            'User Group / Instrument / Full Name / Dataset']
+            'User Group / Instrument / Full Name / Dataset',
+            'Experiment / Dataset',
+            'Dataset']
         self.folderStructureComboBox = \
             wx.ComboBox(self.advancedPanel, wx.ID_ANY,
                         choices=self.folderStructures, style=wx.CB_READONLY)
@@ -812,6 +814,12 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(False)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
+
+        if "User" not in folderStructure and \
+                "Email" not in folderStructure:
+            self.userFolderFilterLabel.Show(False)
+            self.userFolderFilterField.SetValue("")
+            self.userFolderFilterField.Show(False)
 
         if folderStructure.startswith("Username"):
             self.userFolderFilterLabel.SetLabel(
@@ -1352,7 +1360,8 @@ class SettingsDialog(wx.Dialog):
         """
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure == 'Username / Dataset' or \
-                folderStructure == 'Email / Dataset':
+                folderStructure == 'Email / Dataset' or \
+                folderStructure == 'Dataset':
             self.datasetGroupingField\
                 .SetValue("Instrument Name - Data Owner's Full Name")
             self.groupPrefixLabel.Show(False)
@@ -1363,7 +1372,8 @@ class SettingsDialog(wx.Dialog):
         elif folderStructure == \
                 'Username / "MyTardis" / Experiment / Dataset' or \
                 folderStructure == 'Username / Experiment / Dataset' or \
-                folderStructure == 'Email / Experiment / Dataset':
+                folderStructure == 'Email / Experiment / Dataset' or \
+                folderStructure == 'Experiment / Dataset':
             self.datasetGroupingField.SetValue("Experiment")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
@@ -1377,6 +1387,16 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(False)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
+
+        if "User" in folderStructure or \
+                "Email" in folderStructure:
+            self.userFolderFilterLabel.Show(True)
+            self.userFolderFilterField.SetValue("")
+            self.userFolderFilterField.Show(True)
+        else:
+            self.userFolderFilterLabel.Show(False)
+            self.userFolderFilterField.SetValue("")
+            self.userFolderFilterField.Show(False)
 
         if folderStructure.startswith("Username"):
             self.userFolderFilterLabel.SetLabel(
@@ -1423,6 +1443,16 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(False)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
+
+        if "User" in folderStructure or \
+                "Email" in folderStructure:
+            self.userFolderFilterLabel.Show(True)
+            self.userFolderFilterField.SetValue("")
+            self.userFolderFilterField.Show(True)
+        else:
+            self.userFolderFilterLabel.Show(False)
+            self.userFolderFilterField.SetValue("")
+            self.userFolderFilterField.Show(False)
 
         if folderStructure.startswith("Username"):
             self.userFolderFilterLabel.SetLabel(
