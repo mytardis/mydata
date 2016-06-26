@@ -31,7 +31,7 @@ from mydata.logs import logger
 
 class VerifyDatafileRunnable(object):
     def __init__(self, foldersController, foldersModel, folderModel,
-                 dataFileIndex, settingsModel):
+                 dataFileIndex, settingsModel, testRun=False):
         # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
@@ -39,6 +39,7 @@ class VerifyDatafileRunnable(object):
         self.dataFileIndex = dataFileIndex
         self.settingsModel = settingsModel
         self.verificationModel = None
+        self.testRun = testRun
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -75,9 +76,12 @@ class VerifyDatafileRunnable(object):
         existingDatafile = None
         # pylint: disable=bare-except
         try:
+            dataset = self.folderModel.GetDatasetModel()
+            if not dataset:  # test runs don't create required datasets
+                raise DoesNotExist("Dataset doesn't exist.")
             existingDatafile = DataFileModel.GetDataFile(
                 settingsModel=self.settingsModel,
-                dataset=self.folderModel.GetDatasetModel(),
+                dataset=dataset,
                 filename=dataFileName,
                 directory=dataFileDirectory)
             self.verificationModel.SetMessage("Found datafile on "
@@ -275,4 +279,8 @@ class VerifyDatafileRunnable(object):
                         folderModel=self.folderModel,
                         dataFileIndex=self.dataFileIndex,
                         dataFilePath=dataFilePath))
+                if self.testRun:
+                    message = "FOUND VERIFIED UPLOAD FOR: %s" \
+                        % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
+                    logger.testrun(message)
         self.verificationModel.SetComplete()

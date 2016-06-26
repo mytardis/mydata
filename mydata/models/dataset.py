@@ -123,7 +123,7 @@ class DatasetModel(object):
         return self.datafiles
 
     @staticmethod
-    def CreateDatasetIfNecessary(folderModel):
+    def CreateDatasetIfNecessary(folderModel, testRun=False):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         description = folderModel.GetFolder()
@@ -133,29 +133,36 @@ class DatasetModel(object):
         myTardisUsername = settingsModel.GetUsername()
         myTardisApiKey = settingsModel.GetApiKey()
 
-        url = myTardisUrl + "/api/v1/dataset/?format=json" + \
-            "&experiments__id=" + str(folderModel.GetExperiment().GetId())
-        url = url + "&description=" + urllib.quote(description)
+        experiment = folderModel.GetExperiment()
+        if experiment:  # Could be None in test run
+            url = myTardisUrl + "/api/v1/dataset/?format=json" + \
+                "&experiments__id=" + str(experiment.GetId())
+            url = url + "&description=" + urllib.quote(description)
 
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
+            headers = {
+                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                                   myTardisApiKey)}
 
-        response = requests.get(headers=headers, url=url)
-        existingMatchingDatasets = response.json()
-        numExistingMatchingDatasets = \
-            existingMatchingDatasets['meta']['total_count']
-        if numExistingMatchingDatasets == 1:
-            logger.debug("Found existing dataset for folder " + description)
-        elif numExistingMatchingDatasets > 1:
-            logger.debug("WARNING: Found multiple datasets for folder " +
-                         description)
+            response = requests.get(headers=headers, url=url)
+            existingMatchingDatasets = response.json()
+            numExistingMatchingDatasets = \
+                existingMatchingDatasets['meta']['total_count']
+            if numExistingMatchingDatasets == 1:
+                logger.debug("Found existing dataset for folder " + description)
+            elif numExistingMatchingDatasets > 1:
+                logger.debug("WARNING: Found multiple datasets for folder " +
+                             description)
+        else:
+            numExistingMatchingDatasets = 0
 
         if numExistingMatchingDatasets == 0:
             logger.debug("Creating dataset record for folder: " + description)
 
             description = folderModel.GetFolder()
-            experimentUri = folderModel.GetExperiment().GetResourceUri()
+            if experiment:
+                experimentUri = experiment.GetResourceUri()
+            else:
+                experimentUri = None
             immutable = False
             datasetJson = {
                 "instrument": settingsModel.GetInstrument().GetResourceUri(),
@@ -169,6 +176,17 @@ class DatasetModel(object):
                 "Content-Type": "application/json",
                 "Accept": "application/json"}
             url = myTardisUrl + "/api/v1/dataset/"
+            if testRun:
+                message = "CREATING NEW DATASET FOR FOLDER: %s\n" \
+                    "    Description: %s" \
+                    % (folderModel.GetRelPath(),
+                       description)
+                if experiment:  # Could be None in test run.
+                    message += "\n    In Experiment: %s/%s" \
+                        % (folderModel.settingsModel.GetMyTardisUrl(),
+                           experiment.GetViewUri())
+                logger.testrun(message)
+                return
             response = requests.post(headers=headers, url=url, data=data)
             if response.status_code >= 200 and response.status_code < 300:
                 newDatasetJson = response.json()
@@ -208,5 +226,22 @@ class DatasetModel(object):
                     raise InternalServerError(message)
                 raise Exception(response.text)
         else:
+            existingDatasetJson = \
+                existingMatchingDatasets['objects'][0]
+            if testRun:
+                description = existingDatasetJson['description']
+                datasetId = existingDatasetJson['id']
+                viewUri = "dataset/%s" % datasetId
+                message = "ADDING TO EXISTING DATASET FOR FOLDER: %s\n" \
+                    "    URL: %s/%s\n" \
+                    "    Description: %s\n" \
+                    "    In Experiment: %s/%s" \
+                    % (folderModel.GetRelPath(),
+                       folderModel.settingsModel.GetMyTardisUrl(),
+                       viewUri,
+                       description,
+                       folderModel.settingsModel.GetMyTardisUrl(),
+                       folderModel.GetExperiment().GetViewUri())
+                logger.testrun(message)
             return DatasetModel(settingsModel,
                                 existingMatchingDatasets['objects'][0])
