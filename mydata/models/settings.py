@@ -144,6 +144,10 @@ class SettingsModel(object):
         self.ignore_interval_unit = "months"
         self.ignore_new_files = True
         self.ignore_new_files_minutes = 1
+        self.use_includes_file = False
+        self.includes_file = ""
+        self.use_excludes_file = False
+        self.excludes_file = ""
 
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = ""
@@ -212,6 +216,10 @@ class SettingsModel(object):
         self.ignore_interval_unit = "months"
         self.ignore_new_files = True
         self.ignore_new_files_minutes = 1
+        self.use_includes_file = False
+        self.includes_file = ""
+        self.use_excludes_file = False
+        self.excludes_file = ""
 
         # Advanced tab
         self.folder_structure = "Username / Dataset"
@@ -246,6 +254,7 @@ class SettingsModel(object):
                           "sunday_checked", "scheduled_date", "scheduled_time",
                           "timer_minutes", "timer_from_time", "timer_to_time",
                           "user_filter", "dataset_filter", "experiment_filter",
+                          "includes_file", "excludes_file",
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
@@ -257,55 +266,21 @@ class SettingsModel(object):
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
                             configParser.get(configFileSection, field)
-                if configParser.has_option(configFileSection,
-                                           "ignore_old_datasets"):
-                    self.ignore_old_datasets = \
-                        configParser.getboolean(configFileSection,
-                                                "ignore_old_datasets")
-                if configParser.has_option(configFileSection,
-                                           "ignore_interval_number"):
-                    self.ignore_interval_number = \
-                        configParser.getint(configFileSection,
-                                            "ignore_interval_number")
-                if configParser.has_option(configFileSection,
-                                           "ignore_new_files"):
-                    self.ignore_new_files = \
-                        configParser.getboolean(configFileSection,
-                                                "ignore_new_files")
-                if configParser.has_option(configFileSection,
-                                           "ignore_new_files_minutes"):
-                    self.ignore_new_files_minutes = \
-                        configParser.getint(configFileSection,
-                                            "ignore_new_files_minutes")
-                if configParser.has_option(configFileSection,
-                                           "max_upload_threads"):
-                    self.max_upload_threads = \
-                        configParser.getint(configFileSection,
-                                            "max_upload_threads")
-                if configParser.has_option(configFileSection,
-                                           "max_upload_retries"):
-                    self.max_upload_retries = \
-                        configParser.getint(configFileSection,
-                                            "max_upload_retries")
-                if configParser.has_option(configFileSection,
-                                           "validate_folder_structure"):
-                    self.validate_folder_structure = \
-                        configParser.getboolean(configFileSection,
-                                                "validate_folder_structure")
-                if configParser.has_option(configFileSection,
-                                           "start_automatically_on_login"):
-                    self.start_automatically_on_login = \
-                        configParser.getboolean(configFileSection,
-                                                "start_automatically_on_login")
-                if configParser.has_option(configFileSection,
-                                           "upload_invalid_user_folders"):
-                    self.upload_invalid_user_folders = \
-                        configParser.getboolean(configFileSection,
-                                                "upload_invalid_user_folders")
-                if configParser.has_option(configFileSection,
-                                           "locked"):
-                    self.locked = configParser.getboolean(configFileSection,
-                                                          "locked")
+                booleanFields = ["ignore_old_datasets", "ignore_new_files",
+                                 "use_includes_file", "use_excludes_file",
+                                 "validate_folder_structure",
+                                 "start_automatically_on_login",
+                                 "upload_invalid_user_folders", "locked"]
+                for field in booleanFields:
+                    if configParser.has_option(configFileSection, field):
+                        self.__dict__[field] = \
+                            configParser.getboolean(configFileSection, field)
+                intFields = ["ignore_interval_number", "ignore_new_files_minutes",
+                             "max_upload_threads", "max_upload_retries"]
+                for field in intFields:
+                    if configParser.has_option(configFileSection, field):
+                        self.__dict__[field] = \
+                            configParser.getint(configFileSection, field)
                 if configParser.has_option(configFileSection,
                                            "scheduled_date"):
                     datestring = configParser.get(configFileSection,
@@ -385,7 +360,8 @@ class SettingsModel(object):
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
-                            "sunday_checked"):
+                            "sunday_checked", "use_includes_file",
+                            "use_excludes_file"):
                         self.__dict__[setting['key']] = \
                             (setting['value'] == "True")
                     if setting['key'] in (
@@ -468,6 +444,9 @@ class SettingsModel(object):
 
     def GetMyTardisUrl(self):
         return self.mytardis_url
+
+    def GetMyTardisApiUrl(self):
+        return self.mytardis_url + "/api/v1/?format=json"
 
     def SetMyTardisUrl(self, myTardisUrl):
         self.mytardis_url = myTardisUrl.rstrip('/')
@@ -665,6 +644,30 @@ class SettingsModel(object):
     def SetIgnoreNewFilesMinutes(self, ignoreNewFilesMinutes):
         self.ignore_new_files_minutes = ignoreNewFilesMinutes
 
+    def UseIncludesFile(self):
+        return self.use_includes_file
+
+    def SetUseIncludesFile(self, useIncludesFile):
+        self.use_includes_file = useIncludesFile
+
+    def GetIncludesFile(self):
+        return self.includes_file
+
+    def SetIncludesFile(self, includesFile):
+        self.includes_file = includesFile
+
+    def UseExcludesFile(self):
+        return self.use_excludes_file
+
+    def SetUseExcludesFile(self, useExcludesFile):
+        self.use_excludes_file = useExcludesFile
+
+    def GetExcludesFile(self):
+        return self.excludes_file
+
+    def SetExcludesFile(self, excludesFile):
+        self.excludes_file = excludesFile
+
     def GetMaxUploadThreads(self):
         return self.max_upload_threads
 
@@ -736,11 +739,13 @@ class SettingsModel(object):
                       "sunday_checked", "scheduled_date", "scheduled_time",
                       "timer_minutes", "timer_from_time", "timer_to_time",
                       "user_filter", "dataset_filter", "experiment_filter",
+                      "includes_file", "excludes_file",
                       "folder_structure",
                       "dataset_grouping", "group_prefix",
                       "ignore_old_datasets", "ignore_interval_number",
                       "ignore_interval_unit",
                       "ignore_new_files", "ignore_new_files_minutes",
+                      "use_includes_file", "use_excludes_file",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",
@@ -795,6 +800,10 @@ class SettingsModel(object):
         self.SetIgnoreNewFiles(settingsDialog.IgnoreNewFiles())
         self.SetIgnoreNewFilesMinutes(
             settingsDialog.GetIgnoreNewFilesMinutes())
+        self.SetUseIncludesFile(settingsDialog.UseIncludesFile())
+        self.SetIncludesFile(settingsDialog.GetIncludesFile())
+        self.SetUseExcludesFile(settingsDialog.UseExcludesFile())
+        self.SetExcludesFile(settingsDialog.GetExcludesFile())
 
         # Advanced tab
         self.SetFolderStructure(settingsDialog.GetFolderStructure())
@@ -818,7 +827,7 @@ class SettingsModel(object):
             LastSettingsUpdateTrigger.UI_RESPONSE
 
     # pylint: disable=too-many-locals
-    def Validate(self, setStatusMessage=None):
+    def Validate(self, setStatusMessage=None, testRun=False):
         datasetCount = -1
         # pylint: disable=bare-except
         try:
@@ -879,6 +888,40 @@ class SettingsModel(object):
                                                      "data_directory")
                 return self.validation
 
+            if testRun:
+                if self.GetUserFilter().strip() != "":
+                    if self.folderStructure.startswith("User Group"):
+                        logger.testrun(
+                            "WARNING: User group folders are being filtered.")
+                    else:
+                        logger.testrun(
+                            "WARNING: User folders are being filtered.")
+                if self.GetDatasetFilter().strip() != "":
+                    logger.testrun(
+                        "WARNING: Dataset folders are being filtered.")
+                if self.GetExperimentFilter().strip() != "":
+                    logger.testrun(
+                        "WARNING: Experiment folders are being filtered.")
+                if self.IgnoreOldDatasets():
+                    logger.testrun(
+                        "WARNING: Old datasets are being ignored.")
+                if self.IgnoreNewFiles():
+                    logger.testrun(
+                        "WARNING: New files are being ignored.")
+                if self.UseIncludesFile() and not self.UseExcludesFile():
+                    logger.testrun(
+                        "WARNING: Only files matching patterns in includes "
+                        "file will be scanned for upload.")
+                elif not self.UseIncludesFile() and self.UseExcludesFile():
+                    logger.testrun(
+                        "WARNING: Files matching patterns in excludes "
+                        "file will not be scanned for upload.")
+                elif self.UseIncludesFile() and self.UseExcludesFile():
+                    logger.testrun(
+                        "WARNING: Files matching patterns in excludes "
+                        "file will not be scanned for upload, "
+                        "unless they match pattersn in the includes file.")
+
             if self.ValidateFolderStructure():
                 message = "Settings validation - checking folder structure..."
                 logger.debug(message)
@@ -889,18 +932,26 @@ class SettingsModel(object):
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
+            timeout = 5
             # pylint: disable=bare-except
             try:
                 message = "Settings validation - checking MyTardis URL..."
                 logger.debug(message)
                 if setStatusMessage:
                     setStatusMessage(message)
-                response = requests.get(self.GetMyTardisUrl() + "/about/",
-                                        timeout=5)
+                response = requests.get(self.GetMyTardisApiUrl(),
+                                        timeout=timeout)
                 content = response.text
                 history = response.history
                 url = response.url
-                if response.status_code < 200 or response.status_code >= 300:
+                if response.status_code == 200:
+                    message = "Retrieved %s in %.3f seconds." \
+                        % (self.GetMyTardisApiUrl(),
+                           response.elapsed.total_seconds())
+                    logger.debug(message)
+                    if testRun:
+                        logger.testrun(message)
+                elif response.status_code < 200 or response.status_code >= 300:
                     logger.debug("Received HTTP %d while trying to access "
                                  "MyTardis server (%s)."
                                  % (response.status_code,
@@ -954,6 +1005,15 @@ class SettingsModel(object):
                                                          "mytardis_url",
                                                          suggestion)
                     return self.validation
+            except requests.exceptions.Timeout:
+                message = "Attempt to connect to %s timed out after " \
+                    "%s seconds." % (self.GetMyTardisApiUrl(), timeout)
+                if testRun:
+                    logger.testrun(message)
+                self.validation = SettingsValidation(False, message,
+                                                     "mytardis_url")
+                logger.error(traceback.format_exc())
+                return self.validation
             except:
                 if not self.GetMyTardisUrl().startswith("http"):
                     message = "Please enter a valid MyTardis URL, " \
@@ -1306,12 +1366,74 @@ oFS.DeleteFile sLinkFile
                                        "scheduled_time")
                 return
 
+        if self.UseIncludesFile():
+            message = "Settings validation - checking includes file..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
+            self.PerformGlobsFileValidation(self.GetIncludesFile(),
+                                            "Includes", "includes",
+                                            "includes_file")
+
+        if self.UseExcludesFile():
+            message = "Settings validation - checking excludes file..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
+            self.PerformGlobsFileValidation(self.GetExcludesFile(),
+                                            "Excludes", "excludes",
+                                            "excludes_file")
+
         message = "Settings validation - succeeded!"
         logger.debug(message)
+        if testRun:
+            logger.testrun(message)
         if setStatusMessage:
             setStatusMessage(message)
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
+
+    def PerformGlobsFileValidation(self, filePath, upper, lower, field):
+        """
+        Used to validate an "includes" or "excludes"
+        file which is used to match file patterns,
+        e.g. "*.txt"
+
+        upper is an uppercase description of the glob file.
+        lower is a lowercase description of the glob file.
+        field
+        """
+        if filePath.strip() == "":
+            message = "No %s file was specified." % lower
+            self.validation = \
+                SettingsValidation(False, message, field)
+            return
+        if not os.path.exists(filePath):
+            message = "Specified %s file doesn't exist." \
+                % lower
+            self.validation = \
+                SettingsValidation(False, message, field)
+            return
+        if not os.path.isfile(filePath):
+            message = "Specified %s file path is not a file." \
+                % lower
+            self.validation = \
+                SettingsValidation(False, message, field)
+            return
+        with open(filePath, 'r') as globsFile:
+            for line in globsFile.readlines():
+                try:
+                    # Lines starting with '#' or ';' will be ignored.
+                    # Other non-blank lines are expected to be globs,
+                    # e.g. *.txt
+                    line = line.decode('utf-8').strip()
+                except UnicodeDecodeError:
+                    message = "%s file is not a valid plain text " \
+                        "(UTF-8) file." % upper
+                    self.validation = \
+                        SettingsValidation(False, message, field)
+                    return
+
 
     # pylint: disable=too-many-locals
     def PerformFolderStructureValidation(self):
