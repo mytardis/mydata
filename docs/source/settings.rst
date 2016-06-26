@@ -139,6 +139,26 @@ Filters
   be replaced by a newer version.  Therefore, it is important to ensure that
   a file doesn't get uploaded while it is still being modified.
 
+**Includes files matching patterns in**
+  Specifying an includes file will tell MyData to only upload files
+  matching specified patterns, e.g. '\*.txt'. The includes file should
+  contain one pattern on each line.  Any lines beginning with '#' or ';'
+  will be ignored.  The patterns will be matched using Python's fnmatch:
+  https://docs.python.org/2/library/fnmatch.html
+  If both an includes and an excludes file are specified, then filenames
+  matching one or more includes patterns will be uploaded, even if they
+  also match one or more excludes patterns.
+
+**Excludes files matching patterns in**
+  Specifying an excludes file will tell MyData not to upload files
+  matching specified patterns, e.g. \*.bak The excludes file should
+  contain one pattern on each line.  Any lines beginning with '#' or ';'
+  will be ignored.  The patterns will be matched using Python's fnmatch:
+  https://docs.python.org/2/library/fnmatch.html
+  If both an includes and an excludes file are specified, then filenames
+  matching one or more includes patterns will be uploaded, even if they
+  also match one or more excludes patterns.
+
 .. _settings-dialog-advanced:
 
 Advanced
