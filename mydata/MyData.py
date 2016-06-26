@@ -68,6 +68,7 @@ from mydata.media import IconStyle
 from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.controllers.schedule import ScheduleController
+from mydata.views.testrun import TestRunFrame
 
 
 class NotebookTabs(object):
@@ -172,6 +173,7 @@ class MyData(wx.App):
         self.configPath = None
 
         self.frame = None
+        self.testRunFrame = None
         self.panel = None
         self.foldersUsersNotebook = None
 
@@ -182,7 +184,8 @@ class MyData(wx.App):
         self.toolbar = None
         self.settingsTool = None
         self.stopTool = None
-        self.refreshTool = None
+        self.testTool = None
+        self.uploadTool = None
         self.myTardisTool = None
         self.aboutTool = None
         self.helpTool = None
@@ -264,6 +267,7 @@ class MyData(wx.App):
                                  settingsModel=self.settingsModel)
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
+        self.testRunFrame = TestRunFrame(self.frame)
 
         parser = argparse.ArgumentParser()
         parser.add_argument("-v", "--version", action="store_true",
@@ -645,12 +649,21 @@ class MyData(wx.App):
 
         self.toolbar.AddSeparator()
 
-        refreshIcon = MYDATA_ICONS.GetIcon("Refresh", size="24x24")
-        self.refreshTool = addToolMethod(wx.ID_REFRESH, "Refresh",
-                                         refreshIcon, shortHelp="Refresh")
-        self.toolbar.EnableTool(wx.ID_REFRESH, True)
-        self.frame.Bind(wx.EVT_TOOL, self.OnRefreshFromToolbar, self.refreshTool,
-                        self.refreshTool.GetId())
+        testIcon = MYDATA_ICONS.GetIcon("Test tubes", size="24x24")
+        self.testTool = addToolMethod(wx.ID_ANY, "Test Run",
+                                      testIcon, shortHelp="Test Run")
+        self.toolbar.EnableTool(self.testTool.GetId(), True)
+        self.frame.Bind(wx.EVT_TOOL, self.OnTestRunFromToolbar, self.testTool,
+                        self.testTool.GetId())
+
+        self.toolbar.AddSeparator()
+
+        uploadIcon = MYDATA_ICONS.GetIcon("Upload button", size="24x24")
+        self.uploadTool = addToolMethod(wx.ID_ANY, "Scan and Upload",
+                                        uploadIcon, shortHelp="Scan and Upload")
+        self.toolbar.EnableTool(self.uploadTool.GetId(), True)
+        self.frame.Bind(wx.EVT_TOOL, self.OnScanAndUploadFromToolbar, self.uploadTool,
+                        self.uploadTool.GetId())
 
         self.toolbar.AddSeparator()
 
@@ -736,17 +749,37 @@ class MyData(wx.App):
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
             self.uploadsModel.Filter(event.GetString())
 
-    def OnRefreshFromToolbar(self, event):
+    def OnScanAndUploadFromToolbar(self, event):
         """
-        The user pressed the Refresh icon on the main windows' toolbar.
+        The user pressed the Upload icon on the main window's toolbar.
         """
-        logger.debug("OnRefreshFromToolbar")
+        logger.debug("OnScanAndUploadFromToolbar")
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
         self.scheduleController.ApplySchedule(event, runManually=True)
 
-    def OnRefresh(self, event, needToValidateSettings=True, jobId=None):
+    def OnTestRunFromToolbar(self, event):
+        """
+        The user pressed the Test Run icon on the main window's toolbar.
+        """
+        logger.debug("OnTestRunFromToolbar")
+        self.settingsModel.SetScheduleType("Manually")
+        self.settingsModel.SetLastSettingsUpdateTrigger(
+            LastSettingsUpdateTrigger.UI_RESPONSE)
+        self.toolbar.EnableTool(self.testTool.GetId(), False)
+        self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+        self.testRunFrame.saveButton.Disable()
+        self.scheduleController.ApplySchedule(event, runManually=True,
+                                              needToValidateSettings=True,
+                                              testRun=True)
+        self.testRunFrame.Show()
+        self.testRunFrame.Clear()
+        self.testRunFrame.SetTitle("%s - Test Run" % self.frame.GetTitle())
+        logger.testrun("Starting Test Run...")
+
+    def OnRefresh(self, event, needToValidateSettings=True, jobId=None,
+                  testRun=False):
         """
         Shut down any existing data folder scan and upload threads,
         validate settings, and begin scanning data folders, checking
@@ -759,10 +792,12 @@ class MyData(wx.App):
                               mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE)
 
         if hasattr(event, "needToValidateSettings") and \
-                event.needToValidateSettings is False:
+                not event.needToValidateSettings:
             needToValidateSettings = False
         if hasattr(event, "shutdownSuccessful") and event.shutdownSuccessful:
             shutdownForRefreshComplete = True
+        if hasattr(event, "testRun") and event.testRun:
+            testRun = True
 
         # Shutting down existing data scan and upload processes:
 
@@ -775,7 +810,8 @@ class MyData(wx.App):
 
             shutdownForRefreshEvent = \
                 mde.MyDataEvent(mde.EVT_SHUTDOWN_FOR_REFRESH,
-                                foldersController=self.foldersController)
+                                foldersController=self.foldersController,
+                                testRun=testRun)
             logger.debug("Posting shutdownForRefreshEvent")
             wx.PostEvent(wx.GetApp().GetMainFrame(), shutdownForRefreshEvent)
             return
@@ -787,21 +823,24 @@ class MyData(wx.App):
 
         self.searchCtrl.SetValue("")
 
-        # Network connectivity check:
-
-        validateSettingsForRefreshEvent = \
-            mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH)
-        if self.CheckConnectivityForRefresh(
-                nextEvent=validateSettingsForRefreshEvent):
-            # Wait for the event to be handled, which will result
-            # in OnRefresh being called again.
-            return
-
         # Settings validation:
 
         if needToValidateSettings:
+
+            validateSettingsForRefreshEvent = \
+                mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH,
+                                needToValidateSettings=needToValidateSettings,
+                                testRun=testRun)
+            if self.CheckConnectivityForRefresh(
+                    nextEvent=validateSettingsForRefreshEvent):
+                # Wait for the event to be handled, which will result
+                # in OnRefresh being called again.
+                return
+
             logger.debug("OnRefresh: needToValidateSettings is True.")
             self.frame.SetStatusMessage("Validating settings...")
+            if testRun:
+                logger.testrun("Validating settings...")
             self.settingsValidation = None
 
             def ValidateSettings():
@@ -857,10 +896,12 @@ class MyData(wx.App):
                         wx.CallAfter(ShowDialog)
                         return
 
-                    self.settingsValidation = self.settingsModel.Validate()
+                    self.settingsValidation = \
+                        self.settingsModel.Validate(testRun=testRun)
                     event = mde.MyDataEvent(
                         mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
-                        needToValidateSettings=False)
+                        needToValidateSettings=False,
+                        testRun=testRun)
                     wx.PostEvent(self.frame, event)
                     wx.CallAfter(EndBusyCursorIfRequired)
                 except:
@@ -905,6 +946,9 @@ class MyData(wx.App):
                 userOrGroup)
             logger.debug(message)
             self.frame.SetStatusMessage(message)
+            if testRun and self.numUserFoldersScanned == \
+                    self.usersModel.GetNumUserOrGroupFolders():
+                logger.testrun(message)
 
         # SECTION 4: Start FoldersModel.ScanFolders(),
         # followed by FoldersController.StartDataUploads().
@@ -916,13 +960,19 @@ class MyData(wx.App):
             """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
-            wx.CallAfter(self.frame.SetStatusMessage,
-                         "Scanning data folders...")
+            message = "Scanning data folders..."
+            wx.CallAfter(self.frame.SetStatusMessage, message)
+            if testRun:
+                message = "Scanning data folders in %s..." \
+                    % self.settingsModel.GetDataDirectory()
+            logger.testrun(message)
             try:
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
                 logger.info("Just set ScanningFolders to True")
                 self.toolbar.EnableTool(self.stopTool.GetId(), True)
+                self.toolbar.EnableTool(self.testTool.GetId(), False)
+                self.toolbar.EnableTool(self.uploadTool.GetId(), False)
                 self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
                                               self.ShouldAbort)
                 self.SetScanningFolders(False)
@@ -942,12 +992,23 @@ class MyData(wx.App):
 
             if self.ShouldAbort():
                 wx.CallAfter(EndBusyCursorIfRequired)
+                wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
+                             False)
+                wx.CallAfter(self.toolbar.EnableTool, self.testTool.GetId(),
+                             True)
+                wx.CallAfter(self.toolbar.EnableTool, self.uploadTool.GetId(),
+                             True)
+                self.SetScanningFolders(False)
+                logger.info("Just set ScanningFolders to False")
+                if testRun:
+                    logger.testrun("Data scans and uploads canceled.")
                 return
 
             if self.usersModel.GetNumUserOrGroupFolders() > 0:
                 startDataUploadsEvent = \
                     mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
-                                    foldersController=self.foldersController)
+                                    foldersController=self.foldersController,
+                                    testRun=testRun)
                 logger.debug("Posting startDataUploadsEvent")
                 wx.PostEvent(wx.GetApp().GetMainFrame(),
                              startDataUploadsEvent)
@@ -957,6 +1018,10 @@ class MyData(wx.App):
                 wx.CallAfter(self.frame.SetStatusMessage, message)
                 wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
                              False)
+                wx.CallAfter(self.toolbar.EnableTool, self.testTool.GetId(),
+                             True)
+                wx.CallAfter(self.toolbar.EnableTool, self.uploadTool.GetId(),
+                             True)
                 self.SetScanningFolders(False)
                 logger.info("Just set ScanningFolders to False")
 
@@ -986,7 +1051,7 @@ class MyData(wx.App):
             logger.debug("OnRefresh called automatically from "
                          "OnSettings(), after displaying SettingsDialog, "
                          "which was launched from MyData's toolbar.")
-        elif event.GetId() == self.refreshTool.GetId():
+        elif event.GetId() == self.uploadTool.GetId():
             logger.debug("OnRefresh triggered by Refresh toolbar icon.")
         elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
                 event.GetId() == \
@@ -1144,6 +1209,13 @@ class MyData(wx.App):
         an instance of MyDataFrame.
         """
         return self.frame
+
+    def GetTestRunFrame(self):
+        """
+        Returns the Test Run frame, summarizes the
+        results of a dry run.
+        """
+        return self.testRunFrame
 
     def GetMyDataEvents(self):
         """
