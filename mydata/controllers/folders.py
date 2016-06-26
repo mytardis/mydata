@@ -64,6 +64,7 @@ class FoldersController(object):
         self.completed = False
         self.uploadDatafileRunnable = None
         self.numVerificationsToBePerformed = 0
+        self.uploadsAcknowledged = 0
         self.uploadMethod = UploadMethod.HTTP_POST
 
         # These will get overwritten in StartDataUploads, but we need
@@ -73,6 +74,8 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
+
+        self.testRun = False
 
         self.foldersView.Bind(wx.EVT_BUTTON, self.OnOpenFolder,
                               self.foldersView.GetOpenFolderButton())
@@ -226,12 +229,24 @@ class FoldersController(object):
         """
         folderModel = event.folderModel
         dfi = event.dataFileIndex
+        existingUnverifiedDatafile = \
+            getattr(event, "existingUnverifiedDatafile", False)
+
+        if self.testRun:
+            if existingUnverifiedDatafile:
+                message = "NEEDS RE-UPLOADING: %s" \
+                    % folderModel.GetDataFileRelPath(dfi)
+            else:
+                message = "NEEDS UPLOADING: %s" \
+                    % folderModel.GetDataFileRelPath(dfi)
+            self.uploadsAcknowledged += 1
+            logger.testrun(message)
+            self.CountCompletedUploadsAndVerifications(event=None)
+            return
 
         if folderModel not in self.uploadDatafileRunnable:
             self.uploadDatafileRunnable[folderModel] = {}
 
-        existingUnverifiedDatafile = \
-            getattr(event, "existingUnverifiedDatafile", False)
         bytesUploadedPreviously = getattr(event, "bytesUploadedToStaging", 0)
         verificationModel = getattr(event, "verificationModel", None)
         self.uploadDatafileRunnable[folderModel][dfi] = \
@@ -244,14 +259,17 @@ class FoldersController(object):
         self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
         self.CountCompletedUploadsAndVerifications(event=None)
 
-    def StartDataUploads(self):
+    def StartDataUploads(self, testRun=False):
         # pylint: disable=too-many-return-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
         fc = self  # pylint: disable=invalid-name
+        fc.testRun = testRun
         fc.SetStarted()
         settingsModel = fc.settingsModel
-        fc.canceled.clear()
+        fc.SetCanceled(False)
+        fc.SetFailed(False)
+        fc.SetCompleted(False)
         fc.verificationsModel.DeleteAllRows()
         fc.uploadsModel.DeleteAllRows()
         fc.verifyDatafileRunnable = {}
@@ -272,47 +290,48 @@ class FoldersController(object):
         fc.uploadMethod = UploadMethod.HTTP_POST
 
         # pylint: disable=broad-except
-        try:
-            settingsModel.GetUploaderModel().RequestStagingAccess()
-            uploadToStagingRequest = settingsModel\
-                .GetUploadToStagingRequest()
-        except Exception, err:
-            # MyData app could be missing from MyTardis server.
-            logger.error(traceback.format_exc())
-            wx.PostEvent(
-                self.notifyWindow,
-                self.showMessageDialogEvent(
-                    title="MyData",
-                    message=str(err),
-                    icon=wx.ICON_ERROR))
-            return
-        message = None
-        if uploadToStagingRequest is None:
-            message = "Couldn't determine whether uploads to " \
-                      "staging have been approved.  " \
-                      "Falling back to HTTP POST."
-        elif uploadToStagingRequest.IsApproved():
-            logger.info("Uploads to staging have been approved.")
-            fc.uploadMethod = UploadMethod.VIA_STAGING
-        else:
-            message = \
-                "Uploads to MyTardis's staging area require " \
-                "approval from your MyTardis administrator.\n\n" \
-                "A request has been sent, and you will be contacted " \
-                "once the request has been approved. Until then, " \
-                "MyData will upload files using HTTP POST, and will " \
-                "only upload one file at a time.\n\n" \
-                "HTTP POST is generally only suitable for small " \
-                "files (up to 100 MB each)."
-        if message:
-            logger.warning(message)
-            wx.PostEvent(
-                self.notifyWindow,
-                self.showMessageDialogEvent(
-                    title="MyData",
-                    message=message,
-                    icon=wx.ICON_WARNING))
-            fc.uploadMethod = UploadMethod.HTTP_POST
+        if not fc.testRun:
+            try:
+                settingsModel.GetUploaderModel().RequestStagingAccess()
+                uploadToStagingRequest = settingsModel\
+                    .GetUploadToStagingRequest()
+            except Exception, err:
+                # MyData app could be missing from MyTardis server.
+                logger.error(traceback.format_exc())
+                wx.PostEvent(
+                    self.notifyWindow,
+                    self.showMessageDialogEvent(
+                        title="MyData",
+                        message=str(err),
+                        icon=wx.ICON_ERROR))
+                return
+            message = None
+            if uploadToStagingRequest is None:
+                message = "Couldn't determine whether uploads to " \
+                          "staging have been approved.  " \
+                          "Falling back to HTTP POST."
+            elif uploadToStagingRequest.IsApproved():
+                logger.info("Uploads to staging have been approved.")
+                fc.uploadMethod = UploadMethod.VIA_STAGING
+            else:
+                message = \
+                    "Uploads to MyTardis's staging area require " \
+                    "approval from your MyTardis administrator.\n\n" \
+                    "A request has been sent, and you will be contacted " \
+                    "once the request has been approved. Until then, " \
+                    "MyData will upload files using HTTP POST, and will " \
+                    "only upload one file at a time.\n\n" \
+                    "HTTP POST is generally only suitable for small " \
+                    "files (up to 100 MB each)."
+            if message:
+                logger.warning(message)
+                wx.PostEvent(
+                    self.notifyWindow,
+                    self.showMessageDialogEvent(
+                        title="MyData",
+                        message=message,
+                        icon=wx.ICON_WARNING))
+                fc.uploadMethod = UploadMethod.HTTP_POST
         if fc.uploadMethod == UploadMethod.HTTP_POST and \
                 fc.numUploadWorkerThreads > 1:
             logger.warning(
@@ -354,7 +373,8 @@ class FoldersController(object):
                     # pylint: disable=broad-except
                     try:
                         experimentModel = ExperimentModel\
-                            .GetOrCreateExperimentForFolder(folderModel)
+                            .GetOrCreateExperimentForFolder(folderModel,
+                                                            fc.testRun)
                     except Exception, err:
                         logger.error(traceback.format_exc())
                         wx.PostEvent(
@@ -374,7 +394,7 @@ class FoldersController(object):
                     # pylint: disable=broad-except
                     try:
                         datasetModel = DatasetModel\
-                            .CreateDatasetIfNecessary(folderModel)
+                            .CreateDatasetIfNecessary(folderModel, fc.testRun)
                     except Exception, err:
                         logger.error(traceback.format_exc())
                         wx.PostEvent(
@@ -402,19 +422,21 @@ class FoldersController(object):
                                  str(folderModel.GetFolder()))
                     logger.debug(traceback.format_exc())
                     return
-                if experimentModel is None:
+                if experimentModel is None and not fc.testRun:
                     logger.debug("Failed to acquire a MyTardis "
-                                 "experiment to store data in for"
+                                 "experiment to store data in for "
                                  "folder " +
                                  folderModel.GetFolder())
                     return
                 if self.IsShuttingDown():
                     return
             fc.finishedCountingVerifications.set()
-            if self.foldersModel.GetRowCount() == 0:
-                # For the case of zero folders, we can't use the
-                # usual triggers (e.g. datafile upload complete)
-                # to determine when to check if we have finished.
+            if self.foldersModel.GetRowCount() == 0 or \
+                    fc.numVerificationsToBePerformed == 0:
+                # For the case of zero folders or zero files, we
+                # can't use the usual triggers (e.g. datafile
+                # upload complete) to determine when to check if
+                # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
@@ -519,7 +541,9 @@ class FoldersController(object):
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and self.finishedCountingVerifications.isSet() \
-                and uploadsProcessed == uploadsToBePerformed:
+                and (uploadsProcessed == uploadsToBePerformed or
+                     self.testRun and
+                     self.uploadsAcknowledged == uploadsToBePerformed):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
@@ -530,6 +554,9 @@ class FoldersController(object):
         # pylint: disable=too-many-branches
         if self.IsShuttingDown():
             return
+        if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
+            if not wx.GetApp().PerformingLookupsAndUploads():
+                return
         self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
         logger.info(message)
@@ -579,9 +606,15 @@ class FoldersController(object):
         logger.info(message)
         if hasattr(wx.GetApp(), "GetMainFrame"):
             wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if self.testRun:
+            logger.testrun(message)
         app = wx.GetApp()
         if hasattr(app, "toolbar"):
             app.toolbar.EnableTool(app.stopTool.GetId(), False)
+            app.toolbar.EnableTool(app.testTool.GetId(), True)
+            app.toolbar.EnableTool(app.uploadTool.GetId(), True)
+            if self.testRun:
+                app.testRunFrame.saveButton.Enable()
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
             wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
@@ -614,7 +647,8 @@ class FoldersController(object):
                 self.verifyDatafileRunnable[folderModel]\
                     .append(VerifyDatafileRunnable(self, self.foldersModel,
                                                    folderModel, dfi,
-                                                   self.settingsModel))
+                                                   self.settingsModel,
+                                                   self.testRun))
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
 
