@@ -28,17 +28,29 @@ class ExperimentModel(object):
         self.json = experimentJson
 
     @staticmethod
-    def GetOrCreateExperimentForFolder(folderModel):
+    def GetOrCreateExperimentForFolder(folderModel, testRun=False):
         """
         See also GetExperimentForFolder, CreateExperimentForFolder
         """
         try:
             existingExperiment = \
                 ExperimentModel.GetExperimentForFolder(folderModel)
+            if testRun:
+                message = "ADDING TO EXISTING EXPERIMENT FOR FOLDER: %s\n" \
+                    "    URL: %s/%s\n" \
+                    "    Title: %s\n" \
+                    "    Owner: %s" \
+                    % (folderModel.GetRelPath(),
+                       folderModel.settingsModel.GetMyTardisUrl(),
+                       existingExperiment.GetViewUri(),
+                       existingExperiment.GetTitle(),
+                       folderModel.GetOwner().GetUsername())
+                logger.testrun(message)
             return existingExperiment
         except DoesNotExist, err:
             if err.GetModelClass() == ExperimentModel:
-                return ExperimentModel.CreateExperimentForFolder(folderModel)
+                return ExperimentModel.CreateExperimentForFolder(folderModel,
+                                                                 testRun)
             else:
                 raise
 
@@ -193,7 +205,7 @@ class ExperimentModel(object):
             raise MultipleObjectsReturned(message)
 
     @staticmethod
-    def CreateExperimentForFolder(folderModel):
+    def CreateExperimentForFolder(folderModel, testRun=False):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
@@ -229,6 +241,20 @@ class ExperimentModel(object):
                        % (uploaderName, userFolderName, hostname, location))
         if groupFolderName:
             description += "\nGroup folder name: %s" % groupFolderName
+
+        if testRun:
+            message = "CREATING NEW EXPERIMENT FOR FOLDER: %s\n" \
+                "    Title: %s\n" \
+                "    Description: \n" \
+                "        Uploader: %s\n" \
+                "        User folder name: %s\n" \
+                "    Owner: %s" \
+                % (folderModel.GetRelPath(),
+                   experimentTitle, uploaderName, userFolderName,
+                   ownerUsername)
+            logger.testrun(message)
+            return
+
         experimentJson = {
             "title": experimentTitle,
             "description": description,
@@ -249,6 +275,7 @@ class ExperimentModel(object):
             "Content-Type": "application/json",
             "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/mydata_experiment/"
+
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(experimentJson))
         # pylint: disable=bare-except
