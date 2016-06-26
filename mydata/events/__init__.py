@@ -535,6 +535,12 @@ class MyDataEvent(wx.PyCommandEvent):
                 event.settingsDialog.apiKeyField.SelectAll()
             elif settingsValidation.GetField() == "scheduled_time":
                 event.settingsDialog.timeCtrl.SetFocus()
+            elif settingsValidation.GetField() == "includes_file":
+                event.settingsDialog.includesFileField.SetFocus()
+                event.settingsDialog.includesFileField.SelectAll()
+            elif settingsValidation.GetField() == "excludes_file":
+                event.settingsDialog.excludesFileField.SetFocus()
+                event.settingsDialog.excludesFileField.SelectAll()
             logger.debug("Settings were not valid, so Settings dialog "
                          "should remain visible.")
             if wx.version().startswith("3.0.3.dev"):
@@ -711,13 +717,16 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             logger.debug("StartDataUploadsWorker")
             wx.CallAfter(wx.BeginBusyCursor)
-            wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                         "Checking for data files on MyTardis and uploading "
-                         "if necessary...")
+            message = "Checking for data files on MyTardis and uploading " \
+                "if necessary..."
+            wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
+            logger.testrun(message)
             app = wx.GetApp()
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
+            wx.CallAfter(app.toolbar.EnableTool, app.testTool.GetId(), False)
+            wx.CallAfter(app.toolbar.EnableTool, app.uploadTool.GetId(), False)
             wx.GetApp().SetPerformingLookupsAndUploads(True)
-            event.foldersController.StartDataUploads()
+            event.foldersController.StartDataUploads(event.testRun)
             wx.CallAfter(EndBusyCursorIfRequired, event)
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
