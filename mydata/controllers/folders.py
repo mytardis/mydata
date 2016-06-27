@@ -32,6 +32,7 @@ from mydata.logs import logger
 class FoldersController(object):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-statements
     """
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
@@ -263,6 +264,7 @@ class FoldersController(object):
         # pylint: disable=too-many-return-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-locals
         fc = self  # pylint: disable=invalid-name
         fc.testRun = testRun
         fc.SetStarted()
