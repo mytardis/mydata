@@ -601,7 +601,7 @@ class MyDataEvent(wx.PyCommandEvent):
                 message = \
                      "MyData's schedule type is currently " \
                      "set to 'manual', so you will need to click " \
-                     "the Refresh toolbar icon or the Sync Now " \
+                     "the Upload toolbar icon or the Sync Now " \
                      "menu item to begin the data scans and uploads."
                 title = "Manual Schedule"
                 dlg = wx.MessageDialog(None, message, title,

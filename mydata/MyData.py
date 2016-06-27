@@ -1052,7 +1052,7 @@ class MyData(wx.App):
                          "OnSettings(), after displaying SettingsDialog, "
                          "which was launched from MyData's toolbar.")
         elif event.GetId() == self.uploadTool.GetId():
-            logger.debug("OnRefresh triggered by Refresh toolbar icon.")
+            logger.debug("OnRefresh triggered by Upload toolbar icon.")
         elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
                 event.GetId() == \
                 self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
