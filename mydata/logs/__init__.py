@@ -200,6 +200,7 @@ class Logger(object):
 
     def testrun(self, message):
         # pylint: disable=invalid-name
+        # pylint: disable=no-self-use
         wx.GetApp().GetTestRunFrame().WriteLine(message)
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):

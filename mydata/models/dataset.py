@@ -125,6 +125,7 @@ class DatasetModel(object):
     @staticmethod
     def CreateDatasetIfNecessary(folderModel, testRun=False):
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         description = folderModel.GetFolder()
         settingsModel = folderModel.settingsModel
