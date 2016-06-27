@@ -23,7 +23,8 @@ class ScheduleController(object):
         self.settingsModel = settingsModel
         self.tasksModel = tasksModel
 
-    def ApplySchedule(self, event, runManually=False):
+    def ApplySchedule(self, event, runManually=False,
+                      needToValidateSettings=False, testRun=False):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -44,7 +45,7 @@ class ScheduleController(object):
                 # Wait for user to manually click Refresh on MyData's toolbar.
                 logger.debug("Finished processing schedule type.")
                 return
-            self.CreateManualTask(event)
+            self.CreateManualTask(event, needToValidateSettings, testRun)
         elif scheduleType == "Once":
             self.CreateOnceTask(event)
         elif scheduleType == "Daily":
@@ -147,14 +148,15 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateManualTask(self, event):
+    def CreateManualTask(self, event, needToValidateSettings=False,
+                         testRun=False):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
         """
         scheduleType = "Manual"
 
-        def RunTaskManually(event, jobId):
+        def RunTaskManually(event, jobId, needToValidateSettings=False):
             """
             Task to run when the user manually asks MyData to being the
             data folder scans and uploads, usually by clicking the Refresh
@@ -164,11 +166,14 @@ class ScheduleController(object):
             app = wx.GetApp()
             wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
                          True)
+            wx.CallAfter(app.toolbar.EnableTool, app.testTool.GetId(),
+                         False)
+            wx.CallAfter(app.toolbar.EnableTool, app.uploadTool.GetId(),
+                         False)
             while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
+                         jobId, testRun)
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
@@ -184,7 +189,7 @@ class ScheduleController(object):
             "The \"%s\" task is scheduled "
             "to run at %s on %s" % (jobDesc, timeString, dateString))
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
+        jobArgs = [event, taskDataViewId, needToValidateSettings]
         task = TaskModel(taskDataViewId, RunTaskManually, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:

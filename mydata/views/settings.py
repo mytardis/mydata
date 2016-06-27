@@ -474,7 +474,7 @@ class SettingsDialog(wx.Dialog):
 
         # Filters tab
 
-        self.filtersPanelSizer = wx.FlexGridSizer(rows=8, cols=3,
+        self.filtersPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
                                                   vgap=5, hgap=5)
         self.filtersPanel.SetSizer(self.filtersPanelSizer)
         # self.filtersPanelSizer.AddGrowableCol(1)
@@ -601,6 +601,66 @@ class SettingsDialog(wx.Dialog):
                                        flag=wx.EXPAND | wx.ALL, border=5)
 
         self.filtersPanelSizer.Add(self.ignoreFilesIntervalPanel, flag=wx.EXPAND,
+                                   border=5)
+        self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
+                                                 wx.ID_ANY, ""))
+
+        self.includesFileCheckBox = \
+            wx.CheckBox(self.filtersPanel, wx.ID_ANY,
+                        "Include files matching patterns in:")
+        self.Bind(wx.EVT_CHECKBOX, self.OnIncludeFiles,
+                  self.includesFileCheckBox)
+        self.filtersPanelSizer.Add(self.includesFileCheckBox,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.includesFilePanel = wx.Panel(self.filtersPanel)
+        self.includesFilePanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.includesFilePanel.SetSizer(self.includesFilePanelSizer)
+        # N.B. TE_RIGHT is ignored on Mac OS X.
+        self.includesFileField = wx.TextCtrl(self.includesFilePanel,
+                                             wx.ID_ANY, "",
+                                             style=wx.TE_RIGHT)
+        self.includesFilePanelSizer.Add(self.includesFileField,
+                                        flag=wx.GROW | wx.ALL, border=5,
+                                        proportion=3)
+        self.browseIncludesFileButton = wx.Button(self.includesFilePanel,
+                                                  wx.ID_ANY, "Browse...")
+        self.browseIncludesFileButton.SetMaxSize(wx.Size(
+            self.browseIncludesFileButton.GetSize().width, -1))
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseIncludesFile,
+                  self.browseIncludesFileButton)
+        self.includesFilePanelSizer.Add(self.browseIncludesFileButton,
+                                        flag=wx.ALL, border=5, proportion=1)
+        self.filtersPanelSizer.Add(self.includesFilePanel, flag=wx.EXPAND,
+                                   border=5)
+        self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
+                                                 wx.ID_ANY, ""))
+
+        self.excludesFileCheckBox = \
+            wx.CheckBox(self.filtersPanel, wx.ID_ANY,
+                        "Exclude files matching patterns in:")
+        self.Bind(wx.EVT_CHECKBOX, self.OnExcludeFiles,
+                  self.excludesFileCheckBox)
+        self.filtersPanelSizer.Add(self.excludesFileCheckBox,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.excludesFilePanel = wx.Panel(self.filtersPanel)
+        self.excludesFilePanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.excludesFilePanel.SetSizer(self.excludesFilePanelSizer)
+        # N.B. TE_RIGHT is ignored on Mac OS X.
+        self.excludesFileField = wx.TextCtrl(self.excludesFilePanel,
+                                             wx.ID_ANY, "",
+                                             style=wx.TE_RIGHT)
+        self.excludesFilePanelSizer.Add(self.excludesFileField,
+                                        flag=wx.GROW | wx.ALL, border=5,
+                                        proportion=3)
+        self.browseExcludesFileButton = wx.Button(self.excludesFilePanel,
+                                                  wx.ID_ANY, "Browse...")
+        self.browseExcludesFileButton.SetMaxSize(wx.Size(
+            self.browseExcludesFileButton.GetSize().width, -1))
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseExcludesFile,
+                  self.browseExcludesFileButton)
+        self.excludesFilePanelSizer.Add(self.browseExcludesFileButton,
+                                        flag=wx.ALL, border=5, proportion=1)
+        self.filtersPanelSizer.Add(self.excludesFilePanel, flag=wx.EXPAND,
                                    border=5)
         self.filtersPanelSizer.Add(wx.StaticText(self.filtersPanel,
                                                  wx.ID_ANY, ""))
@@ -1051,6 +1111,30 @@ class SettingsDialog(wx.Dialog):
     def SetIgnoreNewFilesMinutes(self, ignoreNewFilesMinutes):
         self.ignoreFilesNewerThanSpinCtrl.SetValue(ignoreNewFilesMinutes)
 
+    def UseIncludesFile(self):
+        return self.includesFileCheckBox.GetValue()
+
+    def SetUseIncludesFile(self, useIncludesFile):
+        return self.includesFileCheckBox.SetValue(useIncludesFile)
+
+    def GetIncludesFile(self):
+        return self.includesFileField.GetValue()
+
+    def SetIncludesFile(self, includesFile):
+        return self.includesFileField.SetValue(includesFile)
+
+    def UseExcludesFile(self):
+        return self.excludesFileCheckBox.GetValue()
+
+    def SetUseExcludesFile(self, useExcludesFile):
+        return self.excludesFileCheckBox.SetValue(useExcludesFile)
+
+    def GetExcludesFile(self):
+        return self.excludesFileField.GetValue()
+
+    def SetExcludesFile(self, excludesFile):
+        return self.excludesFileField.SetValue(excludesFile)
+
     # Advanced tab
 
     def GetFolderStructure(self):
@@ -1157,6 +1241,58 @@ class SettingsDialog(wx.Dialog):
             self.dataDirectoryField.SetValue(dlg.GetPath())
         event.Skip()
 
+    def OnBrowseIncludesFile(self, event):
+        dlg = wx.FileDialog(self, "Choose a file:", "",
+                            self.GetIncludesFile().encode('ascii', 'ignore'),
+                            "", wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.includesFileField.SetValue(dlg.GetPath())
+            # Even though we use style=wx.TE_RIGHT,
+            # this is necessary on Windows to ensure that
+            # the right path of the file path (containing
+            # the file name) is visible:
+            self.includesFileField.SetInsertionPoint(
+                self.includesFileField.GetLastPosition())
+        event.Skip()
+
+    def OnIncludeFiles(self, event):
+        if self.includesFileCheckBox.IsChecked():
+            self.browseIncludesFileButton.Enable(True)
+            self.includesFileField.Enable(True)
+        else:
+            self.browseIncludesFileButton.Enable(False)
+            self.includesFileField.Enable(False)
+        if event:
+            self.includesFileField.SetValue("")
+        if event:
+            event.Skip()
+
+    def OnBrowseExcludesFile(self, event):
+        dlg = wx.FileDialog(self, "Choose a file:", "",
+                            self.GetIncludesFile().encode('ascii', 'ignore'),
+                            "", wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.excludesFileField.SetValue(dlg.GetPath())
+            # Even though we use style=wx.TE_RIGHT,
+            # this is necessary on Windows to ensure that
+            # the right path of the file path (containing
+            # the file name) is visible:
+            self.excludesFileField.SetInsertionPoint(
+                self.excludesFileField.GetLastPosition())
+        event.Skip()
+
+    def OnExcludeFiles(self, event):
+        if self.excludesFileCheckBox.IsChecked():
+            self.browseExcludesFileButton.Enable(True)
+            self.excludesFileField.Enable(True)
+        else:
+            self.browseExcludesFileButton.Enable(False)
+            self.excludesFileField.Enable(False)
+        if event:
+            self.excludesFileField.SetValue("")
+        if event:
+            event.Skip()
+
     def UpdateFieldsFromModel(self, settingsModel):
         # General tab
         self.SetInstrumentName(settingsModel.GetInstrumentName())
@@ -1216,6 +1352,24 @@ class SettingsDialog(wx.Dialog):
         else:
             self.showingSingularMinutes = False
             self.ignoreFilesIntervalUnitLabel.SetLabel("minutes")
+        self.SetUseIncludesFile(settingsModel.UseIncludesFile())
+        if settingsModel.UseIncludesFile():
+            self.includesFileField.Enable(True)
+            self.includesFileField.SetValue(settingsModel.GetIncludesFile())
+            self.browseIncludesFileButton.Enable(True)
+        else:
+            self.includesFileField.Enable(False)
+            self.includesFileField.SetValue("")
+            self.browseIncludesFileButton.Enable(False)
+        self.SetUseExcludesFile(settingsModel.UseExcludesFile())
+        if settingsModel.UseExcludesFile():
+            self.excludesFileField.Enable(True)
+            self.includesFileField.SetValue(settingsModel.GetExcludesFile())
+            self.browseExcludesFileButton.Enable(True)
+        else:
+            self.excludesFileField.Enable(False)
+            self.excludesFileField.SetValue("")
+            self.browseExcludesFileButton.Enable(False)
 
         # Advanced tab
         self.SetFolderStructure(settingsModel.GetFolderStructure())
@@ -1572,6 +1726,20 @@ class SettingsDialog(wx.Dialog):
         self.ignoreDatasetsOlderThanSpinCtrl\
             .Enable(enabled)
         self.intervalUnitsComboBox.Enable(enabled)
+        self.ignoreFilesNewerThanCheckBox.Enable(enabled)
+        self.ignoreFilesNewerThanSpinCtrl.Enable(enabled)
+        wx.PostEvent(self.ignoreFilesNewerThanCheckBox,
+                     wx.CommandEvent(wx.EVT_BUTTON.typeId, self.GetId()))
+        self.includesFileCheckBox.Enable(enabled)
+        self.browseIncludesFileButton.Enable(enabled)
+        self.includesFileField.Enable(enabled)
+        if enabled:
+            self.OnIncludeFiles(None)
+        self.excludesFileCheckBox.Enable(enabled)
+        self.browseExcludesFileButton.Enable(enabled)
+        self.excludesFileField.Enable(enabled)
+        if enabled:
+            self.OnExcludeFiles(None)
 
         # Advanced tab
         self.folderStructureComboBox.Enable(enabled)

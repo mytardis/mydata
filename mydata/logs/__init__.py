@@ -27,6 +27,10 @@ from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
 from mydata.logs.wxloghandler import WxLogHandler
 from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
+# Define a custom log level for writing to the Test Run Frame.
+# Avoid clashing with built-in level numbers (0, 10, 20, 30, 40, 50)
+TESTRUN_LEVEL_NUM = 5
+
 
 class Logger(object):
     """
@@ -36,7 +40,7 @@ class Logger(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, name):
         self.name = name
-        self.loggerObject = None
+        self.loggerObject = logging.getLogger(self.name)
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.myDataConfigPath = None
@@ -50,6 +54,7 @@ class Logger(object):
         self.contactName = ""
         self.contactEmail = ""
         self.comments = ""
+        self.testrunLogOutput = ""
 
     def SetMyDataConfigPath(self, myDataConfigPath):
         self.myDataConfigPath = myDataConfigPath
@@ -62,12 +67,13 @@ class Logger(object):
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
         logWindowHandler.setFormatter(logging.Formatter(logFormatString))
-        self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.addHandler(logWindowHandler)
 
         self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):
+        logging.addLevelName(TESTRUN_LEVEL_NUM, "TESTRUN")
+
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(self.level)
 
@@ -191,6 +197,11 @@ class Logger(object):
             self.loggerObject.info(message, extra=extra)
         else:
             wx.CallAfter(self.loggerObject.info, message, extra=extra)
+
+    def testrun(self, message):
+        # pylint: disable=invalid-name
+        # pylint: disable=no-self-use
+        wx.GetApp().GetTestRunFrame().WriteLine(message)
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         # pylint: disable=too-many-statements
