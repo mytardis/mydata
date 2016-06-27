@@ -67,6 +67,15 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-return-statements
         if self.path.startswith("/api/v1/"):
+            if self.path == "/api/v1/?format=json":
+                # We use this path to test that the MyTardis servers is
+                # accessible and that the API responds in a reasonable time.
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                fakeJson = "{}"
+                self.wfile.write(json.dumps(fakeJson))
+                return
             try:
                 authorization = self.headers.getheader("Authorization", "")
                 match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)

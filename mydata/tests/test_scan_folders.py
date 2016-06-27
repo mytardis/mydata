@@ -79,7 +79,7 @@ class ScanFoldersTester(unittest.TestCase):
         while True:
             try:
                 attempts += 1
-                requests.get(settingsModel.GetMyTardisUrl() + "/about/",
+                requests.get(settingsModel.GetMyTardisUrl() + "/api/v1/?format=json",
                              timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
