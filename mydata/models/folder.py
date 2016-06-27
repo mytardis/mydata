@@ -8,6 +8,7 @@ have a corresponding dataset record in MyTardis.
 import os
 from datetime import datetime
 import traceback
+from fnmatch import fnmatch
 
 from mydata.logs import logger
 
@@ -24,19 +25,40 @@ class FolderModel(object):
                  foldersModel, usersModel, settingsModel):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
+        self.settingsModel = settingsModel
         self.dataViewId = dataViewId
         self.folder = folder
         self.location = location
         absoluteFolderPath = os.path.join(location, folder)
-        self.numFiles = sum([len(files) for dirName, _, files in
-                             os.walk(absoluteFolderPath)])
         self.dataFilePaths = []
         self.dataFileDirectories = []
-        for dirName, _, files in os.walk(absoluteFolderPath):
-            for fileName in sorted(files):
-                self.dataFilePaths.append(os.path.join(dirName, fileName))
+        self.numFiles = 0
+        for dirname, _, files in os.walk(absoluteFolderPath):
+            for filename in sorted(files):
+                if settingsModel.UseIncludesFile() and \
+                        not settingsModel.UseExcludesFile():
+                    if not self.MatchesIncludes(filename):
+                        logger.debug("Ignoring %s, not matching includes."
+                                     % filename)
+                        continue
+                elif not settingsModel.UseIncludesFile() and \
+                        settingsModel.UseExcludesFile():
+                    if self.MatchesExcludes(filename):
+                        logger.debug("Ignoring %s, matching excludes."
+                                     % filename)
+                        continue
+                elif settingsModel.UseIncludesFile() and \
+                        settingsModel.UseExcludesFile():
+                    if self.MatchesExcludes(filename) and \
+                            not self.MatchesIncludes(filename):
+                        logger.debug("Ignoring %s, matching excludes "
+                                     "and not matching includes."
+                                     % filename)
+                        continue
+                self.numFiles += 1
+                self.dataFilePaths.append(os.path.join(dirname, filename))
                 self.dataFileDirectories\
-                    .append(os.path.relpath(dirName, absoluteFolderPath))
+                    .append(os.path.relpath(dirname, absoluteFolderPath))
         for i in range(0, len(self.dataFileDirectories)):
             if self.dataFileDirectories[i] == ".":
                 self.dataFileDirectories[i] = ""
@@ -52,7 +74,6 @@ class FolderModel(object):
         self.owner = owner
         self.foldersModel = foldersModel
         self.usersModel = usersModel
-        self.settingsModel = settingsModel
 
         self.datasetModel = None
         self.experimentModel = None
@@ -79,6 +100,10 @@ class FolderModel(object):
 
     def GetDataFilePath(self, dataFileIndex):
         return self.dataFilePaths[dataFileIndex]
+
+    def GetDataFileRelPath(self, dataFileIndex):
+        return os.path.relpath(self.GetDataFilePath(dataFileIndex),
+                               self.settingsModel.GetDataDirectory())
 
     def GetDataFileDirectory(self, dataFileIndex):
         return self.dataFileDirectories[dataFileIndex]
@@ -116,6 +141,12 @@ class FolderModel(object):
 
     def GetLocation(self):
         return self.location
+
+    def GetRelPath(self):
+        return os.path.join(
+            os.path.relpath(self.location,
+                            self.settingsModel.GetDataDirectory()),
+            self.folder)
 
     def GetNumFiles(self):
         return self.numFiles
@@ -168,15 +199,35 @@ class FolderModel(object):
 
     def Refresh(self):
         absoluteFolderPath = os.path.join(self.location, self.folder)
-        self.numFiles = sum([len(files) for dirName, _, files in
-                             os.walk(absoluteFolderPath)])
         self.dataFilePaths = []
         self.dataFileDirectories = []
-        for dirName, _, files in os.walk(absoluteFolderPath):
-            for fileName in sorted(files):
-                self.dataFilePaths.append(os.path.join(dirName, fileName))
+        self.numFiles = 0
+        for dirname, _, files in os.walk(absoluteFolderPath):
+            for filename in sorted(files):
+                if self.settingsModel.UseIncludesFile() and \
+                        not self.settingsModel.UseExcludesFile():
+                    if not self.MatchesIncludes(filename):
+                        logger.debug("Ignoring %s, not matching includes."
+                                     % filename)
+                        continue
+                elif not self.settingsModel.UseIncludesFile() and \
+                        self.settingsModel.UseExcludesFile():
+                    if self.MatchesExcludes(filename):
+                        logger.debug("Ignoring %s, matching excludes."
+                                     % filename)
+                        continue
+                elif self.settingsModel.UseIncludesFile() and \
+                        self.settingsModel.UseExcludesFile():
+                    if self.MatchesExcludes(filename) and \
+                            not self.MatchesIncludes(filename):
+                        logger.debug("Ignoring %s, matching excludes "
+                                     "and not matching includes."
+                                     % filename)
+                        continue
+                self.numFiles += 1
+                self.dataFilePaths.append(os.path.join(dirname, filename))
                 self.dataFileDirectories\
-                    .append(os.path.relpath(dirName, absoluteFolderPath))
+                    .append(os.path.relpath(dirname, absoluteFolderPath))
         for i in range(0, len(self.dataFileDirectories)):
             if self.dataFileDirectories[i] == ".":
                 self.dataFileDirectories[i] = ""
@@ -187,3 +238,39 @@ class FolderModel(object):
         self.SetCreatedDate()
         modified = True
         return modified
+
+    def MatchesIncludes(self, filename):
+        """
+        Return True if file matches at least one pattern in the includes
+        file.
+        """
+        match = False
+        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
+            for glob in includesFile.readlines():
+                glob = glob.decode('utf-8').strip()
+                if glob == "":
+                    continue
+                if glob.startswith(";"):
+                    continue
+                if glob.startswith("#"):
+                    continue
+                match = match or fnmatch(filename, glob)
+        return match
+
+    def MatchesExcludes(self, filename):
+        """
+        Return True if file matches at least one pattern in the excludes
+        file.
+        """
+        match = False
+        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
+            for glob in includesFile.readlines():
+                glob = glob.decode('utf-8').strip()
+                if glob == "":
+                    continue
+                if glob.startswith(";"):
+                    continue
+                if glob.startswith("#"):
+                    continue
+                match = match or fnmatch(filename, glob)
+        return match
