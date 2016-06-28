@@ -90,6 +90,9 @@ class SettingsModel(object):
     and saved to disk in MyData.cfg
     """
     def __init__(self, configPath):
+
+        self.previousDict = {}
+
         self.SetConfigPath(configPath)
 
         self.uploaderModel = None
@@ -759,8 +762,16 @@ class SettingsModel(object):
         logger.info("Saved settings to " + configPath)
         self.uploaderModel.UpdateSettings(settingsList)
 
+    def RollBack(self):
+        """
+        If settings validation fails, call this method to roll back
+        the updates made to settings from SaveFieldsFromDialog.
+        """
+        self.__dict__.update(self.previousDict)
+
     def SaveFieldsFromDialog(self, settingsDialog, configPath=None,
                              saveToDisk=True):
+        self.previousDict.update(self.__dict__)
         if configPath is None:
             configPath = self.GetConfigPath()
         # General tab
@@ -935,7 +946,7 @@ class SettingsModel(object):
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
-            timeout = 5
+            timeout = 10
             # pylint: disable=bare-except
             try:
                 message = "Settings validation - checking MyTardis URL..."
