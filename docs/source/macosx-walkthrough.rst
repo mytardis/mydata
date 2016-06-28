@@ -11,48 +11,19 @@ eject the disk image.)
 
   .. image:: images/MyDataDmg.png
 
-If you are running a recent version of a Mac OS X (e.g. v10.10 Yosemite), you
-may find that your Mac OS X operating system doesn't recognize MyData's
-code-signing certificate and claims that MyData is from an "unidentified
-developer":
-
-  .. image:: images/MyDataCantBeOpenedUnidentifiedDeveloper.png
-
-Eventually MyData for Mac OS X will be built on a more recent version of 
-Mac OS X (currently OS X 10.7.5), so this won't be a problem.  To understand
-this error message, open the Security & Privacy settings from your
-System Preferences application:
-
-  .. image:: images/MacOSXSecurityOptions.png
-
-The default option is to "Allow applications downloaded from: Mac App Store
-and identified developers".  Because Mac OS X v10.10 doesn't recognize MyData's
-code-signing certificate, you will need to bypass this security check for
-MyData.  Changing "Mac App Store and identified developers" to "Anywhere"
-would prevent this error, but it would also make your Mac less secure, so when
-bypassing Gatekeeper (Mac OS X's security watchdog), it is better to do it
-one application at a time.
-
-Right-click (or control-click) on MyData (instead of double-clicking with the
-left mouse button), and then click "Open" from the pop-up menu.  You should see
-the follow dialog which indicates that Mac OS X can't identify a valid
-code-signing certificate in the MyData app bundle, but it will let you open it
-anyway, if you click "Open" (instead of the default "Cancel" button) :
-
-  .. image:: images/MyDataFromUnidentifiedDeveloperAreYouSure.png
-
 A test MyTardis site is available for authorized MyData testers.  Contact
-James Wettenhall at James.Wettenhall@monash.edu.au if you would like to
+Store.Star Help at store.star.help@monash.edu.au if you would like to
 register for testing MyData against this MyTardis test site or if you would
 like assistance with setting up an alternative test site for MyData.
-After registering as an authorized MyData tester, you will receive a MyTardis username and password.  In my case, my MyTardis username is "wettenhj".  
+After registering as an authorized MyData tester, you will receive a MyTardis
+username and password.
 
 Choose a folder where you would like to store your data.  I chose
 "/Users/Shared/MyDataTest":
 
   .. image:: images/DataDirectory.png
 
-Create a folder whose name matches your MyTardis username ("wettenhj" for me):
+Create a folder whose name matches your MyTardis username (e.g. "wettenhj"):
 
   .. image:: images/UserFolder.png
 
