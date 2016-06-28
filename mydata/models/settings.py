@@ -889,6 +889,9 @@ class SettingsModel(object):
                 return self.validation
 
             if testRun:
+                if not self.UploadInvalidUserFolders():
+                    logger.testrun(
+                        "WARNING: Invalid user folders are being ignored.")
                 if self.GetUserFilter().strip() != "":
                     if self.folderStructure.startswith("User Group"):
                         logger.testrun(
