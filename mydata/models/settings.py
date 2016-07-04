@@ -946,7 +946,7 @@ class SettingsModel(object):
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
 
-            timeout = 10
+            timeout = 5
             # pylint: disable=bare-except
             try:
                 message = "Settings validation - checking MyTardis URL..."
