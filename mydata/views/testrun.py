@@ -4,6 +4,8 @@ the results of a dry run.
 """
 import wx
 
+from mydata.logs import logger
+
 
 class TestRunFrame(wx.Frame):
     """
@@ -50,9 +52,9 @@ class TestRunFrame(wx.Frame):
         """
         Don't actually destroy the frame, just hide it.
         """
-        if not wx.GetApp().ScanningFolders() and \
-                not wx.GetApp().PerformingLookupsAndUploads():
-            self.Hide()
+        logger.info("Closing Test Run Window and calling OnStop.")
+        wx.GetApp().OnStop(None)
+        self.Hide()
 
     def OnSave(self, event):
         """
