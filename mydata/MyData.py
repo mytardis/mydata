@@ -69,6 +69,7 @@ from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.controllers.schedule import ScheduleController
 from mydata.views.testrun import TestRunFrame
+from mydata.utils import EndBusyCursorIfRequired
 
 
 class NotebookTabs(object):
@@ -83,23 +84,6 @@ class NotebookTabs(object):
     VERIFICATIONS = 3
     UPLOADS = 4
     LOG = 5
-
-
-def EndBusyCursorIfRequired():
-    """
-    The built in wx.EndBusyCursor raises an ugly exception if the
-    busy cursor has already been stopped.
-    """
-    # pylint: disable=no-member
-    # Otherwise pylint complains about PyAssertionError.
-    # pylint: disable=protected-access
-    try:
-        wx.EndBusyCursor()
-    except wx._core.PyAssertionError, err:
-        if "no matching wxBeginBusyCursor()" \
-                not in str(err):
-            logger.error(str(err))
-            raise
 
 
 class MyDataFrame(wx.Frame):
@@ -652,7 +636,6 @@ class MyData(wx.App):
         testIcon = MYDATA_ICONS.GetIcon("Test tubes", size="24x24")
         self.testTool = addToolMethod(wx.ID_ANY, "Test Run",
                                       testIcon, shortHelp="Test Run")
-        self.toolbar.EnableTool(self.testTool.GetId(), True)
         self.frame.Bind(wx.EVT_TOOL, self.OnTestRunFromToolbar, self.testTool,
                         self.testTool.GetId())
 
@@ -661,7 +644,6 @@ class MyData(wx.App):
         uploadIcon = MYDATA_ICONS.GetIcon("Upload button", size="24x24")
         self.uploadTool = addToolMethod(wx.ID_ANY, "Scan and Upload",
                                         uploadIcon, shortHelp="Scan and Upload")
-        self.toolbar.EnableTool(self.uploadTool.GetId(), True)
         self.frame.Bind(wx.EVT_TOOL, self.OnScanAndUploadFromToolbar, self.uploadTool,
                         self.uploadTool.GetId())
 
@@ -757,6 +739,7 @@ class MyData(wx.App):
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
+        self.SetShouldAbort(False)
         self.scheduleController.ApplySchedule(event, runManually=True)
 
     def OnTestRunFromToolbar(self, event):
@@ -767,9 +750,9 @@ class MyData(wx.App):
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
-        self.toolbar.EnableTool(self.testTool.GetId(), False)
-        self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+        self.DisableTestAndUploadToolbarButtons()
         self.testRunFrame.saveButton.Disable()
+        self.SetShouldAbort(False)
         self.scheduleController.ApplySchedule(event, runManually=True,
                                               needToValidateSettings=True,
                                               testRun=True)
@@ -898,6 +881,17 @@ class MyData(wx.App):
 
                     self.settingsValidation = \
                         self.settingsModel.Validate(testRun=testRun)
+                    if self.ShouldAbort():
+                        wx.CallAfter(EndBusyCursorIfRequired)
+                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                        self.SetScanningFolders(False)
+                        logger.info("Just set ScanningFolders to False")
+                        message = "Data scans and uploads were canceled."
+                        if testRun:
+                            logger.testrun(message)
+                        self.frame.SetStatusMessage(message)
+                        return
+
                     event = mde.MyDataEvent(
                         mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
                         needToValidateSettings=False,
@@ -950,7 +944,7 @@ class MyData(wx.App):
                     self.usersModel.GetNumUserOrGroupFolders():
                 logger.testrun(message)
 
-        # SECTION 4: Start FoldersModel.ScanFolders(),
+        # Start FoldersModel.ScanFolders(),
         # followed by FoldersController.StartDataUploads().
 
         def ScanDataDirs():
@@ -970,9 +964,7 @@ class MyData(wx.App):
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
                 logger.info("Just set ScanningFolders to True")
-                self.toolbar.EnableTool(self.stopTool.GetId(), True)
-                self.toolbar.EnableTool(self.testTool.GetId(), False)
-                self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+                wx.CallAfter(self.DisableTestAndUploadToolbarButtons)
                 self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
                                               self.ShouldAbort)
                 self.SetScanningFolders(False)
@@ -992,16 +984,11 @@ class MyData(wx.App):
 
             if self.ShouldAbort():
                 wx.CallAfter(EndBusyCursorIfRequired)
-                wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
-                             False)
-                wx.CallAfter(self.toolbar.EnableTool, self.testTool.GetId(),
-                             True)
-                wx.CallAfter(self.toolbar.EnableTool, self.uploadTool.GetId(),
-                             True)
+                wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
                 logger.info("Just set ScanningFolders to False")
                 if testRun:
-                    logger.testrun("Data scans and uploads canceled.")
+                    logger.testrun("Data scans and uploads were canceled.")
                 return
 
             if self.usersModel.GetNumUserOrGroupFolders() > 0:
@@ -1016,12 +1003,7 @@ class MyData(wx.App):
                 message = "No folders were found to upload from."
                 logger.debug(message)
                 wx.CallAfter(self.frame.SetStatusMessage, message)
-                wx.CallAfter(self.toolbar.EnableTool, self.stopTool.GetId(),
-                             False)
-                wx.CallAfter(self.toolbar.EnableTool, self.testTool.GetId(),
-                             True)
-                wx.CallAfter(self.toolbar.EnableTool, self.uploadTool.GetId(),
-                             True)
+                wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
                 logger.info("Just set ScanningFolders to False")
 
@@ -1096,7 +1078,7 @@ class MyData(wx.App):
         """
         The user pressed the stop button on the main toolbar.
         """
-        self.shouldAbort = True
+        self.SetShouldAbort(True)
         self.uploadsView.OnCancelRemainingUploads(event)
 
     def ShouldAbort(self):
@@ -1105,6 +1087,13 @@ class MyData(wx.App):
         datafile lookups (verifications) and/or uploads.
         """
         return self.shouldAbort
+
+    def SetShouldAbort(self, shouldAbort=True):
+        """
+        The user has requested aborting the data folder scans and/or
+        datafile lookups (verifications) and/or uploads.
+        """
+        self.shouldAbort = shouldAbort
 
     def OnOpen(self, event):
         """
@@ -1129,6 +1118,7 @@ class MyData(wx.App):
         icon's "MyData Settings" menu item, or in response to MyData being
         launched without any previously saved settings.
         """
+        self.SetShouldAbort(False)
         settingsDialog = SettingsDialog(self.frame,
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
@@ -1324,6 +1314,33 @@ class MyData(wx.App):
         else:
             self.performingLookupsAndUploads.clear()
 
+    def EnableTestAndUploadToolbarButtons(self):
+        """
+        Enables the Test Run and Upload toolbar buttons,
+        indicating that MyData is ready to respond to a
+        request to start scanning folders and uploading data.
+        """
+        self.toolbar.EnableTool(self.stopTool.GetId(), False)
+        self.toolbar.EnableTool(self.testTool.GetId(), True)
+        self.toolbar.EnableTool(self.uploadTool.GetId(), True)
+
+    def DisableTestAndUploadToolbarButtons(self):
+        """
+        Disables the Test Run and Upload toolbar buttons,
+        indicating that MyData is busy scanning folders,
+        uploading data, validating settings or performing
+        a test run.
+        """
+        self.toolbar.EnableTool(self.stopTool.GetId(), True)
+        self.toolbar.EnableTool(self.testTool.GetId(), False)
+        self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+
+    def Processing(self):
+        """
+        Returns True/False, depending on whether MyData is
+        currently busy processing something.
+        """
+        return self.toolbar.GetToolEnabled(self.stopTool.GetId())
 
 def Run(argv):
     """

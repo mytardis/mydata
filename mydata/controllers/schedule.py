@@ -69,9 +69,8 @@ class ScheduleController(object):
             Task to be run automatically when MyData is launched.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -79,7 +78,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -117,9 +116,8 @@ class ScheduleController(object):
             pressed and settings have been validated.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -127,7 +125,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -164,20 +162,15 @@ class ScheduleController(object):
             "Sync Now" menu item.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            wx.CallAfter(app.toolbar.EnableTool, app.testTool.GetId(),
-                         False)
-            wx.CallAfter(app.toolbar.EnableTool, app.uploadTool.GetId(),
-                         False)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId, testRun)
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -212,9 +205,8 @@ class ScheduleController(object):
             Schedule tab of the Settings dialog.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -222,7 +214,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -270,9 +262,8 @@ class ScheduleController(object):
             in the Schedule tab of the Settings dialog.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -280,7 +271,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -320,9 +311,8 @@ class ScheduleController(object):
             in the Schedule tab of the Settings dialog.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -330,7 +320,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
@@ -381,9 +371,8 @@ class ScheduleController(object):
             specified in the Schedule tab of the Settings dialog.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(),
-                         True)
-            while not app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+            while not app.Processing():
                 time.sleep(0.01)
             needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
@@ -391,7 +380,7 @@ class ScheduleController(object):
             # Sleep this thread until the job is really
             # finished, so we can determine the job's
             # finish time.
-            while app.toolbar.GetToolEnabled(app.stopTool.GetId()):
+            while app.Processing():
                 time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"

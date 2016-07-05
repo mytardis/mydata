@@ -19,6 +19,7 @@ else:
 from mydata.models.task import TaskModel
 from mydata.utils.notification import Notification
 from mydata.logs import logger
+from mydata.utils import EndBusyCursorIfRequired
 
 
 class TasksModel(DataViewIndexListModel):
@@ -315,6 +316,7 @@ class TasksModel(DataViewIndexListModel):
             wx.CallAfter(self.RowAppended)
 
         def JobFunc(taskModel, tasksModel, row, col):
+            # pylint: disable=too-many-statements
 
             def TaskJobFunc():
                 assert callable(taskModel.GetJobFunc())
@@ -395,9 +397,19 @@ class TasksModel(DataViewIndexListModel):
                                     timeString, dateString))
                     tasksModel.AddRow(newTaskModel)
 
-            thread = threading.Thread(target=TaskJobFunc)
-            logger.debug("Starting task %s" % taskModel.GetJobDesc())
-            thread.start()
+            app = wx.GetApp()
+            if not app.ShouldAbort():
+                thread = threading.Thread(target=TaskJobFunc)
+                logger.debug("Starting task %s" % taskModel.GetJobDesc())
+                thread.start()
+            else:
+                logger.info("Not starting task because we are aborting.")
+                app.EnableTestAndUploadToolbarButtons()
+                EndBusyCursorIfRequired()
+                app.SetShouldAbort(False)
+                message = "Data scans and uploads were canceled."
+                wx.GetApp().GetMainFrame().SetStatusMessage(message)
+                return
 
         row = len(self.tasksData) - 1
         col = self.columnKeys.index("finishTime")

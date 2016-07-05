@@ -500,7 +500,7 @@ class FoldersModel(DataViewIndexListModel):
         for userFolderName in userFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
+                             "Data scans and uploads were canceled.")
                 return
             if folderStructure.startswith("Username"):
                 logger.debug("Found folder assumed to be username: " +
@@ -523,7 +523,7 @@ class FoldersModel(DataViewIndexListModel):
                 userRecord = None
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
+                             "Data scans and uploads were canceled.")
                 return
             if userRecord is not None:
                 userRecord.SetDataViewId(usersDataViewId)
@@ -559,7 +559,7 @@ class FoldersModel(DataViewIndexListModel):
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame()
                                  .SetStatusMessage,
-                                 "Data uploads canceled")
+                                 "Data scans and uploads were canceled.")
                     return
             else:
                 message = "Didn't find a MyTardis user record for folder " \
@@ -567,9 +567,9 @@ class FoldersModel(DataViewIndexListModel):
                 logger.warning(message)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
+                                 "Data scans and uploads were canceled.")
                     return
-                if not self.settingsModel.UploadInvalidUserFolders():
+                if not self.settingsModel.UploadInvalidUserOrGroupFolders():
                     logger.warning("Skipping %s, because "
                                    "'Upload invalid user folders' "
                                    "setting is not checked." % userFolderName)
@@ -587,7 +587,7 @@ class FoldersModel(DataViewIndexListModel):
                 self.usersModel.AddRow(userRecord)
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                                 "Data uploads canceled")
+                                 "Data scans and uploads were canceled.")
                     return
                 self.ScanForDatasetFolders(os.path.join(dataDir,
                                                         userFolderName),
@@ -606,10 +606,11 @@ class FoldersModel(DataViewIndexListModel):
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         groupFolderNames = [os.path.basename(d) for d in dirsDepth1]
+        folderStructure = self.settingsModel.GetFolderStructure()
         for groupFolderName in groupFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
+                             "Data scans and uploads were canceled.")
                 return
             logger.debug("Found folder assumed to be user group name: " +
                          groupFolderName)
@@ -626,19 +627,33 @@ class FoldersModel(DataViewIndexListModel):
                     "folder \"%s\" in %s" % (groupFolderName,
                                              dataDir)
                 logger.warning(message)
+                if not self.settingsModel.UploadInvalidUserOrGroupFolders():
+                    logger.warning("Skipping %s, because "
+                                   "'Upload invalid user group folders' "
+                                   "setting is not checked." % groupFolderName)
+                    continue
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
+                             "Data scans and uploads were canceled.")
                 return
             if groupRecord:
                 groupRecord.SetDataViewId(groupsDataViewId)
                 self.groupsModel.AddRow(groupRecord)
-            self.ImportGroupFolders(os.path.join(dataDir,
-                                                 groupFolderName),
-                                    groupRecord)
+            groupFolderPath = os.path.join(dataDir, groupFolderName)
+            if folderStructure == \
+                    'User Group / Instrument / Name / Dataset':
+                self.ImportGroupFolders(groupFolderPath, groupRecord)
+            elif folderStructure == 'User Group / Experiment / Dataset':
+                defaultOwner = self.settingsModel.GetDefaultOwner()
+                self.ScanForExperimentFolders(groupFolderPath,
+                                              owner=defaultOwner,
+                                              groupRecord=groupRecord,
+                                              groupFolderName=groupFolderName)
+            else:
+                raise InvalidFolderStructure("Unknown folder structure.")
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
-                             "Data uploads canceled")
+                             "Data scans and uploads were canceled.")
                 return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
@@ -721,15 +736,26 @@ class FoldersModel(DataViewIndexListModel):
         except:
             logger.error(traceback.format_exc())
 
-    def ScanForExperimentFolders(self, pathToScan, owner, userFolderName):
+    def ScanForExperimentFolders(self, pathToScan, owner,
+                                 userFolderName=None,
+                                 groupRecord=None, groupFolderName=None):
+        # pylint: disable=too-many-arguments
         """
         Scans for experiment folders.
+
+        The MyTardis role account specified in the Settings dialog will
+        automatically be given access (and ownership) to every experiment
+        created.  If the experiment folder is found within a user folder,
+        then that user will be given access, and similarly, if it is
+        found within a user group folder, then the user group will be
+        given access.
         """
         datasetFilterString = '*%s*' % self.settingsModel.GetDatasetFilter()
         expFilterString = '*%s*' % self.settingsModel.GetExperimentFilter()
         filesDepth1 = glob(os.path.join(pathToScan, expFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         expFolders = [os.path.basename(d) for d in dirsDepth1]
+        folderStructure = self.settingsModel.GetFolderStructure()
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
             filesDepth1 = glob(os.path.join(expFolderPath,
@@ -751,17 +777,40 @@ class FoldersModel(DataViewIndexListModel):
                         logger.warning(message)
                         continue
                 dataViewId = self.GetMaxDataViewId() + 1
-                folderModel = FolderModel(dataViewId=dataViewId,
-                                          folder=datasetFolderName,
-                                          location=expFolderPath,
-                                          userFolderName=userFolderName,
-                                          groupFolderName=None,
-                                          owner=owner,
-                                          foldersModel=self,
-                                          usersModel=self.usersModel,
-                                          settingsModel=self.settingsModel)
+                if folderStructure.startswith("Username") or \
+                        folderStructure.startswith("Email"):
+                    folderModel = \
+                        FolderModel(dataViewId=dataViewId,
+                                    folder=datasetFolderName,
+                                    location=expFolderPath,
+                                    userFolderName=userFolderName,
+                                    groupFolderName=None,
+                                    owner=owner,
+                                    foldersModel=self,
+                                    usersModel=self.usersModel,
+                                    settingsModel=self.settingsModel)
+                    folderModel.SetExperimentTitle(expFolderName)
+                elif folderStructure.startswith("User Group"):
+                    folderModel = \
+                        FolderModel(dataViewId=dataViewId,
+                                    folder=datasetFolderName,
+                                    location=expFolderPath,
+                                    userFolderName=None,
+                                    groupFolderName=groupFolderName,
+                                    owner=owner,
+                                    foldersModel=self,
+                                    usersModel=self.usersModel,
+                                    settingsModel=self.settingsModel)
+                    folderModel.SetGroup(groupRecord)
+                    if groupRecord:
+                        groupName = groupRecord.GetShortName()
+                    else:
+                        groupName = groupFolderName
+                    folderModel.SetExperimentTitle(
+                        "%s - %s" % (groupName, expFolderName))
+                else:
+                    raise InvalidFolderStructure("Unknown folder structure.")
                 folderModel.SetCreatedDate()
-                folderModel.SetExperimentTitle(expFolderName)
                 self.AddRow(folderModel)
 
     def ImportGroupFolders(self, groupFolderPath, groupModel):
@@ -822,7 +871,8 @@ class FoldersModel(DataViewIndexListModel):
                              " for dataset folders...")
                 filesDepth1 = glob(os.path.join(userFolderPath,
                                                 datasetFilterString))
-                dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
+                dirsDepth1 = [item for item in filesDepth1
+                              if os.path.isdir(item)]
                 datasetFolders = [os.path.basename(d) for d in dirsDepth1]
                 for datasetFolderName in datasetFolders:
                     if self.ignoreOldDatasets:
