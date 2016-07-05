@@ -13,7 +13,7 @@ import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.logs import logger
-
+from mydata.utils import EndBusyCursorIfRequired
 
 class UploadsView(wx.Panel):
     """
@@ -141,24 +141,13 @@ class UploadsView(wx.Panel):
             try:
                 wx.CallAfter(wx.BeginBusyCursor)
                 self.foldersController.ShutDownUploadThreads()
-
-                def EndBusyCursorIfRequired():
-                    # pylint: disable=no-member
-                    # Otherwise pylint complains about PyAssertionError.
-                    # pylint: disable=protected-access
-                    try:
-                        wx.EndBusyCursor()
-                    except wx._core.PyAssertionError, err:
-                        if "no matching wxBeginBusyCursor()" \
-                                not in str(err):
-                            logger.error(str(err))
-                            raise
                 wx.CallAfter(EndBusyCursorIfRequired)
             except:
                 logger.error(traceback.format_exc())
         thread = threading.Thread(target=ShutDownUploadThreads)
         thread.start()
-        event.Skip()
+        if event:
+            event.Skip()
 
     def GetUploadsModel(self):
         """
