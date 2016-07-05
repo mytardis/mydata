@@ -346,12 +346,6 @@ class MyDataEvent(wx.PyCommandEvent):
         if event.GetEventId() != EVT_SETTINGS_DIALOG_VALIDATION:
             event.Skip()
             return
-        # pylint: disable=bare-except
-        try:
-            event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
-                                                     saveToDisk=False)
-        except:
-            logger.error(traceback.format_exc())
 
         def Validate(settingsModel):
             """
@@ -392,6 +386,11 @@ class MyDataEvent(wx.PyCommandEvent):
                     wx.PostEvent(wx.GetApp().GetMainFrame(),
                                  checkConnectivityEvent)
                     return
+                try:
+                    event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
+                                                             saveToDisk=False)
+                except:  # pylint: disable=bare-except
+                    logger.error(traceback.format_exc())
 
                 def SetStatusMessage(message):
                     """
@@ -548,6 +547,7 @@ class MyDataEvent(wx.PyCommandEvent):
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
+            event.settingsModel.RollBack()
             return
 
         if event.settingsModel.IgnoreOldDatasets():
@@ -722,9 +722,7 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
             logger.testrun(message)
             app = wx.GetApp()
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), True)
-            wx.CallAfter(app.toolbar.EnableTool, app.testTool.GetId(), False)
-            wx.CallAfter(app.toolbar.EnableTool, app.uploadTool.GetId(), False)
+            app.DisableTestAndUploadToolbarButtons()
             wx.GetApp().SetPerformingLookupsAndUploads(True)
             event.foldersController.StartDataUploads(event.testRun)
             wx.CallAfter(EndBusyCursorIfRequired, event)

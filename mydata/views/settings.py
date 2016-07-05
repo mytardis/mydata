@@ -505,23 +505,6 @@ class SettingsDialog(wx.Dialog):
         blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
         self.filtersPanelSizer.Add(blankLine)
 
-        self.datasetFolderFilterLabel = \
-            wx.StaticText(self.filtersPanel, wx.ID_ANY,
-                          "Dataset folder name contains:")
-        self.filtersPanelSizer.Add(self.datasetFolderFilterLabel,
-                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-
-        self.datasetFolderFilterField = wx.TextCtrl(self.filtersPanel,
-                                                    wx.ID_ANY, "")
-        if sys.platform.startswith("darwin"):
-            self.datasetFolderFilterField.SetMinSize(wx.Size(290, -1))
-        else:
-            self.datasetFolderFilterField.SetMinSize(wx.Size(265, -1))
-        self.filtersPanelSizer.Add(self.datasetFolderFilterField,
-                                   flag=wx.EXPAND | wx.ALL, border=5)
-        blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
-        self.filtersPanelSizer.Add(blankLine)
-
         self.expFolderFilterLabel = \
             wx.StaticText(self.filtersPanel, wx.ID_ANY,
                           "Experiment folder name contains:")
@@ -535,6 +518,23 @@ class SettingsDialog(wx.Dialog):
         else:
             self.expFolderFilterField.SetMinSize(wx.Size(265, -1))
         self.filtersPanelSizer.Add(self.expFolderFilterField,
+                                   flag=wx.EXPAND | wx.ALL, border=5)
+        blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
+        self.filtersPanelSizer.Add(blankLine)
+
+        self.datasetFolderFilterLabel = \
+            wx.StaticText(self.filtersPanel, wx.ID_ANY,
+                          "Dataset folder name contains:")
+        self.filtersPanelSizer.Add(self.datasetFolderFilterLabel,
+                                   flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.datasetFolderFilterField = wx.TextCtrl(self.filtersPanel,
+                                                    wx.ID_ANY, "")
+        if sys.platform.startswith("darwin"):
+            self.datasetFolderFilterField.SetMinSize(wx.Size(290, -1))
+        else:
+            self.datasetFolderFilterField.SetMinSize(wx.Size(265, -1))
+        self.filtersPanelSizer.Add(self.datasetFolderFilterField,
                                    flag=wx.EXPAND | wx.ALL, border=5)
         blankLine = wx.StaticText(self.filtersPanel, wx.ID_ANY, "")
         self.filtersPanelSizer.Add(blankLine)
@@ -694,6 +694,7 @@ class SettingsDialog(wx.Dialog):
             'Email / Experiment / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
             'User Group / Instrument / Full Name / Dataset',
+            'User Group / Experiment / Dataset',
             'Experiment / Dataset',
             'Dataset']
         self.folderStructureComboBox = \
@@ -795,10 +796,10 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
                                                   wx.ID_ANY, ""))
 
-        uploadInvalidUserFoldersLabel = \
+        self.uploadInvalidUserFoldersLabel = \
             wx.StaticText(self.advancedPanel, wx.ID_ANY,
                           "Upload invalid user folders:")
-        self.advancedPanelSizer.Add(uploadInvalidUserFoldersLabel,
+        self.advancedPanelSizer.Add(self.uploadInvalidUserFoldersLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.uploadInvalidUserFoldersCheckBox = \
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
@@ -865,10 +866,23 @@ class SettingsDialog(wx.Dialog):
         self.UpdateFieldsFromModel(self.settingsModel)
 
         folderStructure = self.folderStructureComboBox.GetValue()
-        if folderStructure != \
-                "User Group / Instrument / Full Name / Dataset":
+        if not folderStructure.startswith("User Group"):
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
+
+        if "User" in folderStructure or "Email" in folderStructure:
+            self.uploadInvalidUserFoldersLabel.Show(True)
+            self.uploadInvalidUserFoldersCheckBox.Show(True)
+        else:
+            self.uploadInvalidUserFoldersLabel.Show(False)
+            self.uploadInvalidUserFoldersCheckBox.Show(False)
+
+        if folderStructure.startswith("User Group"):
+            self.uploadInvalidUserFoldersLabel.SetLabel(
+                "Upload invalid group folders:")
+        else:
+            self.uploadInvalidUserFoldersLabel.SetLabel(
+                "Upload invalid user folders:")
 
         if "Experiment" not in folderStructure:
             self.expFolderFilterLabel.Show(False)
@@ -1180,12 +1194,12 @@ class SettingsDialog(wx.Dialog):
         self.startAutomaticallyCheckBox.SetValue(
             startAutomaticallyOnLogin)
 
-    def UploadInvalidUserFolders(self):
+    def UploadInvalidUserOrGroupFolders(self):
         return self.uploadInvalidUserFoldersCheckBox.GetValue()
 
-    def SetUploadInvalidUserFolders(self, uploadInvalidUserFolders):
+    def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
         self.uploadInvalidUserFoldersCheckBox.SetValue(
-            uploadInvalidUserFolders)
+            uploadInvalidUserOrGroupFolders)
 
     def Locked(self):
         return self.lockOrUnlockButton.GetLabel() == "Unlock"
@@ -1381,8 +1395,8 @@ class SettingsDialog(wx.Dialog):
             settingsModel.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
             settingsModel.StartAutomaticallyOnLogin())
-        self.SetUploadInvalidUserFolders(
-            settingsModel.UploadInvalidUserFolders())
+        self.SetUploadInvalidUserOrGroupFolders(
+            settingsModel.UploadInvalidUserOrGroupFolders())
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
@@ -1512,6 +1526,7 @@ class SettingsDialog(wx.Dialog):
         """
         Update dialog fields according to selected folder structure.
         """
+        # pylint: disable=too-many-branches
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure == 'Username / Dataset' or \
                 folderStructure == 'Email / Dataset' or \
@@ -1541,6 +1556,14 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(False)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
+        elif folderStructure == \
+                'User Group / Experiment / Dataset':
+            self.datasetGroupingField.SetValue("User Group - Experiment")
+            self.groupPrefixLabel.Show(True)
+            self.groupPrefixField.Show(True)
+            self.expFolderFilterLabel.Show(True)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(True)
 
         if "User" in folderStructure or \
                 "Email" in folderStructure:
@@ -1561,6 +1584,21 @@ class SettingsDialog(wx.Dialog):
         elif folderStructure.startswith("User Group"):
             self.userFolderFilterLabel.SetLabel(
                 "User Group folder name contains:")
+
+        if "User" in folderStructure or "Email" in folderStructure:
+            self.uploadInvalidUserFoldersLabel.Show(True)
+            self.uploadInvalidUserFoldersCheckBox.Show(True)
+        else:
+            self.uploadInvalidUserFoldersLabel.Show(False)
+            self.uploadInvalidUserFoldersCheckBox.Show(False)
+
+        if folderStructure.startswith("User Group"):
+            self.uploadInvalidUserFoldersLabel.SetLabel(
+                "Upload invalid group folders:")
+        else:
+            self.uploadInvalidUserFoldersLabel.SetLabel(
+                "Upload invalid user folders:")
+
         event.Skip()
 
     def OnDropFiles(self, filePaths):

@@ -269,6 +269,14 @@ Advanced
     software making it difficult to structure folders according to who should
     have access to them.
 
+**Folder Structure - User Group / Experiment / Dataset**
+    Folders immediately inside the main data directory
+    (e.g. "D:\\Data\\SmithLab") are assumed to be MyTardis user groups.
+    Folders inside each user group folder (e.g. "D:\\Data\\SmithLab\\Experiment1"
+    will be mapped to MyTardis experiments.  Folders inside each experiment
+    folder (e.g. "D:\\Data\\SmithLab\\Experiment1\\Dataset1") will be
+    mapped to MyTardis datasets.
+
 **Validate Folder Structure**
   When this is checked, MyData will ensure that the folders provided appear
   to be in the correct structure, and it will count the total number of

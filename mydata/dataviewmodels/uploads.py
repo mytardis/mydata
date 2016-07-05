@@ -426,9 +426,9 @@ class UploadsModel(DataViewIndexListModel):
     def CancelRemaining(self):
         app = wx.GetApp()
         if threading.current_thread().name == "MainThread":
-            app.toolbar.EnableTool(app.stopTool.GetId(), False)
+            app.EnableTestAndUploadToolbarButtons()
         else:
-            wx.CallAfter(app.toolbar.EnableTool, app.stopTool.GetId(), False)
+            wx.CallAfter(app.EnableTestAndUploadToolbarButtons)
         rowsToDelete = []
         for row in range(0, self.GetRowCount()):
             if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \

@@ -612,9 +612,8 @@ class FoldersController(object):
             logger.testrun(message)
         app = wx.GetApp()
         if hasattr(app, "toolbar"):
-            app.toolbar.EnableTool(app.stopTool.GetId(), False)
-            app.toolbar.EnableTool(app.testTool.GetId(), True)
-            app.toolbar.EnableTool(app.uploadTool.GetId(), True)
+            app.EnableTestAndUploadToolbarButtons()
+            app.SetShouldAbort(False)
             if self.testRun:
                 app.testRunFrame.saveButton.Enable()
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
