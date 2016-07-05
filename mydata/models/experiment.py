@@ -75,15 +75,16 @@ class ExperimentModel(object):
 
         if folderModel.ExperimentTitleSetManually():
             expTitleEncoded = urllib2.quote(experimentTitle)
-            folderStructureEncoded = urllib2.quote(settingsModel.GetFolderStructure())
+            folderStructureEncoded = \
+                urllib2.quote(settingsModel.GetFolderStructure())
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&title=" + expTitleEncoded + \
-                "&folder_structure=" + folderStructureEncoded + \
-                "&user_folder_name=" + userFolderName
+                "&folder_structure=" + folderStructureEncoded
         else:
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&uploader=" + uploaderUuid + \
-                "&user_folder_name=" + urllib2.quote(userFolderName)
+                "&uploader=" + uploaderUuid
+        if userFolderName:
+            url += "&user_folder_name=" + urllib2.quote(userFolderName)
         if groupFolderName:
             url += "&group_folder_name=" + urllib2.quote(groupFolderName)
 
@@ -153,13 +154,29 @@ class ExperimentModel(object):
             raise
         if numExperimentsFound == 0:
             if folderModel.ExperimentTitleSetManually():
-                message = "Experiment not found for '%s', %s, '%s'" \
-                    % (uploaderName, userFolderName, experimentTitle)
+                if userFolderName:
+                    message = "Experiment not found for '%s', %s, '%s'" \
+                        % (uploaderName, userFolderName, experimentTitle)
+                    if groupFolderName:
+                        message += ", '%s'" % groupFolderName
+                elif groupFolderName:
+                    message = "Experiment not found for '%s', %s, '%s'" \
+                        % (uploaderName, groupFolderName, experimentTitle)
+                else:
+                    message = "Experiment not found for '%s', '%s'" \
+                        % (uploaderName, experimentTitle)
             else:
-                message = "Experiment not found for '%s', %s" \
-                    % (uploaderName, userFolderName)
-            if groupFolderName:
-                message += ", '%s'" % groupFolderName
+                if userFolderName:
+                    message = "Experiment not found for '%s', %s" \
+                        % (uploaderName, userFolderName)
+                    if groupFolderName:
+                        message += ", '%s'" % groupFolderName
+                elif groupFolderName:
+                    message = "Experiment not found for '%s', %s" \
+                        % (uploaderName, groupFolderName)
+                else:
+                    message = "Experiment not found for '%s'." % uploaderName
+
             logger.debug(message)
             raise DoesNotExist(message, modelClass=ExperimentModel)
         elif numExperimentsFound == 1 or \
@@ -172,13 +189,34 @@ class ExperimentModel(object):
             # for duplicate experiments - instead we just use the
             # first one we find.
             if folderModel.ExperimentTitleSetManually():
-                message = "Found existing experiment with title \"" + \
-                    experimentTitle + "\" and user folder " + userFolderName
+                if userFolderName:
+                    message = "Found existing experiment with title '%s' " \
+                        "and user folder '%s'" % (experimentTitle,
+                                                  userFolderName)
+                    if groupFolderName:
+                        message += " and group folder '%s'." % groupFolderName
+                elif groupFolderName:
+                    message = "Found existing experiment with title '%s' " \
+                        "and user group folder '%s'" % (experimentTitle,
+                                                        groupFolderName)
+                else:
+                    message = "Found existing experiment with title '%s'." \
+                        % experimentTitle
             else:
-                message = "Found existing experiment for uploader \"" + \
-                    uploaderName + "\" and user folder " + userFolderName
-            if groupFolderName:
-                message += " and group folder " + groupFolderName
+                if userFolderName:
+                    message = "Found existing experiment for uploader '%s' " \
+                        "and user folder '%s'." % (uploaderName,
+                                                   userFolderName)
+                    if groupFolderName:
+                        message += " and group folder '%s'." % groupFolderName
+                elif groupFolderName:
+                    message = "Found existing experiment for uploader '%s' " \
+                        "and user group folder '%s'." % (uploaderName,
+                                                         groupFolderName)
+                else:
+                    message = "Found existing experiment for uploader '%s'." \
+                        % uploaderName
+
             logger.debug(message)
             return ExperimentModel(settingsModel,
                                    experimentsJson['objects'][0])
@@ -230,17 +268,29 @@ class ExperimentModel(object):
         myTardisDefaultUsername = settingsModel.GetUsername()
         myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
-        message = "Creating experiment for uploader \"" + \
-            uploaderName + ", user folder " + userFolderName
-        if groupFolderName:
-            message += ", group folder : " + groupFolderName
+        if userFolderName:
+            message = "Creating experiment for uploader '%s', " \
+                "user folder '%s'." % (uploaderName, userFolderName)
+            if groupFolderName:
+                message += ", group folder : '%s'" % groupFolderName
+        elif groupFolderName:
+            message = "Creating experiment for uploader '%s', " \
+                "user group folder '%s'." % (uploaderName, groupFolderName)
+        else:
+            message = "Creating experiment for uploader '%s'" % uploaderName
         logger.info(message)
-        description = ("Uploader: %s\n"
-                       "User folder name: %s\n"
-                       "Uploaded from: %s:%s"
-                       % (uploaderName, userFolderName, hostname, location))
-        if groupFolderName:
-            description += "\nGroup folder name: %s" % groupFolderName
+        if userFolderName:
+            description = ("Uploader: %s\n"
+                           "User folder name: %s\n"
+                           "Uploaded from: %s:%s"
+                           % (uploaderName, userFolderName, hostname, location))
+            if groupFolderName:
+                description += "\nGroup folder name: %s" % groupFolderName
+        else:
+            description = ("Uploader: %s\n"
+                           "Group folder name: %s\n"
+                           "Uploaded from: %s:%s"
+                           % (uploaderName, groupFolderName, hostname, location))
 
         if testRun:
             message = "CREATING NEW EXPERIMENT FOR FOLDER: %s\n" \
