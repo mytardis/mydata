@@ -22,10 +22,10 @@ from datetime import datetime
 from datetime import timedelta
 import threading
 import tempfile
-
 import psutil
 import requests
 from validate_email import validate_email
+import wx
 
 if sys.platform.startswith("win"):
     # pylint: disable=import-error
@@ -574,11 +574,11 @@ class SettingsModel(object):
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
         self.start_automatically_on_login = startAutomaticallyOnLogin
 
-    def UploadInvalidUserFolders(self):
+    def UploadInvalidUserOrGroupFolders(self):
         return self.upload_invalid_user_folders
 
-    def SetUploadInvalidUserFolders(self, uploadInvalidUserFolders):
-        self.upload_invalid_user_folders = uploadInvalidUserFolders
+    def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
+        self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
 
     def Locked(self):
         return self.locked
@@ -824,8 +824,8 @@ class SettingsModel(object):
             settingsDialog.ValidateFolderStructure())
         self.SetStartAutomaticallyOnLogin(
             settingsDialog.StartAutomaticallyOnLogin())
-        self.SetUploadInvalidUserFolders(
-            settingsDialog.UploadInvalidUserFolders())
+        self.SetUploadInvalidUserOrGroupFolders(
+            settingsDialog.UploadInvalidUserOrGroupFolders())
         self.SetMaxUploadThreads(settingsDialog.GetMaxUploadThreads())
         self.SetMaxUploadRetries(settingsDialog.GetMaxUploadRetries())
 
@@ -900,9 +900,15 @@ class SettingsModel(object):
                 return self.validation
 
             if testRun:
-                if not self.UploadInvalidUserFolders():
-                    logger.testrun(
-                        "WARNING: Invalid user folders are being ignored.")
+                if not self.UploadInvalidUserOrGroupFolders():
+                    if self.folderStructure.startswith("User Group"):
+                        logger.testrun(
+                            "WARNING: Invalid user group folders are being "
+                            "ignored.")
+                    elif "User" in self.folderStructure or \
+                            "Email" in self.folderStructure:
+                        logger.testrun(
+                            "WARNING: Invalid user folders are being ignored.")
                 if self.GetUserFilter().strip() != "":
                     if self.folderStructure.startswith("User Group"):
                         logger.testrun(
@@ -936,6 +942,10 @@ class SettingsModel(object):
                         "file will not be scanned for upload, "
                         "unless they match pattersn in the includes file.")
 
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
+
             if self.ValidateFolderStructure():
                 message = "Settings validation - checking folder structure..."
                 logger.debug(message)
@@ -945,6 +955,10 @@ class SettingsModel(object):
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
+
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
 
             timeout = 5
             # pylint: disable=bare-except
@@ -1048,8 +1062,12 @@ class SettingsModel(object):
                 logger.error(traceback.format_exc())
                 return self.validation
 
-            # Here we perform a rather arbitrary query, just to test
-            # whether our MyTardis credentials work OK with the API.
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
+
+            # Here we run an arbitrary query, to test whether
+            # our MyTardis credentials work OK with the API.
             message = "Settings validation - checking MyTardis credentials..."
             logger.debug(message)
             if setStatusMessage:
@@ -1077,6 +1095,10 @@ class SettingsModel(object):
 
             if statusCode < 200 or statusCode >= 300:
                 return InvalidUser()
+
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
 
             message = "Settings validation - checking MyTardis facility..."
             logger.debug(message)
@@ -1127,15 +1149,19 @@ class SettingsModel(object):
                                                      suggestion)
                 return self.validation
 
-            logger.warning("For now, we are assuming that if we find an "
-                           "instrument record with the correct name and "
-                           "facility, then it must be the correct instrument "
-                           "record to use with this MyData instance. "
-                           "However, if the instrument record we find is "
-                           "associated with a different uploader instance "
-                           "(suggesting a different MyData instance), then "
-                           "we really shouldn't reuse the same instrument "
-                           "record.")
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
+
+            # For now, we are assuming that if we find an
+            # instrument record with the correct name and
+            # facility, then it must be the correct instrument
+            # record to use with this MyData instance.
+            # However, if the instrument record we find is
+            # associated with a different uploader instance
+            # (suggesting a different MyData instance), then
+            # we really shouldn't reuse the same instrument
+            # record.
             self.instrument = \
                 InstrumentModel.GetInstrument(self,
                                               self.GetFacility(),
@@ -1154,6 +1180,11 @@ class SettingsModel(object):
                         SettingsValidation(False, message, "instrument_name")
                     return self.validation
                 logger.info("self.instrument = " + str(self.instrument))
+
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
+
             logger.debug("Validating email address.")
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
@@ -1173,15 +1204,18 @@ class SettingsModel(object):
                                                "data_directory")
                         return self.validation
 
+            if self.ShouldAbort():
+                self.validation = SettingsValidation(False)
+                return self.validation
+
             message = "Settings validation - " \
                 "checking if MyData is set to start automatically..."
             logger.debug(message)
             if setStatusMessage:
                 setStatusMessage(message)
-            logger.warning("This auto-start on login stuff shouldn't really "
-                           "be in settings validation.  I just put it here "
-                           "temporarily to ensure it doesn't run in the "
-                           "main thread.")
+            # This auto-start on login stuff shouldn't really
+            # be in settings validation.  I put it here
+            # to ensure it doesn't run in the main thread.
             if sys.platform.startswith("win"):
                 # Check for MyData shortcut(s) in startup folder(s).
 
@@ -1370,6 +1404,10 @@ oFS.DeleteFile sLinkFile
             self.validation = SettingsValidation(False, message, "")
             return self.validation
 
+        if self.ShouldAbort():
+            self.validation = SettingsValidation(False)
+            return self.validation
+
         if self.GetScheduleType() == "Once":
             dateTime = datetime.combine(self.GetScheduledDate(),
                                         self.GetScheduledTime())
@@ -1388,6 +1426,10 @@ oFS.DeleteFile sLinkFile
             self.PerformGlobsFileValidation(self.GetIncludesFile(),
                                             "Includes", "includes",
                                             "includes_file")
+
+        if self.ShouldAbort():
+            self.validation = SettingsValidation(False)
+            return self.validation
 
         if self.UseExcludesFile():
             message = "Settings validation - checking excludes file..."
@@ -1474,8 +1516,7 @@ oFS.DeleteFile sLinkFile
             elif self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
                 message += "user folders!"
-            elif self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
+            elif self.GetFolderStructure().startswith("User Group "):
                 message += "user group folders!"
             if self.AlertUserAboutMissingFolders():
                 self.validation = SettingsValidation(False, message,
@@ -1528,6 +1569,9 @@ oFS.DeleteFile sLinkFile
                     'Username / Experiment / Dataset':
                 filterString = expFilterString
             elif self.GetFolderStructure() == \
+                    'User Group / Experiment / Dataset':
+                filterString = expFilterString
+            elif self.GetFolderStructure() == \
                     'Email / Experiment / Dataset':
                 filterString = expFilterString
             filesDepth2 = glob(os.path.join(self.GetDataDirectory(),
@@ -1552,6 +1596,11 @@ oFS.DeleteFile sLinkFile
                     'Email / Experiment / Dataset':
                 message = "The data directory: \"%s\" should contain " \
                     "experiment folders within email folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'User Group / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within user group folders." % \
                     self.GetDataDirectory()
             elif self.GetFolderStructure() == \
                     'Username / "MyTardis" / Experiment / Dataset':
@@ -1612,24 +1661,27 @@ oFS.DeleteFile sLinkFile
                                             self.GetInstrumentName(),
                                             '*'))
         else:
-            if self.GetFolderStructure() == 'Username / Dataset' or \
-                    self.GetFolderStructure() == 'Dataset':
+            if self.GetFolderStructure() == 'Username / Dataset':
                 filterString1 = datasetFilterString
                 filterString2 = '*'
             elif self.GetFolderStructure() == 'Email / Dataset':
                 filterString1 = datasetFilterString
                 filterString2 = '*'
             elif self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset' or \
-                    self.GetFolderStructure() == 'Experiment / Dataset':
+                    'Username / Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
             elif self.GetFolderStructure() == \
                     'Email / Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'User Group / Experiment / Dataset':
+                filterString1 = expFilterString
+                filterString2 = datasetFilterString
             if self.GetFolderStructure().startswith("Username") or \
-                    self.GetFolderStructure().startswith("Email"):
+                    self.GetFolderStructure().startswith("Email") or \
+                    self.GetFolderStructure().startswith("User Group"):
                 filesDepth3 = glob(os.path.join(self.GetDataDirectory(),
                                                 userOrGroupFilterString,
                                                 filterString1,
@@ -1684,7 +1736,9 @@ oFS.DeleteFile sLinkFile
         if self.GetFolderStructure() == \
                 'Username / Experiment / Dataset' or \
                 self.GetFolderStructure() == \
-                'Email / Experiment / Dataset':
+                'Email / Experiment / Dataset' or \
+                self.GetFolderStructure() == \
+                'User Group / Experiment / Dataset':
             if self.IgnoreOldDatasets():
                 datasetCount = 0
                 for folder in dirsDepth3:
@@ -1810,3 +1864,10 @@ oFS.DeleteFile sLinkFile
     def SetUseSshControlMasterIfAvailable(self,
                                           useSshControlMasterIfAvailable):
         self.useSshControlMasterIfAvailable = useSshControlMasterIfAvailable
+
+    def ShouldAbort(self):
+        app = wx.GetApp()
+        if hasattr(app, "ShouldAbort"):
+            return wx.GetApp().ShouldAbort()
+        else:
+            return False
