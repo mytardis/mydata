@@ -147,7 +147,7 @@ class UploadDatafileRunnable(object):
 
             def Md5ProgressCallback(bytesProcessed):
                 if self.uploadModel.Canceled():
-                    # self.foldersController.SetCanceled()
+                    self.foldersController.SetCanceled()
                     return
                 percentComplete = \
                     100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
@@ -175,7 +175,7 @@ class UploadDatafileRunnable(object):
                                      progressCallback=Md5ProgressCallback)
 
             if self.uploadModel.Canceled():
-                # self.foldersController.SetCanceled()
+                self.foldersController.SetCanceled()
                 logger.debug("Upload for \"%s\" was canceled "
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
@@ -210,7 +210,7 @@ class UploadDatafileRunnable(object):
                             "created_time": dataFileCreatedTime}
 
             if self.uploadModel.Canceled():
-                # self.foldersController.SetCanceled()
+                self.foldersController.SetCanceled()
                 logger.debug("Upload for \"%s\" was canceled "
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
@@ -222,7 +222,7 @@ class UploadDatafileRunnable(object):
 
         def ProgressCallback(current, total, message=None):
             if self.uploadModel.Canceled():
-                # self.foldersController.SetCanceled()
+                self.foldersController.SetCanceled()
                 return
             percentComplete = \
                 100.0 - ((total - current) * 100.0) / total
