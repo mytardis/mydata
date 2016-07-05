@@ -3,6 +3,9 @@ Miscellaneous utility functions.
 """
 
 import psutil
+import wx
+
+from mydata.logs import logger
 
 
 def PidIsRunning(pid):
@@ -72,3 +75,20 @@ class ConnectionStatus(object):
     # pylint: disable=too-few-public-methods
     CONNECTED = 0
     DISCONNECTED = 1
+
+
+def EndBusyCursorIfRequired():
+    """
+    The built in wx.EndBusyCursor raises an ugly exception if the
+    busy cursor has already been stopped.
+    """
+    # pylint: disable=no-member
+    # Otherwise pylint complains about PyAssertionError.
+    # pylint: disable=protected-access
+    try:
+        wx.EndBusyCursor()
+    except wx._core.PyAssertionError, err:
+        if "no matching wxBeginBusyCursor()" \
+                not in str(err):
+            logger.error(str(err))
+            raise
