@@ -24,7 +24,7 @@ class ScheduleController(object):
         self.tasksModel = tasksModel
 
     def ApplySchedule(self, event, runManually=False,
-                      needToValidateSettings=False, testRun=False):
+                      needToValidateSettings=True, testRun=False):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -146,7 +146,7 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateManualTask(self, event, needToValidateSettings=False,
+    def CreateManualTask(self, event, needToValidateSettings=True,
                          testRun=False):
         """
         Create and schedule task(s) according to the settings configured in
@@ -154,7 +154,7 @@ class ScheduleController(object):
         """
         scheduleType = "Manual"
 
-        def RunTaskManually(event, jobId, needToValidateSettings=False):
+        def RunTaskManually(event, jobId, needToValidateSettings=True):
             """
             Task to run when the user manually asks MyData to being the
             data folder scans and uploads, usually by clicking the Refresh
