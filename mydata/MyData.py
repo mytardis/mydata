@@ -809,7 +809,6 @@ class MyData(wx.App):
         # Settings validation:
 
         if needToValidateSettings:
-
             validateSettingsForRefreshEvent = \
                 mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH,
                                 needToValidateSettings=needToValidateSettings,
@@ -881,6 +880,22 @@ class MyData(wx.App):
 
                     self.settingsValidation = \
                         self.settingsModel.Validate(testRun=testRun)
+                    if needToValidateSettings and not \
+                            self.settingsValidation.valid:
+                        logger.debug(
+                            "Displaying result from settings validation.")
+                        message = self.settingsValidation.message
+                        logger.error(message)
+                        wx.CallAfter(EndBusyCursorIfRequired)
+                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                        self.SetScanningFolders(False)
+                        self.frame.SetStatusMessage("Settings validation failed.")
+                        if testRun:
+                            wx.CallAfter(self.GetTestRunFrame().Hide)
+                        wx.CallAfter(self.OnSettings, None,
+                                     validationMessage=message)
+                        return
+
                     if self.ShouldAbort():
                         wx.CallAfter(EndBusyCursorIfRequired)
                         wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
@@ -909,16 +924,6 @@ class MyData(wx.App):
             logger.debug("Starting thread %s" % thread.name)
             thread.start()
             logger.debug("Started thread %s" % thread.name)
-            return
-
-        if needToValidateSettings and not self.settingsValidation.valid:
-            logger.debug("Displaying result from settings validation.")
-            message = self.settingsValidation.message
-            logger.error(message)
-            dlg = wx.MessageDialog(None, message, "MyData",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            self.OnSettings(event)
             return
 
         if "Group" in self.settingsModel.GetFolderStructure():
@@ -1111,7 +1116,7 @@ class MyData(wx.App):
         if self.searchCtrl:
             self.searchCtrl.SetValue("")
 
-    def OnSettings(self, event):
+    def OnSettings(self, event, validationMessage=None):
         """
         Open the Settings dialog, which could be in response to the main
         toolbar's Refresh icon, or in response to in response to the task bar
@@ -1122,7 +1127,8 @@ class MyData(wx.App):
         settingsDialog = SettingsDialog(self.frame,
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
-                                        style=wx.DEFAULT_DIALOG_STYLE)
+                                        style=wx.DEFAULT_DIALOG_STYLE,
+                                        validationMessage=validationMessage)
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
             myTardisUrlChanged = (self.settingsModel.GetMyTardisUrl() !=
