@@ -170,7 +170,14 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
-        self.LoadSettings()
+        # pylint: disable=bare-except
+        try:
+            self.LoadSettings()
+        except:
+            # We don't want to raise an exception if invalid
+            # settings are encountered when MyData is first
+            # launched, e.g. an invalid MyTardis URL.
+            logger.error(traceback.format_exc())
 
     def LoadSettings(self, configPath=None, checkForUpdates=True):
         """
@@ -901,16 +908,16 @@ class SettingsModel(object):
 
             if testRun:
                 if not self.UploadInvalidUserOrGroupFolders():
-                    if self.folderStructure.startswith("User Group"):
+                    if self.GetFolderStructure().startswith("User Group"):
                         logger.testrun(
                             "WARNING: Invalid user group folders are being "
                             "ignored.")
-                    elif "User" in self.folderStructure or \
-                            "Email" in self.folderStructure:
+                    elif "User" in self.GetFolderStructure() or \
+                            "Email" in self.GetFolderStructure():
                         logger.testrun(
                             "WARNING: Invalid user folders are being ignored.")
                 if self.GetUserFilter().strip() != "":
-                    if self.folderStructure.startswith("User Group"):
+                    if self.GetFolderStructure().startswith("User Group"):
                         logger.testrun(
                             "WARNING: User group folders are being filtered.")
                     else:
