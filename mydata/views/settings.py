@@ -59,7 +59,8 @@ class SettingsDialog(wx.Dialog):
                  settingsModel,
                  size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
-                 style=wx.DEFAULT_DIALOG_STYLE):
+                 style=wx.DEFAULT_DIALOG_STYLE,
+                 validationMessage=None):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
@@ -905,6 +906,11 @@ class SettingsDialog(wx.Dialog):
             self.userFolderFilterLabel.SetLabel(
                 "User Group folder name contains:")
 
+        self.Show()
+        if validationMessage:
+            dlg = wx.MessageDialog(self, validationMessage, "MyData - Invalid Settings",
+                                   wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
     # General tab
 
     def GetInstrumentName(self):
