@@ -171,6 +171,8 @@ class UploaderModel(object):
             activeInterfaces = ["Local Area Connection 2"]
         elif "Ethernet" in activeInterfaces:
             activeInterfaces = ["Ethernet"]
+        elif "Internet" in activeInterfaces:
+            activeInterfaces = ["Internet"]
         elif "Wi-Fi" in activeInterfaces:
             activeInterfaces = ["Wi-Fi"]
 
@@ -210,9 +212,15 @@ class UploaderModel(object):
                         if "IPv4 Address" in key.strip(' .'):
                             ipv4Address[interface] = \
                                 value.strip().replace("(Preferred)", "")
+                            ipv4Address[interface] = \
+                                ipv4Address[interface] \
+                                    .replace("(Tentative)", "")
                         if "IPv6 Address" in key.strip(' .'):
                             ipv6Address[interface] = \
                                 value.strip().replace("(Preferred)", "")
+                            ipv6Address[interface] = \
+                                ipv6Address[interface] \
+                                    .replace("(Tentative)", "")
                         if "Subnet Mask" in key.strip(' .'):
                             subnetMask[interface] = value.strip()
         else:
