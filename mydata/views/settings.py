@@ -7,6 +7,7 @@ Classes for MyData's settings dialog.
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-statements
 # pylint: disable=no-member
+# pylint: disable=wrong-import-position
 
 from datetime import datetime
 from datetime import timedelta

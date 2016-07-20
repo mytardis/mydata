@@ -7,10 +7,10 @@ import urllib
 import requests
 
 from mydata.logs import logger
-from .replica import ReplicaModel
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import MultipleObjectsReturned
 from mydata.utils import UnderscoreToCamelcase
+from .replica import ReplicaModel
 
 
 # pylint: disable=too-many-instance-attributes

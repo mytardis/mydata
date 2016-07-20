@@ -6,10 +6,10 @@ import traceback
 import urllib2
 import requests
 
-from .group import GroupModel
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DoesNotExist
 from mydata.logs import logger
+from .group import GroupModel
 
 
 class UserModel(object):
