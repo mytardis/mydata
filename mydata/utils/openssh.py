@@ -20,8 +20,7 @@ otherwise we need to worry about escaping special characters like
 # pylint: disable=missing-docstring
 # pylint: disable=fixme
 # pylint: disable=too-many-lines
-# Don't worry about exceeding .pylintrc's max-module-lines for now:
-# pylint: disable=C0302
+# pylint: disable=wrong-import-position
 
 import sys
 import os

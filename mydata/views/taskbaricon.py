@@ -5,6 +5,9 @@ mydata/views/taskbaricon.py
 Provides a system tray icon (Windows)
 or menubar icon (Mac OS X) for MyData.
 """
+
+# pylint: disable=wrong-import-position
+
 import os
 import webbrowser
 

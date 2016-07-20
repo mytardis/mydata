@@ -24,4 +24,3 @@ class VersionTester(unittest.TestCase):
         proc = subprocess.Popen([sys.executable, "run.py", "--version"], stdout=subprocess.PIPE)
         output, _ = proc.communicate()
         assert output.strip() == ("MyData %s (%s)" % (VERSION, LATEST_COMMIT))
-

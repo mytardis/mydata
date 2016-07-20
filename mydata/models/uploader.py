@@ -70,6 +70,7 @@ directory), instead of having a default group of "mydata".
 """
 
 # pylint: disable=missing-docstring
+# pylint: disable=wrong-import-position
 
 import json
 import os
