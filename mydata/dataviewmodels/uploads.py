@@ -4,6 +4,7 @@ and the tabular data displayed on that tab view.
 """
 
 # pylint: disable=missing-docstring
+# pylint: disable=wrong-import-position
 
 import threading
 import traceback

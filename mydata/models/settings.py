@@ -10,6 +10,7 @@ and saved to disk in MyData.cfg
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=wrong-import-position
 
 import sys
 import traceback
