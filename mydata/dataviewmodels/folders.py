@@ -3,6 +3,8 @@ Represents the Folders tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 
+# pylint: disable=wrong-import-position
+
 import threading
 import os
 import sys

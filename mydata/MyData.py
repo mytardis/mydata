@@ -7,8 +7,8 @@ To run MyData from the command-line, use "python run.py", where run.py is
 in the parent directory of the directory containing MyData.py.
 """
 
-# Don't worry about exceeding .pylintrc's max-module-lines for now:
 # pylint: disable=too-many-lines
+# pylint: disable=wrong-import-position
 
 import sys
 import webbrowser

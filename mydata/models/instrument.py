@@ -8,8 +8,8 @@ import urllib
 import requests
 
 from mydata.logs import logger
-from .facility import FacilityModel
 from mydata.utils.exceptions import Unauthorized
+from .facility import FacilityModel
 
 
 class InstrumentModel(object):
