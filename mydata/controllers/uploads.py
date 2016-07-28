@@ -201,13 +201,23 @@ class UploadDatafileRunnable(object):
             datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
             dataFileCreatedTime = \
                 self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
-            dataFileJson = {"dataset": datasetUri,
-                            "filename": dataFileName,
-                            "directory": dataFileDirectory,
-                            "md5sum": dataFileMd5Sum,
-                            "size": dataFileSize,
-                            "mimetype": dataFileMimeType,
-                            "created_time": dataFileCreatedTime}
+            dataFileModifiedTime = \
+                self.folderModel.GetDataFileModifiedTime(self.dataFileIndex)
+            dataFileJson = {
+                "dataset": datasetUri,
+                "filename": dataFileName,
+                "directory": dataFileDirectory,
+                "md5sum": dataFileMd5Sum,
+                "size": dataFileSize,
+                "mimetype": dataFileMimeType,
+                "created_time": dataFileCreatedTime,
+                "modification_time": dataFileModifiedTime,
+            }
+            if self.foldersController.uploadMethod == \
+                    UploadMethod.VIA_STAGING:
+                dataFileJson['uploader_uuid'] = self.settingsModel.GetUuid()
+                dataFileJson['requester_key_fingerprint'] = \
+                    self.settingsModel.GetSshKeyPair().GetFingerprint()
 
             if self.uploadModel.Canceled():
                 self.foldersController.SetCanceled()

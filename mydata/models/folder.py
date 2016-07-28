@@ -124,6 +124,16 @@ class FolderModel(object):
             logger.error(traceback.format_exc())
             return None
 
+    def GetDataFileModifiedTime(self, dataFileIndex):
+        absoluteFilePath = self.GetDataFilePath(dataFileIndex)
+        try:
+            modifiedTimeIsoString = datetime.fromtimestamp(
+                os.stat(absoluteFilePath).st_mtime).isoformat()
+            return modifiedTimeIsoString
+        except:  # pylint: disable=bare-except
+            logger.error(traceback.format_exc())
+            return None
+
     def SetExperiment(self, experimentModel):
         self.experimentModel = experimentModel
 
