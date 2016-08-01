@@ -232,6 +232,10 @@ class VerifyDatafileRunnable(object):
                                 dataFileIndex=self.dataFileIndex,
                                 dataFilePath=dataFilePath))
                         self.verificationModel.SetComplete()
+                        if self.testRun:
+                            message = "FOUND UNVERIFIED UPLOAD FOR: %s" \
+                                % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
+                            logger.testrun(message)
                         return
                     else:
                         self.verificationModel\
@@ -268,6 +272,20 @@ class VerifyDatafileRunnable(object):
                                     "MyTardis administrator to delete the "
                                     "file from the server, so you can "
                                     "re-upload it.")
+                    wx.PostEvent(
+                        self.foldersController.notifyWindow,
+                        self.foldersController
+                        .foundUnverifiedDatafileEvent(
+                            id=self.foldersController
+                            .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
+                            folderModel=self.folderModel,
+                            dataFileIndex=self.dataFileIndex,
+                            dataFilePath=dataFilePath))
+                    self.verificationModel.SetComplete()
+                    if self.testRun:
+                        message = "FOUND UNVERIFIED UPLOAD FOR: %s" \
+                            % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
+                        logger.testrun(message)
             else:
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                      True)
