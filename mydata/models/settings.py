@@ -1434,6 +1434,8 @@ oFS.DeleteFile sLinkFile
             self.PerformGlobsFileValidation(self.GetIncludesFile(),
                                             "Includes", "includes",
                                             "includes_file")
+            if not self.validation.IsValid():
+                return self.validation
 
         if self.ShouldAbort():
             self.validation = SettingsValidation(False)
@@ -1447,6 +1449,8 @@ oFS.DeleteFile sLinkFile
             self.PerformGlobsFileValidation(self.GetExcludesFile(),
                                             "Excludes", "excludes",
                                             "excludes_file")
+            if not self.validation.IsValid():
+                return self.validation
 
         message = "Settings validation - succeeded!"
         logger.debug(message)
