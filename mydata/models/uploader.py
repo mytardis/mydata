@@ -117,7 +117,7 @@ if sys.platform.startswith("win"):
 class UploaderModel(object):
     """
     Model class for MyTardis API v1's UploaderAppResource.
-    See: https://github.com/wettenhj/mytardis-app-mydata/blob/master/api.py
+    See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
     """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, settingsModel):
@@ -765,7 +765,7 @@ class UploaderModel(object):
 class UploaderRegistrationRequest(object):
     """
     Model class for MyTardis API v1's UploaderRegistrationRequestAppResource.
-    See: https://github.com/wettenhj/mytardis-app-mydata/blob/master/api.py
+    See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
     """
     def __init__(self, settingsModel=None, uploaderRegRequestJson=None):
         self.settingsModel = settingsModel
