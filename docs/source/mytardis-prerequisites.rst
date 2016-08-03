@@ -6,14 +6,14 @@ uploads from MyData.
 
 MyData requires the "mydata" MyTardis app to be installed on the MyTardis server.
 This app, and its installation instructions can be found here:
-https://github.com/wettenhj/mytardis-app-mydata/blob/master/README.md
+https://github.com/mytardis/mytardis-app-mydata/blob/master/README.md
 
 You should use the HEAD of the master branch of "mytardis-app-mydata", i.e.
 
 ::
 
     $ cd tardis/apps/
-    $ git clone https://github.com/wettenhj/mytardis-app-mydata mydata
+    $ git clone https://github.com/mytardis/mytardis-app-mydata mydata
     $ cd mydata
 
 MyData stores metadata for each experiment it creates, including a reference
@@ -24,7 +24,7 @@ MyTardis to support this:
   .. image:: images/ExperimentSchema.PNG
 
 The final step of the instructions in
-https://github.com/wettenhj/mytardis-app-mydata/blob/master/README.md
+https://github.com/mytardis/mytardis-app-mydata/blob/master/README.md
 describes how to create this schema, which is just a matter of running:
 
 ::
