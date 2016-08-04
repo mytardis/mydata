@@ -18,7 +18,6 @@ from mydata.models.verification import VerificationStatus
 from mydata.models.datafile import DataFileModel
 from mydata.controllers.uploads import UploadMethod
 from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
@@ -104,35 +103,28 @@ class VerifyDatafileRunnable(object):
             verificationsModel\
                 .VerificationMessageUpdated(self.verificationModel)
             self.HandleExistingDatafile(existingDatafile)
-        except DoesNotExist, err:
-            self.verificationModel.SetMessage("Didn't find datafile on "
-                                              "MyTardis server.")
-            self.verificationModel.SetStatus(VerificationStatus.NOT_FOUND)
-            verificationsModel\
-                .VerificationMessageUpdated(self.verificationModel)
-            self.verificationModel.SetComplete()
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.didntFindDatafileOnServerEvent(
-                    foldersController=self.foldersController,
-                    folderModel=self.folderModel,
-                    dataFileIndex=self.dataFileIndex,
-                    verificationModel=self.verificationModel))
-        except MultipleObjectsReturned, err:
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
-            self.verificationModel.SetComplete()
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.foundVerifiedDatafileEvent(
-                    id=self.foldersController.EVT_FOUND_VERIFIED_DATAFILE,
-                    folderModel=self.folderModel,
-                    dataFileIndex=self.dataFileIndex,
-                    dataFilePath=dataFilePath))
-            logger.error(err.GetMessage())
-            raise
+        except DoesNotExist:
+            self.HandleNonExistentDataFile()
         except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
+
+    def HandleNonExistentDataFile(self):
+        """
+        If file doesn't exist on the server, it needs to be uploaded.
+        """
+        self.verificationModel.SetMessage("Didn't find datafile on "
+                                          "MyTardis server.")
+        self.verificationModel.SetStatus(VerificationStatus.NOT_FOUND)
+        self.foldersController.verificationsModel\
+            .VerificationMessageUpdated(self.verificationModel)
+        self.verificationModel.SetComplete()
+        wx.PostEvent(
+            self.foldersController.notifyWindow,
+            self.foldersController.didntFindDatafileOnServerEvent(
+                foldersController=self.foldersController,
+                folderModel=self.folderModel,
+                dataFileIndex=self.dataFileIndex,
+                verificationModel=self.verificationModel))
 
     def HandleExistingDatafile(self, existingDatafile):
         """
@@ -164,19 +156,20 @@ class VerifyDatafileRunnable(object):
                 uploadToStagingRequest.IsApproved() and \
                 len(replicas) > 0:
             # Can resume partial uploads:
-            self.HandleExistingUnverifiedStagedDatafile(existingDatafile)
+            self.HandleResumableUpload(existingDatafile)
         else:
             # Can't resume partial uploads:
-            self.HandleExistingUnverifiedPostedDatafile()
+            self.HandleUnresumableUpload()
 
-    def HandleExistingUnverifiedStagedDatafile(self, existingDatafile):
+    def HandleResumableUpload(self, existingDatafile):
         """
         Can resume partial uploads.  We'll check whether this is a
         partial upload.
         """
         replicas = existingDatafile.GetReplicas()
         try:
-            uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
+            uploadToStagingRequest = \
+                self.settingsModel.GetUploadToStagingRequest()
             bytesUploadedToStaging = long(0)
             username = uploadToStagingRequest.GetScpUsername()
         except IncompatibleMyTardisVersion, err:
@@ -253,29 +246,27 @@ class VerifyDatafileRunnable(object):
                                         icon=wx.ICON_ERROR))
             return
         if bytesUploadedToStaging == long(existingDatafile.GetSize()):
-            self.HandleFullSizeUnverifiedStagedDatafile(existingDatafile)
+            self.HandleFullSizeResumableUpload()
         else:
-            self.HandleIncompleteUnverifiedStagedDatafile(
+            self.HandlIncompleteResumableUpload(
                 existingDatafile,
                 bytesUploadedToStaging)
 
-    def HandleFullSizeUnverifiedStagedDatafile(self, existingDatafile):
+    def HandleFullSizeResumableUpload(self):
         """
         If the existing unverified DataFile upload is the correct size
         in staging, then we just need to wait for it to be verified.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        verificationsModel = self.foldersController.verificationsModel
         self.verificationModel\
             .SetMessage("Found unverified full-size datafile "
                         "on staging server.")
         self.verificationModel\
             .SetStatus(VerificationStatus
                        .FOUND_UNVERIFIED_FULL_SIZE)
-        verificationsModel\
+        self.foldersController.verificationsModel\
             .VerificationMessageUpdated(self.verificationModel)
-        self.folderModel\
-            .SetDataFileUploaded(self.dataFileIndex, True)
+        self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationModel.SetComplete()
         wx.PostEvent(
@@ -291,30 +282,20 @@ class VerifyDatafileRunnable(object):
             message = "FOUND UNVERIFIED UPLOAD FOR: %s" \
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.unverifiedDatafileOnServerEvent(
-                foldersController=self.foldersController,
-                folderModel=self.folderModel,
-                dataFileIndex=self.dataFileIndex,
-                existingUnverifiedDatafile=existingDatafile,
-                bytesUploadedToStaging=long(existingDatafile.GetSize()),
-                verificationModel=self.verificationModel))
 
-    def HandleIncompleteUnverifiedStagedDatafile(self, existingDatafile,
-                                                 bytesUploadedToStaging):
+    def HandlIncompleteResumableUpload(self, existingDatafile,
+                                       bytesUploadedToStaging):
         """
         Resume partial upload.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        verificationsModel = self.foldersController.verificationsModel
         self.verificationModel\
             .SetMessage("Found partially uploaded datafile "
                         "on staging server.")
         self.verificationModel\
             .SetStatus(VerificationStatus
                        .FOUND_UNVERIFIED_NOT_FULL_SIZE)
-        verificationsModel\
+        self.foldersController.verificationsModel\
             .VerificationMessageUpdated(self.verificationModel)
         logger.debug("Re-uploading \"%s\" to staging, because "
                      "the file size is %d bytes in staging, "
@@ -333,7 +314,7 @@ class VerifyDatafileRunnable(object):
                 bytesUploadedToStaging=bytesUploadedToStaging,
                 verificationModel=self.verificationModel))
 
-    def HandleExistingUnverifiedPostedDatafile(self):
+    def HandleUnresumableUpload(self):
         """
         Can't resume partial uploads.
         """
@@ -348,6 +329,8 @@ class VerifyDatafileRunnable(object):
                         "MyTardis administrator to delete the "
                         "file from the server, so you can "
                         "re-upload it.")
+        self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+        self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationModel.SetComplete()
         wx.PostEvent(
             self.foldersController.notifyWindow,
@@ -368,8 +351,7 @@ class VerifyDatafileRunnable(object):
         Found existing verified file on server.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                             True)
+        self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationModel.SetComplete()
         wx.PostEvent(
