@@ -619,6 +619,8 @@ class FoldersController(object):
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
             wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
+        if hasattr(app, "SetTestRunRunning"):
+            app.SetTestRunRunning(False)
 
         # pylint: disable=bare-except
         try:
