@@ -1229,7 +1229,10 @@ class SettingsDialog(wx.Dialog):
 
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
-        wx.GetApp().OnStop(None)
+        # If we are not running scans and uploads, but we could be
+        # running settings validation, stop when Cancel is pressed.
+        if not wx.GetApp().Processing():
+            wx.GetApp().OnStop(None)
         event.Skip()
 
     def OnOK(self, event):  # pylint: disable=invalid-name
