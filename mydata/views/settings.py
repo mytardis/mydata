@@ -1229,6 +1229,7 @@ class SettingsDialog(wx.Dialog):
 
     def OnCancel(self, event):
         self.EndModal(wx.ID_CANCEL)
+        wx.GetApp().OnStop(None)
         event.Skip()
 
     def OnOK(self, event):  # pylint: disable=invalid-name
