@@ -394,11 +394,14 @@ class UploadDatafileRunnable(object):
                         bytesUploaded = self.uploadModel.GetBytesUploaded()
                         if bytesUploaded == dataFileSize:
                             uploadSuccess = True
-                            if not self.existingUnverifiedDatafile:
+                            if self.existingUnverifiedDatafile:
+                                datafileId = \
+                                    self.existingUnverifiedDatafile.GetId()
+                            else:
                                 location = response.headers['location']
                                 datafileId = location.split("/")[-2]
-                                DataFileModel.Verify(self.settingsModel,
-                                                     datafileId)
+                            DataFileModel.Verify(self.settingsModel,
+                                                 datafileId)
                         else:
                             raise Exception(
                                 "Only %d of %d bytes were uploaded for %s"
