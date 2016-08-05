@@ -52,8 +52,11 @@ class TestRunFrame(wx.Frame):
         """
         Don't actually destroy the frame, just hide it.
         """
-        logger.info("Closing Test Run Window and calling OnStop.")
-        wx.GetApp().OnStop(None)
+        if wx.GetApp().TestRunRunning():
+            logger.info("Closing Test Run Window and calling OnStop.")
+            wx.GetApp().OnStop(None)
+        else:
+            logger.info("Closing Test Run Window.")
         self.Hide()
 
     def OnSave(self, event):
