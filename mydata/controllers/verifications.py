@@ -159,7 +159,7 @@ class VerifyDatafileRunnable(object):
             self.HandleResumableUpload(existingDatafile)
         else:
             # Can't resume partial uploads:
-            self.HandleUnresumableUpload()
+            self.HandleUnresumableUpload(existingDatafile)
 
     def HandleResumableUpload(self, existingDatafile):
         """
@@ -246,28 +246,30 @@ class VerifyDatafileRunnable(object):
                                         icon=wx.ICON_ERROR))
             return
         if bytesUploadedToStaging == long(existingDatafile.GetSize()):
-            self.HandleFullSizeResumableUpload()
+            self.HandleFullSizeResumableUpload(existingDatafile)
         else:
-            self.HandlIncompleteResumableUpload(
+            self.HandleIncompleteResumableUpload(
                 existingDatafile,
                 bytesUploadedToStaging)
 
-    def HandleFullSizeResumableUpload(self):
+    def HandleFullSizeResumableUpload(self, existingDatafile):
         """
         If the existing unverified DataFile upload is the correct size
-        in staging, then we just need to wait for it to be verified.
+        in staging, then we can request its verification, but no upload
+        is needed.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         self.verificationModel\
             .SetMessage("Found unverified full-size datafile "
                         "on staging server.")
-        self.verificationModel\
-            .SetStatus(VerificationStatus
-                       .FOUND_UNVERIFIED_FULL_SIZE)
+        self.verificationModel.SetStatus(
+            VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
         self.foldersController.verificationsModel\
             .VerificationMessageUpdated(self.verificationModel)
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
+        if existingDatafile and not self.testRun:
+            DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationModel.SetComplete()
         wx.PostEvent(
             self.foldersController.notifyWindow,
@@ -283,8 +285,8 @@ class VerifyDatafileRunnable(object):
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
 
-    def HandlIncompleteResumableUpload(self, existingDatafile,
-                                       bytesUploadedToStaging):
+    def HandleIncompleteResumableUpload(self, existingDatafile,
+                                        bytesUploadedToStaging):
         """
         Resume partial upload.
         """
@@ -314,23 +316,24 @@ class VerifyDatafileRunnable(object):
                 bytesUploadedToStaging=bytesUploadedToStaging,
                 verificationModel=self.verificationModel))
 
-    def HandleUnresumableUpload(self):
+    def HandleUnresumableUpload(self, existingDatafile):
         """
-        Can't resume partial uploads.
+        Can't resume partial uploads, e.g. because using
+        POST upload method.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         logger.debug("Found unverified datafile record for \"%s\" "
                      "on MyTardis while using HTTP POST for "
                      "uploads." % dataFilePath)
-        self.verificationModel\
-            .SetMessage("Found unverified datafile record. "
-                        "You can wait for MyTardis to verify the "
-                        "file, or if necessary, you can ask your "
-                        "MyTardis administrator to delete the "
-                        "file from the server, so you can "
-                        "re-upload it.")
+        self.verificationModel.SetMessage("Found unverified datafile record.")
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
+        self.verificationModel.SetStatus(
+            VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
+        self.foldersController.verificationsModel\
+            .VerificationMessageUpdated(self.verificationModel)
+        if existingDatafile and not self.testRun:
+            DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationModel.SetComplete()
         wx.PostEvent(
             self.foldersController.notifyWindow,

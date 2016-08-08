@@ -61,12 +61,13 @@ class LastSettingsUpdateTrigger(object):
 # pylint: disable=too-many-arguments
 class SettingsValidation(object):
     def __init__(self, valid, message="", field="", suggestion=None,
-                 datasetCount=-1):
+                 datasetCount=-1, aborted=False):
         self.valid = valid
         self.message = message
         self.field = field
         self.suggestion = suggestion
         self.datasetCount = datasetCount
+        self.aborted = aborted
 
     def IsValid(self):
         return self.valid
@@ -82,6 +83,9 @@ class SettingsValidation(object):
 
     def GetDatasetCount(self):
         return self.datasetCount
+
+    def Aborted(self):
+        return self.aborted
 
 
 # pylint: disable=too-many-public-methods
@@ -420,16 +424,6 @@ class SettingsModel(object):
         return self.facility_name
 
     def GetFacility(self):
-        if not self.facility:
-            # pylint: disable=bare-except
-            try:
-                facilities = FacilityModel.GetMyFacilities(self)
-                for facility in facilities:
-                    if self.GetFacilityName() == facility.GetName():
-                        self.facility = facility
-                        break
-            except:
-                logger.error(traceback.format_exc())
         return self.facility
 
     def SetFacilityName(self, facilityName):
@@ -951,7 +945,9 @@ class SettingsModel(object):
                         "unless they match pattersn in the includes file.")
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             if self.ValidateFolderStructure():
@@ -965,7 +961,9 @@ class SettingsModel(object):
                 datasetCount = self.validation.GetDatasetCount()
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             timeout = 5
@@ -1071,7 +1069,9 @@ class SettingsModel(object):
                 return self.validation
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             # Here we run an arbitrary query, to test whether
@@ -1105,7 +1105,9 @@ class SettingsModel(object):
                 return InvalidUser()
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             message = "Settings validation - checking MyTardis facility..."
@@ -1128,6 +1130,7 @@ class SettingsModel(object):
                                                          "facility_name")
                     return self.validation
             facilities = FacilityModel.GetMyFacilities(self)
+            self.facility = None
             for facility in facilities:
                 if self.GetFacilityName() == facility.GetName():
                     self.facility = facility
@@ -1158,7 +1161,9 @@ class SettingsModel(object):
                 return self.validation
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             # For now, we are assuming that if we find an
@@ -1190,7 +1195,9 @@ class SettingsModel(object):
                 logger.info("self.instrument = " + str(self.instrument))
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             logger.debug("Validating email address.")
@@ -1213,7 +1220,9 @@ class SettingsModel(object):
                         return self.validation
 
             if self.ShouldAbort():
-                self.validation = SettingsValidation(False)
+                if setStatusMessage:
+                    setStatusMessage("Settings validation aborted.")
+                self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
             message = "Settings validation - " \
@@ -1413,7 +1422,9 @@ oFS.DeleteFile sLinkFile
             return self.validation
 
         if self.ShouldAbort():
-            self.validation = SettingsValidation(False)
+            if setStatusMessage:
+                setStatusMessage("Settings validation aborted.")
+            self.validation = SettingsValidation(False, aborted=True)
             return self.validation
 
         if self.GetScheduleType() == "Once":
@@ -1438,7 +1449,9 @@ oFS.DeleteFile sLinkFile
                 return self.validation
 
         if self.ShouldAbort():
-            self.validation = SettingsValidation(False)
+            if setStatusMessage:
+                setStatusMessage("Settings validation aborted.")
+            self.validation = SettingsValidation(False, aborted=True)
             return self.validation
 
         if self.UseExcludesFile():

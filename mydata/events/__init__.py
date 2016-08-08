@@ -365,6 +365,7 @@ class MyDataEvent(wx.PyCommandEvent):
                     wx.CallAfter(event.settingsDialog.dialogPanel.SetCursor,
                                  busyCursor)
                 wx.CallAfter(event.settingsDialog.okButton.Disable)
+                wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Disable)
 
                 intervalSinceLastCheck = datetime.now() - \
                     wx.GetApp().GetLastConnectivityCheckTime()
@@ -402,6 +403,7 @@ class MyDataEvent(wx.PyCommandEvent):
                 wx.CallAfter(EndBusyCursorIfRequired, event)
                 if settingsModel.IsIncompatibleMyTardisVersion():
                     wx.CallAfter(event.settingsDialog.okButton.Enable)
+                    wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
                     return
                 provideValidationResultsEvent = MyDataEvent(
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
@@ -441,6 +443,7 @@ class MyDataEvent(wx.PyCommandEvent):
                 wx.CallAfter(ShowDialog, message)
             finally:
                 wx.CallAfter(event.settingsDialog.okButton.Enable)
+                wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
                 wx.CallAfter(EndBusyCursorIfRequired, event)
 
             logger.debug("Finished running settingsModel.Validate() 4")
@@ -468,8 +471,18 @@ class MyDataEvent(wx.PyCommandEvent):
             event.Skip()
             return
         settingsValidation = event.settingsModel.GetValidation()
+        if settingsValidation.Aborted():
+            wx.CallAfter(EndBusyCursorIfRequired, event)
+            if wx.version().startswith("3.0.3.dev"):
+                arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+            else:
+                arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
+            event.settingsModel.RollBack()
+            return
         if settingsValidation is not None and \
                 not settingsValidation.IsValid():
+            wx.GetApp().GetMainFrame().SetStatusMessage("")
             message = settingsValidation.GetMessage()
             logger.error(message)
 
@@ -720,7 +733,8 @@ class MyDataEvent(wx.PyCommandEvent):
             message = "Checking for data files on MyTardis and uploading " \
                 "if necessary..."
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
-            logger.testrun(message)
+            if event.testRun:
+                logger.testrun(message)
             app = wx.GetApp()
             app.DisableTestAndUploadToolbarButtons()
             wx.GetApp().SetPerformingLookupsAndUploads(True)
