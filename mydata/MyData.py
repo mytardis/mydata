@@ -180,9 +180,11 @@ class MyData(wx.App):
 
         self.myDataEvents = None
 
-        self.scanningFolders = False
+        self.scanningFolders = threading.Event()
+        self.performingLookupsAndUploads = threading.Event()
+        self.testRunRunning = threading.Event()
+
         self.scanningFoldersThreadingLock = threading.Lock()
-        self.performingLookupsAndUploads = False
         self.numUserFoldersScanned = 0
         self.shouldAbort = False
 
@@ -377,9 +379,6 @@ class MyData(wx.App):
         self.panel.SetFocus()
 
         self.SetTopWindow(self.frame)
-
-        self.scanningFolders = threading.Event()
-        self.performingLookupsAndUploads = threading.Event()
 
         event = None
         if self.settingsModel.RequiredFieldIsBlank():
@@ -736,6 +735,12 @@ class MyData(wx.App):
         The user pressed the Upload icon on the main window's toolbar.
         """
         logger.debug("OnScanAndUploadFromToolbar")
+        self.ScanFoldersAndUpload(event)
+
+    def ScanFoldersAndUpload(self, event):
+        """
+        Scan folders and upload datafiles if necessary.
+        """
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
@@ -747,6 +752,7 @@ class MyData(wx.App):
         The user pressed the Test Run icon on the main window's toolbar.
         """
         logger.debug("OnTestRunFromToolbar")
+        self.SetTestRunRunning(True)
         self.settingsModel.SetScheduleType("Manually")
         self.settingsModel.SetLastSettingsUpdateTrigger(
             LastSettingsUpdateTrigger.UI_RESPONSE)
@@ -880,6 +886,19 @@ class MyData(wx.App):
 
                     self.settingsValidation = \
                         self.settingsModel.Validate(testRun=testRun)
+
+                    if self.ShouldAbort():
+                        wx.CallAfter(EndBusyCursorIfRequired)
+                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                        self.SetScanningFolders(False)
+                        logger.info("Just set ScanningFolders to False")
+                        message = "Data scans and uploads were canceled."
+                        if testRun:
+                            logger.testrun(message)
+                            self.SetTestRunRunning(False)
+                        self.frame.SetStatusMessage(message)
+                        return
+
                     if needToValidateSettings and not \
                             self.settingsValidation.valid:
                         logger.debug(
@@ -894,17 +913,6 @@ class MyData(wx.App):
                             wx.CallAfter(self.GetTestRunFrame().Hide)
                         wx.CallAfter(self.OnSettings, None,
                                      validationMessage=message)
-                        return
-
-                    if self.ShouldAbort():
-                        wx.CallAfter(EndBusyCursorIfRequired)
-                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
-                        self.SetScanningFolders(False)
-                        logger.info("Just set ScanningFolders to False")
-                        message = "Data scans and uploads were canceled."
-                        if testRun:
-                            logger.testrun(message)
-                        self.frame.SetStatusMessage(message)
                         return
 
                     event = mde.MyDataEvent(
@@ -964,7 +972,7 @@ class MyData(wx.App):
             if testRun:
                 message = "Scanning data folders in %s..." \
                     % self.settingsModel.GetDataDirectory()
-            logger.testrun(message)
+                logger.testrun(message)
             try:
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
@@ -994,6 +1002,7 @@ class MyData(wx.App):
                 logger.info("Just set ScanningFolders to False")
                 if testRun:
                     logger.testrun("Data scans and uploads were canceled.")
+                    self.SetTestRunRunning(False)
                 return
 
             if self.usersModel.GetNumUserOrGroupFolders() > 0:
@@ -1040,9 +1049,9 @@ class MyData(wx.App):
                          "which was launched from MyData's toolbar.")
         elif event.GetId() == self.uploadTool.GetId():
             logger.debug("OnRefresh triggered by Upload toolbar icon.")
-        elif self.taskBarIcon.GetMyTardisSyncMenuItem() is not None and \
+        elif self.taskBarIcon.GetSyncNowMenuItem() is not None and \
                 event.GetId() == \
-                self.taskBarIcon.GetMyTardisSyncMenuItem().GetId():
+                self.taskBarIcon.GetSyncNowMenuItem().GetId():
             logger.debug("OnRefresh triggered by 'Sync Now' "
                          "task bar menu item.")
         elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
@@ -1124,6 +1133,7 @@ class MyData(wx.App):
         launched without any previously saved settings.
         """
         self.SetShouldAbort(False)
+        self.frame.SetStatusMessage("")
         settingsDialog = SettingsDialog(self.frame,
                                         self.settingsModel,
                                         size=wx.Size(400, 400),
@@ -1347,6 +1357,25 @@ class MyData(wx.App):
         currently busy processing something.
         """
         return self.toolbar.GetToolEnabled(self.stopTool.GetId())
+
+    def TestRunRunning(self):
+        """
+        Called when the Test Run window is closed to determine
+        whether the Test Run is still running.  If so, it will
+        be aborted.  If not, we need to be careful to avoid
+        aborting a real uploads run.
+        """
+        return self.testRunRunning.isSet()
+
+    def SetTestRunRunning(self, value):
+        """
+        Records whether MyData is currently performing a test run.
+        """
+        if value:
+            self.testRunRunning.set()
+        else:
+            self.testRunRunning.clear()
+
 
 def Run(argv):
     """

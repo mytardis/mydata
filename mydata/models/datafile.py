@@ -40,7 +40,7 @@ class DataFileModel(object):
             for key in dataFileJson:
                 attr = UnderscoreToCamelcase(key)
                 if attr == "id":
-                    attr = "replicaId"
+                    attr = "datafileId"
                 if hasattr(self, attr):
                     self.__dict__[attr] = dataFileJson[key]
             self.replicas = []

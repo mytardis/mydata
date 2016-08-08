@@ -7,13 +7,12 @@ and the tabular data displayed on that tab view.
 # pylint: disable=missing-docstring
 
 import traceback
-import threading
 import wx
 import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.logs import logger
-from mydata.utils import EndBusyCursorIfRequired
+
 
 class UploadsView(wx.Panel):
     """
@@ -136,16 +135,11 @@ class UploadsView(wx.Panel):
             event.Skip()
 
     def OnCancelRemainingUploads(self, event):
-        def ShutDownUploadThreads():
-            # pylint: disable=bare-except
-            try:
-                wx.CallAfter(wx.BeginBusyCursor)
-                self.foldersController.ShutDownUploadThreads()
-                wx.CallAfter(EndBusyCursorIfRequired)
-            except:
-                logger.error(traceback.format_exc())
-        thread = threading.Thread(target=ShutDownUploadThreads)
-        thread.start()
+        wx.CallAfter(wx.BeginBusyCursor)
+        wx.PostEvent(
+            self.foldersController.notifyWindow,
+            self.foldersController.shutdownUploadsEvent(
+                canceled=True))
         if event:
             event.Skip()
 

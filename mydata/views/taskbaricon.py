@@ -23,7 +23,6 @@ else:
 
 from mydata.media import MYDATA_ICONS
 from mydata.logs import logger
-from mydata.models.settings import LastSettingsUpdateTrigger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
@@ -50,7 +49,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.menu = None
         self.aboutMyDataMenuItem = None
-        self.myTardisSyncMenuItem = None
+        self.syncNowMenuItem = None
         self.myTardisMainWindowMenuItem = None
         self.myTardisSettingsMenuItem = None
         self.myTardisHelpMenuItem = None
@@ -74,14 +73,14 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.menu.AppendSeparator()
 
-        self.myTardisSyncMenuItem = wx.MenuItem(
+        self.syncNowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Sync Now")
         if wx.version().startswith("3.0.3.dev"):
-            self.menu.Append(self.myTardisSyncMenuItem)
+            self.menu.Append(self.syncNowMenuItem)
         else:
-            self.menu.AppendItem(self.myTardisSyncMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnMyTardisSync,
-                  self.myTardisSyncMenuItem, self.myTardisSyncMenuItem.GetId())
+            self.menu.AppendItem(self.syncNowMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSyncNow,
+                  self.syncNowMenuItem, self.syncNowMenuItem.GetId())
 
         self.menu.AppendSeparator()
 
@@ -125,12 +124,12 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         return self.menu
 
-    def GetMyTardisSyncMenuItem(self):
+    def GetSyncNowMenuItem(self):
         """
         Returns the "Sync Now" menu item.
         """
-        if hasattr(self, "myTardisSyncMenuItem"):
-            return self.myTardisSyncMenuItem
+        if hasattr(self, "syncNowMenuItem"):
+            return self.syncNowMenuItem
         else:
             return None
 
@@ -154,19 +153,13 @@ class MyDataTaskBarIcon(TaskBarIcon):
         event.Skip()
 
     # pylint: disable=no-self-use
-    def OnMyTardisSync(self, event):
+    def OnSyncNow(self, event):
         """
         Called when the "Sync Now" menu item is
         selected from MyData's system tray / menu bar icon menu.
         """
-        # wx.GetApp().OnRefresh(event)
         logger.debug("Sync Now called from task bar menu item.")
-        app = wx.GetApp()
-        app.settingsModel.SetScheduleType("Manually")
-        app.settingsModel.SetLastSettingsUpdateTrigger(
-            LastSettingsUpdateTrigger.UI_RESPONSE)
-        app.GetScheduleController().ApplySchedule(event, runManually=True)
-        event.Skip()
+        wx.GetApp().ScanFoldersAndUpload(event)
 
     # pylint: disable=no-self-use
     def OnMyDataHelp(self, event):

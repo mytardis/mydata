@@ -292,48 +292,47 @@ class FoldersController(object):
         fc.uploadMethod = UploadMethod.HTTP_POST
 
         # pylint: disable=broad-except
-        if not fc.testRun:
-            try:
-                settingsModel.GetUploaderModel().RequestStagingAccess()
-                uploadToStagingRequest = settingsModel\
-                    .GetUploadToStagingRequest()
-            except Exception, err:
-                # MyData app could be missing from MyTardis server.
-                logger.error(traceback.format_exc())
-                wx.PostEvent(
-                    self.notifyWindow,
-                    self.showMessageDialogEvent(
-                        title="MyData",
-                        message=str(err),
-                        icon=wx.ICON_ERROR))
-                return
-            message = None
-            if uploadToStagingRequest is None:
-                message = "Couldn't determine whether uploads to " \
-                          "staging have been approved.  " \
-                          "Falling back to HTTP POST."
-            elif uploadToStagingRequest.IsApproved():
-                logger.info("Uploads to staging have been approved.")
-                fc.uploadMethod = UploadMethod.VIA_STAGING
-            else:
-                message = \
-                    "Uploads to MyTardis's staging area require " \
-                    "approval from your MyTardis administrator.\n\n" \
-                    "A request has been sent, and you will be contacted " \
-                    "once the request has been approved. Until then, " \
-                    "MyData will upload files using HTTP POST, and will " \
-                    "only upload one file at a time.\n\n" \
-                    "HTTP POST is generally only suitable for small " \
-                    "files (up to 100 MB each)."
-            if message:
-                logger.warning(message)
-                wx.PostEvent(
-                    self.notifyWindow,
-                    self.showMessageDialogEvent(
-                        title="MyData",
-                        message=message,
-                        icon=wx.ICON_WARNING))
-                fc.uploadMethod = UploadMethod.HTTP_POST
+        try:
+            settingsModel.GetUploaderModel().RequestStagingAccess()
+            uploadToStagingRequest = settingsModel\
+                .GetUploadToStagingRequest()
+        except Exception, err:
+            # MyData app could be missing from MyTardis server.
+            logger.error(traceback.format_exc())
+            wx.PostEvent(
+                self.notifyWindow,
+                self.showMessageDialogEvent(
+                    title="MyData",
+                    message=str(err),
+                    icon=wx.ICON_ERROR))
+            return
+        message = None
+        if uploadToStagingRequest is None:
+            message = "Couldn't determine whether uploads to " \
+                      "staging have been approved.  " \
+                      "Falling back to HTTP POST."
+        elif uploadToStagingRequest.IsApproved():
+            logger.info("Uploads to staging have been approved.")
+            fc.uploadMethod = UploadMethod.VIA_STAGING
+        else:
+            message = \
+                "Uploads to MyTardis's staging area require " \
+                "approval from your MyTardis administrator.\n\n" \
+                "A request has been sent, and you will be contacted " \
+                "once the request has been approved. Until then, " \
+                "MyData will upload files using HTTP POST, and will " \
+                "only upload one file at a time.\n\n" \
+                "HTTP POST is generally only suitable for small " \
+                "files (up to 100 MB each)."
+        if message:
+            logger.warning(message)
+            wx.PostEvent(
+                self.notifyWindow,
+                self.showMessageDialogEvent(
+                    title="MyData",
+                    message=message,
+                    icon=wx.ICON_WARNING))
+            fc.uploadMethod = UploadMethod.HTTP_POST
         if fc.uploadMethod == UploadMethod.HTTP_POST and \
                 fc.numUploadWorkerThreads > 1:
             logger.warning(
@@ -522,6 +521,7 @@ class FoldersController(object):
         # pylint: disable=unused-argument
         if self.Completed() or self.Canceled():
             return
+
         numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
 
         uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
@@ -571,6 +571,12 @@ class FoldersController(object):
             self.SetCompleted()
         else:
             self.SetCanceled()
+            # Staging upload methods regularly check the FoldersController
+            # object's IsShuttingDown() method, so they know if the uploads
+            # have been aborted.  But for POST, we need to explicitly cancel
+            # the upload(s).
+            if self.uploadMethod == UploadMethod.HTTP_POST:
+                self.uploadsModel.CancelRemaining()
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
@@ -592,6 +598,30 @@ class FoldersController(object):
             if sshControlMasterPool:
                 sshControlMasterPool.ShutDown()
 
+        if self.testRun:
+            numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
+            numVerifiedUploads = self.verificationsModel.GetFoundVerifiedCount()
+            numFilesNotFoundOnServer = self.verificationsModel.GetNotFoundCount()
+            numFullSizeUnverifiedUploads = \
+                self.verificationsModel.GetFoundUnverifiedFullSizeCount()
+            numIncompleteUploads = \
+                self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
+            numFailedLookups = self.verificationsModel.GetFailedCount()
+            logger.testrun("")
+            logger.testrun("SUMMARY")
+            logger.testrun("")
+            logger.testrun("Files looked up on server: %s"
+                           % numVerificationsCompleted)
+            logger.testrun("Files verified on server: %s" % numVerifiedUploads)
+            logger.testrun("Files not found on server: %s"
+                           % numFilesNotFoundOnServer)
+            logger.testrun("Files unverified (but full size) on server: %s"
+                           % numFullSizeUnverifiedUploads)
+            logger.testrun("Files unverified (and incomplete) on server: %s"
+                           % numIncompleteUploads)
+            logger.testrun("Failed lookups: %s" % numFailedLookups)
+            logger.testrun("")
+
         if self.Failed():
             message = "Data scans and uploads failed."
         elif self.Canceled():
@@ -610,6 +640,7 @@ class FoldersController(object):
             wx.GetApp().GetMainFrame().SetStatusMessage(message)
         if self.testRun:
             logger.testrun(message)
+
         app = wx.GetApp()
         if hasattr(app, "toolbar"):
             app.EnableTestAndUploadToolbarButtons()
@@ -619,6 +650,8 @@ class FoldersController(object):
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
             wx.GetApp().SetPerformingLookupsAndUploads(False)
         self.SetShuttingDown(False)
+        if hasattr(app, "SetTestRunRunning"):
+            app.SetTestRunRunning(False)
 
         # pylint: disable=bare-except
         try:
