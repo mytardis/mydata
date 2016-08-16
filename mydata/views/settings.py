@@ -1232,7 +1232,7 @@ class SettingsDialog(wx.Dialog):
         # If we are not running scans and uploads, but we could be
         # running settings validation, stop when Cancel is pressed.
         if not wx.GetApp().Processing():
-            wx.GetApp().OnStop(None)
+            wx.GetApp().SetShouldAbort(True)
         event.Skip()
 
     def OnOK(self, event):  # pylint: disable=invalid-name
