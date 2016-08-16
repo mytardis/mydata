@@ -44,7 +44,7 @@ class Logger(object):
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.myDataConfigPath = None
-        self.level = logging.DEBUG
+        self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
             self.appRootDir = \
@@ -116,6 +116,8 @@ class Logger(object):
 
     def debug(self, message):
         # pylint: disable=invalid-name
+        if self.level > logging.DEBUG:
+            return
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
@@ -158,6 +160,8 @@ class Logger(object):
 
     def warning(self, message):
         # pylint: disable=invalid-name
+        if self.level > logging.WARNING:
+            return
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
@@ -179,6 +183,8 @@ class Logger(object):
 
     def info(self, message):
         # pylint: disable=invalid-name
+        if self.level > logging.INFO:
+            return
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
@@ -201,7 +207,10 @@ class Logger(object):
     def testrun(self, message):
         # pylint: disable=invalid-name
         # pylint: disable=no-self-use
-        wx.GetApp().GetTestRunFrame().WriteLine(message)
+        if threading.current_thread().name == "MainThread":
+            wx.GetApp().GetTestRunFrame().WriteLine(message)
+        else:
+            wx.CallAfter(wx.GetApp().GetTestRunFrame().WriteLine, message)
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         # pylint: disable=too-many-statements
