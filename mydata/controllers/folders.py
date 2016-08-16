@@ -418,13 +418,13 @@ class FoldersController(object):
                                 connectionStatus=disconnected))
                     return
                 except ValueError, err:
-                    logger.debug("Failed to retrieve experiment "
+                    logger.error("Failed to retrieve experiment "
                                  "for folder " +
                                  str(folderModel.GetFolder()))
-                    logger.debug(traceback.format_exc())
+                    logger.error(traceback.format_exc())
                     return
                 if experimentModel is None and not fc.testRun:
-                    logger.debug("Failed to acquire a MyTardis "
+                    logger.error("Failed to acquire a MyTardis "
                                  "experiment to store data in for "
                                  "folder " +
                                  folderModel.GetFolder())

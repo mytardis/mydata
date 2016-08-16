@@ -1713,7 +1713,7 @@ class SettingsDialog(wx.Dialog):
                             lpParameters=params)
                     except:
                         logger.error("User privilege elevation failed.")
-                        logger.debug(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         return
             elif sys.platform.startswith("darwin"):
                 logger.info("Attempting to run "
