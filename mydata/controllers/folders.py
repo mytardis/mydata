@@ -19,6 +19,7 @@ import wx.dataview
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
+from mydata.utils import EndBusyCursorIfRequired
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -558,6 +559,7 @@ class FoldersController(object):
             return
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
             if not wx.GetApp().PerformingLookupsAndUploads():
+                EndBusyCursorIfRequired()
                 return
         self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
@@ -653,11 +655,7 @@ class FoldersController(object):
         if hasattr(app, "SetTestRunRunning"):
             app.SetTestRunRunning(False)
 
-        # pylint: disable=bare-except
-        try:
-            wx.EndBusyCursor()
-        except:
-            pass
+        EndBusyCursorIfRequired()
 
         logger.debug("")
 

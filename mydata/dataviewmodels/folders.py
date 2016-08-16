@@ -24,6 +24,7 @@ from mydata.models.group import GroupModel
 from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
+from mydata.utils import EndBusyCursorIfRequired
 
 
 # pylint: disable=too-many-instance-attributes
@@ -503,6 +504,7 @@ class FoldersModel(DataViewIndexListModel):
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data scans and uploads were canceled.")
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if folderStructure.startswith("Username"):
                 logger.debug("Found folder assumed to be username: " +
@@ -526,6 +528,7 @@ class FoldersModel(DataViewIndexListModel):
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data scans and uploads were canceled.")
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if userRecord is not None:
                 userRecord.SetDataViewId(usersDataViewId)
@@ -562,6 +565,7 @@ class FoldersModel(DataViewIndexListModel):
                     wx.CallAfter(wx.GetApp().GetMainFrame()
                                  .SetStatusMessage,
                                  "Data scans and uploads were canceled.")
+                    wx.CallAfter(EndBusyCursorIfRequired)
                     return
             else:
                 message = "Didn't find a MyTardis user record for folder " \
@@ -570,6 +574,7 @@ class FoldersModel(DataViewIndexListModel):
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  "Data scans and uploads were canceled.")
+                    wx.CallAfter(EndBusyCursorIfRequired)
                     return
                 if not self.settingsModel.UploadInvalidUserOrGroupFolders():
                     logger.warning("Skipping %s, because "
@@ -590,6 +595,7 @@ class FoldersModel(DataViewIndexListModel):
                 if shouldAbort():
                     wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                                  "Data scans and uploads were canceled.")
+                    wx.CallAfter(EndBusyCursorIfRequired)
                     return
                 self.ScanForDatasetFolders(os.path.join(dataDir,
                                                         userFolderName),
@@ -613,6 +619,7 @@ class FoldersModel(DataViewIndexListModel):
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data scans and uploads were canceled.")
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             logger.debug("Found folder assumed to be user group name: " +
                          groupFolderName)
@@ -637,6 +644,7 @@ class FoldersModel(DataViewIndexListModel):
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data scans and uploads were canceled.")
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if groupRecord:
                 groupRecord.SetDataViewId(groupsDataViewId)
@@ -656,6 +664,7 @@ class FoldersModel(DataViewIndexListModel):
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
                              "Data scans and uploads were canceled.")
+                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if threading.current_thread().name == "MainThread":
                 incrementProgressDialog()
