@@ -130,7 +130,7 @@ class UploadsView(wx.Panel):
             if okToDelete == wx.ID_OK:
                 self.uploadsModel.DeleteRows(rows)
         except:
-            logger.debug(traceback.format_exc())
+            logger.error(traceback.format_exc())
         finally:
             event.Skip()
 

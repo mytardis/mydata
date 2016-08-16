@@ -621,7 +621,7 @@ class MyDataEvent(wx.PyCommandEvent):
                                        wx.OK | wx.ICON_WARNING)
                 dlg.ShowModal()
         except:
-            logger.debug(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
     @staticmethod
     def ShutdownForRefresh(event):
@@ -654,7 +654,7 @@ class MyDataEvent(wx.PyCommandEvent):
                              shutdownForRefreshCompleteEvent)
                 wx.CallAfter(EndBusyCursorIfRequired, event)
             except:
-                logger.debug(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 message = "An error occurred while trying to shut down " \
                     "the existing data-scan-and-upload process in order " \
                     "to start another one.\n\n" \

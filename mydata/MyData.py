@@ -585,13 +585,13 @@ class MyData(wx.App):
                     sys.exit(0)
                 except:
                     try:
-                        logger.debug(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         self.tasksModel.ShutDown()
                         # pylint: disable=protected-access
                         os._exit(1)
                     # pylint: disable=bare-except
                     except:
-                        logger.debug(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         # pylint: disable=protected-access
                         os._exit(1)
                 logger.debug("Finishing run() method for thread %s"
@@ -922,7 +922,7 @@ class MyData(wx.App):
                     wx.PostEvent(self.frame, event)
                     wx.CallAfter(EndBusyCursorIfRequired)
                 except:
-                    logger.debug(traceback.format_exc())
+                    logger.error(traceback.format_exc())
                     return
                 logger.debug("Finishing run() method for thread %s"
                              % threading.current_thread().name)
