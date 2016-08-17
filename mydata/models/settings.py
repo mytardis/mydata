@@ -901,48 +901,69 @@ class SettingsModel(object):
                                                      "data_directory")
                 return self.validation
 
-            if testRun:
-                if not self.UploadInvalidUserOrGroupFolders():
-                    if self.GetFolderStructure().startswith("User Group"):
-                        logger.testrun(
-                            "WARNING: Invalid user group folders are being "
-                            "ignored.")
-                    elif "User" in self.GetFolderStructure() or \
-                            "Email" in self.GetFolderStructure():
-                        logger.testrun(
-                            "WARNING: Invalid user folders are being ignored.")
-                if self.GetUserFilter().strip() != "":
-                    if self.GetFolderStructure().startswith("User Group"):
-                        logger.testrun(
-                            "WARNING: User group folders are being filtered.")
-                    else:
-                        logger.testrun(
-                            "WARNING: User folders are being filtered.")
-                if self.GetDatasetFilter().strip() != "":
-                    logger.testrun(
-                        "WARNING: Dataset folders are being filtered.")
-                if self.GetExperimentFilter().strip() != "":
-                    logger.testrun(
-                        "WARNING: Experiment folders are being filtered.")
-                if self.IgnoreOldDatasets():
-                    logger.testrun(
-                        "WARNING: Old datasets are being ignored.")
-                if self.IgnoreNewFiles():
-                    logger.testrun(
-                        "WARNING: New files are being ignored.")
-                if self.UseIncludesFile() and not self.UseExcludesFile():
-                    logger.testrun(
-                        "WARNING: Only files matching patterns in includes "
-                        "file will be scanned for upload.")
-                elif not self.UseIncludesFile() and self.UseExcludesFile():
-                    logger.testrun(
-                        "WARNING: Files matching patterns in excludes "
-                        "file will not be scanned for upload.")
-                elif self.UseIncludesFile() and self.UseExcludesFile():
-                    logger.testrun(
-                        "WARNING: Files matching patterns in excludes "
-                        "file will not be scanned for upload, "
-                        "unless they match pattersn in the includes file.")
+            if not self.UploadInvalidUserOrGroupFolders():
+                if self.GetFolderStructure().startswith("User Group"):
+                    message = "Invalid user group folders are being ignored."
+                    logger.warning(message)
+                    if testRun:
+                        logger.testrun("WARNING: %s" % message)
+                elif "User" in self.GetFolderStructure() or \
+                        "Email" in self.GetFolderStructure():
+                    message = "Invalid user folders are being ignored."
+                    logger.warning(message)
+                    if testRun:
+                        logger.testrun("WARNING: %s" % message)
+            if self.GetUserFilter().strip() != "":
+                if self.GetFolderStructure().startswith("User Group"):
+                    message = "User group folders are being filtered."
+                    logger.warning(message)
+                    if testRun:
+                        logger.testrun("WARNING: %s" % message)
+                else:
+                    message = "User folders are being filtered."
+                    logger.warning(message)
+                    if testRun:
+                        logger.testrun("WARNING: %s" % message)
+            if self.GetDatasetFilter().strip() != "":
+                message = "Dataset folders are being filtered."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            if self.GetExperimentFilter().strip() != "":
+                message = "Experiment folders are being filtered."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            if self.IgnoreOldDatasets():
+                message = "Old datasets are being ignored."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            if self.IgnoreNewFiles():
+                message = "Files newer than %s minute(s) are being ignored." \
+                    % self.GetIgnoreNewFilesMinutes()
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            if self.UseIncludesFile() and not self.UseExcludesFile():
+                message = "Only files matching patterns in includes " \
+                    "file will be scanned for upload."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            elif not self.UseIncludesFile() and self.UseExcludesFile():
+                message = "Files matching patterns in excludes " \
+                    "file will not be scanned for upload."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
+            elif self.UseIncludesFile() and self.UseExcludesFile():
+                message = "Files matching patterns in excludes " \
+                    "file will not be scanned for upload, " \
+                    "unless they match pattersn in the includes file."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun("WARNING: %s" % message)
 
             if self.ShouldAbort():
                 if setStatusMessage:
@@ -1298,8 +1319,8 @@ End If
                     logger.error(traceback.format_exc())
                 if (shortcutInStartupItems or shortcutInCommonStartupItems) \
                         and self.StartAutomaticallyOnLogin():
-                    logger.info("MyData is already set to start automatically "
-                                "on login.")
+                    logger.debug("MyData is already set to start automatically "
+                                 "on login.")
                 elif (not shortcutInStartupItems and
                       not shortcutInCommonStartupItems) and \
                         self.StartAutomaticallyOnLogin():
@@ -1381,8 +1402,8 @@ oFS.DeleteFile sLinkFile
                 loginItems = [item.strip() for item in
                               loginItemsString.split(',')]
                 if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
-                    logger.info("MyData is already set to start automatically "
-                                "on login.")
+                    logger.debug("MyData is already set to start automatically "
+                                 "on login.")
                 elif 'MyData' not in loginItems and \
                         self.StartAutomaticallyOnLogin():
                     logger.info("Adding MyData to login items.")

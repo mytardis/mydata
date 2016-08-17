@@ -826,9 +826,11 @@ class MyData(wx.App):
                 return
 
             logger.debug("OnRefresh: needToValidateSettings is True.")
-            self.frame.SetStatusMessage("Validating settings...")
+            message = "Validating settings..."
+            self.frame.SetStatusMessage(message)
+            logger.info(message)
             if testRun:
-                logger.testrun("Validating settings...")
+                logger.testrun(message)
             self.settingsValidation = None
 
             def ValidateSettings():
@@ -891,7 +893,7 @@ class MyData(wx.App):
                         wx.CallAfter(EndBusyCursorIfRequired)
                         wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                         self.SetScanningFolders(False)
-                        logger.info("Just set ScanningFolders to False")
+                        logger.debug("Just set ScanningFolders to False")
                         message = "Data scans and uploads were canceled."
                         if testRun:
                             logger.testrun(message)
@@ -951,11 +953,12 @@ class MyData(wx.App):
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),
                 userOrGroup)
-            logger.debug(message)
             self.frame.SetStatusMessage(message)
-            if testRun and self.numUserFoldersScanned == \
+            if self.numUserFoldersScanned == \
                     self.usersModel.GetNumUserOrGroupFolders():
-                logger.testrun(message)
+                logger.info(message)
+                if testRun:
+                    logger.testrun(message)
 
         # Start FoldersModel.ScanFolders(),
         # followed by FoldersController.StartDataUploads().
@@ -969,20 +972,21 @@ class MyData(wx.App):
                          % threading.current_thread().name)
             message = "Scanning data folders..."
             wx.CallAfter(self.frame.SetStatusMessage, message)
+            message = "Scanning data folders in %s..." \
+                % self.settingsModel.GetDataDirectory()
+            logger.info(message)
             if testRun:
-                message = "Scanning data folders in %s..." \
-                    % self.settingsModel.GetDataDirectory()
                 logger.testrun(message)
             try:
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
-                logger.info("Just set ScanningFolders to True")
+                logger.debug("Just set ScanningFolders to True")
                 wx.CallAfter(self.DisableTestAndUploadToolbarButtons)
                 self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
                                               self.ShouldAbort)
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
-                logger.info("Just set ScanningFolders to False")
+                logger.debug("Just set ScanningFolders to False")
             except InvalidFolderStructure, ifs:
                 def ShowMessageDialog():
                     """
@@ -999,7 +1003,7 @@ class MyData(wx.App):
                 wx.CallAfter(EndBusyCursorIfRequired)
                 wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
-                logger.info("Just set ScanningFolders to False")
+                logger.debug("Just set ScanningFolders to False")
                 if testRun:
                     logger.testrun("Data scans and uploads were canceled.")
                     self.SetTestRunRunning(False)
@@ -1019,7 +1023,7 @@ class MyData(wx.App):
                 wx.CallAfter(self.frame.SetStatusMessage, message)
                 wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
-                logger.info("Just set ScanningFolders to False")
+                logger.debug("Just set ScanningFolders to False")
 
             wx.CallAfter(EndBusyCursorIfRequired)
             logger.debug("Finishing run() method for thread %s"

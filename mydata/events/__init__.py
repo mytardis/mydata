@@ -733,6 +733,7 @@ class MyDataEvent(wx.PyCommandEvent):
             message = "Checking for data files on MyTardis and uploading " \
                 "if necessary..."
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
+            logger.info(message)
             if event.testRun:
                 logger.testrun(message)
             app = wx.GetApp()
