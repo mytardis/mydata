@@ -268,7 +268,7 @@ class UploaderModel(object):
         else:
             self.subnetMask = ""
 
-        logger.info("The active network interface is: " + str(self.interface))
+        logger.debug("The active network interface is: " + str(self.interface))
 
         self.name = self.settingsModel.GetInstrumentName()
         self.contactName = self.settingsModel.GetContactName()
@@ -353,7 +353,7 @@ class UploaderModel(object):
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
 
-        logger.info("Uploading uploader info to MyTardis...")
+        logger.debug("Uploading uploader info to MyTardis...")
 
         if numExistingUploaderRecords > 0:
             url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.id
@@ -418,7 +418,7 @@ class UploaderModel(object):
         else:
             response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
-            logger.info("Upload succeeded for uploader info.")
+            logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
         else:
             logger.error("Upload failed for uploader info.")
@@ -461,7 +461,7 @@ class UploaderModel(object):
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
             approvalJson = existingUploaderRecords['objects'][0]
-            logger.info("A request already exists for this uploader.")
+            logger.debug("A request already exists for this uploader.")
             response.close()
             return UploaderRegistrationRequest(
                 settingsModel=self.settingsModel,
@@ -469,7 +469,7 @@ class UploaderModel(object):
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
-            logger.info(message)
+            logger.debug(message)
             response.close()
             raise DoesNotExist(message)
 
@@ -537,18 +537,18 @@ class UploaderModel(object):
                 except DoesNotExist:
                     uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
-                    logger.info("Uploader registration request created.")
+                    logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
-                    logger.info("Generating new uploader registration request, "
-                                "because private key was moved or deleted.")
+                    logger.debug("Generating new uploader registration request, "
+                                 "because private key was moved or deleted.")
                     uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
-                    logger.info("Generated new uploader registration request, "
-                                "because private key was moved or deleted.")
+                    logger.debug("Generated new uploader registration request, "
+                                 "because private key was moved or deleted.")
                 if uploadToStagingRequest.IsApproved():
-                    logger.info("Uploads to staging have been approved!")
+                    logger.debug("Uploads to staging have been approved!")
                 else:
-                    logger.info("Uploads to staging haven't been approved yet.")
+                    logger.debug("Uploads to staging haven't been approved yet.")
                 self.settingsModel\
                     .SetUploadToStagingRequest(uploadToStagingRequest)
             except:
@@ -663,7 +663,7 @@ class UploaderModel(object):
     @staticmethod
     def GetActiveNetworkInterfaces():
         # pylint: disable=too-many-branches
-        logger.info("Determining the active network interface...")
+        logger.debug("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
             proc = subprocess.Popen(["netsh", "interface",
