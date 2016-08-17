@@ -50,6 +50,11 @@ def EndBusyCursorIfRequired(event):
         if "no matching wxBeginBusyCursor()" not in str(err):
             logger.error(str(err))
             raise
+    except RuntimeError, err:
+        if "wrapped C/C++ object of type MyDataEvent has been deleted" \
+                not in str(err):
+            logger.error(str(err))
+            raise
 
 
 class MyDataEvents(object):
