@@ -3,6 +3,7 @@ Represents the Log tab of MyData's main window,
 and the log text displayed within that tab view.
 """
 import sys
+import logging
 import wx
 
 from mydata.logs import logger
@@ -26,13 +27,21 @@ class LogView(wx.Panel):
         logPanelSizer.AddGrowableRow(0)
         logPanelSizer.AddGrowableCol(0)
         logPanelSizer.Add(self.logTextCtrl, flag=wx.EXPAND)
-        self.submitDebugLogButton = wx.Button(self, wx.ID_ANY,
+        footerPanel = wx.Panel(self)
+        footerPanelSizer = wx.FlexGridSizer(rows=1, cols=2, vgap=0, hgap=20)
+        self.submitDebugLogButton = wx.Button(footerPanel, wx.ID_ANY,
                                               "Submit debug log")
         self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog,
                   id=self.submitDebugLogButton.GetId())
-        logPanelSizer.Add(self.submitDebugLogButton,
+        self.debugCheckBox = wx.CheckBox(footerPanel, wx.ID_ANY, "Debug logging")
+        self.Bind(wx.EVT_CHECKBOX, self.OnDebugLogging,
+                  id=self.debugCheckBox.GetId())
+        footerPanelSizer.Add(self.debugCheckBox)
+        footerPanelSizer.Add(self.submitDebugLogButton)
+        footerPanel.SetSizerAndFit(footerPanelSizer)
+        logPanelSizer.Add(footerPanel,
                           flag=wx.ALIGN_RIGHT | wx.TOP | wx.BOTTOM | wx.RIGHT,
-                          border=1)
+                          border=2)
         self.SetSizer(logPanelSizer)
         if sys.platform.startswith("darwin"):
             font = wx.Font(13, wx.MODERN, wx.NORMAL, wx.NORMAL, False,
@@ -54,3 +63,13 @@ class LogView(wx.Panel):
         """
         logger.DumpLog(self.parent, self.settingsModel, submitDebugLog=True)
         event.Skip()
+
+    def OnDebugLogging(self, event):
+        """
+        Turn debug-level logging on or off.
+        """
+        # pylint: disable=no-self-use
+        if event.Checked():
+            logger.SetLevel(logging.DEBUG)
+        else:
+            logger.SetLevel(logging.INFO)
