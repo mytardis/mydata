@@ -120,6 +120,12 @@ class FoldersController(object):
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
+        self.uploadFailedEvent, eventBinder = \
+            wx.lib.newevent.NewCommandEvent()
+        self.EVT_UPLOAD_FAILED = wx.NewId()  # pylint:disable=invalid-name
+        self.notifyWindow.Bind(eventBinder,
+                               self.CountCompletedUploadsAndVerifications)
+
     def Started(self):
         return self.started
 
