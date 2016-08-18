@@ -107,6 +107,13 @@ class UploadDatafileRunnable(object):
             self.uploadsModel.UploadMessageUpdated(self.uploadModel)
             self.uploadModel.SetStatus(UploadStatus.FAILED)
             self.uploadsModel.UploadStatusUpdated(self.uploadModel)
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController.uploadCompleteEvent(
+                    id=self.foldersController.EVT_UPLOAD_FAILED,
+                    folderModel=self.folderModel,
+                    dataFileIndex=self.dataFileIndex,
+                    uploadModel=self.uploadModel))
             return
 
         logger.debug("Uploading " +
