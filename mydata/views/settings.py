@@ -1232,7 +1232,7 @@ class SettingsDialog(wx.Dialog):
         # If we are not running scans and uploads, but we could be
         # running settings validation, stop when Cancel is pressed.
         if not wx.GetApp().Processing():
-            wx.GetApp().OnStop(None)
+            wx.GetApp().SetShouldAbort(True)
         event.Skip()
 
     def OnOK(self, event):  # pylint: disable=invalid-name
@@ -1713,7 +1713,7 @@ class SettingsDialog(wx.Dialog):
                             lpParameters=params)
                     except:
                         logger.error("User privilege elevation failed.")
-                        logger.debug(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         return
             elif sys.platform.startswith("darwin"):
                 logger.info("Attempting to run "

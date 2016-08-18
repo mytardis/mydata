@@ -651,7 +651,7 @@ class UploadDatafileRunnable(object):
                 if hasattr(response, "headers"):
                     # logger.debug(str(response.headers))
                     pass
-            logger.debug(traceback.format_exc())
+            logger.error(traceback.format_exc())
             return
 
         if uploadSuccess:

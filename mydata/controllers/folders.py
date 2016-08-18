@@ -19,6 +19,7 @@ import wx.dataview
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
+from mydata.utils import EndBusyCursorIfRequired
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -418,13 +419,13 @@ class FoldersController(object):
                                 connectionStatus=disconnected))
                     return
                 except ValueError, err:
-                    logger.debug("Failed to retrieve experiment "
+                    logger.error("Failed to retrieve experiment "
                                  "for folder " +
                                  str(folderModel.GetFolder()))
-                    logger.debug(traceback.format_exc())
+                    logger.error(traceback.format_exc())
                     return
                 if experimentModel is None and not fc.testRun:
-                    logger.debug("Failed to acquire a MyTardis "
+                    logger.error("Failed to acquire a MyTardis "
                                  "experiment to store data in for "
                                  "folder " +
                                  folderModel.GetFolder())
@@ -558,6 +559,7 @@ class FoldersController(object):
             return
         if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
             if not wx.GetApp().PerformingLookupsAndUploads():
+                EndBusyCursorIfRequired()
                 return
         self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
@@ -653,11 +655,7 @@ class FoldersController(object):
         if hasattr(app, "SetTestRunRunning"):
             app.SetTestRunRunning(False)
 
-        # pylint: disable=bare-except
-        try:
-            wx.EndBusyCursor()
-        except:
-            pass
+        EndBusyCursorIfRequired()
 
         logger.debug("")
 

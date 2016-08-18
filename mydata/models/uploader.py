@@ -6,18 +6,17 @@ The purpose of this module is to help with registering MyData uploaders
 
 MyData POSTs some basic information about the PC and about the MyData
 installation to its MyTardis server.  This basic information is called an
-"Uploader" record.  In previous MyData versions, a single MyData user could
-create multiple Uploader records from each PC they run MyData on, one for
-each network interface on each PC.  In the latest MyData version however,
-that the Uploader is made unique by a locally-generated UUID (instead of
-the network interface's MAC address), each MyData instance should only
-have one Uploader record in MyTardis.
+"Uploader" record.  The Uploader is made unique by a locally-generated
+UUID, so each MyData instance should only have one Uploader record in MyTardis.
 
 Initially only HTTP POST uploads are enabled in MyData, but MyData will
 request uploads via SCP to a staging area, and wait for a MyTardis
 administrator to approve the request (which requires updating the
 UploaderRegistrationRequest record created by MyData in the Djano Admin
 interface).
+
+The IP address information provided in the Uploader record can be used
+on the SCP server to grant access via /etc/hosts.allow or equivalent.
 
 When the MyTardis administrator approves the UploaderRegistrationRequest,
 they will link the request to a MyTardis StorageBox, which must have
@@ -85,6 +84,7 @@ import traceback
 import uuid
 import threading
 
+import netifaces
 import psutil
 import requests
 
@@ -224,7 +224,7 @@ class UploaderModel(object):
                                     .replace("(Tentative)", "")
                         if "Subnet Mask" in key.strip(' .'):
                             subnetMask[interface] = value.strip()
-        else:
+        elif sys.platform.startswith("darwin"):
             proc = subprocess.Popen(["ifconfig", self.interface],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
@@ -253,6 +253,25 @@ class UploaderModel(object):
                 match = re.match(r"\s+inet6 (\S*)\s+.*$", row)
                 if match:
                     ipv6Address[self.interface] = match.groups()[0]
+        else:
+            macAddress = {}
+            ipv4Address = {}
+            ipv6Address = {}
+            subnetMask = {}
+            interface = self.interface
+
+            macAddress[interface] = \
+                netifaces.ifaddresses(interface)[netifaces.AF_LINK][0]['addr']
+
+            ipv4Addrs = netifaces.ifaddresses(interface)[netifaces.AF_INET]
+            ipv4Address[interface] = ipv4Addrs[0]['addr']
+            subnetMask[interface] = ipv4Addrs[0]['netmask']
+
+            ipv6Addrs = netifaces.ifaddresses(interface)[netifaces.AF_INET6]
+            for addr in ipv6Addrs:
+                match = re.match(r'(.+)%(.+)', addr['addr'])
+                if match and match.group(2) == interface:
+                    ipv6Address[interface] = match.group(1)
 
         self.macAddress = macAddress[self.interface]
         if self.interface in ipv4Address:
@@ -268,7 +287,7 @@ class UploaderModel(object):
         else:
             self.subnetMask = ""
 
-        logger.info("The active network interface is: " + str(self.interface))
+        logger.debug("The active network interface is: " + str(self.interface))
 
         self.name = self.settingsModel.GetInstrumentName()
         self.contactName = self.settingsModel.GetContactName()
@@ -353,7 +372,7 @@ class UploaderModel(object):
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
 
-        logger.info("Uploading uploader info to MyTardis...")
+        logger.debug("Uploading uploader info to MyTardis...")
 
         if numExistingUploaderRecords > 0:
             url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.id
@@ -418,7 +437,7 @@ class UploaderModel(object):
         else:
             response = requests.post(headers=headers, url=url, data=data)
         if response.status_code >= 200 and response.status_code < 300:
-            logger.info("Upload succeeded for uploader info.")
+            logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
         else:
             logger.error("Upload failed for uploader info.")
@@ -461,7 +480,7 @@ class UploaderModel(object):
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
             approvalJson = existingUploaderRecords['objects'][0]
-            logger.info("A request already exists for this uploader.")
+            logger.debug("A request already exists for this uploader.")
             response.close()
             return UploaderRegistrationRequest(
                 settingsModel=self.settingsModel,
@@ -469,7 +488,7 @@ class UploaderModel(object):
         else:
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
-            logger.info(message)
+            logger.debug(message)
             response.close()
             raise DoesNotExist(message)
 
@@ -537,18 +556,18 @@ class UploaderModel(object):
                 except DoesNotExist:
                     uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
-                    logger.info("Uploader registration request created.")
+                    logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
-                    logger.info("Generating new uploader registration request, "
-                                "because private key was moved or deleted.")
+                    logger.debug("Generating new uploader registration request, "
+                                 "because private key was moved or deleted.")
                     uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
-                    logger.info("Generated new uploader registration request, "
-                                "because private key was moved or deleted.")
+                    logger.debug("Generated new uploader registration request, "
+                                 "because private key was moved or deleted.")
                 if uploadToStagingRequest.IsApproved():
-                    logger.info("Uploads to staging have been approved!")
+                    logger.debug("Uploads to staging have been approved!")
                 else:
-                    logger.info("Uploads to staging haven't been approved yet.")
+                    logger.debug("Uploads to staging haven't been approved yet.")
                 self.settingsModel\
                     .SetUploadToStagingRequest(uploadToStagingRequest)
             except:
@@ -663,7 +682,7 @@ class UploaderModel(object):
     @staticmethod
     def GetActiveNetworkInterfaces():
         # pylint: disable=too-many-branches
-        logger.info("Determining the active network interface...")
+        logger.debug("Determining the active network interface...")
         activeInterfaces = []
         if sys.platform.startswith("win"):
             proc = subprocess.Popen(["netsh", "interface",
@@ -725,20 +744,8 @@ class UploaderModel(object):
                 if match and currentInterface:
                     activeInterfaces.append(currentInterface)
         elif sys.platform.startswith("linux"):
-            proc = subprocess.Popen(["/sbin/route"],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(stdout)
-
-            for line in stdout.split("\n"):
-                match = re.match(r"^default.*\s+(\S+)\s*$", line)
-                if match:
-                    interface = match.groups()[0].strip()
-                    activeInterfaces.append(interface)
+            interface = netifaces.gateways()['default'][netifaces.AF_INET][1]
+            activeInterfaces.append(interface)
 
         return activeInterfaces
 
