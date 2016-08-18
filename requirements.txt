@@ -2,6 +2,7 @@
 appdirs==1.4.0
 macholib==1.7
 modulegraph==0.12
+netifaces==0.10.4
 poster==0.8.1
 psutil==2.2.1
 # py2app==0.9

@@ -50,6 +50,11 @@ def EndBusyCursorIfRequired(event):
         if "no matching wxBeginBusyCursor()" not in str(err):
             logger.error(str(err))
             raise
+    except RuntimeError, err:
+        if "wrapped C/C++ object of type MyDataEvent has been deleted" \
+                not in str(err):
+            logger.error(str(err))
+            raise
 
 
 class MyDataEvents(object):
@@ -621,7 +626,7 @@ class MyDataEvent(wx.PyCommandEvent):
                                        wx.OK | wx.ICON_WARNING)
                 dlg.ShowModal()
         except:
-            logger.debug(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
     @staticmethod
     def ShutdownForRefresh(event):
@@ -654,7 +659,7 @@ class MyDataEvent(wx.PyCommandEvent):
                              shutdownForRefreshCompleteEvent)
                 wx.CallAfter(EndBusyCursorIfRequired, event)
             except:
-                logger.debug(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 message = "An error occurred while trying to shut down " \
                     "the existing data-scan-and-upload process in order " \
                     "to start another one.\n\n" \
@@ -733,6 +738,7 @@ class MyDataEvent(wx.PyCommandEvent):
             message = "Checking for data files on MyTardis and uploading " \
                 "if necessary..."
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
+            logger.info(message)
             if event.testRun:
                 logger.testrun(message)
             app = wx.GetApp()

@@ -38,15 +38,15 @@ class TestRunFrame(wx.Frame):
 
     def WriteLine(self, line):
         """
-        Write a line of text to the text control in the main GUI thread.
+        Write a line of text to the text control.
         """
-        wx.CallAfter(self.textCtrl.WriteText, str(line) + '\n')
+        self.textCtrl.WriteText(str(line) + '\n')
 
     def Clear(self):
         """
-        Clear the contents of the text control in the main GUI thread.
+        Clear the contents of the text control.
         """
-        wx.CallAfter(self.textCtrl.SetValue, "")
+        self.textCtrl.SetValue("")
 
     def OnCloseFrame(self, event):  # pylint: disable=unused-argument
         """
