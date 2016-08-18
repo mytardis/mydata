@@ -18,6 +18,7 @@ import threading
 import argparse
 from datetime import datetime
 import logging
+import subprocess
 
 import appdirs  # pylint: disable=import-error
 
@@ -387,6 +388,21 @@ class MyData(wx.App):
         else:
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
+            if sys.platform.startswith("linux"):
+                if os.getenv('DESKTOP_SESSION', '') == 'ubuntu':
+                    proc = subprocess.Popen(['dpkg', '-s',
+                                             'indicator-systemtray-unity'],
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT)
+                    _ = proc.communicate()
+                    if proc.returncode != 0:
+                        message = "Running MyData on Ubuntu's default " \
+                            "(Unity) desktop requires the " \
+                            "indicator-systemtray-unity package: " \
+                            "https://github.com/GGleb/" \
+                            "indicator-systemtray-unity"
+                        wx.MessageBox(message, "MyData", wx.ICON_ERROR)
+                        sys.exit(1)
             self.frame.Hide()
             title = "MyData"
             if sys.platform.startswith("darwin"):
