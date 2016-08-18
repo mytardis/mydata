@@ -23,6 +23,8 @@ from datetime import datetime
 from datetime import timedelta
 import threading
 import tempfile
+import shutil
+
 import psutil
 import requests
 from validate_email import validate_email
@@ -1432,6 +1434,21 @@ oFS.DeleteFile sLinkFile
                     if exitCode != 0:
                         logger.error("Received exit code %d from %s"
                                      % (exitCode, cmdString))
+            elif sys.platform.startswith("linux") and hasattr(sys, "frozen"):
+                autostartDir = os.path.join(os.path.expanduser('~'),
+                                            ".config", "autostart")
+                if self.StartAutomaticallyOnLogin():
+                    if not os.path.exists(autostartDir):
+                        os.makedirs(autostartDir)
+                    pathToMyDataDesktop = \
+                        os.path.join(os.path.dirname(sys.executable),
+                                     "MyData.desktop")
+                    shutil.copy(pathToMyDataDesktop, autostartDir)
+                else:
+                    mydataAutostartPath = os.path.join(autostartDir,
+                                                       "MyData.desktop")
+                    if os.path.exists(mydataAutostartPath):
+                        os.remove(mydataAutostartPath)
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
