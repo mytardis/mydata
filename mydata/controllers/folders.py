@@ -218,7 +218,8 @@ class FoldersController(object):
         except:
             needToRestartBusyCursor = False
         dlg.ShowModal()
-        if needToRestartBusyCursor:
+        if needToRestartBusyCursor and not self.IsShuttingDown() \
+                and wx.GetApp().PerformingLookupsAndUploads():
             wx.BeginBusyCursor()
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(False)
@@ -607,9 +608,12 @@ class FoldersController(object):
                 sshControlMasterPool.ShutDown()
 
         if self.testRun:
-            numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
-            numVerifiedUploads = self.verificationsModel.GetFoundVerifiedCount()
-            numFilesNotFoundOnServer = self.verificationsModel.GetNotFoundCount()
+            numVerificationsCompleted = \
+                self.verificationsModel.GetCompletedCount()
+            numVerifiedUploads = \
+                self.verificationsModel.GetFoundVerifiedCount()
+            numFilesNotFoundOnServer = \
+                self.verificationsModel.GetNotFoundCount()
             numFullSizeUnverifiedUploads = \
                 self.verificationsModel.GetFoundUnverifiedFullSizeCount()
             numIncompleteUploads = \
