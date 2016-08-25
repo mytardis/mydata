@@ -27,10 +27,6 @@ from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
 from mydata.logs.wxloghandler import WxLogHandler
 from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
 
-# Define a custom log level for writing to the Test Run Frame.
-# Avoid clashing with built-in level numbers (0, 10, 20, 30, 40, 50)
-TESTRUN_LEVEL_NUM = 5
-
 
 class Logger(object):
     """
@@ -54,7 +50,6 @@ class Logger(object):
         self.contactName = ""
         self.contactEmail = ""
         self.comments = ""
-        self.testrunLogOutput = ""
 
     def SetMyDataConfigPath(self, myDataConfigPath):
         self.myDataConfigPath = myDataConfigPath
@@ -72,8 +67,6 @@ class Logger(object):
         self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):
-        logging.addLevelName(TESTRUN_LEVEL_NUM, "TESTRUN")
-
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(self.level)
 
@@ -207,10 +200,11 @@ class Logger(object):
     def testrun(self, message):
         # pylint: disable=invalid-name
         # pylint: disable=no-self-use
-        if threading.current_thread().name == "MainThread":
-            wx.GetApp().GetTestRunFrame().WriteLine(message)
-        else:
-            wx.CallAfter(wx.GetApp().GetTestRunFrame().WriteLine, message)
+        """
+        Always use wx.CallAfter, even when called from the MainThread,
+        to ensure that log messages appear in a deterministic order.
+        """
+        wx.CallAfter(wx.GetApp().GetTestRunFrame().WriteLine, message)
 
     def DumpLog(self, myDataMainFrame, settingsModel, submitDebugLog=False):
         # pylint: disable=too-many-statements
