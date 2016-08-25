@@ -356,6 +356,8 @@ C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg) and
 updating the settings outside of MyData.
 
 
+.. _settings-saving-loading:
+
 Saving and Loading Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Each time you click OK on the Settings Dialog, your settings are validated, and
