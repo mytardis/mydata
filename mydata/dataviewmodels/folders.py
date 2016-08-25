@@ -651,7 +651,7 @@ class FoldersModel(DataViewIndexListModel):
                 self.groupsModel.AddRow(groupRecord)
             groupFolderPath = os.path.join(dataDir, groupFolderName)
             if folderStructure == \
-                    'User Group / Instrument / Name / Dataset':
+                    'User Group / Instrument / Full Name / Dataset':
                 self.ImportGroupFolders(groupFolderPath, groupRecord)
             elif folderStructure == 'User Group / Experiment / Dataset':
                 defaultOwner = self.settingsModel.GetDefaultOwner()
