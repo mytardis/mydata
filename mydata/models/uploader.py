@@ -84,13 +84,16 @@ import traceback
 import uuid
 import threading
 
-import netifaces
 import psutil
 import requests
 
 if sys.platform.startswith("win"):
     # pylint: disable=import-error
     import win32process
+
+if sys.platform.startswith("linux"):
+    # pylint: disable=import-error
+    import netifaces
 
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
