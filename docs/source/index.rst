@@ -11,6 +11,7 @@ Contents
    download
    mytardis-prerequisites
    settings
+   test-run
    upload-methods
    user-groups
    macosx-walkthrough
