@@ -450,8 +450,9 @@ class UploaderModel(object):
 
     def ExistingUploadToStagingRequest(self):
         try:
-            # The private key file path must be ~/.ssh/MyData
-            keyPair = OpenSSH.FindKeyPair("MyData")
+            keyPair = self.settingsModel.GetSshKeyPair()
+            if not keyPair:
+                keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
@@ -501,7 +502,9 @@ class UploaderModel(object):
         to a staging area, and then register in MyTardis.
         """
         try:
-            keyPair = OpenSSH.FindKeyPair("MyData")
+            keyPair = self.settingsModel.GetSshKeyPair()
+            if not keyPair:
+                keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
