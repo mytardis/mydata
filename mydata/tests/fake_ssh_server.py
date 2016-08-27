@@ -5,14 +5,14 @@ Local SSH/SCP server for testing.
 
 It listens on port 2200, so you can connect to it as follows:
 
-ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyData \
+ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyDataTest \
         -p 2200 mydata@localhost wc -c setup.py
 
 It can also be used to test SCP, for example, copying the file "hello"
 using a Cygwin build of scp from a Windows command prompt:
 
 scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
--i /cygdrive/C/Users/jsmith/.ssh/MyData \
+-i /cygdrive/C/Users/jsmith/.ssh/MyDataTest \
 /cygdrive/C/Users/jsmith/Desktop/hello.txt \
 mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 """
@@ -62,8 +62,8 @@ class SshServerInterface(paramiko.ServerInterface):
     """
     def __init__(self):
         self.command = None
-        keyPair = OpenSSH.FindKeyPair("MyData")
-        # Remove "ssh-rsa " and "MyData key":
+        keyPair = OpenSSH.FindKeyPair("MyDataTest")
+        # Remove "ssh-rsa " and "MyDataTest key":
         data = bytes(keyPair.GetPublicKey().split(" ")[1])
         self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 

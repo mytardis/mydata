@@ -45,12 +45,13 @@ class ScanFoldersTester(unittest.TestCase):
         # So we need to ensure that the MyData keypair
         # is generated before starting the fake SSH server.
         try:
-            self.keyPair = OpenSSH.FindKeyPair("MyData")
+            self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
         except PrivateKeyDoesNotExist:
-            self.keyPair = OpenSSH.NewKeyPair("MyData")
+            self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
         self.StartFakeSshServer()
 
     def tearDown(self):
+        self.keyPair.Delete()
         self.frame.Destroy()
         self.fakeMyTardisServerProcess.terminate()
         self.fakeSshServerProcess.terminate()
@@ -72,6 +73,7 @@ class ScanFoldersTester(unittest.TestCase):
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
+        settingsModel.SetSshKeyPair(self.keyPair)
         settingsModel.SetUseSshControlMasterIfAvailable(False)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
