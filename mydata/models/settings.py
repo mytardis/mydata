@@ -764,7 +764,8 @@ class SettingsModel(object):
                 settingsList.append(dict(key=field, value=str(value)))
             configParser.write(configFile)
         logger.info("Saved settings to " + configPath)
-        self.uploaderModel.UpdateSettings(settingsList)
+        if self.uploaderModel:
+            self.uploaderModel.UpdateSettings(settingsList)
 
     def RollBack(self):
         """
