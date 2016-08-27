@@ -25,18 +25,15 @@ class SettingsDialogTester(unittest.TestCase):
         safest to do it in setUp, because we know that setUp
         will only be called once, so only one app will be created.
         """
-        self.app = wx.PySimpleApp()
+        self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY)
         self.frame.Show()
         self.settingsModel = SettingsModel(configPath=None)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
 
     def tearDown(self):
-        self.frame.Hide()
-        self.frame.Destroy()
         self.settingsDialog.Hide()
-        self.settingsDialog.Destroy()
-        self.app.Destroy()
+        self.frame.Destroy()
 
     def test_settings_dialog(self):
         """
