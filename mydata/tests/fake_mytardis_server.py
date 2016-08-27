@@ -186,7 +186,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=testuser1":
+        elif self.path == "/api/v1/user/?format=json&username=testuser1" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testuser1%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -211,7 +213,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=testuser2":
+        elif self.path == "/api/v1/user/?format=json&username=testuser2" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testuser2%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -236,6 +240,80 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
+        elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group1":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            groupsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": "101",
+                        "name": "TestFacility-Group1",
+                        "resource_uri": "/api/v1/group/1/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(groupsJson))
+        elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group2":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            groupsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": "102",
+                        "name": "TestFacility-Group2",
+                        "resource_uri": "/api/v1/user/2/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(groupsJson))
+        elif self.path.startswith("/api/v1/instrument/?format=json"
+                                  "&facility__id=2&name=Instrument1"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": 1,
+                        "name": "Instrument1",
+                        "facility": {
+                            "id": 2,
+                            "manager_group": {
+                                "id": 2,
+                                "name": "test_facility_managers",
+                                "resource_uri": "/api/v1/group/2/"
+                            },
+                            "name": "Test Facility",
+                            "resource_uri": "/api/v1/facility/2/"
+                        },
+                        "resource_uri": "/api/v1/instrument/1/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
         elif self.path.startswith("/api/v1/mydata_uploader/?format=json&uuid="):
             match = re.match(r"^.*uuid=(\S+)$", self.path)
             if match:
