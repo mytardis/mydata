@@ -488,10 +488,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif self.path.startswith("/api/v1/dataset/?format=json&experiments__id="):
             # e.g. /api/v1/dataset/?format=json&experiments__id=2551&description=Flowers
             match = re.match(r"^.*&experiments__id=(\S+)&description=(\S+)$", self.path)
-            if match:
-                experimentId = match.groups()[0]
-                _ = urllib.unquote(match.groups()[1])  # description
-            else:
+            if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
@@ -510,35 +507,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "next": None,
                     "offset": 0,
                     "previous": None,
-                    "total_count": 1
+                    "total_count": 0
                 },
                 "objects": [
-                    {
-                        "description": "Flowers",
-                        "directory": "",
-                        "experiments": [
-                            "/api/v1/experiment/%s/" % experimentId
-                        ],
-                        "id": 4457,
-                        "immutable": False,
-                        "instrument": {
-                            "facility": {
-                                "id": 2,
-                                "manager_group": {
-                                    "id": 2,
-                                    "name": "test_facility_managers",
-                                    "resource_uri": "/api/v1/group/2/"
-                                },
-                                "name": "Test Facility",
-                                "resource_uri": "/api/v1/facility/2/"
-                            },
-                            "id": 31,
-                            "name": "Test Instrument",
-                            "resource_uri": "/api/v1/instrument/31/"
-                        },
-                        "parameter_sets": [],
-                        "resource_uri": "/api/v1/dataset/4457/"
-                    }
                 ]
             }
             self.wfile.write(json.dumps(datasetsJson))
@@ -654,6 +625,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         Respond to a POST request
         """
+        # pylint: disable=too-many-locals
         length = int(self.headers['Content-Length'])
         postData = json.loads(self.rfile.read(length))
 
@@ -756,6 +728,40 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             objectaclJson = {
             }
             self.wfile.write(json.dumps(objectaclJson))
+        elif self.path == "/api/v1/dataset/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            experimentResourceUri = postData['experiments'][0]
+            experimentId = experimentResourceUri.split("/")[-2]
+            description = postData['description']
+            datasetJson = {
+                "description": description,
+                "directory": "",
+                "experiments": [
+                    "/api/v1/experiment/%s/" % experimentId
+                ],
+                "id": 4457,
+                "immutable": False,
+                "instrument": {
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
+                            "id": 2,
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
+                        },
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "id": 31,
+                    "name": "Test Instrument",
+                    "resource_uri": "/api/v1/instrument/31/"
+                },
+                "parameter_sets": [],
+                "resource_uri": "/api/v1/dataset/4457/"
+            }
+            self.wfile.write(json.dumps(datasetJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to POST: %s" % self.path)
