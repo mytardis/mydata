@@ -3,6 +3,7 @@ Test ability to open settings dialog.
 """
 import unittest
 import logging
+import tempfile
 import wx
 
 from mydata.models.settings import SettingsModel
@@ -30,17 +31,21 @@ class SettingsDialogTester(unittest.TestCase):
         self.frame.Show()
         self.settingsModel = SettingsModel(configPath=None)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
+        self.tempConfig = tempfile.NamedTemporaryFile()
 
     def tearDown(self):
         self.settingsDialog.Hide()
         self.frame.Destroy()
+        self.tempConfig.close()
 
     def test_settings_dialog(self):
         """
         Test ability to open settings dialog.
         """
-        # pylint: disable=no-self-use
         self.settingsDialog.Show()
+        self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
+                                                configPath=self.tempConfig.name,
+                                                saveToDisk=True)
 
 
 if __name__ == '__main__':
