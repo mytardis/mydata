@@ -1742,6 +1742,10 @@ oFS.DeleteFile sLinkFile
                     'User Group / Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                filterString1 = '*'
+                filterString2 = expFilterString
             if self.GetFolderStructure().startswith("Username") or \
                     self.GetFolderStructure().startswith("Email") or \
                     self.GetFolderStructure().startswith("User Group"):
