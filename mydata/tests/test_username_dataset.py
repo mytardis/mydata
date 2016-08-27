@@ -1,5 +1,5 @@
 """
-Test ability to scan folders.
+Test ability to scan folders with the Username / Dataset structure.
 """
 import os
 import sys
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class ScanFoldersTester(unittest.TestCase):
     """
-    Test ability to scan folders.
+    Test ability to scan folders with the Username / Dataset structure.
     """
     def __init__(self, *args, **kwargs):
         super(ScanFoldersTester, self).__init__(*args, **kwargs)
@@ -36,7 +36,7 @@ class ScanFoldersTester(unittest.TestCase):
         self.fakeSshServerProcess = None
 
     def setUp(self):
-        self.app = wx.PySimpleApp()
+        self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanFoldersTester')
         self.StartFakeMyTardisServer()
@@ -52,13 +52,12 @@ class ScanFoldersTester(unittest.TestCase):
 
     def tearDown(self):
         self.frame.Destroy()
-        self.app.Destroy()
         self.fakeMyTardisServerProcess.terminate()
         self.fakeSshServerProcess.terminate()
 
     def test_scan_folders(self):
         """
-        Test ability to scan folders.
+        Test ability to scan folders with the Username / Dataset structure.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -67,12 +66,12 @@ class ScanFoldersTester(unittest.TestCase):
 
         pathToTestConfig = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdata1.cfg")
+            "testdata/testdataUsernameDataset.cfg")
         settingsModel = SettingsModel(pathToTestConfig)
         settingsModel.SetDataDirectory(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "testdata", "testdata1"))
+                "testdata", "testdataUsernameDataset"))
         settingsModel.SetUseSshControlMasterIfAvailable(False)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
