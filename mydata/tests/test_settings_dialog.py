@@ -7,6 +7,9 @@ import tempfile
 import os
 import wx
 
+from mydata.events import MyDataEvent
+from mydata.events import EVT_SETTINGS_DIALOG_VALIDATION
+from mydata.events import EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
 
@@ -46,6 +49,17 @@ class SettingsDialogTester(unittest.TestCase):
         Test ability to open settings dialog.
         """
         self.settingsDialog.Show()
+
+        event = MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
+                            settingsDialog=self.settingsDialog,
+                            settingsModel=self.settingsModel)
+        MyDataEvent.SettingsDialogValidation(event)
+        event = MyDataEvent(EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
+                            settingsDialog=self.settingsDialog,
+                            settingsModel=self.settingsModel)
+        MyDataEvent.ProvideSettingsValidationResults(event)
+
+        self.settingsModel.SetUploaderModel(None)
         self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
                                                 configPath=self.tempFilePath,
                                                 saveToDisk=True)

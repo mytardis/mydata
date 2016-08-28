@@ -185,10 +185,11 @@ class MyDataEvent(wx.PyCommandEvent):
             if len(activeNetworkInterfaces) > 0:
                 logger.debug("Found at least one active network interface: %s."
                              % activeNetworkInterfaces[0])
-                wx.GetApp().SetLastConnectivityCheckSuccess(True)
-                wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
-                wx.GetApp()\
-                    .SetActiveNetworkInterface(activeNetworkInterfaces[0])
+                app = wx.GetApp()
+                if hasattr(app, "GetMainFrame"):
+                    app.SetLastConnectivityCheckSuccess(True)
+                    app.SetLastConnectivityCheckTime(datetime.now())
+                    app.SetActiveNetworkInterface(activeNetworkInterfaces[0])
                 if event.nextEvent:
                     wx.PostEvent(wx.GetApp().GetMainFrame(), event.nextEvent)
             else:
@@ -372,26 +373,27 @@ class MyDataEvent(wx.PyCommandEvent):
                 wx.CallAfter(event.settingsDialog.okButton.Disable)
                 wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Disable)
 
-                intervalSinceLastCheck = datetime.now() - \
-                    wx.GetApp().GetLastConnectivityCheckTime()
-                checkInterval = \
-                    event.settingsModel.GetConnectivityCheckInterval()
-                if intervalSinceLastCheck.total_seconds() >= checkInterval or \
-                        not wx.GetApp()\
-                        .GetLastConnectivityCheckSuccess():
-                    settingsDialogValidationEvent = \
-                        MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
-                                    settingsDialog=event.settingsDialog,
-                                    settingsModel=settingsModel,
-                                    okEvent=event)
-                    checkConnectivityEvent = \
-                        MyDataEvent(EVT_CHECK_CONNECTIVITY,
-                                    settingsDialog=event.settingsDialog,
-                                    settingsModel=settingsModel,
-                                    nextEvent=settingsDialogValidationEvent)
-                    wx.PostEvent(wx.GetApp().GetMainFrame(),
-                                 checkConnectivityEvent)
-                    return
+                app = wx.GetApp()
+                if hasattr(app, "GetLastConnectivityCheckTime"):
+                    intervalSinceLastCheck = datetime.now() - \
+                        app.GetLastConnectivityCheckTime()
+                    checkInterval = \
+                        event.settingsModel.GetConnectivityCheckInterval()
+                    if intervalSinceLastCheck.total_seconds() >= checkInterval \
+                            or not app.GetLastConnectivityCheckSuccess():
+                        settingsDialogValidationEvent = \
+                            MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
+                                        settingsDialog=event.settingsDialog,
+                                        settingsModel=settingsModel,
+                                        okEvent=event)
+                        checkConnectivityEvent = \
+                            MyDataEvent(EVT_CHECK_CONNECTIVITY,
+                                        settingsDialog=event.settingsDialog,
+                                        settingsModel=settingsModel,
+                                        nextEvent=settingsDialogValidationEvent)
+                        wx.PostEvent(app.GetMainFrame(),
+                                     checkConnectivityEvent)
+                        return
                 try:
                     event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                              saveToDisk=False)
@@ -414,11 +416,10 @@ class MyDataEvent(wx.PyCommandEvent):
                     EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
                     settingsDialog=event.settingsDialog,
                     settingsModel=event.settingsModel)
-                wx.PostEvent(wx.GetApp().GetMainFrame(),
-                             provideValidationResultsEvent)
+                if hasattr(app, "GetMainFrame"):
+                    wx.PostEvent(app.GetMainFrame(),
+                                 provideValidationResultsEvent)
             except IncompatibleMyTardisVersion as err:
-                logger.debug("Finished running settingsModel.Validate() 3")
-
                 wx.CallAfter(EndBusyCursorIfRequired, event)
 
                 def ShowDialog(message):
@@ -451,7 +452,6 @@ class MyDataEvent(wx.PyCommandEvent):
                 wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
                 wx.CallAfter(EndBusyCursorIfRequired, event)
 
-            logger.debug("Finished running settingsModel.Validate() 4")
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
@@ -606,13 +606,16 @@ class MyDataEvent(wx.PyCommandEvent):
             # Use the config path determined by appdirs, not the one
             # determined by a user dragging and dropping a config
             # file onto MyData's Settings dialog:
-            event.settingsModel\
-                .SaveFieldsFromDialog(event.settingsDialog,
-                                      configPath=wx.GetApp().GetConfigPath(),
-                                      saveToDisk=True)
+            app = wx.GetApp()
+            if hasattr(app, "GetConfigPath"):
+                configPath = app.GetConfigPath()
+            else:
+                configPath = None
+            event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
+                                                     configPath=configPath,
+                                                     saveToDisk=True)
             event.settingsDialog.EndModal(wx.ID_OK)
             event.settingsDialog.Show(False)
-            # event.settingsDialog.Destroy()
             logger.debug("Closed Settings dialog.")
 
             if event.settingsModel.GetScheduleType() == "Manually":
