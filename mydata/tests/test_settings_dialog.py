@@ -40,7 +40,8 @@ class SettingsDialogTester(unittest.TestCase):
         self.tempConfig.close()
 
     def tearDown(self):
-        os.remove(self.tempFilePath)
+        if os.path.exists(self.tempFilePath):
+            os.remove(self.tempFilePath)
         self.settingsDialog.Hide()
         self.frame.Destroy()
 
@@ -49,17 +50,6 @@ class SettingsDialogTester(unittest.TestCase):
         Test ability to open settings dialog.
         """
         self.settingsDialog.Show()
-
-        event = MyDataEvent(EVT_SETTINGS_DIALOG_VALIDATION,
-                            settingsDialog=self.settingsDialog,
-                            settingsModel=self.settingsModel)
-        MyDataEvent.SettingsDialogValidation(event)
-        event = MyDataEvent(EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS,
-                            settingsDialog=self.settingsDialog,
-                            settingsModel=self.settingsModel)
-        MyDataEvent.ProvideSettingsValidationResults(event)
-
-        self.settingsModel.SetUploaderModel(None)
         self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
                                                 configPath=self.tempFilePath,
                                                 saveToDisk=True)
