@@ -7,9 +7,6 @@ import tempfile
 import os
 import wx
 
-from mydata.events import MyDataEvent
-from mydata.events import EVT_SETTINGS_DIALOG_VALIDATION
-from mydata.events import EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
 
