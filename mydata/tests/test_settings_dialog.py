@@ -5,6 +5,7 @@ import unittest
 import logging
 import tempfile
 import wx
+import os
 
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
@@ -32,11 +33,13 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsModel = SettingsModel(configPath=None)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
         self.tempConfig = tempfile.NamedTemporaryFile()
+        self.tempFilePath = self.tempConfig.name
+        self.tempConfig.close()
 
     def tearDown(self):
+        os.remove(self.tempFilePath)
         self.settingsDialog.Hide()
         self.frame.Destroy()
-        self.tempConfig.close()
 
     def test_settings_dialog(self):
         """
@@ -44,7 +47,7 @@ class SettingsDialogTester(unittest.TestCase):
         """
         self.settingsDialog.Show()
         self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
-                                                configPath=self.tempConfig.name,
+                                                configPath=self.tempFilePath,
                                                 saveToDisk=True)
 
 
