@@ -4,8 +4,8 @@ Test ability to open settings dialog.
 import unittest
 import logging
 import tempfile
-import wx
 import os
+import wx
 
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
