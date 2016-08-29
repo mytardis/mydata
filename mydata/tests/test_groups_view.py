@@ -2,29 +2,30 @@
 Test ability to open groups view.
 """
 import unittest
-import logging
 import wx
 
 from mydata.dataviewmodels.groups import GroupsModel
 from mydata.views.groups import GroupsView
-
-logger = logging.getLogger(__name__)
 
 
 class GroupsViewTester(unittest.TestCase):
     """
     Test ability to open groups view.
     """
+    def setUp(self):
+        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.frame = wx.Frame(None, title='GroupsViewTester')
+        self.settingsModel = None
+        self.groupsModel = GroupsModel(self.settingsModel)
+        self.groupsView = GroupsView(self.frame, groupsModel=self.groupsModel)
+        self.frame.Show()
+
     def test_groups_view(self):
         """
         Test ability to open groups view.
         """
         # pylint: disable=no-self-use
+        pass
 
-        app = wx.App(redirect=False)  # pylint: disable=unused-variable
-        frame = wx.Frame(None)
-        settingsModel = None
-        groupsModel = GroupsModel(settingsModel)
-        GroupsView(frame, groupsModel=groupsModel)
-        frame.Show()
-        frame.Destroy()
+    def tearDown(self):
+        self.frame.Destroy()

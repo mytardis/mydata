@@ -1,8 +1,7 @@
 """
-Test ability to open settings dialog.
+Test ability to open settings dialog and save fields.
 """
 import unittest
-import logging
 import tempfile
 import os
 import wx
@@ -10,12 +9,10 @@ import wx
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
 
-logger = logging.getLogger(__name__)
-
 
 class SettingsDialogTester(unittest.TestCase):
     """
-    Test ability to open settings dialog.
+    Test ability to open settings dialog and save fields.
 
     References:
     http://wiki.wxpython.org/Unit%20Testing%20with%20wxPython
@@ -28,10 +25,12 @@ class SettingsDialogTester(unittest.TestCase):
         will only be called once, so only one app will be created.
         """
         self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY)
+        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
+                              title="Settings Dialog test")
         self.frame.Show()
         self.settingsModel = SettingsModel(configPath=None)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
+        self.settingsDialog.Show()
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
@@ -44,9 +43,8 @@ class SettingsDialogTester(unittest.TestCase):
 
     def test_settings_dialog(self):
         """
-        Test ability to open settings dialog.
+        Test ability to open settings dialog and save fields.
         """
-        self.settingsDialog.Show()
         self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
                                                 configPath=self.tempFilePath,
                                                 saveToDisk=True)

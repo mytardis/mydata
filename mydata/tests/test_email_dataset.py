@@ -4,7 +4,6 @@ Test ability to scan folders with the Email / Dataset structure.
 import os
 import sys
 import time
-import logging
 import subprocess
 import unittest
 
@@ -15,8 +14,6 @@ from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
 from mydata.dataviewmodels.groups import GroupsModel
-
-logger = logging.getLogger(__name__)
 
 
 class ScanFoldersTester(unittest.TestCase):
