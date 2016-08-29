@@ -4,7 +4,6 @@ Test ability to scan folders with the Username / Dataset structure.
 import os
 import sys
 import time
-import logging
 import subprocess
 import unittest
 
@@ -23,22 +22,20 @@ import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
-logger = logging.getLogger(__name__)
 
-
-class ScanFoldersTester(unittest.TestCase):
+class ScanUsernameDatasetTester(unittest.TestCase):
     """
     Test ability to scan folders with the Username / Dataset structure.
     """
     def __init__(self, *args, **kwargs):
-        super(ScanFoldersTester, self).__init__(*args, **kwargs)
+        super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
         self.fakeMyTardisServerProcess = None
         self.fakeSshServerProcess = None
 
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='ScanFoldersTester')
+                              title='ScanUsernameDatasetTester')
         self.StartFakeMyTardisServer()
         # The fake SSH server needs to know the public
         # key so it can authenticate the test client.
@@ -181,7 +178,6 @@ class ScanFoldersTester(unittest.TestCase):
             foldersController.UploadDatafile(event)
 
         sys.stderr.write("Waiting for uploads to complete...\n")
-        logger.debug("Waiting for uploads to complete...")
         while True:
             uploadsCompleted = uploadsModel.GetCompletedCount()
             uploadsFailed = uploadsModel.GetFailedCount()

@@ -15,7 +15,8 @@ class ConnectivityCheckTester(unittest.TestCase):
     """
     def setUp(self):
         self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY)
+        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
+                              title="Connectivity check test")
         self.settingsModel = SettingsModel(configPath=None)
 
     def tearDown(self):
