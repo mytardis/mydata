@@ -192,6 +192,7 @@ class SettingsModel(object):
         file,
         e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
         """
+        # pylint: disable=too-many-locals
         # General tab
         self.instrument_name = ""
         self.instrument = None
@@ -363,7 +364,11 @@ class SettingsModel(object):
         if self.uuid and checkForUpdates:
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
-            settingsFromServer = uploaderModel.GetSettings()
+            try:
+                settingsFromServer = uploaderModel.GetSettings()
+            except requests.exceptions.RequestException as err:
+                logger.error(err)
+                settingsFromServer = None
             if settingsFromServer:
                 logger.debug("Settings were found on the server.")
                 for setting in settingsFromServer:
@@ -764,7 +769,11 @@ class SettingsModel(object):
                 settingsList.append(dict(key=field, value=str(value)))
             configParser.write(configFile)
         logger.info("Saved settings to " + configPath)
-        self.uploaderModel.UpdateSettings(settingsList)
+        if self.uploaderModel:
+            try:
+                self.uploaderModel.UpdateSettings(settingsList)
+            except requests.exceptions.RequestException as err:
+                logger.error(err)
 
     def RollBack(self):
         """
@@ -1742,6 +1751,10 @@ oFS.DeleteFile sLinkFile
                     'User Group / Experiment / Dataset':
                 filterString1 = expFilterString
                 filterString2 = datasetFilterString
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                filterString1 = '*'
+                filterString2 = expFilterString
             if self.GetFolderStructure().startswith("Username") or \
                     self.GetFolderStructure().startswith("Email") or \
                     self.GetFolderStructure().startswith("User Group"):

@@ -1,10 +1,9 @@
 """
-Test ability to scan folders.
+Test ability to scan folders with the Username / Dataset structure.
 """
 import os
 import sys
 import time
-import logging
 import subprocess
 import unittest
 
@@ -23,42 +22,40 @@ import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 
-logger = logging.getLogger(__name__)
 
-
-class ScanFoldersTester(unittest.TestCase):
+class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test ability to scan folders.
+    Test ability to scan folders with the Username / Dataset structure.
     """
     def __init__(self, *args, **kwargs):
-        super(ScanFoldersTester, self).__init__(*args, **kwargs)
+        super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
         self.fakeMyTardisServerProcess = None
         self.fakeSshServerProcess = None
 
     def setUp(self):
-        self.app = wx.PySimpleApp()
+        self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='ScanFoldersTester')
+                              title='ScanUsernameDatasetTester')
         self.StartFakeMyTardisServer()
         # The fake SSH server needs to know the public
         # key so it can authenticate the test client.
         # So we need to ensure that the MyData keypair
         # is generated before starting the fake SSH server.
         try:
-            self.keyPair = OpenSSH.FindKeyPair("MyData")
+            self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
         except PrivateKeyDoesNotExist:
-            self.keyPair = OpenSSH.NewKeyPair("MyData")
+            self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
         self.StartFakeSshServer()
 
     def tearDown(self):
+        self.keyPair.Delete()
         self.frame.Destroy()
-        self.app.Destroy()
         self.fakeMyTardisServerProcess.terminate()
         self.fakeSshServerProcess.terminate()
 
     def test_scan_folders(self):
         """
-        Test ability to scan folders.
+        Test ability to scan folders with the Username / Dataset structure.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -67,12 +64,13 @@ class ScanFoldersTester(unittest.TestCase):
 
         pathToTestConfig = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdata1.cfg")
+            "testdata/testdataUsernameDataset.cfg")
         settingsModel = SettingsModel(pathToTestConfig)
         settingsModel.SetDataDirectory(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "testdata", "testdata1"))
+                "testdata", "testdataUsernameDataset"))
+        settingsModel.SetSshKeyPair(self.keyPair)
         settingsModel.SetUseSshControlMasterIfAvailable(False)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
@@ -180,7 +178,6 @@ class ScanFoldersTester(unittest.TestCase):
             foldersController.UploadDatafile(event)
 
         sys.stderr.write("Waiting for uploads to complete...\n")
-        logger.debug("Waiting for uploads to complete...")
         while True:
             uploadsCompleted = uploadsModel.GetCompletedCount()
             uploadsFailed = uploadsModel.GetFailedCount()

@@ -17,7 +17,6 @@ import json
 import tempfile
 import os
 import urllib
-# import urlparse
 import logging
 
 from mydata.utils.openssh import GetCygwinPath
@@ -186,7 +185,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=testuser1":
+        elif self.path == "/api/v1/user/?format=json&username=testuser1" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testuser1%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -211,7 +212,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=testuser2":
+        elif self.path == "/api/v1/user/?format=json&username=testuser2" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testuser2%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -236,6 +239,80 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
+        elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group1":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            groupsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": "101",
+                        "name": "TestFacility-Group1",
+                        "resource_uri": "/api/v1/group/1/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(groupsJson))
+        elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group2":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            groupsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": "102",
+                        "name": "TestFacility-Group2",
+                        "resource_uri": "/api/v1/user/2/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(groupsJson))
+        elif self.path.startswith("/api/v1/instrument/?format=json"
+                                  "&facility__id=2&name=Instrument1"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": 1,
+                        "name": "Instrument1",
+                        "facility": {
+                            "id": 2,
+                            "manager_group": {
+                                "id": 2,
+                                "name": "test_facility_managers",
+                                "resource_uri": "/api/v1/group/2/"
+                            },
+                            "name": "Test Facility",
+                            "resource_uri": "/api/v1/facility/2/"
+                        },
+                        "resource_uri": "/api/v1/instrument/1/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
         elif self.path.startswith("/api/v1/mydata_uploader/?format=json&uuid="):
             match = re.match(r"^.*uuid=(\S+)$", self.path)
             if match:
@@ -402,83 +479,16 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "next": None,
                     "offset": 0,
                     "previous": None,
-                    "total_count": 1
+                    "total_count": 0
                 },
                 "objects": [
-                    {
-                        "approved": False,
-                        "authors": [],
-                        "created_by": "/api/v1/user/7/",
-                        "created_time": "2015-10-06T10:12:43.069846",
-                        "description": "Uploader: Test Instrument\n"
-                                       "User folder name: testuser2\n"
-                                       "Uploaded from: MU00087002X:"
-                                       "/Users/Shared/DemoData/testuser2",
-                        "end_time": None,
-                        "handle": "",
-                        "id": 2551,
-                        "institution_name": "Monash University",
-                        "locked": False,
-                        "owner_ids": [7, 149],
-                        "parameter_sets": [
-                            {
-                                "experiment": "/api/v1/experiment/2551/",
-                                "id": 2538,
-                                "parameters": [
-                                    {
-                                        "datetime_value": None,
-                                        "id": 5234,
-                                        "link_id": 25,
-                                        "name": "/api/v1/parametername/309/",
-                                        "numerical_value": None,
-                                        "parameterset": "/api/v1/experimentparameterset/2538/",
-                                        "resource_uri": "/api/v1/experimentparameter/5234/",
-                                        "string_value": "cfb48c4f-29cc-11e5-b8ee-a45e60d72633",
-                                        "value": None
-                                    },
-                                    {
-                                        "datetime_value": None,
-                                        "id": 5235,
-                                        "link_id": None,
-                                        "name": "/api/v1/parametername/310/",
-                                        "numerical_value": None,
-                                        "parameterset": "/api/v1/experimentparameterset/2538/",
-                                        "resource_uri": "/api/v1/experimentparameter/5235/",
-                                        "string_value": "testuser2",
-                                        "value": None
-                                    }
-                                ],
-                                "resource_uri": "/api/v1/experimentparameterset/2538/",
-                                "schema": {
-                                    "hidden": True,
-                                    "id": 31,
-                                    "immutable": True,
-                                    "name": "MyData Default Experiment",
-                                    "namespace":
-                                        "http://mytardis.org"
-                                        "/schemas/mydata/defaultexperiment",
-                                    "resource_uri": "/api/v1/schema/31/",
-                                    "subtype": "",
-                                    "type": 1
-                                }
-                            }
-                        ],
-                        "public_access": 1,
-                        "resource_uri": "/api/v1/mydata_experiment/2551/",
-                        "start_time": None,
-                        "title": "Test Instrument - Test User2",
-                        "update_time": "2015-10-06T10:12:43.069896", "url": None
-                    }
                 ]
             }
             self.wfile.write(json.dumps(experimentsJson))
         elif self.path.startswith("/api/v1/dataset/?format=json&experiments__id="):
             # e.g. /api/v1/dataset/?format=json&experiments__id=2551&description=Flowers
             match = re.match(r"^.*&experiments__id=(\S+)&description=(\S+)$", self.path)
-            if match:
-                experimentId = match.groups()[0]
-                _ = urllib.unquote(match.groups()[1])  # description
-            else:
+            if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
@@ -497,35 +507,9 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "next": None,
                     "offset": 0,
                     "previous": None,
-                    "total_count": 1
+                    "total_count": 0
                 },
                 "objects": [
-                    {
-                        "description": "Flowers",
-                        "directory": "",
-                        "experiments": [
-                            "/api/v1/experiment/%s/" % experimentId
-                        ],
-                        "id": 4457,
-                        "immutable": False,
-                        "instrument": {
-                            "facility": {
-                                "id": 2,
-                                "manager_group": {
-                                    "id": 2,
-                                    "name": "test_facility_managers",
-                                    "resource_uri": "/api/v1/group/2/"
-                                },
-                                "name": "Test Facility",
-                                "resource_uri": "/api/v1/facility/2/"
-                            },
-                            "id": 31,
-                            "name": "Test Instrument",
-                            "resource_uri": "/api/v1/instrument/31/"
-                        },
-                        "parameter_sets": [],
-                        "resource_uri": "/api/v1/dataset/4457/"
-                    }
                 ]
             }
             self.wfile.write(json.dumps(datasetsJson))
@@ -641,25 +625,25 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         Respond to a POST request
         """
+        # pylint: disable=too-many-locals
         length = int(self.headers['Content-Length'])
-        # postData = urlparse.parse_qs(self.rfile.read(length).decode('utf-8'))
         postData = json.loads(self.rfile.read(length))
 
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.datafileIdAutoIncrement += 1
-        self.send_header("location", "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
-        self.end_headers()
-
-        filename = postData['filename']
-        directory = postData['directory']
-        dataset = postData['dataset']  # e.g. "/api/v1/dataset/123/"
-        datasetId = dataset.split("/")[-2]
-        foundAttachedFile = ('attached_file' in postData)
-        foundReplicas = ('replicas' in postData)
-        # For datafiles uploaded via staging, the
-        # POST request should return a temp url.
         if self.path == "/api/v1/mydata_dataset_file/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.datafileIdAutoIncrement += 1
+            self.send_header("location", "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
+            self.end_headers()
+
+            filename = postData['filename']
+            directory = postData['directory']
+            dataset = postData['dataset']  # e.g. "/api/v1/dataset/123/"
+            datasetId = dataset.split("/")[-2]
+            foundAttachedFile = ('attached_file' in postData)
+            foundReplicas = ('replicas' in postData)
+            # For datafiles uploaded via staging, the
+            # POST request should return a temp url.
             if not foundReplicas and not foundAttachedFile:
                 if directory and directory != "":
                     tempUrl = "%s/DatasetDescription-%s/%s/%s" \
@@ -668,6 +652,119 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     tempUrl = "%s/DatasetDescription-%s/%s" \
                         % (STAGING_PATH, datasetId, filename)
                 self.wfile.write(tempUrl)
+        elif self.path == "/api/v1/mydata_experiment/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            experimentJson = {
+                "approved": False,
+                "authors": [],
+                "created_by": "/api/v1/user/7/",
+                "created_time": "2015-10-06T10:12:43.069846",
+                "description": "Uploader: Test Instrument\n"
+                               "User folder name: testuser2\n"
+                               "Uploaded from: MU00087002X:"
+                               "/Users/Shared/DemoData/testuser2",
+                "end_time": None,
+                "handle": "",
+                "id": 2551,
+                "institution_name": "Monash University",
+                "locked": False,
+                "owner_ids": [7, 149],
+                "parameter_sets": [
+                    {
+                        "experiment": "/api/v1/experiment/2551/",
+                        "id": 2538,
+                        "parameters": [
+                            {
+                                "datetime_value": None,
+                                "id": 5234,
+                                "link_id": 25,
+                                "name": "/api/v1/parametername/309/",
+                                "numerical_value": None,
+                                "parameterset": "/api/v1/experimentparameterset/2538/",
+                                "resource_uri": "/api/v1/experimentparameter/5234/",
+                                "string_value": "cfb48c4f-29cc-11e5-b8ee-a45e60d72633",
+                                "value": None
+                            },
+                            {
+                                "datetime_value": None,
+                                "id": 5235,
+                                "link_id": None,
+                                "name": "/api/v1/parametername/310/",
+                                "numerical_value": None,
+                                "parameterset": "/api/v1/experimentparameterset/2538/",
+                                "resource_uri": "/api/v1/experimentparameter/5235/",
+                                "string_value": "testuser2",
+                                "value": None
+                            }
+                        ],
+                        "resource_uri": "/api/v1/experimentparameterset/2538/",
+                        "schema": {
+                            "hidden": True,
+                            "id": 31,
+                            "immutable": True,
+                            "name": "MyData Default Experiment",
+                            "namespace":
+                                "http://mytardis.org"
+                                "/schemas/mydata/defaultexperiment",
+                            "resource_uri": "/api/v1/schema/31/",
+                            "subtype": "",
+                            "type": 1
+                        }
+                    }
+                ],
+                "public_access": 1,
+                "resource_uri": "/api/v1/mydata_experiment/2551/",
+                "start_time": None,
+                "title": "Test Instrument - Test User2",
+                "update_time": "2015-10-06T10:12:43.069896", "url": None
+            }
+            self.wfile.write(json.dumps(experimentJson))
+        elif self.path == "/api/v1/objectacl/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            objectaclJson = {
+            }
+            self.wfile.write(json.dumps(objectaclJson))
+        elif self.path == "/api/v1/dataset/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            experimentResourceUri = postData['experiments'][0]
+            experimentId = experimentResourceUri.split("/")[-2]
+            description = postData['description']
+            datasetJson = {
+                "description": description,
+                "directory": "",
+                "experiments": [
+                    "/api/v1/experiment/%s/" % experimentId
+                ],
+                "id": 4457,
+                "immutable": False,
+                "instrument": {
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
+                            "id": 2,
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
+                        },
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "id": 31,
+                    "name": "Test Instrument",
+                    "resource_uri": "/api/v1/instrument/31/"
+                },
+                "parameter_sets": [],
+                "resource_uri": "/api/v1/dataset/4457/"
+            }
+            self.wfile.write(json.dumps(datasetJson))
+        else:
+            raise Exception("FakeMyTardis Server doesn't know how to respond "
+                            "to POST: %s" % self.path)
 
     def do_PUT(self):  # pylint: disable=invalid-name
         """

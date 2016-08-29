@@ -789,7 +789,8 @@ class FoldersModel(DataViewIndexListModel):
                         continue
                 dataViewId = self.GetMaxDataViewId() + 1
                 if folderStructure.startswith("Username") or \
-                        folderStructure.startswith("Email"):
+                        folderStructure.startswith("Email") or \
+                        folderStructure.startswith("Experiment"):
                     folderModel = \
                         FolderModel(dataViewId=dataViewId,
                                     folder=datasetFolderName,
