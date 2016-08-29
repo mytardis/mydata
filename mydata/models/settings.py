@@ -192,6 +192,7 @@ class SettingsModel(object):
         file,
         e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
         """
+        # pylint: disable=too-many-locals
         # General tab
         self.instrument_name = ""
         self.instrument = None
@@ -363,7 +364,11 @@ class SettingsModel(object):
         if self.uuid and checkForUpdates:
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
-            settingsFromServer = uploaderModel.GetSettings()
+            try:
+                settingsFromServer = uploaderModel.GetSettings()
+            except requests.exceptions.RequestException as err:
+                logger.error(err)
+                settingsFromServer = None
             if settingsFromServer:
                 logger.debug("Settings were found on the server.")
                 for setting in settingsFromServer:
@@ -765,7 +770,10 @@ class SettingsModel(object):
             configParser.write(configFile)
         logger.info("Saved settings to " + configPath)
         if self.uploaderModel:
-            self.uploaderModel.UpdateSettings(settingsList)
+            try:
+                self.uploaderModel.UpdateSettings(settingsList)
+            except requests.exceptions.RequestException as err:
+                logger.error(err)
 
     def RollBack(self):
         """
