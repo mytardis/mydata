@@ -114,6 +114,19 @@ class CustomBuildCommand(build):
             if exitCode != 0:
                 print "\nPyInstaller failed to build MyData.exe\n"
                 sys.exit(1)
+
+            exitCode = \
+                os.system(sys.executable +
+                          r" .\pyinstaller\pyinstaller.py -y "
+                          r"--name=MyData-console "
+                          r"--icon=mydata\media\MyData.ico "
+                          r"--console run.py")
+            if exitCode != 0:
+                print "\nPyInstaller failed to build MyData-console.exe\n"
+                sys.exit(1)
+            os.system(r"COPY /Y dist\MyData-console\MyData-console.exe "
+                      r"dist\MyData\MyData.com")
+
             # favicon.ico and MyData.ico are really the same thing. favicon.ico
             # is the original from the MyTardis repository, and MyData.ico is
             # the result of converting it to PNG and then back to ICO, which
