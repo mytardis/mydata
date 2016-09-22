@@ -12,6 +12,10 @@ is pip-installable.  For earlier versions (2.9.5 or
 3.0.2), use the installer from http://wxpython.org
 """
 import sys
+import os
 from mydata import MyData
 
-MyData.Run(sys.argv)
+STDERR_FILE_PATH = os.path.join(os.path.expanduser("~"), ".MyData_stderr.txt")
+with open(STDERR_FILE_PATH, 'w') as stderrFile:
+    os.dup2(stderrFile.fileno(), sys.stderr.fileno())
+    MyData.Run(sys.argv)
