@@ -7,9 +7,9 @@ import json
 import requests
 
 from mydata.logs import logger
-from .user import UserProfileModel
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import DoesNotExist
+from .user import UserProfileModel
 
 
 class ObjectAclModel(object):

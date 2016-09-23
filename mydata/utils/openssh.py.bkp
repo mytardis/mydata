@@ -20,7 +20,8 @@ otherwise we need to worry about escaping special characters like
 # pylint: disable=missing-docstring
 # pylint: disable=fixme
 # pylint: disable=too-many-lines
-# pylint: disable=wrong-import-position
+# Don't worry about exceeding .pylintrc's max-module-lines for now:
+# pylint: disable=C0302
 
 import sys
 import os
@@ -70,10 +71,7 @@ class OpenSSH(object):
         return '"' + string.replace('"', r'\"') + '"'
 
     def DoubleQuoteRemotePath(self, string):
-        path = string.replace('"', r'\"')
-        path = path.replace('`', r'\\`')
-        path = path.replace('$', r'\\$')
-        return '"%s"' % path
+        return '"' + string.replace('"', r'\"').replace('`', r'\\`') + '"'
 
     def __init__(self):
         """
@@ -799,7 +797,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         lines = stdout.splitlines()
         bytesTransferred = long(0)
         for line in lines:
-            match = re.search(r"^(\d+)\s+bytes.*$", line)
+            match = re.search(r"^(\d+)\s+bytes\s+transferred.*$", line)
             if match:
                 bytesTransferred = long(match.groups()[0])
         skip += 1
@@ -817,9 +815,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
-               remoteChunkPath
-               .replace('`', r'\\`')
-               .replace('$', r'\\$'))
+               remoteChunkPath.replace('`', r'\\`'))
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
@@ -961,22 +957,21 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         '%s -v -P %s -i %s -c %s ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \
         '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-        '%s "%s@%s:\\"%s/\\""' \
+        '%s ^"%s@%s:\\^"%s/\\^"^"' \
         % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
            OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
            OPENSSH.cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
-           remoteDir
-           .replace('`', r'\\`')
-           .replace('$', r'\\$'))
+           EscapeWindowsMetacharacters(remoteDir))
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS)
+        creationflags=DEFAULT_CREATION_FLAGS,
+        shell=True) # FIXME
     uploadModel.SetScpUploadProcess(scpUploadProcess)
 
     stdout, _ = scpUploadProcess.communicate()
@@ -1103,6 +1098,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                          "Aborting upload for %s" % filePath)
             return
 
+        # '%s ^"%s@%s:\\^"%s/\\^"^"' \
+        # EscapeWindowsMetacharacters(remoteChunkDir))
         scpCommandString = \
             '%s -v -P %s -i %s -c %s ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
@@ -1113,16 +1110,16 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                OPENSSH.cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
-               remoteChunkDir
-               .replace('`', r'\\`')
-               .replace('$', r'\\$'))
+               remoteChunkDir)
         logger.debug(scpCommandString)
         scpUploadChunkProcess = subprocess.Popen(
             scpCommandString,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
+            creationflags=DEFAULT_CREATION_FLAGS,
+            # shell=True) # FIXME
+            shell=False)
         uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
         stdout, _ = scpUploadChunkProcess.communicate()
         if scpUploadChunkProcess.returncode != 0:
@@ -1336,3 +1333,16 @@ class SshControlMasterPool(object):
             if PidIsRunning(sshControlMasterProcess.GetPid()):
                 sshControlMasterProcess.Exit()
         self.sshControlMasterProcesses = []
+
+def EscapeWindowsMetacharacters(str):
+    str = str.replace('(', '^(')
+    str = str.replace(')', '^)')
+    str = str.replace('%', '^%')
+    str = str.replace('!', '^!')
+    str = str.replace('^', '^^')
+    str = str.replace('"', '^"')
+    str = str.replace('<', '^<')
+    str = str.replace('>', '^>')
+    str = str.replace('&', '^&')
+    str = str.replace('|', '^|')
+    return str
