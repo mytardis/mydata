@@ -17,6 +17,7 @@ class UploadsView(wx.Panel):
     Represents the Uploads tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
