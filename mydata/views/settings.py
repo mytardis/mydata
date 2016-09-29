@@ -1389,7 +1389,7 @@ class SettingsDialog(wx.Dialog):
         self.SetUseExcludesFile(settingsModel.UseExcludesFile())
         if settingsModel.UseExcludesFile():
             self.excludesFileField.Enable(True)
-            self.includesFileField.SetValue(settingsModel.GetExcludesFile())
+            self.excludesFileField.SetValue(settingsModel.GetExcludesFile())
             self.browseExcludesFileButton.Enable(True)
         else:
             self.excludesFileField.Enable(False)
