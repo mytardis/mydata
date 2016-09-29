@@ -284,9 +284,9 @@ class FoldersController(object):
         fc.uploadsModel.DeleteAllRows()
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
-        # For now, the max number of verification threads is set to be the
-        # same as the max number of upload threads.
-        fc.numVerificationWorkerThreads = settingsModel.GetMaxUploadThreads()
+        # For now, the max number of verification threads is hard-coded
+        # to 16:
+        fc.numVerificationWorkerThreads = 16
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
@@ -675,24 +675,13 @@ class FoldersController(object):
         for dfi in range(0, folderModel.numFiles):
             if self.IsShuttingDown():
                 return
-            thisFileIsAlreadyBeingVerified = False
-            for existingVerifyDatafileRunnable in \
-                    self.verifyDatafileRunnable[folderModel]:
-                if dfi == existingVerifyDatafileRunnable.GetDatafileIndex():
-                    thisFileIsAlreadyBeingVerified = True
-            thisFileIsAlreadyBeingUploaded = False
-            if folderModel in self.uploadDatafileRunnable:
-                if dfi in self.uploadDatafileRunnable[folderModel]:
-                    thisFileIsAlreadyBeingUploaded = True
-            if not thisFileIsAlreadyBeingVerified \
-                    and not thisFileIsAlreadyBeingUploaded:
-                self.verifyDatafileRunnable[folderModel]\
-                    .append(VerifyDatafileRunnable(self, self.foldersModel,
-                                                   folderModel, dfi,
-                                                   self.settingsModel,
-                                                   self.testRun))
-                self.verificationsQueue\
-                    .put(self.verifyDatafileRunnable[folderModel][dfi])
+            self.verifyDatafileRunnable[folderModel]\
+                .append(VerifyDatafileRunnable(self, self.foldersModel,
+                                               folderModel, dfi,
+                                               self.settingsModel,
+                                               self.testRun))
+            self.verificationsQueue\
+                .put(self.verifyDatafileRunnable[folderModel][dfi])
 
     # pylint: disable=unused-argument
     def OnOpenFolder(self, event):
