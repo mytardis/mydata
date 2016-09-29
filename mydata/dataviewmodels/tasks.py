@@ -268,12 +268,6 @@ class TasksModel(DataViewIndexListModel):
         self.searchString = ""
         # self.maxDataViewId = 0
 
-    def Contains(self, name):
-        for row in range(0, self.GetCount()):
-            if self.tasksData[row].GetJobDesc().strip() == name:
-                return True
-        return False
-
     def GetTaskById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
             if self.unfilteredTasksData[row].GetId() == dataViewId:
