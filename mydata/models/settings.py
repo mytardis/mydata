@@ -163,6 +163,7 @@ class SettingsModel(object):
         self.dataset_grouping = ""
         self.group_prefix = ""
         self.validate_folder_structure = True
+        self.max_verification_threads = 16
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
@@ -243,6 +244,7 @@ class SettingsModel(object):
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
+        self.max_verification_threads = 16
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.validate_folder_structure = True
@@ -679,6 +681,12 @@ class SettingsModel(object):
 
     def SetExcludesFile(self, excludesFile):
         self.excludes_file = excludesFile
+
+    def GetMaxVerificationThreads(self):
+        return self.max_verification_threads
+
+    def SetMaxVerificationThreads(self, maxVerificationThreads):
+        self.max_verification_threads = maxVerificationThreads
 
     def GetMaxUploadThreads(self):
         return self.max_upload_threads
