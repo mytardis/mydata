@@ -3,27 +3,37 @@ https://pypi.python.org/pypi/yappi
 
 Make the following patch (#1) to mydata/MyData.py:
 
-At the end of the "OnCloseFrame" method, add event.Skip(), which will allow
-the EVT_CLOSE event to propagate to the point where wxPython knows that all
-of its top level windows have been closed, so it can end its main loop without
-exiting out of the Python shell.
+At the end of the "OnCloseFrame" method, add:
+
+    event.Skip()
+    self.taskBarIcon.Destroy()
+
+which will allow the EVT_CLOSE event to propagate to the point where wxPython
+knows that all of its top level windows have been closed, so it can end its
+main loop without exiting out of the Python shell.
 
 Then run the following:
 
 import yappi
-from mydata import MyData
 yappi.start()
+from mydata import MyData
 MyData.Run(argv=[''])
 # Interact with MyData's GUI, open its main window,
 # and run time-consuming tasks. Then close MyData's
 # main window, having made patch #1
-yappi.get_func_stats().print_all()
 yappi.get_thread_stats().print_all()
+yappi.get_func_stats().print_all()
 
-The task bar icon / system tray menu will not be destroyed by patch #1, but
-after closing the main window (and stopping the event loop), it will not
-be usable.  It will disappear when you exit from the Python shell.  If this
-bothers you, you could add self.taskBarIcon.Destroy() to Patch #1.
+# Sort output by time spent in each function excluding
+# calls to subroutines ('tsub'), listing the most
+# time-consuming functions at the bottom, so you don't
+# need to scroll back:
+yappi.get_func_stats().sort('tsub', 'asc').print_all()
 
 To re-run profiling, exit and relaunch Python before re-running yappi and
 MyData.
+
+On Linux, get_thread_stats() won't display the thread names.  If you want
+to see thread names in yappi output on Linux, you can achieve this with
+the python-prctl package, but the get_func_stats() output is generally
+more useful.
