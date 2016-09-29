@@ -740,8 +740,6 @@ class MyData(wx.App):
             self.usersModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.GROUPS:
             self.groupsModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
-            self.uploadsModel.Filter(event.GetString())
 
     def OnScanAndUploadFromToolbar(self, event):
         """
