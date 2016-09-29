@@ -64,19 +64,6 @@ class VerificationsModel(DataViewIndexListModel):
         columnKey = self.GetColumnKeyName(col)
         return str(self.verificationsData[row].GetValueForKey(columnKey))
 
-    def GetValuesForColname(self, colname):
-        values = []
-        col = -1
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                break
-        if col == self.GetColumnCount():
-            return None
-
-        for row in range(0, self.GetRowCount()):
-            values.append(self.GetValueByRow(row, col))
-        return values
-
     def GetColumnName(self, col):
         return self.columnNames[col]
 

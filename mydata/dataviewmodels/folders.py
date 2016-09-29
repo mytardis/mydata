@@ -366,16 +366,6 @@ class FoldersModel(DataViewIndexListModel):
                     wx.CallAfter(self.RowDeleted, row)
                 return
 
-    def Contains(self, path):
-        """
-        Check if folders model contains a folder model
-        matching the specified path.
-        """
-        for row in range(0, self.GetCount()):
-            if path == self.GetFolderPath(row):
-                return True
-        return False
-
     def GetMaxDataViewIdFromExistingRows(self):
         """
         Get maximum dataview ID from existing rows.

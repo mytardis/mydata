@@ -250,14 +250,6 @@ class UsersModel(DataViewIndexListModel):
         self.searchString = ""
         self.maxDataViewId = 0
 
-    def Contains(self, name, email):
-        for row in range(0, self.GetCount()):
-            if self.usersData[row].GetName().strip() == name:
-                return True
-            if self.usersData[row].GetEmail().strip() == email:
-                return True
-        return False
-
     def GetUserById(self, dataViewId):
         for row in range(0, self.GetRowCount()):
             if self.unfilteredUsersData[row].GetId() == dataViewId:
