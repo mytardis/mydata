@@ -65,6 +65,7 @@ class UploadDatafileRunnable(object):
         self.existingUnverifiedDatafile = existingUnverifiedDatafile
         self.verificationModel = verificationModel
         self.bytesUploadedPreviously = bytesUploadedPreviously
+        self.mimeTypes = mimetypes.MimeTypes()
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -103,10 +104,8 @@ class UploadDatafileRunnable(object):
                 ignoreNewFilesSeconds:
             message = "Not uploading file, in case it is still being modified."
             logger.warning(message.replace('file', dataFilePath))
-            self.uploadModel.SetMessage(message)
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
+            self.uploadsModel.SetMessage(self.uploadModel, message)
+            self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.uploadCompleteEvent(
@@ -137,7 +136,8 @@ class UploadDatafileRunnable(object):
         if self.foldersController.IsShuttingDown():
             return
 
-        self.uploadModel.SetMessage("Getting data file size...")
+        message = "Getting data file size..."
+        self.uploadsModel.SetMessage(self.uploadModel, message)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         self.uploadModel.SetFileSize(dataFileSize)
 
@@ -150,7 +150,8 @@ class UploadDatafileRunnable(object):
 
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
                 not self.existingUnverifiedDatafile:
-            self.uploadModel.SetMessage("Calculating MD5 checksum...")
+            message = "Calculating MD5 checksum..."
+            self.uploadsModel.SetMessage(self.uploadModel, message)
 
             def Md5ProgressCallback(bytesProcessed):
                 if self.uploadModel.Canceled():
@@ -164,12 +165,10 @@ class UploadDatafileRunnable(object):
                 self.uploadModel.SetProgress(int(percentComplete))
                 self.uploadsModel.UploadProgressUpdated(self.uploadModel)
                 if dataFileSize >= (1024 * 1024 * 1024):
-                    self.uploadModel.SetMessage("%3.1f %%  MD5 summed"
-                                                % percentComplete)
+                    message = "%3.1f %%  MD5 summed" % percentComplete
                 else:
-                    self.uploadModel.SetMessage("%3d %%  MD5 summed"
-                                                % int(percentComplete))
-                self.uploadsModel.UploadMessageUpdated(self.uploadModel)
+                    message = "%3d %%  MD5 summed" % int(percentComplete)
+                self.uploadsModel.SetMessage(self.uploadModel, message)
                 myTardisUrl = self.settingsModel.GetMyTardisUrl()
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
@@ -197,14 +196,14 @@ class UploadDatafileRunnable(object):
             return
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
                 not self.existingUnverifiedDatafile:
-            self.uploadModel.SetMessage("Checking MIME type...")
-            # mimetypes.guess_type(...) is not thread-safe!
-            mimeTypes = mimetypes.MimeTypes()
-            dataFileMimeType = mimeTypes.guess_type(dataFilePath)[0]
+            message = "Checking MIME type..."
+            self.uploadsModel.SetMessage(self.uploadModel, message)
+            dataFileMimeType = self.mimeTypes.guess_type(dataFilePath)[0]
 
             if self.foldersController.IsShuttingDown():
                 return
-            self.uploadModel.SetMessage("Defining JSON data for POST...")
+            message = "Defining JSON data for POST..."
+            self.uploadsModel.SetMessage(self.uploadModel, message)
             datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
             dataFileCreatedTime = \
                 self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
@@ -233,7 +232,8 @@ class UploadDatafileRunnable(object):
                              self.uploadModel.GetRelativePathToUpload())
                 return
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
-            self.uploadModel.SetMessage("Initializing buffered reader...")
+            message = "Initializing buffered reader..."
+            self.uploadsModel.SetMessage(self.uploadModel, message)
             datafileBufferedReader = io.open(dataFilePath, 'rb')
             self.uploadModel.SetBufferedReader(datafileBufferedReader)
 
@@ -248,15 +248,13 @@ class UploadDatafileRunnable(object):
             self.uploadModel.SetProgress(int(percentComplete))
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             if message:
-                self.uploadModel.SetMessage(message)
+                self.uploadsModel.SetMessage(self.uploadModel, message)
             else:
                 if total >= (1024 * 1024 * 1024):
-                    self.uploadModel.SetMessage("%3.1f %%  uploaded"
-                                                % percentComplete)
+                    message = "%3.1f %%  uploaded" % percentComplete
                 else:
-                    self.uploadModel.SetMessage("%3d %%  uploaded"
-                                                % int(percentComplete))
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
+                    message = "%3d %%  uploaded" % int(percentComplete)
+                self.uploadsModel.SetMessage(self.uploadModel, message)
             myTardisUrl = self.settingsModel.GetMyTardisUrl()
             wx.PostEvent(
                 self.foldersController.notifyWindow,
@@ -289,7 +287,8 @@ class UploadDatafileRunnable(object):
                 "Accept": "application/json"}
             data = json.dumps(dataFileJson)
 
-        self.uploadModel.SetMessage("Uploading...")
+        message = "Uploading..."
+        self.uploadsModel.SetMessage(self.uploadModel, message)
         postSuccess = False
         uploadSuccess = False
 
@@ -354,8 +353,9 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    self.uploadModel.SetMessage(
-                                        "This file will be re-uploaded...")
+                                    message = "This file will be re-uploaded..."
+                                    self.uploadsModel.SetMessage(
+                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -369,8 +369,10 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    self.uploadModel.SetMessage(
-                                        "This file will be re-uploaded...")
+                                    message = \
+                                        "This file will be re-uploaded..."
+                                    self.uploadsModel.SetMessage(
+                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -384,8 +386,10 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    self.uploadModel.SetMessage(
-                                        "This file will be re-uploaded...")
+                                    message = \
+                                        "This file will be re-uploaded..."
+                                    self.uploadsModel.SetMessage(
+                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -615,11 +619,9 @@ class UploadDatafileRunnable(object):
                                         icon=wx.ICON_ERROR))
             return
         except Exception, err:
-            self.uploadModel.SetMessage(str(err))
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
+            self.uploadsModel.SetMessage(self.uploadModel, str(err))
+            self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
-            self.uploadsModel.UploadMessageUpdated(self.uploadModel)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
             if not self.foldersController.IsShuttingDown():
                 wx.PostEvent(
                     self.foldersController.notifyWindow,
@@ -663,10 +665,10 @@ class UploadDatafileRunnable(object):
 
         if uploadSuccess:
             logger.debug("Upload succeeded for " + dataFilePath)
-            self.uploadModel.SetStatus(UploadStatus.COMPLETED)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
-            self.uploadModel.SetMessage("Upload complete!")
-            # self.uploadModel.SetProgress(100.0)
+            self.uploadsModel.SetStatus(self.uploadModel,
+                                        UploadStatus.COMPLETED)
+            message = "Upload complete!"
+            self.uploadsModel.SetMessage(self.uploadModel, message)
             self.uploadModel.SetProgress(100)
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
@@ -684,16 +686,16 @@ class UploadDatafileRunnable(object):
                     self.uploadModel.Canceled():
                 return
             logger.error("Upload failed for " + dataFilePath)
-            self.uploadModel.SetStatus(UploadStatus.FAILED)
-            self.uploadsModel.UploadStatusUpdated(self.uploadModel)
+            self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             if not postSuccess and response is not None:
                 message = "Internal Server Error: " \
                     "See MyData's log for further " \
                     "information."
                 logger.error(message)
-                self.uploadModel.SetMessage(response.text)
+                message = response.text
             else:
-                self.uploadModel.SetMessage("Upload failed.")
+                message = "Upload failed."
+            self.uploadsModel.SetMessage(self.uploadModel, message)
 
             # self.uploadModel.SetProgress(0.0)
             self.uploadModel.SetProgress(0)
