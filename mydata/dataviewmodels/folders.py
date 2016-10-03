@@ -420,11 +420,12 @@ class FoldersModel(DataViewIndexListModel):
         self.ffd = list()
         self.Filter(self.searchString)
 
-        startDataUploadsForFolderEvent = \
-            mde.MyDataEvent(mde.EVT_START_UPLOADS_FOR_FOLDER,
-                            folderModel=folderModel)
-        wx.PostEvent(wx.GetApp().GetMainFrame(),
-                     startDataUploadsForFolderEvent)
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            startDataUploadsForFolderEvent = \
+                mde.MyDataEvent(mde.EVT_START_UPLOADS_FOR_FOLDER,
+                                folderModel=folderModel)
+            wx.PostEvent(wx.GetApp().GetMainFrame(),
+                         startDataUploadsForFolderEvent)
 
     def FolderStatusUpdated(self, folderModel):
         """
