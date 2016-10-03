@@ -56,7 +56,8 @@ class FoldersController(object):
         self.canceled = threading.Event()
         self.failed = threading.Event()
 
-        self.finishedCountingVerifications = False
+        self.finishedCountingVerifications = dict()
+        self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
         self.threadingLock = threading.Lock()
         self.uploadsThreadingLock = threading.Lock()
@@ -66,10 +67,11 @@ class FoldersController(object):
         self.completed = False
         self.uploadDatafileRunnable = None
         self.numVerificationsToBePerformed = 0
+        self.numVerificationsToBePerformedLock = threading.Lock()
         self.uploadsAcknowledged = 0
         self.uploadMethod = UploadMethod.HTTP_POST
 
-        # These will get overwritten in StartDataUploads, but we need
+        # These will get overwritten in InitForUploads, but we need
         # to initialize them here, so that ShutDownUploadThreads()
         # can be called.
         self.numVerificationWorkerThreads = 0
@@ -268,13 +270,9 @@ class FoldersController(object):
         self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
         self.CountCompletedUploadsAndVerifications(event=None)
 
-    def StartDataUploads(self, testRun=False):
-        # pylint: disable=too-many-return-statements
-        # pylint: disable=too-many-branches
-        # pylint: disable=too-many-statements
-        # pylint: disable=too-many-locals
+    def InitForUploads(self):
         fc = self  # pylint: disable=invalid-name
-        fc.testRun = testRun
+        fc.testRun = wx.GetApp().TestRunRunning()
         fc.SetStarted()
         settingsModel = fc.settingsModel
         fc.SetCanceled(False)
@@ -356,90 +354,104 @@ class FoldersController(object):
             fc.uploadWorkerThreads.append(thread)
             thread.start()
         # pylint: disable=bare-except
+
+        fc.finishedScanningForDatasetFolders = threading.Event()
+        fc.numVerificationsToBePerformed = 0
+        fc.finishedCountingVerifications = dict()
+
+    def FinishedScanningForDatasetFolders(self):
+        """
+        At this point, we know that FoldersModel's
+        ScanFolders method has finished populating
+        self.foldersModel with dataset folders.
+        """
+        self.finishedScanningForDatasetFolders.set()
+
+    def StartUploadsForFolder(self, folderModel):
+        # pylint: disable=too-many-return-statements
+        fc = self  # pylint: disable=invalid-name
         try:
-            fc.numVerificationsToBePerformed = 0
-            fc.finishedCountingVerifications = \
+            fc.finishedCountingVerifications[folderModel] = \
                 threading.Event()
-            for row in range(0, self.foldersModel.GetRowCount()):
-                if self.IsShuttingDown():
-                    return
-                folderModel = self.foldersModel.GetFolderRecord(row)
-                fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
-                logger.debug(
-                    "StartDataUploads: Starting verifications "
-                    "and uploads for folder: " +
-                    folderModel.GetFolder())
-                if self.IsShuttingDown():
-                    return
+            if self.IsShuttingDown():
+                return
+            fc.numVerificationsToBePerformedLock.acquire()
+            fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
+            fc.numVerificationsToBePerformedLock.release()
+            logger.debug(
+                "StartUploadsForFolder: Starting verifications "
+                "and uploads for folder: " +
+                folderModel.GetFolder())
+            if self.IsShuttingDown():
+                return
+            try:
+                # Save MyTardis URL, so if it's changing in the
+                # Settings Dialog while this thread is
+                # attempting to connect, we ensure that any
+                # exception thrown by this thread refers to the
+                # old version of the URL.
+                myTardisUrl = self.settingsModel.GetMyTardisUrl()
+                # pylint: disable=broad-except
                 try:
-                    # Save MyTardis URL, so if it's changing in the
-                    # Settings Dialog while this thread is
-                    # attempting to connect, we ensure that any
-                    # exception thrown by this thread refers to the
-                    # old version of the URL.
-                    myTardisUrl = \
-                        settingsModel.GetMyTardisUrl()
-                    # pylint: disable=broad-except
-                    try:
-                        experimentModel = ExperimentModel\
-                            .GetOrCreateExperimentForFolder(folderModel,
-                                                            fc.testRun)
-                    except Exception, err:
-                        logger.error(traceback.format_exc())
-                        wx.PostEvent(
-                            self.notifyWindow,
-                            self.showMessageDialogEvent(
-                                title="MyData",
-                                message=str(err),
-                                icon=wx.ICON_ERROR))
-                        return
-                    folderModel.SetExperiment(experimentModel)
-                    connected = ConnectionStatus.CONNECTED
+                    experimentModel = ExperimentModel\
+                        .GetOrCreateExperimentForFolder(folderModel,
+                                                        fc.testRun)
+                except Exception, err:
+                    logger.error(traceback.format_exc())
+                    wx.PostEvent(
+                        self.notifyWindow,
+                        self.showMessageDialogEvent(
+                            title="MyData",
+                            message=str(err),
+                            icon=wx.ICON_ERROR))
+                    return
+                folderModel.SetExperiment(experimentModel)
+                connected = ConnectionStatus.CONNECTED
+                wx.PostEvent(
+                    self.notifyWindow,
+                    self.connectionStatusEvent(
+                        myTardisUrl=myTardisUrl,
+                        connectionStatus=connected))
+                # pylint: disable=broad-except
+                try:
+                    datasetModel = DatasetModel\
+                        .CreateDatasetIfNecessary(folderModel, fc.testRun)
+                except Exception, err:
+                    logger.error(traceback.format_exc())
+                    wx.PostEvent(
+                        self.notifyWindow,
+                        self.showMessageDialogEvent(
+                            title="MyData",
+                            message=str(err),
+                            icon=wx.ICON_ERROR))
+                    return
+                folderModel.SetDatasetModel(datasetModel)
+                self.VerifyDatafiles(folderModel)
+            except requests.exceptions.ConnectionError, err:
+                if not self.IsShuttingDown():
+                    disconnected = \
+                        ConnectionStatus.DISCONNECTED
                     wx.PostEvent(
                         self.notifyWindow,
                         self.connectionStatusEvent(
                             myTardisUrl=myTardisUrl,
-                            connectionStatus=connected))
-                    # pylint: disable=broad-except
-                    try:
-                        datasetModel = DatasetModel\
-                            .CreateDatasetIfNecessary(folderModel, fc.testRun)
-                    except Exception, err:
-                        logger.error(traceback.format_exc())
-                        wx.PostEvent(
-                            self.notifyWindow,
-                            self.showMessageDialogEvent(
-                                title="MyData",
-                                message=str(err),
-                                icon=wx.ICON_ERROR))
-                        return
-                    folderModel.SetDatasetModel(datasetModel)
-                    self.VerifyDatafiles(folderModel)
-                except requests.exceptions.ConnectionError, err:
-                    if not self.IsShuttingDown():
-                        disconnected = \
-                            ConnectionStatus.DISCONNECTED
-                        wx.PostEvent(
-                            self.notifyWindow,
-                            self.connectionStatusEvent(
-                                myTardisUrl=myTardisUrl,
-                                connectionStatus=disconnected))
-                    return
-                except ValueError, err:
-                    logger.error("Failed to retrieve experiment "
-                                 "for folder " +
-                                 str(folderModel.GetFolder()))
-                    logger.error(traceback.format_exc())
-                    return
-                if experimentModel is None and not fc.testRun:
-                    logger.error("Failed to acquire a MyTardis "
-                                 "experiment to store data in for "
-                                 "folder " +
-                                 folderModel.GetFolder())
-                    return
-                if self.IsShuttingDown():
-                    return
-            fc.finishedCountingVerifications.set()
+                            connectionStatus=disconnected))
+                return
+            except ValueError, err:
+                logger.error("Failed to retrieve experiment "
+                             "for folder " +
+                             str(folderModel.GetFolder()))
+                logger.error(traceback.format_exc())
+                return
+            if experimentModel is None and not fc.testRun:
+                logger.error("Failed to acquire a MyTardis "
+                             "experiment to store data in for "
+                             "folder " +
+                             folderModel.GetFolder())
+                return
+            if self.IsShuttingDown():
+                return
+            fc.finishedCountingVerifications[folderModel].set()
             if self.foldersModel.GetRowCount() == 0 or \
                     fc.numVerificationsToBePerformed == 0:
                 # For the case of zero folders or zero files, we
@@ -448,7 +460,7 @@ class FoldersController(object):
                 # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
-        except:
+        except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
 
     def UploadWorker(self):
@@ -539,7 +551,8 @@ class FoldersController(object):
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
         if hasattr(wx.GetApp(), "GetMainFrame"):
-            if numVerificationsCompleted == self.numVerificationsToBePerformed \
+            if numVerificationsCompleted == \
+                    self.numVerificationsToBePerformed \
                     and uploadsToBePerformed > 0:
                 message = "Uploaded %d of %d files." % \
                     (uploadsCompleted, uploadsToBePerformed)
@@ -549,11 +562,19 @@ class FoldersController(object):
                      self.numVerificationsToBePerformed)
             wx.GetApp().GetMainFrame().SetStatusMessage(message)
 
-        if numVerificationsCompleted == self.numVerificationsToBePerformed \
-                and self.finishedCountingVerifications.isSet() \
+        finishedVerificationCounting = \
+            self.finishedScanningForDatasetFolders.isSet()
+        for folder in self.finishedCountingVerifications:
+            if not self.finishedCountingVerifications[folder]:
+                finishedVerificationCounting = False
+                break
+        if numVerificationsCompleted == \
+                    self.numVerificationsToBePerformed \
+                and finishedVerificationCounting \
                 and (uploadsProcessed == uploadsToBePerformed or
                      self.testRun and
-                     self.uploadsAcknowledged == uploadsToBePerformed):
+                     self.uploadsAcknowledged ==
+                     uploadsToBePerformed):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")

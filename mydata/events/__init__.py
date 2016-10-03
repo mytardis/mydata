@@ -27,7 +27,7 @@ EVT_RENAME_INSTRUMENT = wx.NewId()
 EVT_SETTINGS_DIALOG_VALIDATION = wx.NewId()
 EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS = wx.NewId()
 EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE = wx.NewId()
-EVT_START_DATA_UPLOADS = wx.NewId()
+EVT_START_UPLOADS_FOR_FOLDER = wx.NewId()
 
 
 def EndBusyCursorIfRequired(event):
@@ -726,7 +726,7 @@ class MyDataEvent(wx.PyCommandEvent):
         """
         Start the data uploads.
         """
-        if event.GetEventId() != EVT_START_DATA_UPLOADS:
+        if event.GetEventId() != EVT_START_UPLOADS_FOR_FOLDER:
             event.Skip()
             return
 
@@ -742,20 +742,17 @@ class MyDataEvent(wx.PyCommandEvent):
                 "if necessary..."
             wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
             logger.info(message)
-            if event.testRun:
-                logger.testrun(message)
             app = wx.GetApp()
+            if app.TestRunRunning():
+                logger.testrun(message)
             app.DisableTestAndUploadToolbarButtons()
             wx.GetApp().SetPerformingLookupsAndUploads(True)
-            event.foldersController.StartDataUploads(event.testRun)
+            app.foldersController.StartUploadsForFolder(
+                event.folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)
-            logger.debug("Finishing run() method for thread %s"
-                         % threading.current_thread().name)
 
-        startDataUploadsThread = \
+        startDataUploadsForFolderThread = \
             threading.Thread(target=StartDataUploadsWorker,
                              name="StartDataUploadsThread")
-        MYDATA_THREADS.Add(startDataUploadsThread)
-        logger.debug("Starting thread %s" % startDataUploadsThread.name)
-        startDataUploadsThread.start()
-        logger.debug("Started thread %s" % startDataUploadsThread.name)
+        MYDATA_THREADS.Add(startDataUploadsForFolderThread)
+        startDataUploadsForFolderThread.start()
