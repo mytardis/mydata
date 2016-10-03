@@ -53,6 +53,7 @@ class UploadsModel(DataViewIndexListModel):
                             ColumnType.TEXT)
 
         self.maxDataViewId = 0
+        self.maxDataViewIdLock = threading.Lock()
         self.completedCount = 0
         self.completedCountLock = threading.Lock()
         self.failedCount = 0
@@ -178,16 +179,23 @@ class UploadsModel(DataViewIndexListModel):
     def GetMaxDataViewId(self):
         return self.maxDataViewId
 
+    def SetMaxDataViewId(self, dataViewId):
+        self.maxDataViewIdLock.acquire()
+        self.maxDataViewId = dataViewId
+        self.maxDataViewIdLock.release()
+
     def GetUploadModel(self, row):
         return self.uploadsData[row]
 
-    def AddRow(self, value):
-        self.uploadsData.append(value)
+    def AddRow(self, uploadModel):
+        self.uploadsData.append(uploadModel)
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
         else:
             wx.CallAfter(self.RowAppended)
+
+        self.SetMaxDataViewId(uploadModel.GetDataViewId())
 
     def TryRowValueChanged(self, row, col):
         try:
