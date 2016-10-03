@@ -39,6 +39,7 @@ class VerificationsModel(DataViewIndexListModel):
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.TEXT, ColumnType.TEXT)
         self.maxDataViewId = 0
+        self.maxDataViewIdLock = threading.Lock()
         self.completedCount = 0
         self.completedCountLock = threading.Lock()
 
@@ -144,13 +145,20 @@ class VerificationsModel(DataViewIndexListModel):
     def GetMaxDataViewId(self):
         return self.maxDataViewId
 
-    def AddRow(self, value):
-        self.verificationsData.append(value)
+    def SetMaxDataViewId(self, dataViewId):
+        self.maxDataViewIdLock.acquire()
+        self.maxDataViewId = dataViewId
+        self.maxDataViewIdLock.release()
+
+    def AddRow(self, verificationModel):
+        self.verificationsData.append(verificationModel)
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
         else:
             wx.CallAfter(self.RowAppended)
+
+        self.SetMaxDataViewId(verificationModel.GetDataViewId())
 
     def TryRowValueChanged(self, row, col):
         try:
