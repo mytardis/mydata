@@ -145,7 +145,11 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                     "Couldn't connect to SSH server at 127.0.0.1:2200")
             time.sleep(0.25)
 
-        foldersController.StartDataUploads()
+        foldersController.InitForUploads()
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
+            foldersController.StartUploadsForFolder(folderModel)
+        foldersController.FinishedScanningForDatasetFolders()
 
         while True:
             numVerificationsCompleted = verificationsModel.GetCompletedCount()
@@ -154,8 +158,13 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             uploadsFailed = uploadsModel.GetFailedCount()
             uploadsProcessed = uploadsCompleted + uploadsFailed
 
-            if numVerificationsCompleted == numFiles and \
-                    foldersController.finishedCountingVerifications.isSet() \
+            finishedVerificationCounting = True
+            for folder in foldersController.finishedCountingVerifications:
+                if not foldersController.finishedCountingVerifications[folder]:
+                    finishedVerificationCounting = False
+
+            if numVerificationsCompleted == numFiles \
+                    and finishedVerificationCounting \
                     and uploadsProcessed == uploadsToBePerformed:
                 break
             time.sleep(0.1)
