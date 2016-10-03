@@ -272,7 +272,11 @@ class FoldersController(object):
 
     def InitForUploads(self):
         fc = self  # pylint: disable=invalid-name
-        fc.testRun = wx.GetApp().TestRunRunning()
+        app = wx.GetApp()
+        if hasattr(app, "TestRunRunning"):
+            fc.testRun = app.TestRunRunning()
+        else:
+            fc.testRun = False
         fc.SetStarted()
         settingsModel = fc.settingsModel
         fc.SetCanceled(False)
