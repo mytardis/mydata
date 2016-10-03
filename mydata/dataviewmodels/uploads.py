@@ -42,13 +42,6 @@ class UploadsModel(DataViewIndexListModel):
 
         DataViewIndexListModel.__init__(self, len(self.uploadsData))
 
-        # Unfiltered uploads data:
-        self.uud = self.uploadsData
-        # Filtered uploads data:
-        self.fud = list()
-        self.filtered = False
-        self.searchString = ""
-
         self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
                             "File Size", "Status", "Progress", "Message")
         self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
@@ -59,68 +52,16 @@ class UploadsModel(DataViewIndexListModel):
                             ColumnType.BITMAP, ColumnType.PROGRESS,
                             ColumnType.TEXT)
 
-        # This is the largest ID value which has been used in this model.
-        # It may no longer exist, i.e. if we delete the row with the
-        # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
+        self.maxDataViewIdLock = threading.Lock()
+        self.completedCount = 0
+        self.completedCountLock = threading.Lock()
+        self.failedCount = 0
+        self.failedCountLock = threading.Lock()
 
         self.inProgressIcon = MYDATA_ICONS.GetIcon("Refresh", size="16x16")
         self.completedIcon = MYDATA_ICONS.GetIcon("Apply", size="16x16")
         self.failedIcon = MYDATA_ICONS.GetIcon("Delete", size="16x16")
-
-    def Filter(self, searchString):
-        """
-        Only show uploads method query string.
-        """
-        # pylint: disable=too-many-branches
-        self.searchString = searchString
-        query = self.searchString.lower()
-        if not self.filtered:
-            # This only does a shallow copy:
-            self.uud = list(self.uploadsData)
-
-        for row in reversed(range(0, self.GetRowCount())):
-            upload = self.uploadsData[row]
-            if query not in upload.GetFilename().lower():
-                self.fud.append(upload)
-                del self.uploadsData[row]
-                # Notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                self.filtered = True
-
-        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fud = self.fud[filteredRow]  # fud = filtered uploads data
-            if query in fud.GetFilename().lower():
-                # Model doesn't care about currently sorted column.
-                # Always use ID.
-                row = 0
-                col = 0
-                ascending = True
-                while row < self.GetRowCount() and \
-                        self.CompareUploadRecords(self.uploadsData[row],
-                                                  fud, col, ascending) < 0:
-                    row = row + 1
-
-                if row == self.GetRowCount():
-                    self.uploadsData.append(fud)
-                    # Notify the view that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowAppended()
-                    else:
-                        wx.CallAfter(self.RowAppended)
-                else:
-                    self.uploadsData.insert(row, fud)
-                    # Notify the view that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowInserted(row)
-                    else:
-                        wx.CallAfter(self.RowInserted, row)
-                del self.fud[filteredRow]
-                if self.GetFilteredRowCount() == 0:
-                    self.filtered = False
 
     # All of our columns are strings.  If the model or the renderers
     # in the view are other types then that should be reflected here.
@@ -161,19 +102,6 @@ class UploadsModel(DataViewIndexListModel):
             #              "called on missing row.")
             return None
 
-    def GetValuesForColname(self, colname):
-        values = []
-        col = -1
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                break
-        if col == self.GetColumnCount():
-            return None
-
-        for row in range(0, self.GetRowCount()):
-            values.append(self.GetValueByRow(row, col))
-        return values
-
     def GetColumnName(self, col):
         return self.columnNames[col]
 
@@ -188,15 +116,6 @@ class UploadsModel(DataViewIndexListModel):
         Report how many rows this model provides data for.
         """
         return len(self.uploadsData)
-
-    def GetUnfilteredRowCount(self):
-        """
-        Report how many rows this model provides data for.
-        """
-        return len(self.uud)
-
-    def GetFilteredRowCount(self):
-        return len(self.fud)
 
     def GetColumnCount(self):
         """
@@ -241,64 +160,6 @@ class UploadsModel(DataViewIndexListModel):
             return cmp(self.GetValueByRow(row1, col),
                        self.GetValueByRow(row2, col))
 
-    # Unlike the previous Compare method, in this case,
-    # the upload records don't need
-    # to be visible in the current (possibly filtered) data view.
-    def CompareUploadRecords(self, uploadRecord1, uploadRecord2, col,
-                             ascending):
-        if not ascending:
-            uploadRecord2, uploadRecord1 = uploadRecord1, uploadRecord2
-        if col == 0:
-            return cmp(int(uploadRecord1.GetDataViewId()),
-                       int(uploadRecord2.GetDataViewId()))
-        else:
-            return cmp(uploadRecord1.GetValueForKey(self.columnKeys[col]),
-                       uploadRecord2.GetValueForKey(self.columnKeys[col]))
-
-    def DeleteRows(self, rows):
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            logger.debug("DeleteRows: Canceling upload: " +
-                         self.uploadsData[row].GetRelativePathToUpload())
-            self.uploadsData[row].Cancel()
-            del self.uploadsData[row]
-            del self.uud[row]
-
-        # Notify the view(s) that these rows have been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rows)
-        else:
-            wx.CallAfter(self.RowsDeleted, rows)
-
-    def DeleteUpload(self, folderModel, dataFileIndex):
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetFolderModel() == folderModel and \
-                    self.uploadsData[row].GetDataFileIndex() == dataFileIndex:
-                del self.uploadsData[row]
-                del self.uud[row]
-                # Notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.TryRowDeleted(row)
-                else:
-                    wx.CallAfter(self.TryRowDeleted, row)
-                return
-
-    def Contains(self, filename):
-        for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetFilename().strip() == filename:
-                return True
-        return False
-
     def DeleteAllRows(self):
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
@@ -311,38 +172,30 @@ class UploadsModel(DataViewIndexListModel):
         else:
             wx.CallAfter(self.RowsDeleted, rowsDeleted)
 
-        self.uud = list()
-        self.fud = list()
-        self.filtered = False
-        self.searchString = ""
         self.maxDataViewId = 0
-
-    def GetMaxDataViewIdFromExistingRows(self):
-        maxDataViewId = 0
-        for row in range(0, self.GetCount()):
-            if self.uploadsData[row].GetDataViewId() > maxDataViewId:
-                maxDataViewId = self.uploadsData[row].GetDataViewId()
-        return maxDataViewId
+        self.completedCount = 0
+        self.failedCount = 0
 
     def GetMaxDataViewId(self):
-        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
-            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
+
+    def SetMaxDataViewId(self, dataViewId):
+        self.maxDataViewIdLock.acquire()
+        self.maxDataViewId = dataViewId
+        self.maxDataViewIdLock.release()
 
     def GetUploadModel(self, row):
         return self.uploadsData[row]
 
-    def AddRow(self, value):
-        self.uploadsData.append(value)
+    def AddRow(self, uploadModel):
+        self.uploadsData.append(uploadModel)
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
         else:
             wx.CallAfter(self.RowAppended)
 
-        self.uud = self.uploadsData
-        self.fud = list()
-        self.Filter(self.searchString)
+        self.SetMaxDataViewId(uploadModel.GetDataViewId())
 
     def TryRowValueChanged(self, row, col):
         try:
@@ -371,98 +224,73 @@ class UploadsModel(DataViewIndexListModel):
     def UploadFileSizeUpdated(self, uploadModel):
         if uploadModel.Canceled():
             return
-        for row in range(0, self.GetCount()):
-            # Uploads could be in the process of being canceled:
-            if row >= self.GetCount():
-                break
+        for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("File Size")
                 if threading.current_thread().name == "MainThread":
                     self.TryRowValueChanged(row, col)
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
+                break
 
     def UploadProgressUpdated(self, uploadModel):
         if uploadModel.Canceled():
             return
-        for row in range(0, self.GetCount()):
-            # Uploads could be in the process of being canceled:
-            if row >= self.GetCount():
-                break
+        for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
                 if threading.current_thread().name == "MainThread":
                     self.TryRowValueChanged(row, col)
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
+                break
 
-    def UploadStatusUpdated(self, uploadModel):
+    def StatusUpdated(self, uploadModel):
         if uploadModel.Canceled():
             return
-        for row in range(0, self.GetCount()):
-            # Uploads could be in the process of being canceled:
-            if row >= self.GetCount():
-                break
+        for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
                 if threading.current_thread().name == "MainThread":
                     self.TryRowValueChanged(row, col)
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
+                break
 
-    def UploadMessageUpdated(self, uploadModel):
+    def MessageUpdated(self, uploadModel):
         if uploadModel.Canceled():
             return
-        for row in range(0, self.GetCount()):
-            # Uploads could be in the process of being canceled:
-            if row >= self.GetCount():
-                break
+        for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
                 if threading.current_thread().name == "MainThread":
                     self.TryRowValueChanged(row, col)
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
+                break
 
-    def CancelRemaining(self):
-        app = wx.GetApp()
-        if threading.current_thread().name == "MainThread":
-            app.EnableTestAndUploadToolbarButtons()
-        else:
-            wx.CallAfter(app.EnableTestAndUploadToolbarButtons)
-        rowsToDelete = []
-        for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \
-                    and \
-                    self.uploadsData[row].GetStatus() != UploadStatus.FAILED:
-                rowsToDelete.append(row)
+    def SetStatus(self, uploadModel, status):
+        uploadModel.SetStatus(status)
+        if status == UploadStatus.COMPLETED:
+            self.completedCountLock.acquire()
+            try:
+                self.completedCount += 1
+            finally:
+                self.completedCountLock.release()
+        elif status == UploadStatus.FAILED:
+            self.failedCountLock.acquire()
+            try:
+                self.failedCount += 1
+            finally:
+                self.failedCountLock.release()
+        self.StatusUpdated(uploadModel)
 
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-        for row in reversed(rowsToDelete):
-            self.uploadsData[row].Cancel()
-            del self.uploadsData[row]
-            del self.uud[row]
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rowsToDelete)
-        else:
-            wx.CallAfter(self.RowsDeleted, rowsToDelete)
-
-        self.fud = list()
-        self.filtered = False
-        self.searchString = ""
-        self.maxDataViewId = 0
+    def SetMessage(self, uploadModel, message):
+        uploadModel.SetMessage(message)
+        self.MessageUpdated(uploadModel)
 
     def GetCompletedCount(self):
-        completedCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetStatus() == UploadStatus.COMPLETED:
-                completedCount += 1
-        return completedCount
+        return self.completedCount
 
     def GetFailedCount(self):
-        failedCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetStatus() == UploadStatus.FAILED:
-                failedCount += 1
-        return failedCount
+        return self.failedCount

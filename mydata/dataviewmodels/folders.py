@@ -25,6 +25,7 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils import EndBusyCursorIfRequired
+import mydata.events as mde
 
 
 # pylint: disable=too-many-instance-attributes
@@ -366,16 +367,6 @@ class FoldersModel(DataViewIndexListModel):
                     wx.CallAfter(self.RowDeleted, row)
                 return
 
-    def Contains(self, path):
-        """
-        Check if folders model contains a folder model
-        matching the specified path.
-        """
-        for row in range(0, self.GetCount()):
-            if path == self.GetFolderPath(row):
-                return True
-        return False
-
     def GetMaxDataViewIdFromExistingRows(self):
         """
         Get maximum dataview ID from existing rows.
@@ -413,12 +404,12 @@ class FoldersModel(DataViewIndexListModel):
         except wx.PyAssertionError:
             logger.warning(traceback.format_exc())
 
-    def AddRow(self, value):
+    def AddRow(self, folderModel):
         """
         Add folder model to folders model and notify view.
         """
         self.Filter("")
-        self.foldersData.append(value)
+        self.foldersData.append(folderModel)
         # Notify views
         if threading.current_thread().name == "MainThread":
             self.RowAppended()
@@ -428,6 +419,13 @@ class FoldersModel(DataViewIndexListModel):
         self.ufd = self.foldersData
         self.ffd = list()
         self.Filter(self.searchString)
+
+        if hasattr(wx.GetApp(), "GetMainFrame"):
+            startDataUploadsForFolderEvent = \
+                mde.MyDataEvent(mde.EVT_START_UPLOADS_FOR_FOLDER,
+                                folderModel=folderModel)
+            wx.PostEvent(wx.GetApp().GetMainFrame(),
+                         startDataUploadsForFolderEvent)
 
     def FolderStatusUpdated(self, folderModel):
         """

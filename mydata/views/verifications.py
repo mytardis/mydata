@@ -2,12 +2,10 @@
 Represents the Verifications tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-import traceback
 import wx
 import wx.dataview as dv
 
 from mydata.dataviewmodels.verifications import ColumnType
-from mydata.logs import logger
 
 
 class VerificationsView(wx.Panel):
@@ -15,6 +13,7 @@ class VerificationsView(wx.Panel):
     Represents the Verifications tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, verificationsModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
@@ -72,57 +71,6 @@ class VerificationsView(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(sizer)
         sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
-
-    def OnCancelSelectedVerifications(self, event):
-        """
-        Remove the selected row(s) from the model. The model will take
-        care of notifying the view (and any other observers) that the
-        change has happened.
-        """
-        # pylint: disable=fixme
-        # FIXME: Should warn the user if already-completed verifications
-        # exist within the selection (in which case their datafiles
-        # won't be deleted from the MyTardis server).
-        # The OnCancelRemainingVerifications method is a bit smarter in
-        # terms of only deleting incomplete verification rows from the view.
-
-        # pylint: disable=bare-except
-        try:
-            items = self.verificationsDataViewControl.GetSelections()
-            rows = [self.verificationsModel.GetRow(item) for item in items]
-            if len(rows) > 1:
-                message = \
-                    "Are you sure you want to cancel the selected " \
-                    "verifications?" \
-                    "\n\n" \
-                    "MyData will attempt to resume the verifications " \
-                    "next time it runs."
-            elif len(rows) == 1:
-                pathToVerification = \
-                    self.verificationsModel.GetVerificationModel(rows[0])\
-                        .GetRelativePathToVerification()
-                message = "Are you sure you want to cancel verificationing " + \
-                    "\"" + pathToVerification + "\"?" \
-                    "\n\n" \
-                    "MyData will attempt to resume the verifications " \
-                    "next time it runs."
-            else:
-                dlg = wx.MessageDialog(None,
-                                       "Please select an verification "
-                                       "to cancel.",
-                                       "Cancel Verification(s)", wx.OK)
-                dlg.ShowModal()
-                return
-            confirmationDialog = \
-                wx.MessageDialog(None, message, "MyData",
-                                 wx.OK | wx.CANCEL | wx.ICON_QUESTION)
-            okToDelete = confirmationDialog.ShowModal()
-            if okToDelete == wx.ID_OK:
-                self.verificationsModel.DeleteRows(rows)
-        except:
-            logger.error(traceback.format_exc())
-        finally:
-            event.Skip()
 
     def GetVerificationsModel(self):
         """

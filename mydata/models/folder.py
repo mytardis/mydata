@@ -284,3 +284,9 @@ class FolderModel(object):
                     continue
                 match = match or fnmatch(filename, glob)
         return match
+
+    def __hash__(self):
+        return hash(self.dataViewId)
+
+    def __eq__(self, other):
+        return self.dataViewId == other.dataViewId

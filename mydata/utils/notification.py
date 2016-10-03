@@ -28,7 +28,7 @@ class Notification(object):
         if sys.platform.startswith("linux"):
             try:
                 icon = MYDATA_ICONS.GetIconPath("favicon", vendor="MyTardis")
-                args = ["-i", icon, "-t", "5000", title, message]
+                args = ["-i", icon, "-t", "3000", title, message]
                 proc = subprocess.Popen(["notify-send"] + args,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT)

@@ -57,6 +57,10 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
+# Running subprocess's communicate from multiple threads can cause high CPU
+# usage, so we poll each subprocess before running communicate, using a sleep
+# interval of SLEEP_FACTOR * maxThreads.
+SLEEP_FACTOR = 0.01
 
 # pylint: disable=too-many-instance-attributes
 class OpenSSH(object):
@@ -452,9 +456,12 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                               host, port, settingsModel):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
     quotedRemoteFilePath = OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
+    maxThreads = settingsModel.GetMaxVerificationThreads() + \
+        settingsModel.GetMaxUploadThreads()
 
     if sys.platform.startswith("win"):
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
@@ -476,7 +483,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                 OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
                                                 host, port)
             sshControlMasterProcess = \
-                sshControlMasterPool.GetSshControlMasterProcess()
+                sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
             sshControlPathOptionValuePair = \
                 sshControlMasterProcess.GetControlPathOptionValuePair()
         else:
@@ -507,6 +514,11 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                             stderr=subprocess.STDOUT,
                             startupinfo=DEFAULT_STARTUP_INFO,
                             creationflags=DEFAULT_CREATION_FLAGS)
+    while True:
+        poll = proc.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
     stdout, _ = proc.communicate()
     lines = stdout.splitlines()
     bytesUploaded = long(0)
@@ -675,14 +687,15 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
                                         os.path.basename(remoteFilePath))
 
-    # logger.warning("Assuming that the remote shell is Bash.")
+    settingsModel = foldersController.settingsModel
+    maxThreads = settingsModel.GetMaxUploadThreads()
 
-    if foldersController.settingsModel.UseSshControlMasterIfAvailable():
+    if settingsModel.UseSshControlMasterIfAvailable():
         sshControlMasterPool = \
             OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
                                             host, port)
         sshControlMasterProcess = \
-            sshControlMasterPool.GetSshControlMasterProcess()
+            sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
         sshControlPathOptionValuePair = \
             sshControlMasterProcess.GetControlPathOptionValuePair()
     else:
@@ -712,6 +725,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                          stderr=subprocess.STDOUT,
                          startupinfo=DEFAULT_STARTUP_INFO,
                          creationflags=DEFAULT_CREATION_FLAGS)
+    while True:
+        poll = mkdirProcess.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
         logger.error("'%s' returned %d" % (mkdirCmdString,
@@ -740,6 +758,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                          stderr=subprocess.STDOUT,
                          startupinfo=DEFAULT_STARTUP_INFO,
                          creationflags=DEFAULT_CREATION_FLAGS)
+    while True:
+        poll = removeRemoteChunkProcess.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
     stdout, _ = removeRemoteChunkProcess.communicate()
     if removeRemoteChunkProcess.returncode != 0:
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
@@ -791,6 +814,12 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
+        maxThreads = settingsModel.GetMaxUploadThreads()
+        while True:
+            poll = ddProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         stdout, _ = ddProcess.communicate()
         if ddProcess.returncode != 0:
             raise Exception(stdout,
@@ -829,6 +858,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
         uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
+        while True:
+            poll = scpUploadChunkProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         stdout, _ = scpUploadChunkProcess.communicate()
         if scpUploadChunkProcess.returncode != 0:
             raise ScpException(stdout,
@@ -876,6 +910,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
+        while True:
+            poll = appendChunkProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         stdout, _ = appendChunkProcess.communicate()
         if appendChunkProcess.returncode != 0:
             raise SshException(stdout, appendChunkProcess.returncode)
@@ -909,6 +948,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                          stderr=subprocess.STDOUT,
                          startupinfo=DEFAULT_STARTUP_INFO,
                          creationflags=DEFAULT_CREATION_FLAGS)
+    while True:
+        poll = removeRemoteChunkProcess.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
     stdout, _ = removeRemoteChunkProcess.communicate()
     if removeRemoteChunkProcess.returncode != 0:
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
@@ -1007,6 +1051,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    maxThreads = foldersController.settingsModel.GetMaxUploadThreads()
+
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
@@ -1029,6 +1075,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
                          stderr=subprocess.STDOUT,
                          startupinfo=DEFAULT_STARTUP_INFO,
                          creationflags=DEFAULT_CREATION_FLAGS)
+    while True:
+        poll = mkdirProcess.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
     stdout, _ = mkdirProcess.communicate()
     if mkdirProcess.returncode != 0:
         raise SshException(stdout, mkdirProcess.returncode)
@@ -1124,6 +1175,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
         uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
+        while True:
+            poll = scpUploadChunkProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         stdout, _ = scpUploadChunkProcess.communicate()
         if scpUploadChunkProcess.returncode != 0:
             raise ScpException(stdout,
@@ -1164,6 +1220,11 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
+        while True:
+            poll = scpUploadChunkProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         stdout, _ = appendChunkProcess.communicate()
         if appendChunkProcess.returncode != 0:
             raise SshException(stdout, appendChunkProcess.returncode)
@@ -1236,7 +1297,7 @@ class SshControlMasterProcess(object):
             creationflags=DEFAULT_CREATION_FLAGS)
         self.pid = self.proc.pid
 
-    def Check(self):
+    def Check(self, maxThreads):
         checkSshControlMasterCommand = \
             "%s -oControlPath=%s -O check " \
             "%s@%s" \
@@ -1251,6 +1312,11 @@ class SshControlMasterProcess(object):
             shell=OPENSSH.preferToUseShellInSubprocess,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
+        while True:
+            poll = proc.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
         proc.communicate()
         return proc.returncode == 0
 
@@ -1304,9 +1370,9 @@ class SshControlMasterPool(object):
         self.sshControlMasterProcesses = []
         self.timeout = 1
 
-    def GetSshControlMasterProcess(self):
+    def GetSshControlMasterProcess(self, maxThreads):
         for sshControlMasterProcess in self.sshControlMasterProcesses:
-            if sshControlMasterProcess.Check():
+            if sshControlMasterProcess.Check(maxThreads):
                 return sshControlMasterProcess
         if len(self.sshControlMasterProcesses) < self.maxConnections:
             newSshControlMasterProcess = \
@@ -1320,7 +1386,7 @@ class SshControlMasterPool(object):
                 time.sleep(0.1)
                 wait += 0.1
                 for sshControlMasterProcess in self.sshControlMasterProcesses:
-                    if sshControlMasterProcess.Check():
+                    if sshControlMasterProcess.Check(maxThreads):
                         return sshControlMasterProcess
             message = "Exceeded max connections in SshControlMasterPool\n\n" \
                 "This suggests a problem with the scp_hostname and/or " \

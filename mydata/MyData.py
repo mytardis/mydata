@@ -740,11 +740,6 @@ class MyData(wx.App):
             self.usersModel.Filter(event.GetString())
         elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.GROUPS:
             self.groupsModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == \
-                NotebookTabs.VERIFICATIONS:
-            self.verificationsModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.UPLOADS:
-            self.uploadsModel.Filter(event.GetString())
 
     def OnScanAndUploadFromToolbar(self, event):
         """
@@ -976,8 +971,7 @@ class MyData(wx.App):
                 if testRun:
                     logger.testrun(message)
 
-        # Start FoldersModel.ScanFolders(),
-        # followed by FoldersController.StartDataUploads().
+        # Start FoldersModel.ScanFolders()
 
         def ScanDataDirs():
             """
@@ -986,6 +980,7 @@ class MyData(wx.App):
             """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
+            self.foldersController.InitForUploads()
             message = "Scanning data folders..."
             wx.CallAfter(self.frame.SetStatusMessage, message)
             message = "Scanning data folders in %s..." \
@@ -1000,6 +995,7 @@ class MyData(wx.App):
                 wx.CallAfter(self.DisableTestAndUploadToolbarButtons)
                 self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
                                               self.ShouldAbort)
+                self.foldersController.FinishedScanningForDatasetFolders()
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
                 logger.debug("Just set ScanningFolders to False")
@@ -1025,15 +1021,7 @@ class MyData(wx.App):
                     self.SetTestRunRunning(False)
                 return
 
-            if self.usersModel.GetNumUserOrGroupFolders() > 0:
-                startDataUploadsEvent = \
-                    mde.MyDataEvent(mde.EVT_START_DATA_UPLOADS,
-                                    foldersController=self.foldersController,
-                                    testRun=testRun)
-                logger.debug("Posting startDataUploadsEvent")
-                wx.PostEvent(wx.GetApp().GetMainFrame(),
-                             startDataUploadsEvent)
-            else:
+            if self.usersModel.GetNumUserOrGroupFolders() == 0:
                 message = "No folders were found to upload from."
                 logger.debug(message)
                 wx.CallAfter(self.frame.SetStatusMessage, message)

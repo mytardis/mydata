@@ -6,12 +6,10 @@ and the tabular data displayed on that tab view.
 # pylint: disable=fixme
 # pylint: disable=missing-docstring
 
-import traceback
 import wx
 import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
-from mydata.logs import logger
 
 
 class UploadsView(wx.Panel):
@@ -19,6 +17,7 @@ class UploadsView(wx.Panel):
     Represents the Uploads tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
@@ -73,67 +72,6 @@ class UploadsView(wx.Panel):
         self.SetSizer(sizer)
         sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
-        cancelSelectedUploadsButton = \
-            wx.Button(self, label="Cancel Selected Upload(s)")
-        self.Bind(wx.EVT_BUTTON, self.OnCancelSelectedUploads,
-                  cancelSelectedUploadsButton)
-
-        cancelRemainingUploadsButton = \
-            wx.Button(self, label="Cancel All Remaining Upload(s)")
-        self.Bind(wx.EVT_BUTTON, self.OnCancelRemainingUploads,
-                  cancelRemainingUploadsButton)
-
-        btnbox = wx.BoxSizer(wx.HORIZONTAL)
-        btnbox.Add(cancelSelectedUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
-        btnbox.Add(cancelRemainingUploadsButton, 0, wx.LEFT | wx.RIGHT, 5)
-        self.Sizer.Add(btnbox, 0, wx.TOP | wx.BOTTOM, 5)
-
-    def OnCancelSelectedUploads(self, event):
-        """
-        Remove the selected row(s) from the model. The model will take
-        care of notifying the view (and any other observers) that the
-        change has happened.
-        """
-        # FIXME: Should warn the user if already-completed uploads
-        # exist within the selection (in which case their datafiles
-        # won't be deleted from the MyTardis server).
-        # The OnCancelRemainingUploads method is a bit smarter in
-        # terms of only deleting incomplete upload rows from the view.
-        # pylint: disable=bare-except
-        try:
-            items = self.uploadsDataViewControl.GetSelections()
-            rows = [self.uploadsModel.GetRow(item) for item in items]
-            if len(rows) > 1:
-                message = \
-                    "Are you sure you want to cancel the selected uploads?" \
-                    "\n\n" \
-                    "MyData will attempt to resume the uploads next time " \
-                    "it runs."
-            elif len(rows) == 1:
-                pathToUpload = self.uploadsModel.GetUploadModel(rows[0])\
-                    .GetRelativePathToUpload()
-                message = "Are you sure you want to cancel uploading " + \
-                    "\"" + pathToUpload + "\"?" \
-                    "\n\n" \
-                    "MyData will attempt to resume the uploads next time " \
-                    "it runs."
-            else:
-                dlg = wx.MessageDialog(None,
-                                       "Please select an upload to cancel.",
-                                       "Cancel Upload(s)", wx.OK)
-                dlg.ShowModal()
-                return
-            confirmationDialog = \
-                wx.MessageDialog(None, message, "MyData",
-                                 wx.OK | wx.CANCEL | wx.ICON_QUESTION)
-            okToDelete = confirmationDialog.ShowModal()
-            if okToDelete == wx.ID_OK:
-                self.uploadsModel.DeleteRows(rows)
-        except:
-            logger.error(traceback.format_exc())
-        finally:
-            event.Skip()
-
     def OnCancelRemainingUploads(self, event):
         wx.CallAfter(wx.BeginBusyCursor)
         wx.PostEvent(
@@ -142,9 +80,3 @@ class UploadsView(wx.Panel):
                 canceled=True))
         if event:
             event.Skip()
-
-    def GetUploadsModel(self):
-        """
-        Returns the UploadsModel instance associated with the view.
-        """
-        return self.uploadsModel

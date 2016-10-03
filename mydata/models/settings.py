@@ -163,6 +163,7 @@ class SettingsModel(object):
         self.dataset_grouping = ""
         self.group_prefix = ""
         self.validate_folder_structure = True
+        self.max_verification_threads = 16
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
@@ -243,6 +244,7 @@ class SettingsModel(object):
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
+        self.max_verification_threads = 16
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.validate_folder_structure = True
@@ -406,6 +408,8 @@ class SettingsModel(object):
                 logger.debug("Updated local settings from server.")
             else:
                 logger.debug("Settings were not found on the server.")
+
+        self.previousDict.update(self.__dict__)
 
         self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
@@ -679,6 +683,12 @@ class SettingsModel(object):
 
     def SetExcludesFile(self, excludesFile):
         self.excludes_file = excludesFile
+
+    def GetMaxVerificationThreads(self):
+        return self.max_verification_threads
+
+    def SetMaxVerificationThreads(self, maxVerificationThreads):
+        self.max_verification_threads = maxVerificationThreads
 
     def GetMaxUploadThreads(self):
         return self.max_upload_threads
@@ -1198,6 +1208,11 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
+            message = "Settings validation - checking instrument name..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
+
             # For now, we are assuming that if we find an
             # instrument record with the correct name and
             # facility, then it must be the correct instrument
@@ -1232,13 +1247,16 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
-            logger.debug("Validating email address.")
+            message = "Settings validation - validating email address..."
+            logger.debug(message)
+            if setStatusMessage:
+                setStatusMessage(message)
+
             if not validate_email(self.GetContactEmail()):
                 message = "Please enter a valid contact email."
                 self.validation = \
                     SettingsValidation(False, message, "contact_email")
                 return self.validation
-            logger.debug("Done validating email address.")
             if self.GetFolderStructure().startswith('Email'):
                 dataDir = self.GetDataDirectory()
                 folderNames = os.walk(dataDir).next()[1]
@@ -1257,207 +1275,14 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
-            message = "Settings validation - " \
-                "checking if MyData is set to start automatically..."
-            logger.debug(message)
-            if setStatusMessage:
-                setStatusMessage(message)
-            # This auto-start on login stuff shouldn't really
-            # be in settings validation.  I put it here
-            # to ensure it doesn't run in the main thread.
-            if sys.platform.startswith("win"):
-                # Check for MyData shortcut(s) in startup folder(s).
-
-                with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
-                        as vbScript:
-                    script = r"""
-set objShell = CreateObject("WScript.Shell")
-startupFolder = objShell.SpecialFolders("Startup")
-path = startupFolder & "\" & "MyData.lnk"
-
-Set fso = CreateObject("Scripting.FileSystemObject")
-If (fso.FileExists(path)) Then
-   msg = path & " exists."
-   Wscript.Echo(msg)
-   Wscript.Quit(0)
-Else
-   msg = path & " doesn't exist."
-   Wscript.Echo(msg)
-   Wscript.Quit(1)
-End If
-                    """
-                    vbScript.write(script)
-                cmdList = ['cscript', '//Nologo', vbScript.name]
-                logger.info("Checking for MyData shortcut in user "
-                            "startup items.")
-                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, shell=False,
-                                        startupinfo=DEFAULT_STARTUP_INFO,
-                                        creationflags=DEFAULT_CREATION_FLAGS)
-                output, _ = proc.communicate()
-                shortcutInStartupItems = (proc.returncode == 0)
-                if shortcutInStartupItems:
-                    logger.info("Found MyData shortcut in user startup items.")
-                else:
-                    logger.info("Didn't find MyData shortcut in user "
-                                "startup items.")
-                try:
-                    os.unlink(vbScript.name)
-                except:
-                    logger.error(traceback.format_exc())
-                with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
-                        as vbScript:
-                    script = script.replace("Startup", "AllUsersStartup")
-                    vbScript.write(script)
-                cmdList = ['cscript', '//Nologo', vbScript.name]
-                logger.info("Checking for MyData shortcut in common "
-                            "startup items.")
-                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, shell=False,
-                                        startupinfo=DEFAULT_STARTUP_INFO,
-                                        creationflags=DEFAULT_CREATION_FLAGS)
-                output, _ = proc.communicate()
-                shortcutInCommonStartupItems = (proc.returncode == 0)
-                if shortcutInCommonStartupItems:
-                    logger.info("Found MyData shortcut in common "
-                                "startup items.")
-                else:
-                    logger.info("Didn't find MyData shortcut in common "
-                                "startup items.")
-                try:
-                    os.unlink(vbScript.name)
-                except:
-                    logger.error(traceback.format_exc())
-                if (shortcutInStartupItems or shortcutInCommonStartupItems) \
-                        and self.StartAutomaticallyOnLogin():
-                    logger.debug("MyData is already set to start automatically "
-                                 "on login.")
-                elif (not shortcutInStartupItems and
-                      not shortcutInCommonStartupItems) and \
-                        self.StartAutomaticallyOnLogin():
-                    logger.info("Adding MyData shortcut to startup items.")
-                    pathToMyDataExe = \
-                        r"C:\Program Files (x86)\MyData\MyData.exe"
-                    if hasattr(sys, "frozen"):
-                        pathToMyDataExe = os.path.realpath(r'.\MyData.exe')
-                    with tempfile.NamedTemporaryFile(suffix='.vbs',
-                                                     delete=False) as vbScript:
-                        script = r"""
-Set oWS = WScript.CreateObject("WScript.Shell")
-startupFolder = oWS.SpecialFolders("Startup")
-sLinkFile = startupFolder & "\" & "MyData.lnk"
-Set oLink = oWS.CreateShortcut(sLinkFile)
-oLink.TargetPath = "%s"
-oLink.Save
-                        """ % pathToMyDataExe
-                        vbScript.write(script)
-                    cmdList = ['cscript', '//Nologo', vbScript.name]
-                    logger.info("Adding MyData shortcut to user "
-                                "startup items.")
-                    proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
-                                            shell=False,
-                                            startupinfo=DEFAULT_STARTUP_INFO,
-                                            creationflags=DEFAULT_CREATION_FLAGS)
-                    output, _ = proc.communicate()
-                    success = (proc.returncode == 0)
-                    if not success:
-                        logger.error(output)
-                    try:
-                        os.unlink(vbScript.name)
-                    except:
-                        logger.error(traceback.format_exc())
-                elif (shortcutInStartupItems or
-                      shortcutInCommonStartupItems) and \
-                        not self.StartAutomaticallyOnLogin():
-                    logger.info("Removing MyData from login items.")
-                    with tempfile.NamedTemporaryFile(suffix='.vbs',
-                                                     delete=False) as vbScript:
-                        script = r"""
-Set oWS = WScript.CreateObject("WScript.Shell")
-Set oFS = CreateObject("Scripting.FileSystemObject")
-startupFolder = oWS.SpecialFolders("Startup")
-sLinkFile = startupFolder & "\" & "MyData.lnk"
-oFS.DeleteFile sLinkFile
-                        """
-                        vbScript.write(script)
-                    cmdList = ['cscript', '//Nologo', vbScript.name]
-                    proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
-                                            shell=False,
-                                            startupinfo=DEFAULT_STARTUP_INFO,
-                                            creationflags=DEFAULT_CREATION_FLAGS)
-                    output, _ = proc.communicate()
-                    success = (proc.returncode == 0)
-                    if not success:
-                        logger.error(output)
-                    try:
-                        os.unlink(vbScript.name)
-                    except:
-                        logger.error(traceback.format_exc())
-
-            elif sys.platform.startswith("darwin"):
-                # Update ~/Library/Preferences/com.apple.loginitems.plist
-                # cfprefsd can cause unwanted caching.
-                # It will automatically respawn when needed.
-                for proc in psutil.process_iter():
-                    if proc.name() == "cfprefsd" and \
-                            proc.username() == getpass.getuser():
-                        proc.kill()
-                applescript = \
-                    'tell application "System Events" ' \
-                    'to get the name of every login item'
-                cmdString = "osascript -e '%s'" % applescript
-                loginItemsString = subprocess.check_output(cmdString,
-                                                           shell=True)
-                loginItems = [item.strip() for item in
-                              loginItemsString.split(',')]
-                if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
-                    logger.debug("MyData is already set to start automatically "
-                                 "on login.")
-                elif 'MyData' not in loginItems and \
-                        self.StartAutomaticallyOnLogin():
-                    logger.info("Adding MyData to login items.")
-                    pathToMyDataApp = "/Applications/MyData.app"
-                    if hasattr(sys, "frozen"):
-                        # Working directory in py2app bundle is
-                        # MyData.app/Contents/Resources/
-                        pathToMyDataApp = os.path.realpath('../..')
-                    applescript = \
-                        'tell application "System Events" ' \
-                        'to make login item at end with properties ' \
-                        '{path:"%s", hidden:false}' % pathToMyDataApp
-                    cmdString = "osascript -e '%s'" % applescript
-                    exitCode = subprocess.call(cmdString, shell=True)
-                    if exitCode != 0:
-                        logger.error("Received exit code %d from %s"
-                                     % (exitCode, cmdString))
-                elif 'MyData' in loginItems and \
-                        not self.StartAutomaticallyOnLogin():
-                    logger.info("Removing MyData from login items.")
-                    applescript = \
-                        'tell application "System Events" to ' \
-                        'delete login item "MyData"'
-                    cmdString = "osascript -e '%s'" % applescript
-                    exitCode = subprocess.call(cmdString, shell=True)
-                    if exitCode != 0:
-                        logger.error("Received exit code %d from %s"
-                                     % (exitCode, cmdString))
-            elif sys.platform.startswith("linux") and hasattr(sys, "frozen"):
-                autostartDir = os.path.join(os.path.expanduser('~'),
-                                            ".config", "autostart")
-                if self.StartAutomaticallyOnLogin():
-                    if not os.path.exists(autostartDir):
-                        os.makedirs(autostartDir)
-                    pathToMyDataDesktop = \
-                        os.path.join(os.path.dirname(sys.executable),
-                                     "MyData.desktop")
-                    shutil.copy(pathToMyDataDesktop, autostartDir)
-                else:
-                    mydataAutostartPath = os.path.join(autostartDir,
-                                                       "MyData.desktop")
-                    if os.path.exists(mydataAutostartPath):
-                        os.remove(mydataAutostartPath)
+            if self.previousDict['start_automatically_on_login'] != \
+                    self.StartAutomaticallyOnLogin():
+                message = "Settings validation - " \
+                    "checking if MyData is set to start automatically..."
+                logger.debug(message)
+                if setStatusMessage:
+                    setStatusMessage(message)
+                self.UpdateAutostartFile()
         except IncompatibleMyTardisVersion:
             logger.debug("Incompatible MyTardis Version.")
             self.SetIncompatibleMyTardisVersion(True)
@@ -1918,6 +1743,208 @@ oFS.DeleteFile sLinkFile
                 message="Instrument with name \"%s\" "
                         "already exists" % newInstrumentName)
         oldInstrument.Rename(newInstrumentName)
+
+    def UpdateAutostartFile(self):
+        """
+        This auto-start on login stuff shouldn't really
+        be in settings validation.  I put it here
+        to ensure it doesn't run in the main thread.
+        """
+        # pylint: disable=bare-except
+
+        if sys.platform.startswith("win"):
+            # Check for MyData shortcut(s) in startup folder(s).
+
+            with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
+                    as vbScript:
+                script = r"""
+set objShell = CreateObject("WScript.Shell")
+startupFolder = objShell.SpecialFolders("Startup")
+path = startupFolder & "\" & "MyData.lnk"
+
+Set fso = CreateObject("Scripting.FileSystemObject")
+If (fso.FileExists(path)) Then
+msg = path & " exists."
+Wscript.Echo(msg)
+Wscript.Quit(0)
+Else
+msg = path & " doesn't exist."
+Wscript.Echo(msg)
+Wscript.Quit(1)
+End If
+                """
+                vbScript.write(script)
+            cmdList = ['cscript', '//Nologo', vbScript.name]
+            logger.info("Checking for MyData shortcut in user "
+                        "startup items.")
+            proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, shell=False,
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
+            output, _ = proc.communicate()
+            shortcutInStartupItems = (proc.returncode == 0)
+            if shortcutInStartupItems:
+                logger.info("Found MyData shortcut in user startup items.")
+            else:
+                logger.info("Didn't find MyData shortcut in user "
+                            "startup items.")
+            try:
+                os.unlink(vbScript.name)
+            except:
+                logger.error(traceback.format_exc())
+            with tempfile.NamedTemporaryFile(suffix='.vbs', delete=False) \
+                    as vbScript:
+                script = script.replace("Startup", "AllUsersStartup")
+                vbScript.write(script)
+            cmdList = ['cscript', '//Nologo', vbScript.name]
+            logger.info("Checking for MyData shortcut in common "
+                        "startup items.")
+            proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, shell=False,
+                                    startupinfo=DEFAULT_STARTUP_INFO,
+                                    creationflags=DEFAULT_CREATION_FLAGS)
+            output, _ = proc.communicate()
+            shortcutInCommonStartupItems = (proc.returncode == 0)
+            if shortcutInCommonStartupItems:
+                logger.info("Found MyData shortcut in common "
+                            "startup items.")
+            else:
+                logger.info("Didn't find MyData shortcut in common "
+                            "startup items.")
+            try:
+                os.unlink(vbScript.name)
+            except:
+                logger.error(traceback.format_exc())
+            if (shortcutInStartupItems or shortcutInCommonStartupItems) \
+                    and self.StartAutomaticallyOnLogin():
+                logger.debug("MyData is already set to start automatically "
+                             "on login.")
+            elif (not shortcutInStartupItems and
+                  not shortcutInCommonStartupItems) and \
+                    self.StartAutomaticallyOnLogin():
+                logger.info("Adding MyData shortcut to startup items.")
+                pathToMyDataExe = \
+                    r"C:\Program Files (x86)\MyData\MyData.exe"
+                if hasattr(sys, "frozen"):
+                    pathToMyDataExe = os.path.realpath(r'.\MyData.exe')
+                with tempfile.NamedTemporaryFile(suffix='.vbs',
+                                                 delete=False) as vbScript:
+                    script = r"""
+Set oWS = WScript.CreateObject("WScript.Shell")
+startupFolder = oWS.SpecialFolders("Startup")
+sLinkFile = startupFolder & "\" & "MyData.lnk"
+Set oLink = oWS.CreateShortcut(sLinkFile)
+oLink.TargetPath = "%s"
+oLink.Save
+                    """ % pathToMyDataExe
+                    vbScript.write(script)
+                cmdList = ['cscript', '//Nologo', vbScript.name]
+                logger.info("Adding MyData shortcut to user "
+                            "startup items.")
+                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        shell=False,
+                                        startupinfo=DEFAULT_STARTUP_INFO,
+                                        creationflags=DEFAULT_CREATION_FLAGS)
+                output, _ = proc.communicate()
+                success = (proc.returncode == 0)
+                if not success:
+                    logger.error(output)
+                try:
+                    os.unlink(vbScript.name)
+                except:
+                    logger.error(traceback.format_exc())
+            elif (shortcutInStartupItems or
+                  shortcutInCommonStartupItems) and \
+                    not self.StartAutomaticallyOnLogin():
+                logger.info("Removing MyData from login items.")
+                with tempfile.NamedTemporaryFile(suffix='.vbs',
+                                                 delete=False) as vbScript:
+                    script = r"""
+Set oWS = WScript.CreateObject("WScript.Shell")
+Set oFS = CreateObject("Scripting.FileSystemObject")
+startupFolder = oWS.SpecialFolders("Startup")
+sLinkFile = startupFolder & "\" & "MyData.lnk"
+oFS.DeleteFile sLinkFile
+                    """
+                    vbScript.write(script)
+                cmdList = ['cscript', '//Nologo', vbScript.name]
+                proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        shell=False,
+                                        startupinfo=DEFAULT_STARTUP_INFO,
+                                        creationflags=DEFAULT_CREATION_FLAGS)
+                output, _ = proc.communicate()
+                success = (proc.returncode == 0)
+                if not success:
+                    logger.error(output)
+                try:
+                    os.unlink(vbScript.name)
+                except:
+                    logger.error(traceback.format_exc())
+
+        elif sys.platform.startswith("darwin"):
+            # Update ~/Library/Preferences/com.apple.loginitems.plist
+            # cfprefsd can cause unwanted caching.
+            # It will automatically respawn when needed.
+            for proc in psutil.process_iter():
+                if proc.name() == "cfprefsd" and \
+                        proc.username() == getpass.getuser():
+                    proc.kill()
+            applescript = \
+                'tell application "System Events" ' \
+                'to get the name of every login item'
+            cmdString = "osascript -e '%s'" % applescript
+            loginItemsString = subprocess.check_output(cmdString,
+                                                       shell=True)
+            loginItems = [item.strip() for item in
+                          loginItemsString.split(',')]
+            if 'MyData' in loginItems and self.StartAutomaticallyOnLogin():
+                logger.debug("MyData is already set to start automatically "
+                             "on login.")
+            elif 'MyData' not in loginItems and \
+                    self.StartAutomaticallyOnLogin():
+                logger.info("Adding MyData to login items.")
+                pathToMyDataApp = "/Applications/MyData.app"
+                if hasattr(sys, "frozen"):
+                    # Working directory in py2app bundle is
+                    # MyData.app/Contents/Resources/
+                    pathToMyDataApp = os.path.realpath('../..')
+                applescript = \
+                    'tell application "System Events" ' \
+                    'to make login item at end with properties ' \
+                    '{path:"%s", hidden:false}' % pathToMyDataApp
+                cmdString = "osascript -e '%s'" % applescript
+                exitCode = subprocess.call(cmdString, shell=True)
+                if exitCode != 0:
+                    logger.error("Received exit code %d from %s"
+                                 % (exitCode, cmdString))
+            elif 'MyData' in loginItems and \
+                    not self.StartAutomaticallyOnLogin():
+                logger.info("Removing MyData from login items.")
+                applescript = \
+                    'tell application "System Events" to ' \
+                    'delete login item "MyData"'
+                cmdString = "osascript -e '%s'" % applescript
+                exitCode = subprocess.call(cmdString, shell=True)
+                if exitCode != 0:
+                    logger.error("Received exit code %d from %s"
+                                 % (exitCode, cmdString))
+        elif sys.platform.startswith("linux") and hasattr(sys, "frozen"):
+            autostartDir = os.path.join(os.path.expanduser('~'),
+                                        ".config", "autostart")
+            if self.StartAutomaticallyOnLogin():
+                if not os.path.exists(autostartDir):
+                    os.makedirs(autostartDir)
+                pathToMyDataDesktop = \
+                    os.path.join(os.path.dirname(sys.executable),
+                                 "MyData.desktop")
+                shutil.copy(pathToMyDataDesktop, autostartDir)
+            else:
+                mydataAutostartPath = os.path.join(autostartDir,
+                                                   "MyData.desktop")
+                if os.path.exists(mydataAutostartPath):
+                    os.remove(mydataAutostartPath)
 
     def GetConfigPath(self):
         return self.configPath
