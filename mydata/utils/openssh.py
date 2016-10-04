@@ -23,6 +23,7 @@ otherwise we need to worry about escaping special characters like
 # pylint: disable=wrong-import-position
 
 import sys
+from datetime import datetime
 import os
 import subprocess
 import traceback
@@ -1265,6 +1266,8 @@ class SshControlMasterProcess(object):
     See "ControlMaster" in "man ssh_config"
     Only available on POSIX systems.
     """
+    CHECK_INTERVAL = 5  # seconds  # pylint: disable=invalid-name
+
     def __init__(self, username, privateKeyFilePath, host, port):
         self.username = username
         self.privateKeyFilePath = privateKeyFilePath
@@ -1296,8 +1299,14 @@ class SshControlMasterProcess(object):
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
         self.pid = self.proc.pid
+        self.lastCheckTime = datetime.fromtimestamp(0)
+        self.lastCheckResult = True
 
     def Check(self, maxThreads):
+        intervalSinceLastCheck = datetime.now() - self.lastCheckTime
+        if intervalSinceLastCheck.total_seconds() < self.CHECK_INTERVAL:
+            return self.lastCheckResult
+        self.lastCheckTime = datetime.now()
         checkSshControlMasterCommand = \
             "%s -oControlPath=%s -O check " \
             "%s@%s" \
@@ -1318,7 +1327,8 @@ class SshControlMasterProcess(object):
                 break
             time.sleep(SLEEP_FACTOR * maxThreads)
         proc.communicate()
-        return proc.returncode == 0
+        self.lastCheckResult = (proc.returncode == 0)
+        return self.lastCheckResult
 
     def Exit(self):
         exitSshControlMasterCommand = \
