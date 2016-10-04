@@ -77,6 +77,14 @@ class ConnectionStatus(object):
     DISCONNECTED = 1
 
 
+def BeginBusyCursorIfRequired():
+    """
+    Begin busy cursor if it's not already being displayed.
+    """
+    if not wx.IsBusy():
+        wx.BeginBusyCursor()
+
+
 def EndBusyCursorIfRequired():
     """
     The built in wx.EndBusyCursor raises an ugly exception if the
