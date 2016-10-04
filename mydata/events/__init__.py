@@ -731,17 +731,16 @@ class MyDataEvent(wx.PyCommandEvent):
             event.Skip()
             return
 
-        def StartDataUploadsWorker():
+        def StartDataUploadsForFolderWorker():
             """
             Start the data uploads in a dedicated thread.
             """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
-            logger.debug("StartDataUploadsWorker")
+            logger.debug("StartDataUploadsForFolderWorker")
             wx.CallAfter(BeginBusyCursorIfRequired)
             message = "Checking for data files on MyTardis and uploading " \
-                "if necessary..."
-            wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
+                "if necessary for folder: %s" % event.folderModel.GetFolder()
             logger.info(message)
             app = wx.GetApp()
             if app.TestRunRunning():
@@ -753,7 +752,7 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
         startDataUploadsForFolderThread = \
-            threading.Thread(target=StartDataUploadsWorker,
+            threading.Thread(target=StartDataUploadsForFolderWorker,
                              name="StartDataUploadsThread")
         MYDATA_THREADS.Add(startDataUploadsForFolderThread)
         startDataUploadsForFolderThread.start()
