@@ -1022,9 +1022,22 @@ class MyData(wx.App):
                     self.SetTestRunRunning(False)
                 return
 
-            if self.usersModel.GetNumUserOrGroupFolders() == 0:
-                message = "No folders were found to upload from."
-                logger.debug(message)
+            folderStructure = self.settingsModel.GetFolderStructure()
+            # pylint: disable=too-many-boolean-expressions
+            if self.usersModel.GetNumUserOrGroupFolders() == 0 or \
+                    (folderStructure.startswith("Username") and \
+                     self.usersModel.GetCount() == 0) or \
+                    (folderStructure.startswith("Email") and \
+                     self.usersModel.GetCount() == 0) or \
+                    (folderStructure.startswith("User Group") and \
+                     self.groupsModel.GetCount() == 0):
+                if self.usersModel.GetNumUserOrGroupFolders() == 0:
+                    message = "No folders were found to upload from."
+                else:
+                    message = "No valid folders were found to upload from."
+                logger.warning(message)
+                if testRun:
+                    logger.testrun(message)
                 wx.CallAfter(self.frame.SetStatusMessage, message)
                 wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
