@@ -439,7 +439,7 @@ class FoldersModel(DataViewIndexListModel):
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
 
-    def ScanFolders(self, incrementProgressDialog, shouldAbort):
+    def ScanFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
         """
         Scan dataset folders.
         """
@@ -473,9 +473,9 @@ class FoldersModel(DataViewIndexListModel):
         logger.debug("FoldersModel.ScanFolders(): Scanning " + dataDir + "...")
         if folderStructure.startswith("Username") or \
                 folderStructure.startswith("Email"):
-            self.ScanForUserFolders(incrementProgressDialog, shouldAbort)
+            self.ScanForUserFolders(writeProgressUpdateToStatusBar, shouldAbort)
         elif folderStructure.startswith("User Group"):
-            self.ScanForGroupFolders(incrementProgressDialog, shouldAbort)
+            self.ScanForGroupFolders(writeProgressUpdateToStatusBar, shouldAbort)
         elif folderStructure.startswith("Experiment"):
             self.ScanForExperimentFolders(dataDir, defaultOwner,
                                           defaultOwner.GetUsername())
@@ -488,7 +488,7 @@ class FoldersModel(DataViewIndexListModel):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def ScanForUserFolders(self, incrementProgressDialog, shouldAbort):
+    def ScanForUserFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
         """
         Scan for user folders.
         """
@@ -599,11 +599,11 @@ class FoldersModel(DataViewIndexListModel):
                                                         userFolderName),
                                            userRecord, userFolderName)
             if threading.current_thread().name == "MainThread":
-                incrementProgressDialog()
+                writeProgressUpdateToStatusBar()
             else:
-                wx.CallAfter(incrementProgressDialog)
+                wx.CallAfter(writeProgressUpdateToStatusBar)
 
-    def ScanForGroupFolders(self, incrementProgressDialog, shouldAbort):
+    def ScanForGroupFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
         """
         Scan for group folders.
         """
@@ -665,9 +665,9 @@ class FoldersModel(DataViewIndexListModel):
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if threading.current_thread().name == "MainThread":
-                incrementProgressDialog()
+                writeProgressUpdateToStatusBar()
             else:
-                wx.CallAfter(incrementProgressDialog)
+                wx.CallAfter(writeProgressUpdateToStatusBar)
 
     def ScanForDatasetFolders(self, pathToScan, owner, userFolderName):
         """
