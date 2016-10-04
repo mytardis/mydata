@@ -19,6 +19,7 @@ import wx.dataview
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
+from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 
 from mydata.models.experiment import ExperimentModel
@@ -222,7 +223,7 @@ class FoldersController(object):
         dlg.ShowModal()
         if needToRestartBusyCursor and not self.IsShuttingDown() \
                 and wx.GetApp().PerformingLookupsAndUploads():
-            wx.BeginBusyCursor()
+            BeginBusyCursorIfRequired()
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(False)
 

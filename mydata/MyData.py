@@ -70,6 +70,7 @@ from mydata.utils.notification import Notification
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.controllers.schedule import ScheduleController
 from mydata.views.testrun import TestRunFrame
+from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 
 
@@ -594,7 +595,7 @@ class MyData(wx.App):
                 logger.debug("Starting ShutDownDataScansAndUploads...")
                 # pylint: disable=bare-except
                 try:
-                    wx.CallAfter(wx.BeginBusyCursor)
+                    wx.CallAfter(BeginBusyCursorIfRequired)
                     self.foldersController.ShutDownUploadThreads()
                     wx.CallAfter(EndBusyCursorIfRequired)
                     self.tasksModel.ShutDown()
@@ -852,7 +853,7 @@ class MyData(wx.App):
                              % threading.current_thread().name)
                 # pylint: disable=bare-except
                 try:
-                    wx.CallAfter(wx.BeginBusyCursor)
+                    wx.CallAfter(BeginBusyCursorIfRequired)
                     # pylint: disable=broad-except
                     try:
                         activeNetworkInterfaces = \
