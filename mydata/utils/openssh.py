@@ -23,6 +23,7 @@ otherwise we need to worry about escaping special characters like
 # pylint: disable=wrong-import-position
 
 import sys
+from datetime import datetime
 import os
 import subprocess
 import traceback
@@ -606,9 +607,11 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     and ultimately it will be the MyTardis verification
     task which does the final check.
     """
+    # pylint: disable=too-many-branches
 
     bytesUploaded = long(0)
-    largeFileSize = 10 * 1024 * 1024  # FIXME: Magic number
+    settingsModel = foldersController.settingsModel
+    largeFileSize = settingsModel.GetLargeFileSize()
 
     if fileSize > largeFileSize:
         progressCallback(bytesUploaded, fileSize,
@@ -616,7 +619,6 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         if uploadModel.GetBytesUploadedToStaging() is not None:
             bytesUploaded = uploadModel.GetBytesUploadedToStaging()
         else:
-            settingsModel = foldersController.settingsModel
             bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
                                                       username,
                                                       privateKeyFilePath,
@@ -646,31 +648,115 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         # The most common use case.
         progressCallback(bytesUploaded, fileSize,
                          message="Uploading...")
-    if not sys.platform.startswith("win"):
-        UploadFileFromPosixSystem(filePath, fileSize, username,
-                                  privateKeyFilePath, host, port,
-                                  remoteFilePath, progressCallback,
-                                  foldersController, uploadModel,
-                                  bytesUploaded)
-        return
+    if sys.platform.startswith("win"):
+        if fileSize > largeFileSize:
+            return UploadLargeFileFromWindows(filePath, fileSize, username,
+                                              privateKeyFilePath, host, port,
+                                              remoteFilePath, progressCallback,
+                                              foldersController, uploadModel,
+                                              bytesUploaded)
+        else:
+            return UploadSmallFileFromWindows(filePath, fileSize, username,
+                                              privateKeyFilePath, host, port,
+                                              remoteFilePath, progressCallback,
+                                              uploadModel)
     if fileSize > largeFileSize:
-        return UploadLargeFileFromWindows(filePath, fileSize, username,
-                                          privateKeyFilePath, host, port,
-                                          remoteFilePath, progressCallback,
-                                          foldersController, uploadModel,
-                                          bytesUploaded)
+        UploadLargeFileFromPosixSystem(filePath, fileSize, username,
+                                       privateKeyFilePath, host, port,
+                                       remoteFilePath, progressCallback,
+                                       foldersController, uploadModel,
+                                       bytesUploaded)
     else:
-        return UploadSmallFileFromWindows(filePath, fileSize, username,
-                                          privateKeyFilePath, host, port,
-                                          remoteFilePath, progressCallback,
-                                          uploadModel)
+        return UploadSmallFileFromPosixSystem(filePath, fileSize, username,
+                                              privateKeyFilePath, host, port,
+                                              remoteFilePath, progressCallback,
+                                              uploadModel)
+
+
+def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
+                                   privateKeyFilePath, host, port,
+                                   remoteFilePath, progressCallback,
+                                   uploadModel):
+    """
+    Fast method for uploading small files (less overhead from chunking).
+    This method don't support resuming interrupted uploads, and doesn't
+    provide progress updates.
+    """
+    bytesUploaded = long(0)
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    if remoteDir not in REMOTE_DIRS_CREATED:
+        mkdirCmdAndArgs = \
+            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+             "-p", port,
+             "-n",
+             "-c", OPENSSH.cipher,
+             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-oIdentitiesOnly=yes",
+             "-oPasswordAuthentication=no",
+             "-oNoHostAuthenticationForLocalhost=yes",
+             "-oStrictHostKeyChecking=no",
+             "-l", username,
+             host,
+             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdString = " ".join(mkdirCmdAndArgs)
+        logger.debug(mkdirCmdString)
+        mkdirProcess = \
+            subprocess.Popen(mkdirCmdString,
+                             shell=OPENSSH.preferToUseShellInSubprocess,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             startupinfo=DEFAULT_STARTUP_INFO,
+                             creationflags=DEFAULT_CREATION_FLAGS)
+        stdout, _ = mkdirProcess.communicate()
+        if mkdirProcess.returncode != 0:
+            raise SshException(stdout, mkdirProcess.returncode)
+        REMOTE_DIRS_CREATED[remoteDir] = True
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    scpCommandString = \
+        '%s -v -P %s -i %s -c %s ' \
+        '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
+        '-oNoHostAuthenticationForLocalhost=yes ' \
+        '-oStrictHostKeyChecking=no ' \
+        '%s "%s@%s:\\"%s\\""' \
+        % (OPENSSH.DoubleQuote(OPENSSH.scp),
+           port,
+           privateKeyFilePath,
+           OPENSSH.cipher,
+           OPENSSH.DoubleQuote(filePath),
+           username, host,
+           remoteDir
+           .replace('`', r'\\`')
+           .replace('$', r'\\$'))
+    logger.debug(scpCommandString)
+    scpUploadProcess = subprocess.Popen(
+        scpCommandString,
+        shell=OPENSSH.preferToUseShellInSubprocess,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        startupinfo=DEFAULT_STARTUP_INFO,
+        creationflags=DEFAULT_CREATION_FLAGS)
+    uploadModel.SetScpUploadProcess(scpUploadProcess)
+
+    stdout, _ = scpUploadProcess.communicate()
+    if scpUploadProcess.returncode != 0:
+        raise ScpException(stdout, scpCommandString,
+                           scpUploadProcess.returncode)
+    bytesUploaded = fileSize
+    progressCallback(bytesUploaded, fileSize)
+    return
 
 
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
-def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
-                              host, port, remoteFilePath, progressCallback,
-                              foldersController, uploadModel, bytesUploaded):
+def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
+                                   privateKeyFilePath, host, port,
+                                   remoteFilePath, progressCallback,
+                                   foldersController, uploadModel,
+                                   bytesUploaded):
     """
     On POSIX systems, we use SSH connection caching (the ControlMaster
     and ControlPath options in "man ssh_config"), but they are not
@@ -767,8 +853,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     if removeRemoteChunkProcess.returncode != 0:
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
-    # defaultChunkSize = 1024*1024  # FIXME: magic number
-    defaultChunkSize = 128 * 1024  # FIXME: magic number
+    defaultChunkSize = 1024 * 1024  # FIXME: magic number
     maxChunkSize = 16 * 1024 * 1024  # FIXME: magic number
     chunkSize = defaultChunkSize
     # FIXME: magic number (approximately 50 progress bar increments)
@@ -791,8 +876,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
 
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadFileFromPosixSystem 1: Aborting upload for "
-                         "%s" % filePath)
+            logger.debug("UploadLargeFileFromPosixSystem 1: Aborting upload "
+                         "for %s" % filePath)
             return
 
         # Write chunk to temporary file:
@@ -923,8 +1008,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         progressCallback(bytesUploaded, fileSize)
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadFileFromPosixSystem 2: Aborting upload for "
-                         "%s" % filePath)
+            logger.debug("UploadLargeFileFromPosixSystem 2: Aborting upload "
+                         "for %s" % filePath)
             return
 
     remoteRemoveChunkCommand = \
@@ -1265,6 +1350,8 @@ class SshControlMasterProcess(object):
     See "ControlMaster" in "man ssh_config"
     Only available on POSIX systems.
     """
+    CHECK_INTERVAL = 5  # seconds  # pylint: disable=invalid-name
+
     def __init__(self, username, privateKeyFilePath, host, port):
         self.username = username
         self.privateKeyFilePath = privateKeyFilePath
@@ -1296,8 +1383,14 @@ class SshControlMasterProcess(object):
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
         self.pid = self.proc.pid
+        self.lastCheckTime = datetime.fromtimestamp(0)
+        self.lastCheckResult = True
 
     def Check(self, maxThreads):
+        intervalSinceLastCheck = datetime.now() - self.lastCheckTime
+        if intervalSinceLastCheck.total_seconds() < self.CHECK_INTERVAL:
+            return self.lastCheckResult
+        self.lastCheckTime = datetime.now()
         checkSshControlMasterCommand = \
             "%s -oControlPath=%s -O check " \
             "%s@%s" \
@@ -1318,7 +1411,8 @@ class SshControlMasterProcess(object):
                 break
             time.sleep(SLEEP_FACTOR * maxThreads)
         proc.communicate()
-        return proc.returncode == 0
+        self.lastCheckResult = (proc.returncode == 0)
+        return self.lastCheckResult
 
     def Exit(self):
         exitSshControlMasterCommand = \

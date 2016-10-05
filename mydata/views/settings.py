@@ -25,6 +25,8 @@ else:
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
 
+from mydata.utils import BeginBusyCursorIfRequired
+from mydata.utils import EndBusyCursorIfRequired
 from mydata.logs import logger
 import mydata.events as mde
 
@@ -1526,11 +1528,11 @@ class SettingsDialog(wx.Dialog):
         """
         Open MyData documentation in the default web browser.
         """
-        wx.BeginBusyCursor()
+        BeginBusyCursorIfRequired()
         import webbrowser
         webbrowser.open(
             "http://mydata.readthedocs.org/en/latest/settings.html")
-        wx.EndBusyCursor()
+        EndBusyCursorIfRequired()
         event.Skip()
 
     def OnSelectFolderStructure(self, event):

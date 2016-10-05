@@ -1,8 +1,22 @@
 """
 The main controller class for managing datafile verifications.
 
-Most of this content used to be part of the FoldersController
-class.
+class VerifyDatafileRunnable(object):
+  Run:
+    HandleNonExistentDataFile:
+      Post EVT_DIDNT_FIND_FILE_ON_SERVER
+    HandleExistingDatafile:
+      HandleExistingVerifiedDatafile:
+        Post EVT_FOUND_VERIFIED_DATAFILE
+      HandleExistingUnverifiedDatafile:
+        HandleResumableUpload:
+          HandleFullSizeResumableUpload:
+            Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
+          HandleIncompleteResumableUpload:
+            Post EVT_UNVERIFIED_FILE_ON_SERVER
+        HandleUnresumableUpload:
+          Either: Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
+              or: Post EVT_FOUND_UNVERIFIED_NO_DFOS
 """
 
 import os
@@ -120,6 +134,7 @@ class VerifyDatafileRunnable(object):
         wx.PostEvent(
             self.foldersController.notifyWindow,
             self.foldersController.didntFindDatafileOnServerEvent(
+                id=self.foldersController.EVT_DIDNT_FIND_FILE_ON_SERVER,
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
@@ -145,7 +160,7 @@ class VerifyDatafileRunnable(object):
         replicas = existingDatafile.GetReplicas()
         message = "Found datafile record for %s " \
             "but it has no verified replicas." % dataFilePath
-        logger.warning(message)
+        logger.debug(message)
         message = "Found unverified datafile record on MyTardis."
         self.verificationModel.SetMessage(message)
         uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
@@ -162,9 +177,17 @@ class VerifyDatafileRunnable(object):
 
     def HandleResumableUpload(self, existingDatafile):
         """
-        Can resume partial uploads.  We'll check whether this is a
-        partial upload.
+        Can resume partial uploads.  If this file is large enough to
+        be worth resuming, we'll check whether it has been partially
+        uploaded, otherwise we'll just re-upload it.
         """
+        if long(existingDatafile.GetSize()) < \
+                self.settingsModel.GetLargeFileSize():
+            bytesUploadedToStaging = long(0)
+            self.HandleIncompleteResumableUpload(
+                existingDatafile,
+                bytesUploadedToStaging)
+            return
         replicas = existingDatafile.GetReplicas()
         try:
             uploadToStagingRequest = \
@@ -306,6 +329,7 @@ class VerifyDatafileRunnable(object):
         wx.PostEvent(
             self.foldersController.notifyWindow,
             self.foldersController.unverifiedDatafileOnServerEvent(
+                id=self.foldersController.EVT_UNVERIFIED_FILE_ON_SERVER,
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
@@ -315,18 +339,30 @@ class VerifyDatafileRunnable(object):
 
     def HandleUnresumableUpload(self, existingDatafile):
         """
-        Can't resume partial uploads, e.g. because using
-        POST upload method.
+        We found an unverified datafile on the server for which
+        there is no point in checking for a resumable partial
+        upload.
+
+        This is usually because we are uploading using the POST upload method.
+        Or we could be using the STAGING method but failed to find any
+        DataFileObjects on the server for the datafile.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         logger.debug("Found unverified datafile record for \"%s\" "
-                     "on MyTardis while using HTTP POST for "
-                     "uploads." % dataFilePath)
+                     "on MyTardis." % dataFilePath)
         self.verificationModel.SetMessage("Found unverified datafile record.")
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
-        self.verificationModel.SetStatus(
-            VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
+        if self.foldersController.uploadMethod == UploadMethod.POST:
+            self.verificationModel.SetStatus(
+                VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
+            eventId = self.foldersController\
+                .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
+        else:
+            self.verificationModel.SetStatus(
+                VerificationStatus.FOUND_UNVERIFIED_NO_DFOS)
+            eventId = self.foldersController\
+                .EVT_FOUND_UNVERIFIED_NO_DFOS
         self.verificationsModel.MessageUpdated(self.verificationModel)
         if existingDatafile and not self.testRun:
             DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
@@ -335,8 +371,7 @@ class VerifyDatafileRunnable(object):
             self.foldersController.notifyWindow,
             self.foldersController
             .foundUnverifiedDatafileEvent(
-                id=self.foldersController
-                .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
+                id=eventId,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 dataFilePath=dataFilePath))

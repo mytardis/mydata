@@ -13,6 +13,7 @@ from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DuplicateKey
+from mydata.utils import BeginBusyCursorIfRequired
 from mydata.logs import logger
 
 MYDATA_EVENT_TYPE = wx.NewEventType()
@@ -156,7 +157,7 @@ class MyDataEvent(wx.PyCommandEvent):
             """
             Checks network connectivity in separate thread.
             """
-            wx.CallAfter(wx.BeginBusyCursor)
+            wx.CallAfter(BeginBusyCursorIfRequired)
             # pylint: disable=broad-except
             try:
                 activeNetworkInterfaces = \
@@ -307,7 +308,7 @@ class MyDataEvent(wx.PyCommandEvent):
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             try:
-                wx.CallAfter(wx.BeginBusyCursor)
+                wx.CallAfter(BeginBusyCursorIfRequired)
                 event.settingsModel.RenameInstrument(
                     event.facilityName,
                     event.oldInstrumentName,
@@ -360,7 +361,7 @@ class MyDataEvent(wx.PyCommandEvent):
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
             try:
-                wx.CallAfter(wx.BeginBusyCursor)
+                wx.CallAfter(BeginBusyCursorIfRequired)
                 if sys.platform.startswith("win"):
                     # BeginBusyCursor should update the cursor everywhere,
                     # but it doesn't always work on Windows.
@@ -651,7 +652,7 @@ class MyDataEvent(wx.PyCommandEvent):
                          % threading.current_thread().name)
             # pylint: disable=bare-except
             try:
-                wx.CallAfter(wx.BeginBusyCursor)
+                wx.CallAfter(BeginBusyCursorIfRequired)
                 app = wx.GetApp()
                 app.GetScheduleController().ApplySchedule(event)
                 event.foldersController.ShutDownUploadThreads()
@@ -730,17 +731,16 @@ class MyDataEvent(wx.PyCommandEvent):
             event.Skip()
             return
 
-        def StartDataUploadsWorker():
+        def StartDataUploadsForFolderWorker():
             """
             Start the data uploads in a dedicated thread.
             """
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
-            logger.debug("StartDataUploadsWorker")
-            wx.CallAfter(wx.BeginBusyCursor)
+            logger.debug("StartDataUploadsForFolderWorker")
+            wx.CallAfter(BeginBusyCursorIfRequired)
             message = "Checking for data files on MyTardis and uploading " \
-                "if necessary..."
-            wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage, message)
+                "if necessary for folder: %s" % event.folderModel.GetFolder()
             logger.info(message)
             app = wx.GetApp()
             if app.TestRunRunning():
@@ -752,7 +752,7 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
         startDataUploadsForFolderThread = \
-            threading.Thread(target=StartDataUploadsWorker,
+            threading.Thread(target=StartDataUploadsForFolderWorker,
                              name="StartDataUploadsThread")
         MYDATA_THREADS.Add(startDataUploadsForFolderThread)
         startDataUploadsForFolderThread.start()

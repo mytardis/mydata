@@ -19,6 +19,7 @@ import wx.dataview
 
 from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
+from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 
 from mydata.models.experiment import ExperimentModel
@@ -88,10 +89,12 @@ class FoldersController(object):
 
         self.didntFindDatafileOnServerEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
+        self.EVT_DIDNT_FIND_FILE_ON_SERVER = wx.NewId()  # pylint: disable=invalid-name
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
         self.unverifiedDatafileOnServerEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
+        self.EVT_UNVERIFIED_FILE_ON_SERVER = wx.NewId()  # pylint: disable=invalid-name
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
         self.connectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
@@ -113,6 +116,12 @@ class FoldersController(object):
         self.foundUnverifiedDatafileEvent, eventBinder = \
             wx.lib.newevent.NewCommandEvent()
         self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE = wx.NewId()  # pylint:disable=invalid-name
+        self.notifyWindow.Bind(eventBinder,
+                               self.CountCompletedUploadsAndVerifications)
+
+        self.foundUnverifiedNoDfosDatafileEvent, eventBinder = \
+            wx.lib.newevent.NewCommandEvent()
+        self.EVT_FOUND_UNVERIFIED_NO_DFOS = wx.NewId()  # pylint:disable=invalid-name
         self.notifyWindow.Bind(eventBinder,
                                self.CountCompletedUploadsAndVerifications)
 
@@ -222,7 +231,7 @@ class FoldersController(object):
         dlg.ShowModal()
         if needToRestartBusyCursor and not self.IsShuttingDown() \
                 and wx.GetApp().PerformingLookupsAndUploads():
-            wx.BeginBusyCursor()
+            BeginBusyCursorIfRequired()
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(False)
 

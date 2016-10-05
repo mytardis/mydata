@@ -235,7 +235,8 @@ class Logger(object):
                     stoppedBusyCursor = False
                 result = dlg.ShowModal()
                 if stoppedBusyCursor:
-                    wx.BeginBusyCursor()
+                    if not wx.IsBusy():
+                        wx.BeginBusyCursor()
                 myDataMainFrame.submitDebugLog = (result == wx.ID_OK)
                 if myDataMainFrame.submitDebugLog:
                     self.contactName = dlg.GetName()

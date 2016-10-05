@@ -5,8 +5,8 @@ Make the following patch (#1) to mydata/MyData.py:
 
 At the end of the "OnCloseFrame" method, add:
 
-    event.Skip()
-    self.taskBarIcon.Destroy()
+        event.Skip()
+        self.taskBarIcon.Destroy()
 
 which will allow the EVT_CLOSE event to propagate to the point where wxPython
 knows that all of its top level windows have been closed, so it can end its

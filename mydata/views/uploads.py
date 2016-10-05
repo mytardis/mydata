@@ -10,6 +10,7 @@ import wx
 import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
+from mydata.utils import BeginBusyCursorIfRequired
 
 
 class UploadsView(wx.Panel):
@@ -73,7 +74,7 @@ class UploadsView(wx.Panel):
         sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
 
     def OnCancelRemainingUploads(self, event):
-        wx.CallAfter(wx.BeginBusyCursor)
+        wx.CallAfter(BeginBusyCursorIfRequired)
         wx.PostEvent(
             self.foldersController.notifyWindow,
             self.foldersController.shutdownUploadsEvent(
