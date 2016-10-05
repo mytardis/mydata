@@ -177,7 +177,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         uploadsToBePerformed = numVerificationsCompleted
         for i in range(numVerificationsCompleted):
             verificationModel = verificationsModel.verificationsData[i]
-            folderModel = verificationModel.GetFolderModel()
+            folderModelId = verificationModel.GetFolderModelId()
+            folderModel = foldersModel.GetFolderRecord(folderModelId-1)
             dataFileIndex = verificationModel.GetDataFileIndex()
             event = foldersController.didntFindDatafileOnServerEvent(
                 foldersController=foldersController,
