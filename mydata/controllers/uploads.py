@@ -88,7 +88,6 @@ class UploadDatafileRunnable(object):
         self.foldersController.uploadsThreadingLock.release()
         self.uploadModel.SetBytesUploadedToStaging(
             self.bytesUploadedPreviously)
-        self.uploadModel.SetVerificationModel(self.verificationModel)
 
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)

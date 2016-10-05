@@ -38,11 +38,10 @@ class UploadModel(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
-        self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.folder = folderModel.GetFolder()
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
-        self.filename = self.folderModel.GetDataFileName(dataFileIndex)
+        self.filename = folderModel.GetDataFileName(dataFileIndex)
         self.filesize = ""  # Human-readable string displayed in data view
         self.bytesUploaded = 0
         self.bytesUploadedToStaging = None
@@ -56,8 +55,6 @@ class UploadModel(object):
         self.fileSize = 0  # File size long integer in bytes
         self.canceled = False
         self.retries = 0
-
-        self.verificationModel = None
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -105,9 +102,6 @@ class UploadModel(object):
 
     def GetValueForKey(self, key):
         return self.__dict__[key]
-
-    def GetFolderModel(self):
-        return self.folderModel
 
     def GetDataFileIndex(self):
         return self.dataFileIndex
@@ -178,12 +172,6 @@ class UploadModel(object):
 
     def Canceled(self):
         return self.canceled
-
-    def GetVerificationModel(self):
-        return self.verificationModel
-
-    def SetVerificationModel(self, verificationModel):
-        self.verificationModel = verificationModel
 
     def GetRetries(self):
         return self.retries
