@@ -177,17 +177,9 @@ class VerifyDatafileRunnable(object):
 
     def HandleResumableUpload(self, existingDatafile):
         """
-        Can resume partial uploads.  If this file is large enough to
-        be worth resuming, we'll check whether it has been partially
-        uploaded, otherwise we'll just re-upload it.
+        Determine whether part of the file is already available
+        on staging.
         """
-        if long(existingDatafile.GetSize()) < \
-                self.settingsModel.GetLargeFileSize():
-            bytesUploadedToStaging = long(0)
-            self.HandleIncompleteResumableUpload(
-                existingDatafile,
-                bytesUploadedToStaging)
-            return
         replicas = existingDatafile.GetReplicas()
         try:
             uploadToStagingRequest = \
