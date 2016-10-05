@@ -41,11 +41,11 @@ class VerificationModel(object):
     """
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
-        self.folderModel = folderModel
+        self.folderModelId = folderModel.GetDataViewId()
         self.folder = folderModel.GetFolder()
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.dataFileIndex = dataFileIndex
-        self.filename = self.folderModel.GetDataFileName(dataFileIndex)
+        self.filename = folderModel.GetDataFileName(dataFileIndex)
         self.message = ""
         self.status = VerificationStatus.NOT_STARTED
         self.complete = False
@@ -110,11 +110,11 @@ class VerificationModel(object):
         """
         return self.__dict__[key]
 
-    def GetFolderModel(self):
+    def GetFolderModelId(self):
         """
-        Get folder model.
+        Get folder model ID.
         """
-        return self.folderModel
+        return self.folderModelId
 
     def GetFolder(self):
         """
