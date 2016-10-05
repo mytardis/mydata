@@ -1378,7 +1378,10 @@ class MyData(wx.App):
         Returns True/False, depending on whether MyData is
         currently busy processing something.
         """
-        return self.toolbar.GetToolEnabled(self.stopTool.GetId())
+        try:
+            return self.toolbar.GetToolEnabled(self.stopTool.GetId())
+        except wx.PyDeadObjectError:
+            return False
 
     def TestRunRunning(self):
         """
