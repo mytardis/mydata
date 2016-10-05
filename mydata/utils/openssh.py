@@ -610,7 +610,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     # pylint: disable=too-many-branches
 
     bytesUploaded = long(0)
-    largeFileSize = 10 * 1024 * 1024  # FIXME: Magic number
+    settingsModel = foldersController.settingsModel
+    largeFileSize = settingsModel.GetLargeFileSize()
 
     if fileSize > largeFileSize:
         progressCallback(bytesUploaded, fileSize,
@@ -618,7 +619,6 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         if uploadModel.GetBytesUploadedToStaging() is not None:
             bytesUploaded = uploadModel.GetBytesUploadedToStaging()
         else:
-            settingsModel = foldersController.settingsModel
             bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
                                                       username,
                                                       privateKeyFilePath,

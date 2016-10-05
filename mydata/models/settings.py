@@ -178,6 +178,12 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
+        # Incremental progress updates will not be provided for
+        # files smaller than this to improve speed.
+        # Also, we won't bother trying to resume partial uploads
+        # for files smaller than this, we'll just re-upload.
+        self.largeFileSize = 10 * 1024 * 1024
+
         # pylint: disable=bare-except
         try:
             self.LoadSettings()
@@ -1974,3 +1980,6 @@ oFS.DeleteFile sLinkFile
             return wx.GetApp().ShouldAbort()
         else:
             return False
+
+    def GetLargeFileSize(self):
+        return self.largeFileSize
