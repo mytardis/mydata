@@ -10,19 +10,28 @@ class VerificationStatus(object):
     Enumerated data type for verification states.
     """
     NOT_STARTED = 0
+
     IN_PROGRESS = 1
+
     # Not found on MyTardis, need to upload this file:
     NOT_FOUND = 2
+
     # Found on MyTardis (and verified), no need to upload this file:
     FOUND_VERIFIED = 3
+
     # Finished uploading to staging, waiting
     # for MyTardis to verify (don't re-upload):
     FOUND_UNVERIFIED_FULL_SIZE = 4
+
     # Partially uploaded to staging, need to resume upload or re-upload:
     FOUND_UNVERIFIED_NOT_FULL_SIZE = 5
+
+    # Missing datafile objects (replicas) on server:
+    FOUND_UNVERIFIED_NO_DFOS = 6
+
     # Verification failed, should upload file, unless the failure
     # was so serious (e.g. no network) that we need to abort everything.
-    FAILED = 6
+    FAILED = 7
 
 
 # pylint: disable=too-many-instance-attributes
