@@ -176,6 +176,16 @@ class UploadsModel(DataViewIndexListModel):
         self.completedCount = 0
         self.failedCount = 0
 
+    def CancelRemaining(self):
+        rowsToCancel = []
+        for row in range(0, self.GetRowCount()):
+            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \
+                    and \
+                    self.uploadsData[row].GetStatus() != UploadStatus.FAILED:
+                rowsToCancel.append(row)
+        for row in rowsToCancel:
+            self.uploadsData[row].Cancel()
+
     def GetMaxDataViewId(self):
         return self.maxDataViewId
 
