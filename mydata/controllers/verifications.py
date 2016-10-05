@@ -160,7 +160,7 @@ class VerifyDatafileRunnable(object):
         replicas = existingDatafile.GetReplicas()
         message = "Found datafile record for %s " \
             "but it has no verified replicas." % dataFilePath
-        logger.warning(message)
+        logger.debug(message)
         message = "Found unverified datafile record on MyTardis."
         self.verificationModel.SetMessage(message)
         uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
