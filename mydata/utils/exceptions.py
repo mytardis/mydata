@@ -222,3 +222,14 @@ class StorageBoxOptionNotFound(Exception):
         message = "Key '%s' not found in options for storage box '%s'" \
             % (key, storageBox.GetName())
         super(StorageBoxOptionNotFound, self).__init__(message)
+
+
+class FileNotFoundOnStaging(Exception):
+    """
+    While attempting to measure how many bytes of an unverified file have been
+    uploaded to staging, MyData determined that the file does not yet exist on
+    staging.
+    """
+    def __init__(self, remoteFilePath):
+        message = "No such file or directory: %s" % remoteFilePath
+        super(FileNotFoundOnStaging, self).__init__(message)

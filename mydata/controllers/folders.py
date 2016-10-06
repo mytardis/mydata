@@ -94,7 +94,12 @@ class FoldersController(object):
 
         self.unverifiedDatafileOnServerEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
-        self.EVT_UNVERIFIED_FILE_ON_SERVER = wx.NewId()  # pylint: disable=invalid-name
+        self.EVT_INCOMPLETE_FILE_ON_STAGING = wx.NewId()  # pylint: disable=invalid-name
+        self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
+
+        self.unverifiedNotFoundOnStagingEvent, eventBinder = \
+            wx.lib.newevent.NewEvent()
+        self.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING = wx.NewId()  # pylint: disable=invalid-name
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
 
         self.connectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
@@ -267,7 +272,7 @@ class FoldersController(object):
         if folderModel not in self.uploadDatafileRunnable:
             self.uploadDatafileRunnable[folderModel] = {}
 
-        bytesUploadedPreviously = getattr(event, "bytesUploadedToStaging", 0)
+        bytesUploadedPreviously = getattr(event, "bytesUploadedPreviously", None)
         verificationModel = getattr(event, "verificationModel", None)
         self.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,

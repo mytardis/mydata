@@ -45,6 +45,7 @@ from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import SshControlMasterLimit
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.utils.exceptions import FileNotFoundOnStaging
 from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
@@ -453,8 +454,8 @@ def SshServerIsReady(username, privateKeyFilePath,
     return proc.returncode == 0
 
 
-def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
-                              host, port, settingsModel):
+def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
+                                host, port, settingsModel):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
@@ -529,8 +530,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
             bytesUploaded = long(match.groups()[0])
             return bytesUploaded
         elif "No such file or directory" in line:
-            bytesUploaded = long(0)
-            return bytesUploaded
+            raise FileNotFoundOnStaging(remoteFilePath)
         elif line == "ssh_exchange_identification: read: " \
                 "Connection reset by peer" or \
                 line == "ssh_exchange_identification: " \
@@ -609,45 +609,55 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     """
     # pylint: disable=too-many-branches
 
-    bytesUploaded = long(0)
+    bytesUploaded = None
     settingsModel = foldersController.settingsModel
     largeFileSize = settingsModel.GetLargeFileSize()
 
-    if fileSize > largeFileSize:
-        progressCallback(bytesUploaded, fileSize,
-                         message="Checking for a previous partial upload...")
-        if uploadModel.GetBytesUploadedToStaging() is not None:
-            bytesUploaded = uploadModel.GetBytesUploadedToStaging()
+    progressCallback(bytesUploaded, fileSize,
+                     message="Checking for a previous partial upload...")
+    try:
+        # The FileNotFoundOnStaging exception (thrown by
+        # CountBytesUploadedToStaging) is actually the most common case, but
+        # it is inefficient to first test for existence on staging, and then
+        # count the bytes uploaded, instead we just try to count the bytes
+        # uploaded which tells us if the file is missing from staging.
+        if uploadModel.GetBytesUploadedPreviously() is not None:
+            bytesUploaded = uploadModel.GetBytesUploadedPreviously()
         else:
-            bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
-                                                      username,
-                                                      privateKeyFilePath,
-                                                      host, port,
-                                                      settingsModel)
-            uploadModel.SetBytesUploadedToStaging(bytesUploaded)
-    if 0 < bytesUploaded < fileSize:
-        progressCallback(bytesUploaded, fileSize,
-                         message="Found %s uploaded previously"
-                         % HumanReadableSizeString(bytesUploaded))
-    if foldersController.IsShuttingDown() or uploadModel.Canceled():
-        logger.debug("UploadFile 1: Aborting upload for "
-                     "%s" % filePath)
-        return
-    if bytesUploaded == fileSize:
-        logger.debug("UploadFile returning because file \"%s\" has already "
-                     "been uploaded." % filePath)
-        return
-    elif bytesUploaded > fileSize:
-        logger.error("Possibly due to a bug in MyData, the file size on "
-                     "the remote server is larger than the local file size "
-                     "for \"%s\"." % filePath)
-    elif 0 < bytesUploaded < fileSize:
-        logger.info("MyData will attempt to resume the partially "
-                    "completed upload for \"%s\"..." % filePath)
-    elif bytesUploaded == 0:
+            bytesUploaded = CountBytesUploadedToStaging(remoteFilePath,
+                                                        username,
+                                                        privateKeyFilePath,
+                                                        host, port,
+                                                        settingsModel)
+            uploadModel.SetBytesUploadedPreviously(bytesUploaded)
+        if 0 < bytesUploaded < fileSize:
+            progressCallback(bytesUploaded, fileSize,
+                             message="Found %s uploaded previously"
+                             % HumanReadableSizeString(bytesUploaded))
+        if foldersController.IsShuttingDown() or uploadModel.Canceled():
+            logger.debug("UploadFile 1: Aborting upload for "
+                         "%s" % filePath)
+            return
+        if bytesUploaded == fileSize:
+            logger.debug("UploadFile returning because file \"%s\" has "
+                         "already been uploaded." % filePath)
+            return
+        elif bytesUploaded > fileSize:
+            logger.error("Possibly due to a bug in MyData, the file size on "
+                         "the remote server is larger than the local file "
+                         "size for \"%s\"." % filePath)
+        elif 0 < bytesUploaded < fileSize:
+            logger.info("MyData will attempt to resume the partially "
+                        "completed upload for \"%s\"..." % filePath)
+        elif bytesUploaded == 0:
+            progressCallback(bytesUploaded, fileSize, message="Uploading...")
+    except FileNotFoundOnStaging:
         # The most common use case.
-        progressCallback(bytesUploaded, fileSize,
-                         message="Uploading...")
+        # bytesUploaded will be None, indicating that even for a zero-sized
+        # file, we have not finished uploading it - we haven't even started.
+        progressCallback(bytesUploaded, fileSize, message="Uploading...")
+        bytesUploaded = long(0)
+
     if sys.platform.startswith("win"):
         if fileSize > largeFileSize:
             return UploadLargeFileFromWindows(filePath, fileSize, username,
@@ -682,8 +692,6 @@ def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
-    bytesUploaded = long(0)
-
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
