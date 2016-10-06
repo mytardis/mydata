@@ -29,9 +29,13 @@ class VerificationStatus(object):
     # Missing datafile objects (replicas) on server:
     FOUND_UNVERIFIED_NO_DFOS = 6
 
+    # An unverified DFO (replica) was created previously, but the file
+    # can't be found on the staging server:
+    NOT_FOUND_ON_STAGING = 7
+
     # Verification failed, should upload file, unless the failure
     # was so serious (e.g. no network) that we need to abort everything.
-    FAILED = 7
+    FAILED = 8
 
 
 # pylint: disable=too-many-instance-attributes

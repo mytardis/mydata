@@ -43,8 +43,12 @@ class UploadModel(object):
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = folderModel.GetDataFileName(dataFileIndex)
         self.filesize = ""  # Human-readable string displayed in data view
+
+        # Number of bytes uploaded (used to render progress bar):
         self.bytesUploaded = 0
-        self.bytesUploadedToStaging = None
+        # Number of bytes previously uploaded, or None if the file is not yet
+        # on the staging area:
+        self.bytesUploadedPreviously = None
         # self.progress = 0.0  # Percentage used to render progress bar
         self.progress = 0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
@@ -68,11 +72,11 @@ class UploadModel(object):
     def SetBytesUploaded(self, bytesUploaded):
         self.bytesUploaded = bytesUploaded
 
-    def GetBytesUploadedToStaging(self):
-        return self.bytesUploadedToStaging
+    def GetBytesUploadedPreviously(self):
+        return self.bytesUploadedPreviously
 
-    def SetBytesUploadedToStaging(self, bytesUploadedToStaging):
-        self.bytesUploadedToStaging = bytesUploadedToStaging
+    def SetBytesUploadedPreviously(self, bytesUploadedPreviously):
+        self.bytesUploadedPreviously = bytesUploadedPreviously
 
     def GetProgress(self):
         return self.progress
