@@ -619,12 +619,7 @@ class FoldersController(object):
             self.SetCompleted()
         else:
             self.SetCanceled()
-            # Staging upload methods regularly check the FoldersController
-            # object's IsShuttingDown() method, so they know if the uploads
-            # have been aborted.  But for POST, we need to explicitly cancel
-            # the upload(s).
-            if self.uploadMethod == UploadMethod.HTTP_POST:
-                self.uploadsModel.CancelRemaining()
+            self.uploadsModel.CancelRemaining()
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
