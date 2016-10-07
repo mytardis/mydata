@@ -53,7 +53,7 @@ class UploadDatafileRunnable(object):
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, uploadsModel, settingsModel,
                  existingUnverifiedDatafile, verificationModel,
-                 bytesUploadedPreviously=0):
+                 bytesUploadedPreviously=None):
         # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
@@ -86,7 +86,7 @@ class UploadDatafileRunnable(object):
                                        dataFileIndex=self.dataFileIndex)
         self.uploadsModel.AddRow(self.uploadModel)
         self.foldersController.uploadsThreadingLock.release()
-        self.uploadModel.SetBytesUploadedToStaging(
+        self.uploadModel.SetBytesUploadedPreviously(
             self.bytesUploadedPreviously)
 
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
@@ -156,11 +156,12 @@ class UploadDatafileRunnable(object):
                 if self.uploadModel.Canceled():
                     self.foldersController.SetCanceled()
                     return
-                percentComplete = \
-                    100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
-                    / dataFileSize
-
-                # self.uploadModel.SetProgress(float(percentComplete))
+                if dataFileSize > 0:
+                    percentComplete = \
+                        100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
+                        / dataFileSize
+                else:
+                    percentComplete = 100
                 self.uploadModel.SetProgress(int(percentComplete))
                 self.uploadsModel.UploadProgressUpdated(self.uploadModel)
                 if dataFileSize >= (1024 * 1024 * 1024):
@@ -168,12 +169,6 @@ class UploadDatafileRunnable(object):
                 else:
                     message = "%3d %%  MD5 summed" % int(percentComplete)
                 self.uploadsModel.SetMessage(self.uploadModel, message)
-                myTardisUrl = self.settingsModel.GetMyTardisUrl()
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.connectionStatusEvent(
-                        myTardisUrl=myTardisUrl,
-                        connectionStatus=ConnectionStatus.CONNECTED))
             dataFileMd5Sum = \
                 self.CalculateMd5Sum(dataFilePath, dataFileSize,
                                      self.uploadModel,
@@ -240,10 +235,17 @@ class UploadDatafileRunnable(object):
             if self.uploadModel.Canceled():
                 self.foldersController.SetCanceled()
                 return
-            percentComplete = \
-                100.0 - ((total - current) * 100.0) / total
+            if current is None:
+                # For a zero-sized file, current will be None
+                # before its upload, and 0 after is upload.
+                percentComplete = 0
+                current = 0
+            elif total > 0:
+                percentComplete = \
+                    100.0 - ((total - current) * 100.0) / total
+            else:
+                percentComplete = 100
             self.uploadModel.SetBytesUploaded(current)
-            # self.uploadModel.SetProgress(float(percentComplete))
             self.uploadModel.SetProgress(int(percentComplete))
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             if message:
@@ -254,12 +256,6 @@ class UploadDatafileRunnable(object):
                 else:
                     message = "%3d %%  uploaded" % int(percentComplete)
                 self.uploadsModel.SetMessage(self.uploadModel, message)
-            myTardisUrl = self.settingsModel.GetMyTardisUrl()
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.connectionStatusEvent(
-                    myTardisUrl=myTardisUrl,
-                    connectionStatus=ConnectionStatus.CONNECTED))
 
         # The database interactions below should go in a model class.
 

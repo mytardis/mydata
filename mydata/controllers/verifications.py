@@ -4,16 +4,18 @@ The main controller class for managing datafile verifications.
 class VerifyDatafileRunnable(object):
   Run:
     HandleNonExistentDataFile:
-      Post EVT_DIDNT_FIND_FILE_ON_SERVER
+      Post EVT_DIDNT_FIND_FILE_ON_SERVER  # DataFile record doesn't exist
     HandleExistingDatafile:
       HandleExistingVerifiedDatafile:
-        Post EVT_FOUND_VERIFIED_DATAFILE
+        Post EVT_FOUND_VERIFIED_DATAFILE  # Verified DFO exists!
       HandleExistingUnverifiedDatafile:
         HandleResumableUpload:
+          HandleUnverifiedNotFoundOnStaging:
+            Post EVT_UNVERIFIED_NOT_FOUND_ON_STAGING
           HandleFullSizeResumableUpload:
             Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
           HandleIncompleteResumableUpload:
-            Post EVT_UNVERIFIED_FILE_ON_SERVER
+            Post EVT_INCOMPLETE_FILE_ON_STAGING
         HandleUnresumableUpload:
           Either: Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
               or: Post EVT_FOUND_UNVERIFIED_NO_DFOS
@@ -25,7 +27,7 @@ import traceback
 
 import wx
 
-from mydata.utils.openssh import GetBytesUploadedToStaging
+from mydata.utils.openssh import CountBytesUploadedToStaging
 
 from mydata.models.verification import VerificationModel
 from mydata.models.verification import VerificationStatus
@@ -36,6 +38,8 @@ from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
+from mydata.utils.exceptions import FileNotFoundOnStaging
+from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
 
@@ -184,7 +188,6 @@ class VerifyDatafileRunnable(object):
         try:
             uploadToStagingRequest = \
                 self.settingsModel.GetUploadToStagingRequest()
-            bytesUploadedToStaging = long(0)
             username = uploadToStagingRequest.GetScpUsername()
         except IncompatibleMyTardisVersion, err:
             self.verificationsModel.SetComplete(self.verificationModel)
@@ -221,16 +224,19 @@ class VerifyDatafileRunnable(object):
         location = uploadToStagingRequest.GetLocation()
         remoteFilePath = "%s/%s" % (location.rstrip('/'),
                                     replicas[0].GetUri())
-        bytesUploadedToStaging = long(0)
+        bytesUploadePreviously = None
         try:
-            bytesUploadedToStaging = \
-                GetBytesUploadedToStaging(
+            bytesUploadePreviously = \
+                CountBytesUploadedToStaging(
                     remoteFilePath,
                     username, privateKeyFilePath, host, port,
                     self.settingsModel)
             logger.debug("%d bytes uploaded to staging for %s"
-                         % (bytesUploadedToStaging,
+                         % (bytesUploadePreviously,
                             replicas[0].GetUri()))
+        except FileNotFoundOnStaging, err:
+            self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
+            return
         except StagingHostRefusedSshConnection, err:
             self.verificationsModel.SetComplete(self.verificationModel)
             wx.PostEvent(
@@ -259,12 +265,25 @@ class VerifyDatafileRunnable(object):
                                         message=message,
                                         icon=wx.ICON_ERROR))
             return
-        if bytesUploadedToStaging == long(existingDatafile.GetSize()):
+        except SshControlMasterLimit, err:
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController.shutdownUploadsEvent(
+                    failed=True))
+            message = str(err)
+            wx.PostEvent(
+                self.foldersController.notifyWindow,
+                self.foldersController
+                .showMessageDialogEvent(title="MyData",
+                                        message=message,
+                                        icon=wx.ICON_ERROR))
+            return
+        if bytesUploadePreviously == long(existingDatafile.GetSize()):
             self.HandleFullSizeResumableUpload(existingDatafile)
         else:
             self.HandleIncompleteResumableUpload(
                 existingDatafile,
-                bytesUploadedToStaging)
+                bytesUploadePreviously)
 
     def HandleFullSizeResumableUpload(self, existingDatafile):
         """
@@ -299,7 +318,7 @@ class VerifyDatafileRunnable(object):
             logger.testrun(message)
 
     def HandleIncompleteResumableUpload(self, existingDatafile,
-                                        bytesUploadedToStaging):
+                                        bytesUploadePreviously):
         """
         Resume partial upload.
         """
@@ -315,18 +334,46 @@ class VerifyDatafileRunnable(object):
                      "the file size is %d bytes in staging, "
                      "but it should be %d bytes."
                      % (dataFilePath,
-                        bytesUploadedToStaging,
+                        bytesUploadePreviously,
                         long(existingDatafile.GetSize())))
         self.verificationsModel.SetComplete(self.verificationModel)
         wx.PostEvent(
             self.foldersController.notifyWindow,
             self.foldersController.unverifiedDatafileOnServerEvent(
-                id=self.foldersController.EVT_UNVERIFIED_FILE_ON_SERVER,
+                id=self.foldersController.EVT_INCOMPLETE_FILE_ON_STAGING,
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
-                bytesUploadedToStaging=bytesUploadedToStaging,
+                bytesUploadePreviously=bytesUploadePreviously,
+                verificationModel=self.verificationModel))
+
+    def HandleUnverifiedNotFoundOnStaging(self, existingDatafile):
+        """
+        File has a DataFile record, and a DataFileObject record,
+        marked as unverified.  The file is not accessible on staging.
+        So we need to upload the entire file and create any subdirectories
+        required for it on staging.
+        """
+        dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
+        self.verificationModel\
+            .SetMessage("Unverified and not found on staging server.")
+        self.verificationModel.SetStatus(
+            VerificationStatus.NOT_FOUND_ON_STAGING)
+        self.verificationsModel.MessageUpdated(self.verificationModel)
+        logger.debug("Uploading \"%s\" to staging, because "
+                     "it was not there. It does have a DataFileObject."
+                     % dataFilePath)
+        self.verificationsModel.SetComplete(self.verificationModel)
+        wx.PostEvent(
+            self.foldersController.notifyWindow,
+            self.foldersController.unverifiedDatafileOnServerEvent(
+                id=self.foldersController.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING,
+                foldersController=self.foldersController,
+                folderModel=self.folderModel,
+                dataFileIndex=self.dataFileIndex,
+                existingUnverifiedDatafile=existingDatafile,
+                bytesUploadePreviously=None,
                 verificationModel=self.verificationModel))
 
     def HandleUnresumableUpload(self, existingDatafile):

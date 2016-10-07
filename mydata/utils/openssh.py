@@ -45,6 +45,7 @@ from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import SshControlMasterLimit
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.utils.exceptions import FileNotFoundOnStaging
 from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
@@ -453,8 +454,8 @@ def SshServerIsReady(username, privateKeyFilePath,
     return proc.returncode == 0
 
 
-def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
-                              host, port, settingsModel):
+def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
+                                host, port, settingsModel):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
@@ -529,8 +530,7 @@ def GetBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
             bytesUploaded = long(match.groups()[0])
             return bytesUploaded
         elif "No such file or directory" in line:
-            bytesUploaded = long(0)
-            return bytesUploaded
+            raise FileNotFoundOnStaging(remoteFilePath)
         elif line == "ssh_exchange_identification: read: " \
                 "Connection reset by peer" or \
                 line == "ssh_exchange_identification: " \
@@ -601,53 +601,41 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                host, port, remoteFilePath, progressCallback,
                foldersController, uploadModel):
     """
-    The file may have already been uploaded, so let's check
-    for it (and check its size) on the server. We don't use
-    checksums here because they are slow for large files,
-    and ultimately it will be the MyTardis verification
-    task which does the final check.
+    Upload a file to staging using SCP.
+
+    If the file has already been uploaded (or partially uploaded),
+    uploadModel.GetBytesUploadedPreviously() should return the number
+    of bytes uploaded, otherwise it will return None.
     """
     # pylint: disable=too-many-branches
 
-    bytesUploaded = long(0)
-    settingsModel = foldersController.settingsModel
-    largeFileSize = settingsModel.GetLargeFileSize()
+    bytesUploaded = uploadModel.GetBytesUploadedPreviously()
 
-    if fileSize > largeFileSize:
-        progressCallback(bytesUploaded, fileSize,
-                         message="Checking for a previous partial upload...")
-        if uploadModel.GetBytesUploadedToStaging() is not None:
-            bytesUploaded = uploadModel.GetBytesUploadedToStaging()
-        else:
-            bytesUploaded = GetBytesUploadedToStaging(remoteFilePath,
-                                                      username,
-                                                      privateKeyFilePath,
-                                                      host, port,
-                                                      settingsModel)
-            uploadModel.SetBytesUploadedToStaging(bytesUploaded)
-    if 0 < bytesUploaded < fileSize:
+    if bytesUploaded is None:
+         # bytesUploaded being None (rather than zero) tells our progress
+         # callback that we haven't finished uploading the file, even if
+         # the file is zero bytes in size.
+        progressCallback(bytesUploaded, fileSize, message="Uploading...")
+        bytesUploaded = long(0)
+    elif 0 < bytesUploaded < fileSize:
         progressCallback(bytesUploaded, fileSize,
                          message="Found %s uploaded previously"
                          % HumanReadableSizeString(bytesUploaded))
-    if foldersController.IsShuttingDown() or uploadModel.Canceled():
-        logger.debug("UploadFile 1: Aborting upload for "
-                     "%s" % filePath)
-        return
-    if bytesUploaded == fileSize:
-        logger.debug("UploadFile returning because file \"%s\" has already "
-                     "been uploaded." % filePath)
+    elif bytesUploaded == fileSize:
+        logger.debug("UploadFile returning because file \"%s\" has "
+                     "already been uploaded." % filePath)
         return
     elif bytesUploaded > fileSize:
         logger.error("Possibly due to a bug in MyData, the file size on "
-                     "the remote server is larger than the local file size "
-                     "for \"%s\"." % filePath)
+                     "the remote server is larger than the local file "
+                     "size for \"%s\"." % filePath)
     elif 0 < bytesUploaded < fileSize:
         logger.info("MyData will attempt to resume the partially "
                     "completed upload for \"%s\"..." % filePath)
     elif bytesUploaded == 0:
-        # The most common use case.
-        progressCallback(bytesUploaded, fileSize,
-                         message="Uploading...")
+        progressCallback(bytesUploaded, fileSize, message="Uploading...")
+
+    largeFileSize = foldersController.settingsModel.GetLargeFileSize()
     if sys.platform.startswith("win"):
         if fileSize > largeFileSize:
             return UploadLargeFileFromWindows(filePath, fileSize, username,
@@ -682,8 +670,6 @@ def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
-    bytesUploaded = long(0)
-
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -713,6 +699,11 @@ def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
         if mkdirProcess.returncode != 0:
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
+
+    if uploadModel.Canceled():
+        logger.debug("UploadSmallFileFromPosixSystem: Aborting upload "
+                     "for %s" % filePath)
+        return
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
@@ -853,11 +844,12 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
     if removeRemoteChunkProcess.returncode != 0:
         raise SshException(stdout, removeRemoteChunkProcess.returncode)
 
-    defaultChunkSize = 1024 * 1024  # FIXME: magic number
-    maxChunkSize = 16 * 1024 * 1024  # FIXME: magic number
+    defaultChunkSize = settingsModel.GetDefaultChunkSize()
+    maxChunkSize = settingsModel.GetMaxChunkSize()
     chunkSize = defaultChunkSize
-    # FIXME: magic number (approximately 50 progress bar increments)
-    while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+    # Aim for approximately 50 progress bar increments:
+    numIncrements = 50
+    while (fileSize / chunkSize) > numIncrements and chunkSize < maxChunkSize:
         chunkSize = chunkSize * 2
     skip = 0
     if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
@@ -1084,6 +1076,11 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
+    if uploadModel.Canceled():
+        logger.debug("UploadSmallFileFromWindows: Aborting upload "
+                     "for %s" % filePath)
+        return
+
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     scpCommandString = \
@@ -1136,7 +1133,8 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    maxThreads = foldersController.settingsModel.GetMaxUploadThreads()
+    settingsModel = foldersController.settingsModel
+    maxThreads = settingsModel.GetMaxUploadThreads()
 
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
@@ -1188,11 +1186,12 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
 
     # logger.warning("Assuming that the remote shell is Bash.")
 
-    defaultChunkSize = 1024 * 1024  # FIXME: magic number
-    maxChunkSize = 256 * 1024 * 1024  # FIXME: magic number
+    defaultChunkSize = settingsModel.GetDefaultChunkSize()
+    maxChunkSize = settingsModel.GetMaxChunkSize()
     chunkSize = defaultChunkSize
-    # FIXME: magic number (approximately 50 progress bar increments)
-    while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+    # Aim for approximately 50 progress bar increments:
+    numIncrements = 50
+    while (fileSize / chunkSize) > numIncrements and chunkSize < maxChunkSize:
         chunkSize = chunkSize * 2
     skip = 0
     if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
