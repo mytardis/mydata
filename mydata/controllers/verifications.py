@@ -392,7 +392,7 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.SetMessage("Found unverified datafile record.")
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
-        if self.foldersController.uploadMethod == UploadMethod.POST:
+        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             self.verificationModel.SetStatus(
                 VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
             eventId = self.foldersController\
