@@ -180,7 +180,17 @@ class SettingsModel(object):
 
         # Incremental progress updates will not be provided for
         # files smaller than this to improve speed.
-        self.largeFileSize = 10 * 1024 * 1024
+        if sys.platform.startswith("darwin"):
+            # Mac OS X instances of MyData are likely to be running on
+            # laptops just for demos, often with lower connection speeds,
+            # and Mac OS X seems to be able to handle the frequent subprocess
+            # calls spawned when using smaller chunk sizes.
+            self.largeFileSize = 1024 * 1024
+            self.defaultChunkSize = 128 * 1024
+        else:
+            self.largeFileSize = 10 * 1024 * 1024
+            self.defaultChunkSize = 1024 * 1024
+        self.maxChunkSize = 256 * 1024 * 1024
 
         # pylint: disable=bare-except
         try:
@@ -1981,3 +1991,9 @@ oFS.DeleteFile sLinkFile
 
     def GetLargeFileSize(self):
         return self.largeFileSize
+
+    def GetDefaultChunkSize(self):
+        return self.defaultChunkSize
+
+    def GetMaxChunkSize(self):
+        return self.maxChunkSize
