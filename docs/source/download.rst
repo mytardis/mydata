@@ -3,9 +3,9 @@ Download
 
 Current Version
 ^^^^^^^^^^^^^^^
-* Download MyData for Windows: `MyData_v0.6.1.exe <https://github.com/mytardis/mydata/releases/download/v0.6.1/MyData_v0.6.1.exe>`_
-* Download MyData for Mac OS X: `MyData_v0.6.1.dmg <https://github.com/mytardis/mydata/releases/download/v0.6.1/MyData_v0.6.1.dmg>`_
-* Download MyData for RHEL 6: `mydata-0.6.1-1.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.6.1/mydata-0.6.1-1.x86_64.rpm>`_
+* Download MyData for Windows: `MyData_v0.6.2.exe <https://github.com/mytardis/mydata/releases/download/v0.6.2/MyData_v0.6.2.exe>`_
+* Download MyData for Mac OS X: `MyData_v0.6.2.dmg <https://github.com/mytardis/mydata/releases/download/v0.6.2/MyData_v0.6.2.dmg>`_
+* Download MyData for RHEL 6: `mydata-0.6.2-1.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.6.2/mydata-0.6.2-1.x86_64.rpm>`_
 
 Previous Version
 ^^^^^^^^^^^^^^^^
