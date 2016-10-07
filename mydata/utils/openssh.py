@@ -630,8 +630,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                      "the remote server is larger than the local file "
                      "size for \"%s\"." % filePath)
     elif 0 < bytesUploaded < fileSize:
-        logger.info("MyData will attempt to resume the partially "
-                    "completed upload for \"%s\"..." % filePath)
+        logger.debug("MyData will attempt to resume the partially "
+                     "completed upload for \"%s\"..." % filePath)
     elif bytesUploaded == 0:
         progressCallback(bytesUploaded, fileSize, message="Uploading...")
 
@@ -1217,7 +1217,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         # from a datafile a little bit at a time (not wasting memory).
         with open(filePath, 'rb') as datafile:
             with open(chunkFilePath, 'wb') as chunkFile:
-                logger.info("Writing chunk to %s" % chunkFilePath)
+                logger.debug("Writing chunk to %s" % chunkFilePath)
                 datafile.seek(skip * chunkSize)
                 bytesTransferred = long(0)
                 smallChunkSize = chunkSize
