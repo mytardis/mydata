@@ -53,7 +53,7 @@ class UploadDatafileRunnable(object):
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, uploadsModel, settingsModel,
                  existingUnverifiedDatafile, verificationModel,
-                 bytesUploadedPreviously=0):
+                 bytesUploadedPreviously=None):
         # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
