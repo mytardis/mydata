@@ -84,6 +84,7 @@ import traceback
 import uuid
 import threading
 
+import dateutil.parser
 import psutil
 import requests
 
@@ -133,6 +134,7 @@ class UploaderModel(object):
 
         self.id = None  # pylint: disable=invalid-name
         self.uploaderSettings = None
+        self.settingsUpdated = None
         self.uuid = self.settingsModel.GetUuid()
         if self.uuid is None:
             self.GenerateUuid()
@@ -374,6 +376,10 @@ class UploaderModel(object):
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
+                settingsUpdatedString = \
+                    existingUploaderRecords['objects'][0]['settings_updated']
+                self.settingsUpdated = \
+                    dateutil.parser.parse(settingsUpdatedString)
 
         logger.debug("Uploading uploader info to MyTardis...")
 
@@ -680,6 +686,10 @@ class UploaderModel(object):
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
+                settingsUpdatedString = \
+                    existingUploaderRecords['objects'][0]['settings_updated']
+                self.settingsUpdated = \
+                    dateutil.parser.parse(settingsUpdatedString)
             else:
                 self.uploaderSettings = None
 
@@ -774,6 +784,8 @@ class UploaderModel(object):
     def GetHostname(self):
         return self.hostname
 
+    def GetSettingsUpdated(self):
+        return self.settingsUpdated
 
 class UploaderRegistrationRequest(object):
     """
