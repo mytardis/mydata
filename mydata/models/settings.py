@@ -185,12 +185,12 @@ class SettingsModel(object):
             # laptops just for demos, often with lower connection speeds,
             # and Mac OS X seems to be able to handle the frequent subprocess
             # calls spawned when using smaller chunk sizes.
-            self.largeFileSize = 1024 * 1024
-            self.defaultChunkSize = 128 * 1024
+            self.min_chunkable_file_size = 1024 * 1024
+            self.default_chunk_size = 128 * 1024
         else:
-            self.largeFileSize = 10 * 1024 * 1024
-            self.defaultChunkSize = 1024 * 1024
-        self.maxChunkSize = 256 * 1024 * 1024
+            self.min_chunkable_file_size = 10 * 1024 * 1024
+            self.default_chunk_size = 1024 * 1024
+        self.max_chunk_size = 256 * 1024 * 1024
 
         # pylint: disable=bare-except
         try:
@@ -265,6 +265,14 @@ class SettingsModel(object):
         self.start_automatically_on_login = True
         self.upload_invalid_user_folders = True
 
+        if sys.platform.startswith("darwin"):
+            self.min_chunkable_file_size = 1024 * 1024
+            self.default_chunk_size = 128 * 1024
+        else:
+            self.min_chunkable_file_size = 10 * 1024 * 1024
+            self.default_chunk_size = 1024 * 1024
+        self.max_chunk_size = 256 * 1024 * 1024
+
         self.locked = False
 
         self.uuid = None
@@ -292,6 +300,9 @@ class SettingsModel(object):
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
+                          "max_verification_threads",
+                          "min_chunkable_file_size", "default_chunk_size",
+                          "max_chunk_size",
                           "max_upload_retries",
                           "validate_folder_structure", "locked", "uuid",
                           "start_automatically_on_login",
@@ -309,7 +320,11 @@ class SettingsModel(object):
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
                             configParser.getboolean(configFileSection, field)
-                intFields = ["ignore_interval_number", "ignore_new_files_minutes",
+                intFields = ["ignore_interval_number",
+                             "ignore_new_files_minutes",
+                             "min_chunkable_file_size", "default_chunk_size",
+                             "max_chunk_size",
+                             "max_verification_threads",
                              "max_upload_threads", "max_upload_retries"]
                 for field in intFields:
                     if configParser.has_option(configFileSection, field):
@@ -413,6 +428,9 @@ class SettingsModel(object):
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
+                            "min_chunkable_file_size", "default_chunk_size",
+                            "max_chunk_size",
+                            "max_verification_threads",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
                     if setting['key'] in (
@@ -790,6 +808,9 @@ class SettingsModel(object):
                       "ignore_interval_unit",
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
+                      "min_chunkable_file_size", "default_chunk_size",
+                      "max_chunk_size",
+                      "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",
@@ -1998,11 +2019,11 @@ oFS.DeleteFile sLinkFile
         else:
             return False
 
-    def GetLargeFileSize(self):
-        return self.largeFileSize
+    def GetMinChunkableFileSize(self):
+        return self.min_chunkable_file_size
 
     def GetDefaultChunkSize(self):
-        return self.defaultChunkSize
+        return self.default_chunk_size
 
     def GetMaxChunkSize(self):
-        return self.maxChunkSize
+        return self.max_chunk_size
