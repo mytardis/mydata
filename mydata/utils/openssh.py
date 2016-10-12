@@ -113,7 +113,6 @@ class OpenSSH(object):
             self.rm = os.path.join(baseDir, self.opensshBuildDir,
                                    "bin", "rm.exe")
 
-            self.cipher = "arcfour128"
             self.preferToUseShellInSubprocess = False
 
             # This is not where we store the MyData private key.
@@ -130,7 +129,6 @@ class OpenSSH(object):
             self.ssh = "/usr/bin/ssh"
             self.scp = "/usr/bin/scp"
             self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.cipher = "arcfour128"
             self.ddCmd = "/bin/dd"
             # False would be better below, but then (on POSIX
             # systems), I'd have to use command lists, instead
@@ -141,7 +139,6 @@ class OpenSSH(object):
             self.ssh = "/usr/bin/ssh"
             self.scp = "/usr/bin/scp"
             self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.cipher = "arcfour128"
             self.ddCmd = "/bin/dd"
             # False would be better below, but then (on POSIX
             # systems), I'd have to use command lists, instead
@@ -462,11 +459,13 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
     maxThreads = settingsModel.GetMaxVerificationThreads() + \
         settingsModel.GetMaxUploadThreads()
 
+    cipher = settingsModel.GetCipher()
+
     if sys.platform.startswith("win"):
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", port,
                       "-n",
-                      "-c", OPENSSH.cipher,
+                      "-c", cipher,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
@@ -481,7 +480,8 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                 OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
                                                 host, port)
             sshControlMasterProcess = \
-                sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
+                sshControlMasterPool.GetSshControlMasterProcess(maxThreads,
+                                                                cipher)
             sshControlPathOptionValuePair = \
                 sshControlMasterProcess.GetControlPathOptionValuePair()
         else:
@@ -493,7 +493,7 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
         # it will be ready immediately.
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", port,
-                      "-c", OPENSSH.cipher,
+                      "-c", cipher,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
@@ -644,7 +644,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
             return UploadWholeFileFromWindows(filePath, fileSize, username,
                                               privateKeyFilePath, host, port,
                                               remoteFilePath, progressCallback,
-                                              uploadModel)
+                                              foldersController, uploadModel)
     if fileSize >= minChunkableFileSize:
         UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
                                          privateKeyFilePath, host, port,
@@ -655,18 +655,20 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         return UploadWholeFileFromPosixSystem(filePath, fileSize, username,
                                               privateKeyFilePath, host, port,
                                               remoteFilePath, progressCallback,
-                                              uploadModel)
+                                              foldersController, uploadModel)
 
 
 def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
                                    privateKeyFilePath, host, port,
                                    remoteFilePath, progressCallback,
-                                   uploadModel):
+                                   foldersController, uploadModel):
     """
     Fast method for uploading small files (less overhead from chunking).
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
+    settingsModel = foldersController.settingsModel
+    cipher = settingsModel.GetCipher()
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -674,7 +676,7 @@ def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
             [OPENSSH.DoubleQuote(OPENSSH.ssh),
              "-p", port,
              "-n",
-             "-c", OPENSSH.cipher,
+             "-c", cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
              "-oPasswordAuthentication=no",
              "-oNoHostAuthenticationForLocalhost=yes",
@@ -712,7 +714,7 @@ def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
         % (OPENSSH.DoubleQuote(OPENSSH.scp),
            port,
            privateKeyFilePath,
-           OPENSSH.cipher,
+           cipher,
            OPENSSH.DoubleQuote(filePath),
            username, host,
            remoteDir
@@ -761,6 +763,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
                                         os.path.basename(remoteFilePath))
 
     settingsModel = foldersController.settingsModel
+    cipher = settingsModel.GetCipher()
     maxThreads = settingsModel.GetMaxUploadThreads()
 
     if settingsModel.UseSshControlMasterIfAvailable():
@@ -768,7 +771,8 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
             OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
                                             host, port)
         sshControlMasterProcess = \
-            sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
+            sshControlMasterPool.GetSshControlMasterProcess(maxThreads,
+                                                            cipher)
         sshControlPathOptionValuePair = \
             sshControlMasterProcess.GetControlPathOptionValuePair()
     else:
@@ -780,7 +784,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-         "-c", OPENSSH.cipher,
+         "-c", cipher,
          sshControlPathOptionValuePair,
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
@@ -818,7 +822,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh),
            port,
-           privateKeyFilePath, OPENSSH.cipher,
+           privateKeyFilePath, cipher,
            sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
@@ -911,7 +915,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
             % (OPENSSH.DoubleQuote(OPENSSH.scp),
                port,
                privateKeyFilePath,
-               OPENSSH.cipher,
+               cipher,
                sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
@@ -962,7 +966,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
             "%s@%s %s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
                privateKeyFilePath,
-               OPENSSH.cipher,
+               cipher,
                sshControlPathOptionValuePair,
                username, host,
                OPENSSH.DoubleQuote(remoteCatCommand))
@@ -1000,7 +1004,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-           privateKeyFilePath, OPENSSH.cipher,
+           privateKeyFilePath, cipher,
            sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
@@ -1025,12 +1029,15 @@ REMOTE_DIRS_CREATED = dict()
 
 def UploadWholeFileFromWindows(filePath, fileSize, username,
                                privateKeyFilePath, host, port, remoteFilePath,
-                               progressCallback, uploadModel):
+                               progressCallback,
+                               foldersController, uploadModel):
     """
     Fast method for uploading small files (less overhead from chunking).
     This method don't support resuming interrupted uploads, and doesn't
     provide progress updates.
     """
+    settingsModel = foldersController.settingsModel
+    cipher = settingsModel.GetCipher()
     bytesUploaded = long(0)
 
     remoteDir = os.path.dirname(remoteFilePath)
@@ -1040,7 +1047,7 @@ def UploadWholeFileFromWindows(filePath, fileSize, username,
             [OPENSSH.DoubleQuote(OPENSSH.ssh),
              "-p", port,
              "-n",
-             "-c", OPENSSH.cipher,
+             "-c", cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
              "-oPasswordAuthentication=no",
              "-oNoHostAuthenticationForLocalhost=yes",
@@ -1076,7 +1083,7 @@ def UploadWholeFileFromWindows(filePath, fileSize, username,
         '%s "%s@%s:\\"%s/\\""' \
         % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
            OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-           OPENSSH.cipher,
+           cipher,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
            remoteDir
@@ -1120,13 +1127,14 @@ def UploadChunkedFileFromWindows(filePath, fileSize, username,
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     settingsModel = foldersController.settingsModel
+    cipher = settingsModel.GetCipher()
     maxThreads = settingsModel.GetMaxUploadThreads()
 
     mkdirCmdAndArgs = \
         [OPENSSH.DoubleQuote(OPENSSH.ssh),
          "-p", port,
          "-n",
-         "-c", OPENSSH.cipher,
+         "-c", cipher,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
@@ -1230,7 +1238,7 @@ def UploadChunkedFileFromWindows(filePath, fileSize, username,
             '%s "%s@%s:\\"%s/\\""' \
             % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
                OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-               OPENSSH.cipher,
+               cipher,
                OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
                username, host,
                remoteChunkDir
@@ -1276,7 +1284,7 @@ def UploadChunkedFileFromWindows(filePath, fileSize, username,
             "%s@%s %s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
                OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-               OPENSSH.cipher,
+               cipher,
                username, host,
                OPENSSH.DoubleQuote(remoteCatCommand))
         # logger.debug(catCommandString)
@@ -1333,7 +1341,7 @@ class SshControlMasterProcess(object):
     """
     CHECK_INTERVAL = 5  # seconds  # pylint: disable=invalid-name
 
-    def __init__(self, username, privateKeyFilePath, host, port):
+    def __init__(self, username, privateKeyFilePath, host, port, cipher):
         self.username = username
         self.privateKeyFilePath = privateKeyFilePath
         self.host = host
@@ -1354,7 +1362,7 @@ class SshControlMasterProcess(object):
             "%s@%s" \
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
                privateKeyFilePath,
-               OPENSSH.cipher,
+               cipher,
                OPENSSH.DoubleQuote(self.sshControlPath),
                username, host)
         logger.debug(sshControlMasterCommandString)
@@ -1445,14 +1453,14 @@ class SshControlMasterPool(object):
         self.sshControlMasterProcesses = []
         self.timeout = 1
 
-    def GetSshControlMasterProcess(self, maxThreads):
+    def GetSshControlMasterProcess(self, maxThreads, cipher):
         for sshControlMasterProcess in self.sshControlMasterProcesses:
             if sshControlMasterProcess.Check(maxThreads):
                 return sshControlMasterProcess
         if len(self.sshControlMasterProcesses) < self.maxConnections:
             newSshControlMasterProcess = \
                 SshControlMasterProcess(self.username, self.privateKeyFilePath,
-                                        self.host, self.port)
+                                        self.host, self.port, cipher)
             self.sshControlMasterProcesses.append(newSshControlMasterProcess)
             return newSshControlMasterProcess
         else:
