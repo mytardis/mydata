@@ -18,7 +18,6 @@ otherwise we need to worry about escaping special characters like
 
 # Disabling some Pylint warnings for now...
 # pylint: disable=missing-docstring
-# pylint: disable=fixme
 # pylint: disable=too-many-lines
 # pylint: disable=wrong-import-position
 
@@ -859,9 +858,6 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         # Overwrite staging file if it is bigger that local file:
         bytesUploaded = long(0)
 
-    # FIXME: Handle exception where socket for ssh control path
-    # is missing, then we need to create a new master connection.
-
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
             logger.debug("UploadChunkedFileFromPosixSystem 1: Aborting upload "
@@ -948,12 +944,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         except:
             logger.error(traceback.format_exc())
 
-        # Append chunk to remote datafile.
-        # FIXME: Investigate whether using an ampersand to put
-        # remote cat process in the background helps to make things
-        # more robust in the case of an interrupted connection.
-        # On Windows, we might need to escape the ampersand with a
-        # caret (^&)
+        # Append chunk to remote datafile:
 
         if bytesUploaded > 0:
             redirect = ">>"
@@ -1267,12 +1258,9 @@ def UploadChunkedFileFromWindows(filePath, fileSize, username,
             os.unlink(chunkFilePath)
         except:  # pylint: disable=bare-except
             logger.error(traceback.format_exc())
-        # Append chunk to remote datafile.
-        # FIXME: Investigate whether using an ampersand to put
-        # remote cat process in the background helps to make things
-        # more robust in the case of an interrupted connection.
-        # On Windows, we might need to escape the ampersand with a
-        # caret (^&)
+
+        # Append chunk to remote datafile:
+
         if bytesUploaded > 0:
             redirect = ">>"
         else:
