@@ -192,6 +192,9 @@ class SettingsModel(object):
             self.default_chunk_size = 1024 * 1024
         self.max_chunk_size = 256 * 1024 * 1024
 
+        # If True, don't calculate an MD5 sum, just provide a string of zeroes:
+        self.fake_md5_sum = False
+
         # pylint: disable=bare-except
         try:
             self.LoadSettings()
@@ -273,6 +276,9 @@ class SettingsModel(object):
             self.default_chunk_size = 1024 * 1024
         self.max_chunk_size = 256 * 1024 * 1024
 
+        # If True, don't calculate an MD5 sum, just provide a string of zeroes:
+        self.fake_md5_sum = False
+
         self.locked = False
 
         self.uuid = None
@@ -304,7 +310,8 @@ class SettingsModel(object):
                           "min_chunkable_file_size", "default_chunk_size",
                           "max_chunk_size",
                           "max_upload_retries",
-                          "validate_folder_structure", "locked", "uuid",
+                          "validate_folder_structure", "fake_md5_sum",
+                          "locked", "uuid",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
@@ -313,7 +320,7 @@ class SettingsModel(object):
                             configParser.get(configFileSection, field)
                 booleanFields = ["ignore_old_datasets", "ignore_new_files",
                                  "use_includes_file", "use_excludes_file",
-                                 "validate_folder_structure",
+                                 "validate_folder_structure", "fake_md5_sum",
                                  "start_automatically_on_login",
                                  "upload_invalid_user_folders", "locked"]
                 for field in booleanFields:
@@ -417,7 +424,7 @@ class SettingsModel(object):
                             "validate_folder_structure",
                             "start_automatically_on_login",
                             "upload_invalid_user_folders",
-                            "locked",
+                            "locked", "fake_md5_sum",
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
@@ -633,6 +640,9 @@ class SettingsModel(object):
     def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
         self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
 
+    def FakeMd5Sum(self):
+        return self.fake_md5_sum
+
     def Locked(self):
         return self.locked
 
@@ -812,7 +822,8 @@ class SettingsModel(object):
                       "max_chunk_size",
                       "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
-                      "validate_folder_structure", "locked", "uuid",
+                      "validate_folder_structure", "fake_md5_sum",
+                      "locked", "uuid",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []

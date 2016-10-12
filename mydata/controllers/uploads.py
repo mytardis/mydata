@@ -169,10 +169,14 @@ class UploadDatafileRunnable(object):
                 else:
                     message = "%3d %%  MD5 summed" % int(percentComplete)
                 self.uploadsModel.SetMessage(self.uploadModel, message)
-            dataFileMd5Sum = \
-                self.CalculateMd5Sum(dataFilePath, dataFileSize,
-                                     self.uploadModel,
-                                     progressCallback=Md5ProgressCallback)
+            if self.settingsModel.FakeMd5Sum():
+                dataFileMd5Sum = "00000000000000000000000000000000"
+                logger.warning("Faking MD5 sum for %s" % dataFilePath)
+            else:
+                dataFileMd5Sum = \
+                    self.CalculateMd5Sum(dataFilePath, dataFileSize,
+                                         self.uploadModel,
+                                         progressCallback=Md5ProgressCallback)
 
             if self.uploadModel.Canceled():
                 self.foldersController.SetCanceled()
