@@ -422,7 +422,6 @@ def SshServerIsReady(username, privateKeyFilePath,
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
@@ -433,7 +432,6 @@ def SshServerIsReady(username, privateKeyFilePath,
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
@@ -471,7 +469,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-n",
                       "-c", OPENSSH.cipher,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
@@ -499,7 +496,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-p", port,
                       "-c", OPENSSH.cipher,
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oIdentitiesOnly=yes",
                       "-oPasswordAuthentication=no",
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
@@ -681,7 +677,6 @@ def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
              "-n",
              "-c", OPENSSH.cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oIdentitiesOnly=yes",
              "-oPasswordAuthentication=no",
              "-oNoHostAuthenticationForLocalhost=yes",
              "-oStrictHostKeyChecking=no",
@@ -711,7 +706,7 @@ def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     scpCommandString = \
         '%s -v -P %s -i %s -c %s ' \
-        '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
+        '-oPasswordAuthentication=no ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \
         '-oStrictHostKeyChecking=no ' \
         '%s "%s@%s:\\"%s\\""' \
@@ -788,7 +783,6 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-c", OPENSSH.cipher,
          sshControlPathOptionValuePair,
-         "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
          "-oStrictHostKeyChecking=no",
@@ -819,7 +813,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
         "%s -p %s -i %s -c %s %s " \
-        "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+        "-oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
@@ -914,7 +908,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
 
         scpCommandString = \
             '%s -v -P %s -i %s -c %s %s ' \
-            '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
+            '-oPasswordAuthentication=no ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oStrictHostKeyChecking=no ' \
             '%s "%s@%s:\\"%s\\""' \
@@ -971,7 +965,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
                               OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
         catCommandString = \
             "%s -p %s -i %s -c %s %s " \
-            "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+            "-oPasswordAuthentication=no " \
             "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
             "%s@%s %s" \
@@ -1010,7 +1004,7 @@ def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
         "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
         "%s -p %s -i %s -c %s %s " \
-        "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+        "-oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
@@ -1057,7 +1051,6 @@ def UploadWholeFileFromWindows(filePath, fileSize, username,
              "-n",
              "-c", OPENSSH.cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oIdentitiesOnly=yes",
              "-oPasswordAuthentication=no",
              "-oNoHostAuthenticationForLocalhost=yes",
              "-oStrictHostKeyChecking=no",
@@ -1144,7 +1137,6 @@ def UploadChunkedFileFromWindows(filePath, fileSize, username,
          "-n",
          "-c", OPENSSH.cipher,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-         "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
          "-oStrictHostKeyChecking=no",
@@ -1368,7 +1360,7 @@ class SshControlMasterProcess(object):
         sshControlMasterCommandString = \
             "%s -p %s -N -i %s -c %s " \
             "-oControlMaster=yes -oControlPath=%s " \
-            "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
+            "-oPasswordAuthentication=no " \
             "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
             "%s@%s" \
