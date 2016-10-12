@@ -635,33 +635,35 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     elif bytesUploaded == 0:
         progressCallback(bytesUploaded, fileSize, message="Uploading...")
 
-    largeFileSize = foldersController.settingsModel.GetLargeFileSize()
+    minChunkableFileSize = \
+        foldersController.settingsModel.GetMinChunkableFileSize()
     if sys.platform.startswith("win"):
-        if fileSize > largeFileSize:
-            return UploadLargeFileFromWindows(filePath, fileSize, username,
-                                              privateKeyFilePath, host, port,
-                                              remoteFilePath, progressCallback,
-                                              foldersController, uploadModel,
-                                              bytesUploaded)
+        if fileSize >= minChunkableFileSize:
+            return UploadChunkedFileFromWindows(filePath, fileSize, username,
+                                                privateKeyFilePath, host, port,
+                                                remoteFilePath,
+                                                progressCallback,
+                                                foldersController, uploadModel,
+                                                bytesUploaded)
         else:
-            return UploadSmallFileFromWindows(filePath, fileSize, username,
+            return UploadWholeFileFromWindows(filePath, fileSize, username,
                                               privateKeyFilePath, host, port,
                                               remoteFilePath, progressCallback,
                                               uploadModel)
-    if fileSize > largeFileSize:
-        UploadLargeFileFromPosixSystem(filePath, fileSize, username,
-                                       privateKeyFilePath, host, port,
-                                       remoteFilePath, progressCallback,
-                                       foldersController, uploadModel,
-                                       bytesUploaded)
+    if fileSize >= minChunkableFileSize:
+        UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
+                                         privateKeyFilePath, host, port,
+                                         remoteFilePath, progressCallback,
+                                         foldersController, uploadModel,
+                                         bytesUploaded)
     else:
-        return UploadSmallFileFromPosixSystem(filePath, fileSize, username,
+        return UploadWholeFileFromPosixSystem(filePath, fileSize, username,
                                               privateKeyFilePath, host, port,
                                               remoteFilePath, progressCallback,
                                               uploadModel)
 
 
-def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
+def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
                                    privateKeyFilePath, host, port,
                                    remoteFilePath, progressCallback,
                                    uploadModel):
@@ -701,7 +703,7 @@ def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
         REMOTE_DIRS_CREATED[remoteDir] = True
 
     if uploadModel.Canceled():
-        logger.debug("UploadSmallFileFromPosixSystem: Aborting upload "
+        logger.debug("UploadWholeFileFromPosixSystem: Aborting upload "
                      "for %s" % filePath)
         return
 
@@ -743,11 +745,11 @@ def UploadSmallFileFromPosixSystem(filePath, fileSize, username,
 
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
-def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
-                                   privateKeyFilePath, host, port,
-                                   remoteFilePath, progressCallback,
-                                   foldersController, uploadModel,
-                                   bytesUploaded):
+def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
+                                     privateKeyFilePath, host, port,
+                                     remoteFilePath, progressCallback,
+                                     foldersController, uploadModel,
+                                     bytesUploaded):
     """
     On POSIX systems, we use SSH connection caching (the ControlMaster
     and ControlPath options in "man ssh_config"), but they are not
@@ -868,7 +870,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
 
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadLargeFileFromPosixSystem 1: Aborting upload "
+            logger.debug("UploadChunkedFileFromPosixSystem 1: Aborting upload "
                          "for %s" % filePath)
             return
 
@@ -1000,7 +1002,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
         progressCallback(bytesUploaded, fileSize)
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadLargeFileFromPosixSystem 2: Aborting upload "
+            logger.debug("UploadChunkedFileFromPosixSystem 2: Aborting upload "
                          "for %s" % filePath)
             return
 
@@ -1036,7 +1038,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
 
 REMOTE_DIRS_CREATED = dict()
 
-def UploadSmallFileFromWindows(filePath, fileSize, username,
+def UploadWholeFileFromWindows(filePath, fileSize, username,
                                privateKeyFilePath, host, port, remoteFilePath,
                                progressCallback, uploadModel):
     """
@@ -1077,7 +1079,7 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
         REMOTE_DIRS_CREATED[remoteDir] = True
 
     if uploadModel.Canceled():
-        logger.debug("UploadSmallFileFromWindows: Aborting upload "
+        logger.debug("UploadWholeFileFromWindows: Aborting upload "
                      "for %s" % filePath)
         return
 
@@ -1116,11 +1118,11 @@ def UploadSmallFileFromWindows(filePath, fileSize, username,
 
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
-def UploadLargeFileFromWindows(filePath, fileSize, username,
-                               privateKeyFilePath, host, port,
-                               remoteFilePath,
-                               progressCallback, foldersController,
-                               uploadModel, bytesUploaded):
+def UploadChunkedFileFromWindows(filePath, fileSize, username,
+                                 privateKeyFilePath, host, port,
+                                 remoteFilePath,
+                                 progressCallback, foldersController,
+                                 uploadModel, bytesUploaded):
     """
     We want to ensure that the partially uploaded datafile in MyTardis's
     staging area always has a whole number of chunks.  If we were to
@@ -1208,7 +1210,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         bytesUploaded = long(0)
     while bytesUploaded < fileSize:
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadLargeFileFromWindows 1: "
+            logger.debug("UploadChunkedFileFromWindows 1: "
                          "Aborting upload for %s" % filePath)
             return
         # We'll write a chunk to a temporary file.
@@ -1234,7 +1236,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         skip += 1
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadLargeFileFromWindows 2: "
+            logger.debug("UploadChunkedFileFromWindows 2: "
                          "Aborting upload for %s" % filePath)
             return
 
@@ -1317,7 +1319,7 @@ def UploadLargeFileFromWindows(filePath, fileSize, username,
         progressCallback(bytesUploaded, fileSize)
 
         if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadLargeFileFromWindows 3: "
+            logger.debug("UploadChunkedFileFromWindows 3: "
                          "Aborting upload for %s" % filePath)
             return
 
@@ -1446,7 +1448,7 @@ class SshControlMasterPool(object):
     only works on POSIX systems, not on Windows.
 
     To avoid having too many frequent SSH connections on Windows, we can
-    use larger chunk sizes (see UploadLargeFileFromWindows).
+    use larger chunk sizes (see UploadChunkedFileFromWindows).
     """
 
     def __init__(self, username, privateKeyFilePath, host, port):
