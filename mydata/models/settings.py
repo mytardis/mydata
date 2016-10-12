@@ -381,12 +381,20 @@ class SettingsModel(object):
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
             try:
+                localModTime = \
+                    datetime.fromtimestamp(os.stat(self.configPath).st_mtime)
+            except OSError:
+                localModTime = datetime.fromtimestamp(0)
+            try:
                 settingsFromServer = uploaderModel.GetSettings()
+                settingsUpdated = uploaderModel.GetSettingsUpdated()
             except requests.exceptions.RequestException as err:
                 logger.error(err)
                 settingsFromServer = None
-            if settingsFromServer:
-                logger.debug("Settings were found on the server.")
+                settingsUpdated = datetime.fromtimestamp(0)
+            if settingsFromServer and settingsUpdated and \
+                    settingsUpdated > localModTime:
+                logger.debug("Settings will be updated from the server.")
                 for setting in settingsFromServer:
                     self.__dict__[setting['key']] = setting['value']
                     if setting['key'] in (
@@ -421,7 +429,7 @@ class SettingsModel(object):
 
                 logger.debug("Updated local settings from server.")
             else:
-                logger.debug("Settings were not found on the server.")
+                logger.debug("Settings were not updated from the server.")
 
         self.previousDict.update(self.__dict__)
 
