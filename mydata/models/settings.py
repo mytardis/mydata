@@ -1297,7 +1297,8 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
-            if self.previousDict['start_automatically_on_login'] != \
+            if 'start_automatically_on_login' in self.previousDict and \
+                    self.previousDict['start_automatically_on_login'] != \
                     self.StartAutomaticallyOnLogin():
                 message = "Settings validation - " \
                     "checking if MyData is set to start automatically..."
