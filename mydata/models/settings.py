@@ -195,6 +195,12 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
+        if sys.platform.startswith("linux"):
+            # Linux systems tend to be better at using AES-NI:
+            self.cipher = "aes128-ctr"
+        else:
+            self.cipher = "arcfour128"
+
         # pylint: disable=bare-except
         try:
             self.LoadSettings()
@@ -279,6 +285,12 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
+        if sys.platform.startswith("linux"):
+            # Linux systems tend to be better at using AES-NI:
+            self.cipher = "aes128-ctr"
+        else:
+            self.cipher = "arcfour128"
+
         self.locked = False
 
         self.uuid = None
@@ -311,7 +323,7 @@ class SettingsModel(object):
                           "max_chunk_size",
                           "max_upload_retries",
                           "validate_folder_structure", "fake_md5_sum",
-                          "locked", "uuid",
+                          "cipher", "locked", "uuid",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
@@ -424,7 +436,7 @@ class SettingsModel(object):
                             "validate_folder_structure",
                             "start_automatically_on_login",
                             "upload_invalid_user_folders",
-                            "locked", "fake_md5_sum",
+                            "cipher", "fake_md5_sum", "locked",
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
@@ -643,6 +655,9 @@ class SettingsModel(object):
     def FakeMd5Sum(self):
         return self.fake_md5_sum
 
+    def GetCipher(self):
+        return self.cipher
+
     def Locked(self):
         return self.locked
 
@@ -823,7 +838,7 @@ class SettingsModel(object):
                       "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "fake_md5_sum",
-                      "locked", "uuid",
+                      "cipher", "locked", "uuid",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []
