@@ -141,9 +141,9 @@ class CustomBuildCommand(build):
                                          "dist/MyData/media/Aha-Soft")
 
             distutils.dir_util\
-                .copy_tree("resources/win32/openssh-7.1p1-cygwin-2.2.1",
-                           "dist/MyData/openssh-7.1p1-cygwin-2.2.1")
-            cygwinHomeDir = "dist/MyData/openssh-7.1p1-cygwin-2.2.1/home"
+                .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
+                           "dist/MyData/openssh-7.3p1-cygwin-2.6.0")
+            cygwinHomeDir = "dist/MyData/openssh-7.3p1-cygwin-2.6.0/home"
             for subdir in os.listdir(cygwinHomeDir):
                 subdirpath = os.path.join(cygwinHomeDir, subdir)
                 if os.path.isdir(subdirpath):
@@ -221,7 +221,7 @@ OutputDir=.
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Dirs]
-Name: "{pf}\{#MyDataAppName}\openssh-7.1p1-cygwin-2.2.1\home"; Permissions: "users-modify"
+Name: "{pf}\{#MyDataAppName}\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"

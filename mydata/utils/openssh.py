@@ -70,9 +70,9 @@ SLEEP_FACTOR = 0.01
 # pylint: disable=too-many-instance-attributes
 class OpenSSH(object):
     if hasattr(sys, "frozen"):
-        opensshBuildDir = "openssh-7.1p1-cygwin-2.2.1"
+        opensshBuildDir = "openssh-7.3p1-cygwin-2.6.0"
     else:
-        opensshBuildDir = "resources/win32/openssh-7.1p1-cygwin-2.2.1"
+        opensshBuildDir = "resources/win64/openssh-7.3p1-cygwin-2.6.0"
 
     # pylint: disable=no-self-use
     def DoubleQuote(self, string):
