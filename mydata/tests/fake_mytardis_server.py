@@ -591,6 +591,62 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "objects": []
                 }
             self.wfile.write(json.dumps(datafilesJson))
+        elif self.path.startswith("/api/v1/mydata_dataset_file/") and \
+                self.path.endswith("/?format=json"):
+            # e.g. /api/v1/mydata_dataset_file/12345/?format=json
+            match = re.match(r"^/api/v1/mydata_dataset_file/(\d+)/\?format=json$", self.path)
+            if match:
+                dataFileId = match.groups()[0]
+                replicaId = dataFileId
+            else:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message":
+                    "Missing DataFile ID "
+                    "in mydata_dataset_file GET query"
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            datafileJson = {
+                "id": dataFileId,
+                "replicas": [
+                    {
+                        "id": replicaId,
+                        "datafile": "/api/v1/dataset_file/%s/" % dataFileId
+                    }
+                ],
+            }
+            self.wfile.write(json.dumps(datafileJson))
+        elif self.path.startswith("/api/v1/mydata_replica/") and \
+                self.path.endswith("/?format=json"):
+            # e.g. /api/v1/mydata_replica/12345/?format=json
+            match = re.match(r"^/api/v1/mydata_replica/(\d+)/\?format=json$", self.path)
+            if match:
+                replicaId = match.groups()[0]
+            else:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message":
+                    "Missing DFO ID "
+                    "in mydata_replica GET query"
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            replicaJson = {
+                "id": replicaId,
+                "size": 1024
+            }
+            self.wfile.write(json.dumps(replicaJson))
         elif self.path.startswith("/api/v1/dataset_file") and "verify" in self.path:
             # e.g. /api/v1/dataset_file/1/verify/
             match = re.match(r"^/api/v1/dataset_file/([0-9]+)/verify/$", self.path)
