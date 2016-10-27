@@ -81,8 +81,14 @@ def BeginBusyCursorIfRequired():
     """
     Begin busy cursor if it's not already being displayed.
     """
-    if not wx.IsBusy():
-        wx.BeginBusyCursor()
+    # pylint: disable=no-member
+    # Otherwise pylint complains about PyAssertionError.
+    # pylint: disable=protected-access
+    try:
+        if not wx.IsBusy():
+            wx.BeginBusyCursor()
+    except wx._core.PyAssertionError, err:
+        logger.warning(err)
 
 
 def EndBusyCursorIfRequired():
@@ -98,5 +104,5 @@ def EndBusyCursorIfRequired():
     except wx._core.PyAssertionError, err:
         if "no matching wxBeginBusyCursor()" \
                 not in str(err):
-            logger.error(str(err))
+            logger.warning(str(err))
             raise
