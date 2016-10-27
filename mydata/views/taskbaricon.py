@@ -8,7 +8,6 @@ or menubar icon (Mac OS X) for MyData.
 
 # pylint: disable=wrong-import-position
 
-import os
 import webbrowser
 
 import wx
@@ -177,15 +176,10 @@ class MyDataTaskBarIcon(TaskBarIcon):
         Called when the "Exit MyData" menu item is
         selected from MyData's system tray / menu bar icon menu.
         """
-        started = wx.GetApp().foldersController.Started()
-        completed = wx.GetApp().foldersController.Completed()
-        canceled = wx.GetApp().foldersController.Canceled()
-        failed = wx.GetApp().foldersController.Failed()
-
         self.frame.Show(True)
         self.frame.Raise()
         message = "Are you sure you want to quit MyData?"
-        if started and not completed and not canceled and not failed:
+        if wx.GetApp().Processing():
             message += "\n\n" \
                 "MyData will attempt to shut down any uploads currently " \
                 "in progress before exiting."
@@ -194,7 +188,5 @@ class MyDataTaskBarIcon(TaskBarIcon):
                              wx.YES | wx.NO | wx.ICON_QUESTION)
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
-            # See also: wx.GetApp().ShutDownCleanlyAndExit(event)
-            # pylint: disable=protected-access
-            os._exit(0)
+            wx.GetApp().ShutDownCleanlyAndExit(event, confirm=False)
         event.Skip()
