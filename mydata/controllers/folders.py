@@ -17,7 +17,6 @@ import wx
 import wx.lib.newevent
 import wx.dataview
 
-from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
@@ -634,12 +633,6 @@ class FoldersController(object):
 
         self.verifyDatafileRunnable = {}
         self.uploadDatafileRunnable = {}
-
-        if sys.platform == 'darwin':
-            sshControlMasterPool = \
-                OPENSSH.GetSshControlMasterPool(createIfMissing=False)
-            if sshControlMasterPool:
-                sshControlMasterPool.ShutDown()
 
         if self.testRun:
             numVerificationsCompleted = \
