@@ -43,14 +43,14 @@ class UploadsModel(DataViewIndexListModel):
         DataViewIndexListModel.__init__(self, len(self.uploadsData))
 
         self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
-                            "File Size", "Status", "Progress", "Message")
+                            "File Size", "Status", "Progress", "Message", "Speed")
         self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
-                           "filesize", "status", "progress", "message")
-        self.defaultColumnWidths = (40, 170, 170, 200, 75, 55, 100, 300)
+                           "filesize", "status", "progress", "message", "speed")
+        self.defaultColumnWidths = (40, 170, 170, 200, 75, 55, 100, 200, 100)
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.BITMAP, ColumnType.PROGRESS,
-                            ColumnType.TEXT)
+                            ColumnType.TEXT, ColumnType.TEXT)
 
         self.maxDataViewId = 0
         self.maxDataViewIdLock = threading.Lock()
@@ -167,10 +167,7 @@ class UploadsModel(DataViewIndexListModel):
             rowsDeleted.append(row)
 
         # notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rowsDeleted)
-        else:
-            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+        wx.CallAfter(self.RowsDeleted, rowsDeleted)
 
         self.maxDataViewId = 0
         self.completedCount = 0
@@ -200,10 +197,7 @@ class UploadsModel(DataViewIndexListModel):
     def AddRow(self, uploadModel):
         self.uploadsData.append(uploadModel)
         # Notify views
-        if threading.current_thread().name == "MainThread":
-            self.RowAppended()
-        else:
-            wx.CallAfter(self.RowAppended)
+        wx.CallAfter(self.RowAppended)
 
         self.SetMaxDataViewId(uploadModel.GetDataViewId())
 
@@ -237,10 +231,7 @@ class UploadsModel(DataViewIndexListModel):
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("File Size")
-                if threading.current_thread().name == "MainThread":
-                    self.TryRowValueChanged(row, col)
-                else:
-                    wx.CallAfter(self.TryRowValueChanged, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def UploadProgressUpdated(self, uploadModel):
@@ -249,10 +240,9 @@ class UploadsModel(DataViewIndexListModel):
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
-                if threading.current_thread().name == "MainThread":
-                    self.TryRowValueChanged(row, col)
-                else:
-                    wx.CallAfter(self.TryRowValueChanged, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
+                col = self.columnNames.index("Speed")
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def StatusUpdated(self, uploadModel):
@@ -261,10 +251,7 @@ class UploadsModel(DataViewIndexListModel):
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
-                if threading.current_thread().name == "MainThread":
-                    self.TryRowValueChanged(row, col)
-                else:
-                    wx.CallAfter(self.TryRowValueChanged, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def MessageUpdated(self, uploadModel):
@@ -273,10 +260,7 @@ class UploadsModel(DataViewIndexListModel):
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
-                if threading.current_thread().name == "MainThread":
-                    self.TryRowValueChanged(row, col)
-                else:
-                    wx.CallAfter(self.TryRowValueChanged, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def SetStatus(self, uploadModel, status):
