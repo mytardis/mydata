@@ -54,6 +54,8 @@ class VerificationModel(object):
         self.status = VerificationStatus.NOT_STARTED
         self.complete = False
 
+        self.existingUnverifiedDatafile = None
+
     def GetDataViewId(self):
         """
         Returns data view ID.
@@ -131,3 +133,17 @@ class VerificationModel(object):
         Get datafile index.
         """
         return self.dataFileIndex
+
+    def GetExistingUnverifiedDatafile(self):
+        """
+        If during verification, it has been determined that an
+        unverified DataFile exists on the server for this file,
+        a DataFileModel object will be returned, otherwise None.
+        """
+        return self.existingUnverifiedDatafile
+
+    def SetExistingUnverifiedDatafile(self, existingUnverifiedDatafile):
+        """
+        Set DataFileModel object for existing unverified datafile.
+        """
+        self.existingUnverifiedDatafile = existingUnverifiedDatafile
