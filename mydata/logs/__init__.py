@@ -14,7 +14,6 @@ from ConfigParser import ConfigParser
 import HTMLParser
 import os
 import time
-import subprocess
 import sys
 import inspect
 import pkgutil
