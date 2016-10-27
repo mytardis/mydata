@@ -21,7 +21,8 @@ from mydata.controllers.folders import FoldersController
 import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
-
+if sys.platform.startswith("linux"):
+    from mydata.linuxsubprocesses import StopErrandBoy
 
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
@@ -52,6 +53,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         self.frame.Destroy()
         self.fakeMyTardisServerProcess.terminate()
         self.fakeSshServerProcess.terminate()
+        if sys.platform.startswith("linux"):
+            StopErrandBoy()
 
     def test_scan_folders(self):
         """
@@ -71,7 +74,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
         settingsModel.SetSshKeyPair(self.keyPair)
-        settingsModel.SetUseSshControlMasterIfAvailable(False)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
