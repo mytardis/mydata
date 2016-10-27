@@ -36,7 +36,6 @@ from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
-from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
 
@@ -84,6 +83,8 @@ class UploadDatafileRunnable(object):
         self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                        folderModel=self.folderModel,
                                        dataFileIndex=self.dataFileIndex)
+        self.uploadModel.SetExistingUnverifiedDatafile(
+            self.verificationModel.GetExistingUnverifiedDatafile())
         self.uploadsModel.AddRow(self.uploadModel)
         self.foldersController.uploadsThreadingLock.release()
         self.uploadModel.SetBytesUploadedPreviously(
@@ -113,10 +114,6 @@ class UploadDatafileRunnable(object):
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
             return
-
-        logger.debug("Uploading " +
-                     self.folderModel.GetDataFileName(self.dataFileIndex) +
-                     "...")
 
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST or \
                 not self.existingUnverifiedDatafile:
@@ -170,7 +167,7 @@ class UploadDatafileRunnable(object):
                     message = "%3d %%  MD5 summed" % int(percentComplete)
                 self.uploadsModel.SetMessage(self.uploadModel, message)
             if self.settingsModel.FakeMd5Sum():
-                dataFileMd5Sum = "00000000000000000000000000000000"
+                dataFileMd5Sum = self.settingsModel.GetFakeMd5Sum()
                 logger.warning("Faking MD5 sum for %s" % dataFilePath)
             else:
                 dataFileMd5Sum = \
@@ -238,6 +235,8 @@ class UploadDatafileRunnable(object):
         def ProgressCallback(current, total, message=None):
             if self.uploadModel.Canceled():
                 self.foldersController.SetCanceled()
+                return
+            elif self.uploadModel.GetStatus() == UploadStatus.COMPLETED:
                 return
             if current is None:
                 # For a zero-sized file, current will be None
@@ -333,6 +332,9 @@ class UploadDatafileRunnable(object):
                             # to copy/upload the file to.
                             tempUrl = response.text
                             remoteFilePath = tempUrl
+                            dataFileId = \
+                                response.headers['Location'].split('/')[-2]
+                            self.uploadModel.SetDataFileId(dataFileId)
                         while True:
                             try:
                                 UploadFile(dataFilePath,
@@ -352,9 +354,6 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    message = "This file will be re-uploaded..."
-                                    self.uploadsModel.SetMessage(
-                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -368,10 +367,6 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    message = \
-                                        "This file will be re-uploaded..."
-                                    self.uploadsModel.SetMessage(
-                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -385,10 +380,6 @@ class UploadDatafileRunnable(object):
                                     self.uploadModel.IncrementRetries()
                                     logger.debug("Restarting upload for " +
                                                  dataFilePath)
-                                    message = \
-                                        "This file will be re-uploaded..."
-                                    self.uploadsModel.SetMessage(
-                                        self.uploadModel, message)
                                     self.uploadModel.SetProgress(0)
                                     continue
                                 else:
@@ -510,21 +501,6 @@ class UploadDatafileRunnable(object):
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
-                self.uploadModel.SetTraceback(
-                    traceback.format_exc())
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
-                        failed=True))
-                message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController
-                    .showMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
-            except SshControlMasterLimit, err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
                 wx.PostEvent(
@@ -663,7 +639,6 @@ class UploadDatafileRunnable(object):
             return
 
         if uploadSuccess:
-            logger.debug("Upload succeeded for " + dataFilePath)
             self.uploadsModel.SetStatus(self.uploadModel,
                                         UploadStatus.COMPLETED)
             message = "Upload complete!"
