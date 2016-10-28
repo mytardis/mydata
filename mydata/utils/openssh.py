@@ -4,8 +4,8 @@ On Windows, we bundle a Cygwin build of OpenSSH.
 
 subprocess is used extensively throughout this module.
 
-Given the complex quoting requirements when running commands like
-ssh staging_host "cat file.chunk >> file", I don't trust Python's
+Given the complex quoting requirements when running remote
+commands over ssh, I don't trust Python's
 automatic quoting which is done when converting a list of arguments
 to a command string in subprocess.Popen.  Furthermore, formatting
 the command string ourselves, rather than leaving it to Python
@@ -27,7 +27,6 @@ import os
 import subprocess
 import traceback
 import re
-import tempfile
 import getpass
 import threading
 import time
@@ -38,16 +37,21 @@ if sys.platform.startswith("win"):
     import win32process
 
 from mydata.logs import logger
+from mydata.models.datafile import DataFileModel
+from mydata.models.replica import ReplicaModel
+from mydata.models.upload import UploadStatus
 from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.utils.exceptions import DoesNotExist
+
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
-from mydata.utils.exceptions import SshControlMasterLimit
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.utils.exceptions import FileNotFoundOnStaging
-from mydata.utils import PidIsRunning
-from mydata.utils import HumanReadableSizeString
+from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 
+if sys.platform.startswith("linux"):
+    from mydata.linuxsubprocesses import GetErrandBoyTransport
 
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
@@ -145,30 +149,6 @@ class OpenSSH(object):
             # of command strings, and in some cases, I don't trust
             # subprocess to quote the command lists correctly.
             self.preferToUseShellInSubprocess = True
-
-        # Only useful on POSIX systems:
-        self.sshControlMasterPool = None
-        self.createMasterPoolThreadingLock = threading.Lock()
-
-    def GetSshControlMasterPool(self, username=None, privateKeyFilePath=None,
-                                host=None, port=None, createIfMissing=True):
-        """
-        -oControlMaster is only available in POSIX implementations of ssh.
-        """
-        # pylint: disable=too-many-arguments
-        if sys.platform.startswith("win"):
-            raise NotImplementedError("-oControlMaster is not implemented "
-                                      "in MinGW or Cygwin builds of OpenSSH.")
-        if not self.sshControlMasterPool:
-            if createIfMissing:
-                self.createMasterPoolThreadingLock.acquire()
-                self.sshControlMasterPool = \
-                    SshControlMasterPool(username, privateKeyFilePath,
-                                         host, port)
-                self.createMasterPoolThreadingLock.release()
-            else:
-                return None
-        return self.sshControlMasterPool
 
 
 class KeyPair(object):
@@ -293,7 +273,6 @@ class KeyPair(object):
                                 startupinfo=DEFAULT_STARTUP_INFO,
                                 creationflags=DEFAULT_CREATION_FLAGS)
         stdout, _ = proc.communicate()
-
         if proc.returncode != 0:
             raise SshException(stdout)
 
@@ -443,21 +422,378 @@ def SshServerIsReady(username, privateKeyFilePath,
                             startupinfo=DEFAULT_STARTUP_INFO,
                             creationflags=DEFAULT_CREATION_FLAGS)
     stdout, _ = proc.communicate()
-    if proc.returncode != 0:
-        logger.debug(stdout)
-    return proc.returncode == 0
+    returncode = proc.returncode
+    if returncode != 0:
+        logger.error(stdout)
+
+    return returncode == 0
 
 
-def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
-                                host, port, settingsModel):
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-function-args
+def UploadFile(filePath, fileSize, username, privateKeyFilePath,
+               host, port, remoteFilePath, progressCallback,
+               foldersController, uploadModel):
+    """
+    Upload a file to staging using SCP.
+
+    Ignore bytes uploaded previously, because MyData is no longer
+    chunking files, so with SCP, we will always upload the whole
+    file.
+    """
+    bytesUploaded = long(0)
+    progressCallback(bytesUploaded, fileSize, message="Uploading...")
+
+    if sys.platform.startswith("win"):
+        return UploadFileFromWindows(filePath, fileSize, username,
+                                     privateKeyFilePath, host, port,
+                                     remoteFilePath, progressCallback,
+                                     foldersController, uploadModel)
+    else:
+        return UploadFileFromPosixSystem(filePath, fileSize, username,
+                                         privateKeyFilePath, host, port,
+                                         remoteFilePath, progressCallback,
+                                         foldersController, uploadModel)
+
+
+def UploadFileFromPosixSystem(filePath, fileSize, username,
+                              privateKeyFilePath, host, port,
+                              remoteFilePath, progressCallback,
+                              foldersController, uploadModel):
+    """
+    Upload file using SCP.
+    """
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
+    settingsModel = foldersController.settingsModel
+    cipher = settingsModel.GetCipher()
+
+    progressPollInterval = settingsModel.GetProgressPollInterval()
+    monitoringProgress = threading.Event()
+
+    startTime = datetime.now()
+    uploadModel.SetStartTime(startTime)
+    def MonitorProgress():
+        if foldersController.IsShuttingDown() or \
+                (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
+                 uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
+            return
+        timer = threading.Timer(progressPollInterval, MonitorProgress)
+        timer.start()
+        if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
+            return
+        if monitoringProgress.isSet():
+            return
+        monitoringProgress.set()
+        dfoId = uploadModel.GetDfoId()
+        if dfoId is None:
+            dataFileId = uploadModel.GetDataFileId()
+            if dataFileId is not None:
+                try:
+                    dataFile = \
+                        DataFileModel.GetDataFileFromId(settingsModel, dataFileId)
+                    dfoId = dataFile.GetReplicas()[0].GetId()
+                    uploadModel.SetDfoId(dfoId)
+                except DoesNotExist:
+                    # If the DataFile ID reported in the location header
+                    # after POSTing to the API doesn't exist yet, don't
+                    # worry, just check again later.
+                    pass
+                except IndexError:
+                    # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
+                    # don't worry, just check again later.
+                    pass
+        if dfoId:
+            try:
+                bytesUploaded = \
+                    ReplicaModel.CountBytesUploadedToStaging(settingsModel, dfoId)
+                latestUpdateTime = datetime.now()
+                # If this file already has a partial upload in staging,
+                # progress and speed estimates can be misleading.
+                uploadModel.SetLatestTime(latestUpdateTime)
+                uploadModel.SetBytesUploaded(bytesUploaded)
+                progressCallback(bytesUploaded, fileSize)
+            except MissingMyDataReplicaApiEndpoint:
+                timer.cancel()
+        monitoringProgress.clear()
+    MonitorProgress()
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    if remoteDir not in REMOTE_DIRS_CREATED:
+        mkdirCmdAndArgs = \
+            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+             "-p", port,
+             "-n",
+             "-c", cipher,
+             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-oPasswordAuthentication=no",
+             "-oNoHostAuthenticationForLocalhost=yes",
+             "-oStrictHostKeyChecking=no",
+             "-l", username,
+             host,
+             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdString = " ".join(mkdirCmdAndArgs)
+        logger.debug(mkdirCmdString)
+        if not sys.platform.startswith("linux"):
+            mkdirProcess = \
+                subprocess.Popen(mkdirCmdString,
+                                 shell=OPENSSH.preferToUseShellInSubprocess,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 startupinfo=DEFAULT_STARTUP_INFO,
+                                 creationflags=DEFAULT_CREATION_FLAGS)
+            stdout, _ = mkdirProcess.communicate()
+            if mkdirProcess.returncode != 0:
+                raise SshException(stdout, mkdirProcess.returncode)
+        else:
+            stdout, stderr, returncode = GetErrandBoyTransport().run_cmd(mkdirCmdString)
+            if returncode != 0:
+                raise SshException(stderr, returncode)
+        REMOTE_DIRS_CREATED[remoteDir] = True
+
+    if uploadModel.Canceled():
+        logger.debug("UploadFileFromPosixSystem: Aborting upload "
+                     "for %s" % filePath)
+        return
+
+    maxThreads = settingsModel.GetMaxUploadThreads()
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    if settingsModel.UseNoneCipher():
+        cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
+    else:
+        cipherString = "-c %s" % cipher
+    scpCommandString = \
+        '%s -P %s -i %s %s ' \
+        '-oPasswordAuthentication=no ' \
+        '-oNoHostAuthenticationForLocalhost=yes ' \
+        '-oStrictHostKeyChecking=no ' \
+        '%s "%s@%s:\\"%s\\""' \
+        % (OPENSSH.DoubleQuote(OPENSSH.scp),
+           port,
+           privateKeyFilePath,
+           cipherString,
+           OPENSSH.DoubleQuote(filePath),
+           username, host,
+           remoteDir
+           .replace('`', r'\\`')
+           .replace('$', r'\\$'))
+    logger.debug(scpCommandString)
+    if not sys.platform.startswith("linux"):
+        scpUploadProcess = subprocess.Popen(
+            scpCommandString,
+            shell=OPENSSH.preferToUseShellInSubprocess,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=DEFAULT_STARTUP_INFO,
+            creationflags=DEFAULT_CREATION_FLAGS)
+        uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
+        while True:
+            poll = scpUploadProcess.poll()
+            if poll is not None:
+                break
+            time.sleep(SLEEP_FACTOR * maxThreads)
+        stdout, _ = scpUploadProcess.communicate()
+        returncode = scpUploadProcess.returncode
+        if returncode != 0:
+            raise ScpException(stdout, scpCommandString, returncode)
+    else:
+        with GetErrandBoyTransport().get_session() as session:
+            ebSubprocess = session.subprocess
+            if sys.platform.startswith("linux"):
+                preexecFunction = os.setpgrp
+            else:
+                preexecFunction = None
+            scpUploadProcess = \
+                ebSubprocess.Popen(scpCommandString, shell=True,
+                                   close_fds=True, preexec_fn=preexecFunction)
+            uploadModel.SetStatus(UploadStatus.IN_PROGRESS)
+            uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
+
+            while True:
+                poll = scpUploadProcess.poll()
+                if poll is not None:
+                    break
+                time.sleep(SLEEP_FACTOR * maxThreads)
+            stdout, stderr = scpUploadProcess.communicate()
+            returncode = scpUploadProcess.returncode
+
+    latestUpdateTime = datetime.now()
+    uploadModel.SetLatestTime(latestUpdateTime)
+    if returncode != 0:
+        raise ScpException(stdout, scpCommandString,
+                           returncode)
+    bytesUploaded = fileSize
+    progressCallback(bytesUploaded, fileSize)
+    return
+
+REMOTE_DIRS_CREATED = dict()
+
+def UploadFileFromWindows(filePath, fileSize, username,
+                          privateKeyFilePath, host, port, remoteFilePath,
+                          progressCallback,
+                          foldersController, uploadModel):
+    """
+    Upload file using SCP.
+    """
+    # pylint: disable=too-many-statements
+    settingsModel = foldersController.settingsModel
+    maxThreads = settingsModel.GetMaxUploadThreads()
+
+    progressPollInterval = settingsModel.GetProgressPollInterval()
+    monitoringProgress = threading.Event()
+
+    def MonitorProgress():
+        if foldersController.IsShuttingDown() or \
+                (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
+                 uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
+            return
+        timer = threading.Timer(progressPollInterval, MonitorProgress)
+        timer.start()
+        if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
+            return
+        if monitoringProgress.isSet():
+            return
+        monitoringProgress.set()
+        dfoId = uploadModel.GetDfoId()
+        if dfoId is None:
+            dataFileId = uploadModel.GetDataFileId()
+            if dataFileId is not None:
+                try:
+                    dataFile = \
+                        DataFileModel.GetDataFileFromId(settingsModel, dataFileId)
+                    dfoId = dataFile.GetReplicas()[0].GetId()
+                    uploadModel.SetDfoId(dfoId)
+                except DoesNotExist:
+                    # If the DataFile ID reported in the location header
+                    # after POSTing to the API doesn't exist yet, don't
+                    # worry, just check again later.
+                    pass
+                except IndexError:
+                    # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
+                    # don't worry, just check again later.
+                    pass
+        if dfoId:
+            try:
+                bytesUploaded = \
+                    ReplicaModel.CountBytesUploadedToStaging(settingsModel, dfoId)
+                latestUpdateTime = datetime.now()
+                # If this file already has a partial upload in staging,
+                # progress and speed estimates can be misleading.
+                uploadModel.SetLatestTime(latestUpdateTime)
+                uploadModel.SetBytesUploaded(bytesUploaded)
+                progressCallback(bytesUploaded, fileSize)
+            except MissingMyDataReplicaApiEndpoint:
+                timer.cancel()
+        monitoringProgress.clear()
+    MonitorProgress()
+
+    cipher = settingsModel.GetCipher()
+    bytesUploaded = long(0)
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    if remoteDir not in REMOTE_DIRS_CREATED:
+        mkdirCmdAndArgs = \
+            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+             "-p", port,
+             "-n",
+             "-c", cipher,
+             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-oPasswordAuthentication=no",
+             "-oNoHostAuthenticationForLocalhost=yes",
+             "-oStrictHostKeyChecking=no",
+             "-l", username,
+             host,
+             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdString = " ".join(mkdirCmdAndArgs)
+        logger.debug(mkdirCmdString)
+        mkdirProcess = \
+            subprocess.Popen(mkdirCmdString,
+                             shell=OPENSSH.preferToUseShellInSubprocess,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             startupinfo=DEFAULT_STARTUP_INFO,
+                             creationflags=DEFAULT_CREATION_FLAGS)
+        stdout, _ = mkdirProcess.communicate()
+        if mkdirProcess.returncode != 0:
+            raise SshException(stdout, mkdirProcess.returncode)
+        REMOTE_DIRS_CREATED[remoteDir] = True
+
+    if uploadModel.Canceled():
+        logger.debug("UploadFileFromWindows: Aborting upload "
+                     "for %s" % filePath)
+        return
+
+    remoteDir = os.path.dirname(remoteFilePath)
+    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    scpCommandString = \
+        '%s -v -P %s -i %s -c %s ' \
+        '-oNoHostAuthenticationForLocalhost=yes ' \
+        '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
+        '%s "%s@%s:\\"%s/\\""' \
+        % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
+           OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
+           cipher,
+           OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
+           username, host,
+           remoteDir
+           .replace('`', r'\\`')
+           .replace('$', r'\\$'))
+    logger.debug(scpCommandString)
+    scpUploadProcess = subprocess.Popen(
+        scpCommandString,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        startupinfo=DEFAULT_STARTUP_INFO,
+        creationflags=DEFAULT_CREATION_FLAGS)
+    uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
+    uploadModel.SetStatus(UploadStatus.IN_PROGRESS)
+    while True:
+        poll = scpUploadProcess.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * maxThreads)
+    stdout, _ = scpUploadProcess.communicate()
+    if scpUploadProcess.returncode != 0:
+        raise ScpException(stdout, scpCommandString,
+                           scpUploadProcess.returncode)
+    bytesUploaded = fileSize
+    progressCallback(bytesUploaded, fileSize)
+    return
+
+
+def GetCygwinPath(path):
+    """
+    Converts "C:\\path\\to\\file" to "/cygdrive/C/path/to/file".
+    """
+    realpath = os.path.realpath(path)
+    match = re.search(r"^(\S):(.*)", realpath)
+    if match:
+        return "/cygdrive/" + match.groups()[0] + \
+            match.groups()[1].replace("\\", "/")
+    else:
+        raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
+                        "a valid path." % path)
+
+# Singleton instance of OpenSSH class:
+OPENSSH = OpenSSH()
+
+
+def OldCountBytesUploadedToStaging(remoteFilePath, username,
+                                   privateKeyFilePath,
+                                   host, port, settingsModel):
+    """
+    Deprecated.  Use ReplicaModel.CountBytesUploadedToStaging instead.
+    """
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
     quotedRemoteFilePath = OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
-    maxThreads = settingsModel.GetMaxVerificationThreads() + \
-        settingsModel.GetMaxUploadThreads()
+    maxThreads = settingsModel.GetMaxVerificationThreads()
 
     cipher = settingsModel.GetCipher()
 
@@ -475,22 +811,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       OPENSSH.DoubleQuoteRemotePath(
                           "wc -c %s" % quotedRemoteFilePath)]
     else:
-        if settingsModel.UseSshControlMasterIfAvailable():
-            sshControlMasterPool = \
-                OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                                host, port)
-            sshControlMasterProcess = \
-                sshControlMasterPool.GetSshControlMasterProcess(maxThreads,
-                                                                cipher)
-            sshControlPathOptionValuePair = \
-                sshControlMasterProcess.GetControlPathOptionValuePair()
-        else:
-            sshControlPathOptionValuePair = ""
-
-        # The authentication options below (-i privateKeyFilePath etc.)
-        # shouldn't be necessary if the socket created by the SSH master
-        # process (sshControlPath) is ready), but we can't guarantee that
-        # it will be ready immediately.
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", port,
                       "-c", cipher,
@@ -499,7 +819,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
-                      sshControlPathOptionValuePair,
                       host,
                       OPENSSH.DoubleQuoteRemotePath(
                           "wc -c %s" % quotedRemoteFilePath)]
@@ -588,900 +907,3 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
         else:
             logger.debug(line)
     return bytesUploaded
-
-
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-function-args
-def UploadFile(filePath, fileSize, username, privateKeyFilePath,
-               host, port, remoteFilePath, progressCallback,
-               foldersController, uploadModel):
-    """
-    Upload a file to staging using SCP.
-
-    If the file has already been uploaded (or partially uploaded),
-    uploadModel.GetBytesUploadedPreviously() should return the number
-    of bytes uploaded, otherwise it will return None.
-    """
-    # pylint: disable=too-many-branches
-
-    bytesUploaded = uploadModel.GetBytesUploadedPreviously()
-
-    if bytesUploaded is None:
-         # bytesUploaded being None (rather than zero) tells our progress
-         # callback that we haven't finished uploading the file, even if
-         # the file is zero bytes in size.
-        progressCallback(bytesUploaded, fileSize, message="Uploading...")
-        bytesUploaded = long(0)
-    elif 0 < bytesUploaded < fileSize:
-        progressCallback(bytesUploaded, fileSize,
-                         message="Found %s uploaded previously"
-                         % HumanReadableSizeString(bytesUploaded))
-    elif bytesUploaded == fileSize:
-        logger.debug("UploadFile returning because file \"%s\" has "
-                     "already been uploaded." % filePath)
-        return
-    elif bytesUploaded > fileSize:
-        logger.error("Possibly due to a bug in MyData, the file size on "
-                     "the remote server is larger than the local file "
-                     "size for \"%s\"." % filePath)
-    elif 0 < bytesUploaded < fileSize:
-        logger.debug("MyData will attempt to resume the partially "
-                     "completed upload for \"%s\"..." % filePath)
-    elif bytesUploaded == 0:
-        progressCallback(bytesUploaded, fileSize, message="Uploading...")
-
-    minChunkableFileSize = \
-        foldersController.settingsModel.GetMinChunkableFileSize()
-    if sys.platform.startswith("win"):
-        if fileSize >= minChunkableFileSize:
-            return UploadChunkedFileFromWindows(filePath, fileSize, username,
-                                                privateKeyFilePath, host, port,
-                                                remoteFilePath,
-                                                progressCallback,
-                                                foldersController, uploadModel,
-                                                bytesUploaded)
-        else:
-            return UploadWholeFileFromWindows(filePath, fileSize, username,
-                                              privateKeyFilePath, host, port,
-                                              remoteFilePath, progressCallback,
-                                              foldersController, uploadModel)
-    if fileSize >= minChunkableFileSize:
-        UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
-                                         privateKeyFilePath, host, port,
-                                         remoteFilePath, progressCallback,
-                                         foldersController, uploadModel,
-                                         bytesUploaded)
-    else:
-        return UploadWholeFileFromPosixSystem(filePath, fileSize, username,
-                                              privateKeyFilePath, host, port,
-                                              remoteFilePath, progressCallback,
-                                              foldersController, uploadModel)
-
-
-def UploadWholeFileFromPosixSystem(filePath, fileSize, username,
-                                   privateKeyFilePath, host, port,
-                                   remoteFilePath, progressCallback,
-                                   foldersController, uploadModel):
-    """
-    Fast method for uploading small files (less overhead from chunking).
-    This method don't support resuming interrupted uploads, and doesn't
-    provide progress updates.
-    """
-    settingsModel = foldersController.settingsModel
-    cipher = settingsModel.GetCipher()
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    if remoteDir not in REMOTE_DIRS_CREATED:
-        mkdirCmdAndArgs = \
-            [OPENSSH.DoubleQuote(OPENSSH.ssh),
-             "-p", port,
-             "-n",
-             "-c", cipher,
-             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oPasswordAuthentication=no",
-             "-oNoHostAuthenticationForLocalhost=yes",
-             "-oStrictHostKeyChecking=no",
-             "-l", username,
-             host,
-             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-        mkdirCmdString = " ".join(mkdirCmdAndArgs)
-        logger.debug(mkdirCmdString)
-        mkdirProcess = \
-            subprocess.Popen(mkdirCmdString,
-                             shell=OPENSSH.preferToUseShellInSubprocess,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             startupinfo=DEFAULT_STARTUP_INFO,
-                             creationflags=DEFAULT_CREATION_FLAGS)
-        stdout, _ = mkdirProcess.communicate()
-        if mkdirProcess.returncode != 0:
-            raise SshException(stdout, mkdirProcess.returncode)
-        REMOTE_DIRS_CREATED[remoteDir] = True
-
-    if uploadModel.Canceled():
-        logger.debug("UploadWholeFileFromPosixSystem: Aborting upload "
-                     "for %s" % filePath)
-        return
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    scpCommandString = \
-        '%s -v -P %s -i %s -c %s ' \
-        '-oPasswordAuthentication=no ' \
-        '-oNoHostAuthenticationForLocalhost=yes ' \
-        '-oStrictHostKeyChecking=no ' \
-        '%s "%s@%s:\\"%s\\""' \
-        % (OPENSSH.DoubleQuote(OPENSSH.scp),
-           port,
-           privateKeyFilePath,
-           cipher,
-           OPENSSH.DoubleQuote(filePath),
-           username, host,
-           remoteDir
-           .replace('`', r'\\`')
-           .replace('$', r'\\$'))
-    logger.debug(scpCommandString)
-    scpUploadProcess = subprocess.Popen(
-        scpCommandString,
-        shell=OPENSSH.preferToUseShellInSubprocess,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS)
-    uploadModel.SetScpUploadProcess(scpUploadProcess)
-
-    stdout, _ = scpUploadProcess.communicate()
-    if scpUploadProcess.returncode != 0:
-        raise ScpException(stdout, scpCommandString,
-                           scpUploadProcess.returncode)
-    bytesUploaded = fileSize
-    progressCallback(bytesUploaded, fileSize)
-    return
-
-
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-def UploadChunkedFileFromPosixSystem(filePath, fileSize, username,
-                                     privateKeyFilePath, host, port,
-                                     remoteFilePath, progressCallback,
-                                     foldersController, uploadModel,
-                                     bytesUploaded):
-    """
-    On POSIX systems, we use SSH connection caching (the ControlMaster
-    and ControlPath options in "man ssh_config"), but they are not
-    available on Windows.
-
-    We want to ensure that the partially uploaded datafile in MyTardis's
-    staging area always has a whole number of chunks.  If we were to
-    append each chunk directly to the datafile at the same time as
-    sending it over the SSH channel, there would be a risk of a broken
-    connection resulting in a partial chunk being appended to the datafile.
-    So we upload the chunk to its own file on the remote server first,
-    and then append the chunk onto the remote (partial) datafile.
-    """
-    remoteChunkPath = "%s/.%s.chunk" % (os.path.dirname(remoteFilePath),
-                                        os.path.basename(remoteFilePath))
-
-    settingsModel = foldersController.settingsModel
-    cipher = settingsModel.GetCipher()
-    maxThreads = settingsModel.GetMaxUploadThreads()
-
-    if settingsModel.UseSshControlMasterIfAvailable():
-        sshControlMasterPool = \
-            OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                            host, port)
-        sshControlMasterProcess = \
-            sshControlMasterPool.GetSshControlMasterProcess(maxThreads,
-                                                            cipher)
-        sshControlPathOptionValuePair = \
-            sshControlMasterProcess.GetControlPathOptionValuePair()
-    else:
-        sshControlPathOptionValuePair = ""
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    mkdirCmdAndArgs = \
-        [OPENSSH.DoubleQuote(OPENSSH.ssh),
-         "-p", port,
-         "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-         "-c", cipher,
-         sshControlPathOptionValuePair,
-         "-oPasswordAuthentication=no",
-         "-oNoHostAuthenticationForLocalhost=yes",
-         "-oStrictHostKeyChecking=no",
-         "-l", username,
-         host,
-         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-    mkdirCmdString = " ".join(mkdirCmdAndArgs)
-    logger.debug(mkdirCmdString)
-    mkdirProcess = \
-        subprocess.Popen(mkdirCmdString,
-                         shell=OPENSSH.preferToUseShellInSubprocess,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         startupinfo=DEFAULT_STARTUP_INFO,
-                         creationflags=DEFAULT_CREATION_FLAGS)
-    while True:
-        poll = mkdirProcess.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = mkdirProcess.communicate()
-    if mkdirProcess.returncode != 0:
-        logger.error("'%s' returned %d" % (mkdirCmdString,
-                                           mkdirProcess.returncode))
-        raise SshException(stdout, mkdirProcess.returncode)
-
-    remoteRemoveChunkCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
-    rmCommandString = \
-        "%s -p %s -i %s -c %s %s " \
-        "-oPasswordAuthentication=no " \
-        "-oNoHostAuthenticationForLocalhost=yes " \
-        "-oStrictHostKeyChecking=no " \
-        "%s@%s %s" \
-        % (OPENSSH.DoubleQuote(OPENSSH.ssh),
-           port,
-           privateKeyFilePath, cipher,
-           sshControlPathOptionValuePair,
-           username, host,
-           OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
-    logger.debug(rmCommandString)
-    removeRemoteChunkProcess = \
-        subprocess.Popen(rmCommandString,
-                         shell=OPENSSH.preferToUseShellInSubprocess,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         startupinfo=DEFAULT_STARTUP_INFO,
-                         creationflags=DEFAULT_CREATION_FLAGS)
-    while True:
-        poll = removeRemoteChunkProcess.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = removeRemoteChunkProcess.communicate()
-    if removeRemoteChunkProcess.returncode != 0:
-        raise SshException(stdout, removeRemoteChunkProcess.returncode)
-
-    defaultChunkSize = settingsModel.GetDefaultChunkSize()
-    maxChunkSize = settingsModel.GetMaxChunkSize()
-    chunkSize = defaultChunkSize
-    # Aim for approximately 50 progress bar increments:
-    numIncrements = 50
-    while (fileSize / chunkSize) > numIncrements and chunkSize < maxChunkSize:
-        chunkSize = chunkSize * 2
-    skip = 0
-    if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
-        progressCallback(bytesUploaded, fileSize,
-                         message="Performing seek on file, so we can "
-                         "resume the upload.")
-        # Using dd command on POSIX systems, so don't need fp.seek
-        skip = bytesUploaded / chunkSize
-        progressCallback(bytesUploaded, fileSize)
-    else:
-        # Overwrite staging file if it is bigger that local file:
-        bytesUploaded = long(0)
-
-    while bytesUploaded < fileSize:
-        if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadChunkedFileFromPosixSystem 1: Aborting upload "
-                         "for %s" % filePath)
-            return
-
-        # Write chunk to temporary file:
-        chunkFile = tempfile.NamedTemporaryFile(delete=False)
-        chunkFile.close()
-        chunkFilePath = chunkFile.name
-        ddCommandString = \
-            "%s bs=%d skip=%d count=1 if=%s of=%s" \
-            % (OPENSSH.ddCmd,
-               chunkSize,
-               skip,
-               OPENSSH.DoubleQuote(filePath),
-               OPENSSH.DoubleQuote(chunkFilePath))
-        logger.debug(ddCommandString)
-        ddProcess = subprocess.Popen(
-            ddCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        maxThreads = settingsModel.GetMaxUploadThreads()
-        while True:
-            poll = ddProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = ddProcess.communicate()
-        if ddProcess.returncode != 0:
-            raise Exception(stdout,
-                            ddCommandString,
-                            ddProcess.returncode)
-        lines = stdout.splitlines()
-        bytesTransferred = long(0)
-        for line in lines:
-            match = re.search(r"^(\d+)\s+bytes.*$", line)
-            if match:
-                bytesTransferred = long(match.groups()[0])
-        skip += 1
-
-        scpCommandString = \
-            '%s -v -P %s -i %s -c %s %s ' \
-            '-oPasswordAuthentication=no ' \
-            '-oNoHostAuthenticationForLocalhost=yes ' \
-            '-oStrictHostKeyChecking=no ' \
-            '%s "%s@%s:\\"%s\\""' \
-            % (OPENSSH.DoubleQuote(OPENSSH.scp),
-               port,
-               privateKeyFilePath,
-               cipher,
-               sshControlPathOptionValuePair,
-               chunkFilePath,
-               username, host,
-               remoteChunkPath
-               .replace('`', r'\\`')
-               .replace('$', r'\\$'))
-        logger.debug(scpCommandString)
-        scpUploadChunkProcess = subprocess.Popen(
-            scpCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
-        while True:
-            poll = scpUploadChunkProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = scpUploadChunkProcess.communicate()
-        if scpUploadChunkProcess.returncode != 0:
-            raise ScpException(stdout,
-                               scpCommandString,
-                               scpUploadChunkProcess.returncode)
-
-        # pylint: disable=bare-except
-        try:
-            os.unlink(chunkFile.name)
-        except:
-            logger.error(traceback.format_exc())
-
-        # Append chunk to remote datafile:
-
-        if bytesUploaded > 0:
-            redirect = ">>"
-        else:
-            redirect = ">"
-        remoteCatCommand = \
-            "cat %s %s %s" % (OPENSSH.DoubleQuoteRemotePath(remoteChunkPath),
-                              redirect,
-                              OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
-        catCommandString = \
-            "%s -p %s -i %s -c %s %s " \
-            "-oPasswordAuthentication=no " \
-            "-oNoHostAuthenticationForLocalhost=yes " \
-            "-oStrictHostKeyChecking=no " \
-            "%s@%s %s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-               privateKeyFilePath,
-               cipher,
-               sshControlPathOptionValuePair,
-               username, host,
-               OPENSSH.DoubleQuote(remoteCatCommand))
-        # logger.debug(catCommandString)
-        appendChunkProcess = subprocess.Popen(
-            catCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        while True:
-            poll = appendChunkProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = appendChunkProcess.communicate()
-        if appendChunkProcess.returncode != 0:
-            raise SshException(stdout, appendChunkProcess.returncode)
-
-        bytesUploaded += bytesTransferred
-        progressCallback(bytesUploaded, fileSize)
-
-        if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadChunkedFileFromPosixSystem 2: Aborting upload "
-                         "for %s" % filePath)
-            return
-
-    remoteRemoveChunkCommand = \
-        "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
-    rmCommandString = \
-        "%s -p %s -i %s -c %s %s " \
-        "-oPasswordAuthentication=no " \
-        "-oNoHostAuthenticationForLocalhost=yes " \
-        "-oStrictHostKeyChecking=no " \
-        "%s@%s %s" \
-        % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-           privateKeyFilePath, cipher,
-           sshControlPathOptionValuePair,
-           username, host,
-           OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
-    # logger.debug(rmCommandString)
-    removeRemoteChunkProcess = \
-        subprocess.Popen(rmCommandString,
-                         shell=OPENSSH.preferToUseShellInSubprocess,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         startupinfo=DEFAULT_STARTUP_INFO,
-                         creationflags=DEFAULT_CREATION_FLAGS)
-    while True:
-        poll = removeRemoteChunkProcess.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = removeRemoteChunkProcess.communicate()
-    if removeRemoteChunkProcess.returncode != 0:
-        raise SshException(stdout, removeRemoteChunkProcess.returncode)
-
-REMOTE_DIRS_CREATED = dict()
-
-def UploadWholeFileFromWindows(filePath, fileSize, username,
-                               privateKeyFilePath, host, port, remoteFilePath,
-                               progressCallback,
-                               foldersController, uploadModel):
-    """
-    Fast method for uploading small files (less overhead from chunking).
-    This method don't support resuming interrupted uploads, and doesn't
-    provide progress updates.
-    """
-    settingsModel = foldersController.settingsModel
-    cipher = settingsModel.GetCipher()
-    bytesUploaded = long(0)
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    if remoteDir not in REMOTE_DIRS_CREATED:
-        mkdirCmdAndArgs = \
-            [OPENSSH.DoubleQuote(OPENSSH.ssh),
-             "-p", port,
-             "-n",
-             "-c", cipher,
-             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oPasswordAuthentication=no",
-             "-oNoHostAuthenticationForLocalhost=yes",
-             "-oStrictHostKeyChecking=no",
-             "-l", username,
-             host,
-             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-        mkdirCmdString = " ".join(mkdirCmdAndArgs)
-        logger.debug(mkdirCmdString)
-        mkdirProcess = \
-            subprocess.Popen(mkdirCmdString,
-                             shell=OPENSSH.preferToUseShellInSubprocess,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             startupinfo=DEFAULT_STARTUP_INFO,
-                             creationflags=DEFAULT_CREATION_FLAGS)
-        stdout, _ = mkdirProcess.communicate()
-        if mkdirProcess.returncode != 0:
-            raise SshException(stdout, mkdirProcess.returncode)
-        REMOTE_DIRS_CREATED[remoteDir] = True
-
-    if uploadModel.Canceled():
-        logger.debug("UploadWholeFileFromWindows: Aborting upload "
-                     "for %s" % filePath)
-        return
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    scpCommandString = \
-        '%s -v -P %s -i %s -c %s ' \
-        '-oNoHostAuthenticationForLocalhost=yes ' \
-        '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-        '%s "%s@%s:\\"%s/\\""' \
-        % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
-           OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-           cipher,
-           OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
-           username, host,
-           remoteDir
-           .replace('`', r'\\`')
-           .replace('$', r'\\$'))
-    logger.debug(scpCommandString)
-    scpUploadProcess = subprocess.Popen(
-        scpCommandString,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS)
-    uploadModel.SetScpUploadProcess(scpUploadProcess)
-
-    stdout, _ = scpUploadProcess.communicate()
-    if scpUploadProcess.returncode != 0:
-        raise ScpException(stdout, scpCommandString,
-                           scpUploadProcess.returncode)
-    bytesUploaded = fileSize
-    progressCallback(bytesUploaded, fileSize)
-    return
-
-
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-def UploadChunkedFileFromWindows(filePath, fileSize, username,
-                                 privateKeyFilePath, host, port,
-                                 remoteFilePath,
-                                 progressCallback, foldersController,
-                                 uploadModel, bytesUploaded):
-    """
-    We want to ensure that the partially uploaded datafile in MyTardis's
-    staging area always has a whole number of chunks.  If we were to
-    append each chunk directly to the datafile at the same time as
-    sending it over the SSH channel, there would be a risk of a broken
-    connection resulting in a partial chunk being appended to the datafile.
-    So we upload the chunk to its own file on the remote server first,
-    and then append the chunk onto the remote (partial) datafile.
-    """
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
-    settingsModel = foldersController.settingsModel
-    cipher = settingsModel.GetCipher()
-    maxThreads = settingsModel.GetMaxUploadThreads()
-
-    mkdirCmdAndArgs = \
-        [OPENSSH.DoubleQuote(OPENSSH.ssh),
-         "-p", port,
-         "-n",
-         "-c", cipher,
-         "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-         "-oPasswordAuthentication=no",
-         "-oNoHostAuthenticationForLocalhost=yes",
-         "-oStrictHostKeyChecking=no",
-         "-l", username,
-         host,
-         OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-    mkdirCmdString = " ".join(mkdirCmdAndArgs)
-    logger.debug(mkdirCmdString)
-    mkdirProcess = \
-        subprocess.Popen(mkdirCmdString,
-                         shell=OPENSSH.preferToUseShellInSubprocess,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         startupinfo=DEFAULT_STARTUP_INFO,
-                         creationflags=DEFAULT_CREATION_FLAGS)
-    while True:
-        poll = mkdirProcess.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = mkdirProcess.communicate()
-    if mkdirProcess.returncode != 0:
-        raise SshException(stdout, mkdirProcess.returncode)
-
-    # It might seem simpler to let Python's tempfile module determine the
-    # filename of the local chunk file (e.g. "tmp123"), and then assign
-    # the correct name when transferring the file with scp, e.g.
-
-    # scp tmp123 mydata@remotehost:/some/dir/.datafile001.jpg.chunk
-
-    # However if the datafile name contains an ampersand, then escaping the
-    # ampersand in the remote file path supplied to scp becomes a nightmare
-    # on Windows, so it is easier to set the filename locally and only
-    # specify the remote directory for scp.
-
-    remoteChunkDir = os.path.dirname(remoteFilePath)
-    chunkFilename = ".%s.chunk" % os.path.basename(remoteFilePath)
-    remoteChunkPath = "%s/%s" % (remoteChunkDir, chunkFilename)
-    tempChunkDir = tempfile.mkdtemp()
-    chunkFilePath = os.path.join(tempChunkDir, chunkFilename)
-
-    # logger.warning("Assuming that the remote shell is Bash.")
-
-    defaultChunkSize = settingsModel.GetDefaultChunkSize()
-    maxChunkSize = settingsModel.GetMaxChunkSize()
-    chunkSize = defaultChunkSize
-    # Aim for approximately 50 progress bar increments:
-    numIncrements = 50
-    while (fileSize / chunkSize) > numIncrements and chunkSize < maxChunkSize:
-        chunkSize = chunkSize * 2
-    skip = 0
-    if 0 < bytesUploaded < fileSize and (bytesUploaded % chunkSize == 0):
-        progressCallback(bytesUploaded, fileSize,
-                         message="Performing seek on file, so we can "
-                         "resume the upload.")
-        # See "datafile.seek" below.
-        skip = bytesUploaded / chunkSize
-        progressCallback(bytesUploaded, fileSize)
-    elif bytesUploaded > 0 and (bytesUploaded % chunkSize != 0):
-        logger.debug("Setting bytesUploaded to 0, because the size of the "
-                     "partially uploaded file in MyTardis's staging area "
-                     "is not a whole number of chunks.")
-        bytesUploaded = long(0)
-    while bytesUploaded < fileSize:
-        if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadChunkedFileFromWindows 1: "
-                         "Aborting upload for %s" % filePath)
-            return
-        # We'll write a chunk to a temporary file.
-        # chunkSize (e.g. 256 MB) is for SCP uploads
-        # smallChunkSize (e.g. 8 MB) is for extracting a large chunk
-        # from a datafile a little bit at a time (not wasting memory).
-        with open(filePath, 'rb') as datafile:
-            with open(chunkFilePath, 'wb') as chunkFile:
-                logger.debug("Writing chunk to %s" % chunkFilePath)
-                datafile.seek(skip * chunkSize)
-                bytesTransferred = long(0)
-                smallChunkSize = chunkSize
-                count = 1
-                while (smallChunkSize > 8 * 1024 * 1024) and \
-                        (smallChunkSize % 2 == 0) and count < 32:
-                    smallChunkSize /= 2
-                    count *= 2
-                for _ in range(count):
-                    smallChunk = datafile.read(smallChunkSize)
-                    chunkFile.write(smallChunk)
-                    bytesTransferred += len(smallChunk)
-                    del smallChunk
-        skip += 1
-
-        if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadChunkedFileFromWindows 2: "
-                         "Aborting upload for %s" % filePath)
-            return
-
-        scpCommandString = \
-            '%s -v -P %s -i %s -c %s ' \
-            '-oNoHostAuthenticationForLocalhost=yes ' \
-            '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-            '%s "%s@%s:\\"%s/\\""' \
-            % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
-               OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-               cipher,
-               OPENSSH.DoubleQuote(GetCygwinPath(chunkFile.name)),
-               username, host,
-               remoteChunkDir
-               .replace('`', r'\\`')
-               .replace('$', r'\\$'))
-        logger.debug(scpCommandString)
-        scpUploadChunkProcess = subprocess.Popen(
-            scpCommandString,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        uploadModel.SetScpUploadProcess(scpUploadChunkProcess)
-        while True:
-            poll = scpUploadChunkProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = scpUploadChunkProcess.communicate()
-        if scpUploadChunkProcess.returncode != 0:
-            raise ScpException(stdout,
-                               scpCommandString,
-                               scpUploadChunkProcess.returncode)
-        try:
-            os.unlink(chunkFilePath)
-        except:  # pylint: disable=bare-except
-            logger.error(traceback.format_exc())
-
-        # Append chunk to remote datafile:
-
-        if bytesUploaded > 0:
-            redirect = ">>"
-        else:
-            redirect = ">"
-        remoteCatCommand = \
-            "cat %s %s %s" % (OPENSSH.DoubleQuoteRemotePath(remoteChunkPath),
-                              redirect,
-                              OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
-        catCommandString = \
-            "%s -p %s -n -i %s -c %s " \
-            "-oNoHostAuthenticationForLocalhost=yes " \
-            "-oPasswordAuthentication=no -oStrictHostKeyChecking=no " \
-            "%s@%s %s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-               OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-               cipher,
-               username, host,
-               OPENSSH.DoubleQuote(remoteCatCommand))
-        # logger.debug(catCommandString)
-        appendChunkProcess = subprocess.Popen(
-            catCommandString,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        while True:
-            poll = scpUploadChunkProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = appendChunkProcess.communicate()
-        if appendChunkProcess.returncode != 0:
-            raise SshException(stdout, appendChunkProcess.returncode)
-
-        bytesUploaded += bytesTransferred
-        progressCallback(bytesUploaded, fileSize)
-
-        if foldersController.IsShuttingDown() or uploadModel.Canceled():
-            logger.debug("UploadChunkedFileFromWindows 3: "
-                         "Aborting upload for %s" % filePath)
-            return
-
-    try:
-        os.rmdir(tempChunkDir)
-    except:  # pylint: disable=bare-except
-        logger.error(traceback.format_exc())
-
-
-def GetCygwinPath(path):
-    """
-    Converts "C:\\path\\to\\file" to "/cygdrive/C/path/to/file".
-    """
-    realpath = os.path.realpath(path)
-    match = re.search(r"^(\S):(.*)", realpath)
-    if match:
-        return "/cygdrive/" + match.groups()[0] + \
-            match.groups()[1].replace("\\", "/")
-    else:
-        raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
-                        "a valid path." % path)
-
-# Singleton instance of OpenSSH class:
-OPENSSH = OpenSSH()
-
-
-class SshControlMasterProcess(object):
-    """
-    See "ControlMaster" in "man ssh_config"
-    Only available on POSIX systems.
-    """
-    CHECK_INTERVAL = 5  # seconds  # pylint: disable=invalid-name
-
-    def __init__(self, username, privateKeyFilePath, host, port, cipher):
-        self.username = username
-        self.privateKeyFilePath = privateKeyFilePath
-        self.host = host
-        self.port = port
-
-        tempFile = tempfile.NamedTemporaryFile(delete=True)
-        tempFile.close()
-        if sys.platform.startswith("win"):
-            self.sshControlPath = GetCygwinPath(tempFile.name)
-        else:
-            self.sshControlPath = tempFile.name
-        sshControlMasterCommandString = \
-            "%s -p %s -N -i %s -c %s " \
-            "-oControlMaster=yes -oControlPath=%s " \
-            "-oPasswordAuthentication=no " \
-            "-oNoHostAuthenticationForLocalhost=yes " \
-            "-oStrictHostKeyChecking=no " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-               privateKeyFilePath,
-               cipher,
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               username, host)
-        logger.debug(sshControlMasterCommandString)
-        self.proc = subprocess.Popen(
-            sshControlMasterCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        self.pid = self.proc.pid
-        self.lastCheckTime = datetime.fromtimestamp(0)
-        self.lastCheckResult = True
-
-    def Check(self, maxThreads):
-        intervalSinceLastCheck = datetime.now() - self.lastCheckTime
-        if intervalSinceLastCheck.total_seconds() < self.CHECK_INTERVAL:
-            return self.lastCheckResult
-        self.lastCheckTime = datetime.now()
-        checkSshControlMasterCommand = \
-            "%s -oControlPath=%s -O check " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh),
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               self.username, self.host)
-        logger.debug(checkSshControlMasterCommand)
-        proc = subprocess.Popen(
-            checkSshControlMasterCommand,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        while True:
-            poll = proc.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        proc.communicate()
-        self.lastCheckResult = (proc.returncode == 0)
-        return self.lastCheckResult
-
-    def Exit(self):
-        exitSshControlMasterCommand = \
-            "%s -oControlPath=%s -O exit " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh),
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               self.username, self.host)
-        logger.debug(exitSshControlMasterCommand)
-        proc = subprocess.Popen(
-            exitSshControlMasterCommand,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        proc.communicate()
-
-    def GetControlPath(self):
-        return self.sshControlPath
-
-    def GetControlPathOptionValuePair(self):
-        return "-oControlPath=%s" % OPENSSH.DoubleQuote(self.sshControlPath)
-
-    def GetPid(self):
-        return self.pid
-
-
-class SshControlMasterPool(object):
-    """
-    Re-using an SSH connection with -oControlPath=...
-    only works on POSIX systems, not on Windows.
-
-    To avoid having too many frequent SSH connections on Windows, we can
-    use larger chunk sizes (see UploadChunkedFileFromWindows).
-    """
-
-    def __init__(self, username, privateKeyFilePath, host, port):
-        if sys.platform.startswith("win"):
-            raise NotImplementedError("-oControlMaster is not implemented "
-                                      "in MinGW or Cygwin builds of OpenSSH.")
-        self.username = username
-        self.privateKeyFilePath = privateKeyFilePath
-        self.host = host
-        self.port = port
-        # self.maxConnections should be less than
-        # MaxSessions in staging server's sshd_config
-        self.maxConnections = 5
-        self.sshControlMasterProcesses = []
-        self.timeout = 1
-
-    def GetSshControlMasterProcess(self, maxThreads, cipher):
-        for sshControlMasterProcess in self.sshControlMasterProcesses:
-            if sshControlMasterProcess.Check(maxThreads):
-                return sshControlMasterProcess
-        if len(self.sshControlMasterProcesses) < self.maxConnections:
-            newSshControlMasterProcess = \
-                SshControlMasterProcess(self.username, self.privateKeyFilePath,
-                                        self.host, self.port, cipher)
-            self.sshControlMasterProcesses.append(newSshControlMasterProcess)
-            return newSshControlMasterProcess
-        else:
-            wait = 0
-            while wait < self.timeout:
-                time.sleep(0.1)
-                wait += 0.1
-                for sshControlMasterProcess in self.sshControlMasterProcesses:
-                    if sshControlMasterProcess.Check(maxThreads):
-                        return sshControlMasterProcess
-            message = "Exceeded max connections in SshControlMasterPool\n\n" \
-                "This suggests a problem with the scp_hostname and/or " \
-                "scp_username attributes of the assigned storage box."
-            logger.error(message)
-            logger.info("scp_hostname: %s" % self.host)
-            logger.info("scp_username: %s" % self.username)
-            logger.info("Private key path: %s" % self.privateKeyFilePath)
-            raise SshControlMasterLimit(message)
-
-    def ShutDown(self):
-        for sshControlMasterProcess in self.sshControlMasterProcesses:
-            if PidIsRunning(sshControlMasterProcess.GetPid()):
-                sshControlMasterProcess.Exit()
-        self.sshControlMasterProcesses = []
