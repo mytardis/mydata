@@ -177,12 +177,7 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
-        if sys.platform.startswith("linux"):
-            # Linux systems tend to be better at using AES-NI:
-            self.cipher = "aes128-ctr"
-        else:
-            self.cipher = "arcfour128"
-
+        self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
         self.use_none_cipher = False
 
         # Interval in seconds between RESTful progress queries:
@@ -264,12 +259,7 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
-        if sys.platform.startswith("linux"):
-            # Linux systems tend to be better at using AES-NI:
-            self.cipher = "aes128-ctr"
-        else:
-            self.cipher = "arcfour128"
-
+        self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
         self.use_none_cipher = False
 
         # Interval in seconds between RESTful progress queries:
