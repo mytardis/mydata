@@ -114,10 +114,6 @@ class SettingsModel(object):
 
         self.connectivityCheckInterval = 30  # seconds
 
-        # Allow MyData to reuse SSH connections on POSIX systems:
-        # (See ControlMaster and ControlPath in "man ssh_config".)
-        self.useSshControlMasterIfAvailable = True
-
         # pylint: disable=invalid-name
         # MyData mostly uses lowerCamelCase for attributes, but these
         # attributes correspond to fields in MyData.cfg which we
@@ -163,7 +159,7 @@ class SettingsModel(object):
         self.dataset_grouping = ""
         self.group_prefix = ""
         self.validate_folder_structure = True
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
@@ -178,20 +174,6 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
-        # Incremental progress updates will not be provided for
-        # files smaller than this to improve speed.
-        if sys.platform.startswith("darwin"):
-            # Mac OS X instances of MyData are likely to be running on
-            # laptops just for demos, often with lower connection speeds,
-            # and Mac OS X seems to be able to handle the frequent subprocess
-            # calls spawned when using smaller chunk sizes.
-            self.min_chunkable_file_size = 1024 * 1024
-            self.default_chunk_size = 128 * 1024
-        else:
-            self.min_chunkable_file_size = 10 * 1024 * 1024
-            self.default_chunk_size = 1024 * 1024
-        self.max_chunk_size = 256 * 1024 * 1024
-
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
@@ -200,6 +182,11 @@ class SettingsModel(object):
             self.cipher = "aes128-ctr"
         else:
             self.cipher = "arcfour128"
+
+        self.use_none_cipher = False
+
+        # Interval in seconds between RESTful progress queries:
+        self.progress_poll_interval = 1
 
         # pylint: disable=bare-except
         try:
@@ -267,20 +254,12 @@ class SettingsModel(object):
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
         self.upload_invalid_user_folders = True
-
-        if sys.platform.startswith("darwin"):
-            self.min_chunkable_file_size = 1024 * 1024
-            self.default_chunk_size = 128 * 1024
-        else:
-            self.min_chunkable_file_size = 10 * 1024 * 1024
-            self.default_chunk_size = 1024 * 1024
-        self.max_chunk_size = 256 * 1024 * 1024
 
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
@@ -290,6 +269,11 @@ class SettingsModel(object):
             self.cipher = "aes128-ctr"
         else:
             self.cipher = "arcfour128"
+
+        self.use_none_cipher = False
+
+        # Interval in seconds between RESTful progress queries:
+        self.progress_poll_interval = 1
 
         self.locked = False
 
@@ -319,11 +303,11 @@ class SettingsModel(object):
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
                           "max_verification_threads",
-                          "min_chunkable_file_size", "default_chunk_size",
-                          "max_chunk_size",
                           "max_upload_retries",
                           "validate_folder_structure", "fake_md5_sum",
+                          "use_none_cipher",
                           "cipher", "locked", "uuid",
+                          "progress_poll_interval",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
@@ -334,6 +318,7 @@ class SettingsModel(object):
                                  "use_includes_file", "use_excludes_file",
                                  "validate_folder_structure", "fake_md5_sum",
                                  "start_automatically_on_login",
+                                 "use_none_cipher",
                                  "upload_invalid_user_folders", "locked"]
                 for field in booleanFields:
                     if configParser.has_option(configFileSection, field):
@@ -341,8 +326,6 @@ class SettingsModel(object):
                             configParser.getboolean(configFileSection, field)
                 intFields = ["ignore_interval_number",
                              "ignore_new_files_minutes",
-                             "min_chunkable_file_size", "default_chunk_size",
-                             "max_chunk_size",
                              "max_verification_threads",
                              "max_upload_threads", "max_upload_retries"]
                 for field in intFields:
@@ -436,7 +419,7 @@ class SettingsModel(object):
                             "validate_folder_structure",
                             "start_automatically_on_login",
                             "upload_invalid_user_folders",
-                            "cipher", "fake_md5_sum", "locked",
+                            "fake_md5_sum", "use_none_cipher", "locked",
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
@@ -447,8 +430,7 @@ class SettingsModel(object):
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
-                            "min_chunkable_file_size", "default_chunk_size",
-                            "max_chunk_size",
+                            "progress_poll_interval",
                             "max_verification_threads",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
@@ -653,10 +635,45 @@ class SettingsModel(object):
         self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
 
     def FakeMd5Sum(self):
+        """
+        Whether to use a fake MD5 sum to save time.
+        It can be set later via the MyTardis API.
+        Until it is set properly, the file won't be
+        verified on MyTardis.
+        """
         return self.fake_md5_sum
 
+    def GetFakeMd5Sum(self):
+        """
+        The fake MD5 sum to use when self.FakeMd5Sum()
+        is True.
+        """
+        return "00000000000000000000000000000000"
+
     def GetCipher(self):
+        """
+        SSH Cipher for SCP uploads.
+        """
         return self.cipher
+
+    def UseNoneCipher(self):
+        """
+        If True, self.cipher is ignored.
+        """
+        return self.use_none_cipher
+
+    def SetUseNoneCipher(self, useNoneCipher):
+        """
+        If True, self.cipher is ignored.
+        """
+        self.use_none_cipher = useNoneCipher
+
+    def GetProgressPollInterval(self):
+        """
+        Stored as an int in MyData.cfg, but used
+        as a float in threading.Timer(...)
+        """
+        return float(self.progress_poll_interval)
 
     def Locked(self):
         return self.locked
@@ -833,12 +850,11 @@ class SettingsModel(object):
                       "ignore_interval_unit",
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
-                      "min_chunkable_file_size", "default_chunk_size",
-                      "max_chunk_size",
                       "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "fake_md5_sum",
-                      "cipher", "locked", "uuid",
+                      "cipher", "locked", "uuid", "use_none_cipher",
+                      "progress_poll_interval",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []
@@ -2031,25 +2047,9 @@ oFS.DeleteFile sLinkFile
     def GetConnectivityCheckInterval(self):
         return self.connectivityCheckInterval
 
-    def UseSshControlMasterIfAvailable(self):
-        return self.useSshControlMasterIfAvailable
-
-    def SetUseSshControlMasterIfAvailable(self,
-                                          useSshControlMasterIfAvailable):
-        self.useSshControlMasterIfAvailable = useSshControlMasterIfAvailable
-
     def ShouldAbort(self):
         app = wx.GetApp()
         if hasattr(app, "ShouldAbort"):
             return wx.GetApp().ShouldAbort()
         else:
             return False
-
-    def GetMinChunkableFileSize(self):
-        return self.min_chunkable_file_size
-
-    def GetDefaultChunkSize(self):
-        return self.default_chunk_size
-
-    def GetMaxChunkSize(self):
-        return self.max_chunk_size
