@@ -471,8 +471,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
     progressPollInterval = settingsModel.GetProgressPollInterval()
     monitoringProgress = threading.Event()
 
-    startTime = datetime.now()
-    uploadModel.SetStartTime(startTime)
+    uploadModel.SetStartTime(datetime.now())
     def MonitorProgress():
         if foldersController.IsShuttingDown() or \
                 (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
@@ -638,6 +637,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
     Upload file using SCP.
     """
     # pylint: disable=too-many-statements
+    uploadModel.SetStartTime(datetime.now())
     settingsModel = foldersController.settingsModel
     maxThreads = settingsModel.GetMaxUploadThreads()
 
