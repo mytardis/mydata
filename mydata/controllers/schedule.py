@@ -47,13 +47,13 @@ class ScheduleController(object):
                 return
             self.CreateManualTask(event, needToValidateSettings, testRun)
         elif scheduleType == "Once":
-            self.CreateOnceTask(event)
+            self.CreateOnceTask(event, needToValidateSettings)
         elif scheduleType == "Daily":
-            self.CreateDailyTask(event)
+            self.CreateDailyTask(event, needToValidateSettings)
         elif scheduleType == "Weekly":
-            self.CreateWeeklyTask(event)
+            self.CreateWeeklyTask(event, needToValidateSettings)
         elif scheduleType == "Timer":
-            self.CreateTimerTask(event)
+            self.CreateTimerTask(event, needToValidateSettings)
         logger.debug("Finished processing schedule type.")
 
     def CreateOnStartupTask(self, event, needToValidateSettings):
@@ -190,7 +190,7 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateOnceTask(self, event):
+    def CreateOnceTask(self, event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -207,7 +207,6 @@ class ScheduleController(object):
             wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
             while not app.Processing():
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId)
             # Sleep this thread until the job is really
@@ -247,7 +246,7 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateDailyTask(self, event):
+    def CreateDailyTask(self, event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -264,7 +263,6 @@ class ScheduleController(object):
             wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
             while not app.Processing():
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId)
             # Sleep this thread until the job is really
@@ -296,7 +294,7 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateWeeklyTask(self, event):
+    def CreateWeeklyTask(self, event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -313,7 +311,6 @@ class ScheduleController(object):
             wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
             while not app.Processing():
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId)
             # Sleep this thread until the job is really
@@ -356,7 +353,7 @@ class ScheduleController(object):
             wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
             return
 
-    def CreateTimerTask(self, event):
+    def CreateTimerTask(self, event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -373,7 +370,6 @@ class ScheduleController(object):
             wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
             while not app.Processing():
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId)
             # Sleep this thread until the job is really
