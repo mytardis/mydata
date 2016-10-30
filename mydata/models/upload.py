@@ -79,8 +79,10 @@ class UploadModel(object):
         self.bytesUploaded = bytesUploaded
         if self.bytesUploaded and self.latestTime:
             elapsedTime = self.latestTime - self.startTime
-            self.speed = "%3.1f MB/s" % \
-                (float(self.bytesUploaded) / 1000000.0 / elapsedTime.total_seconds())
+            if elapsedTime.total_seconds():
+                self.speed = "%3.1f MB/s" % \
+                    (float(self.bytesUploaded) / 1000000.0 \
+                    / elapsedTime.total_seconds())
 
     def GetBytesUploadedPreviously(self):
         return self.bytesUploadedPreviously
@@ -116,10 +118,12 @@ class UploadModel(object):
 
     def SetLatestTime(self, latestTime):
         self.latestTime = latestTime
-        elapsedTime = self.latestTime - self.startTime
         if self.bytesUploaded and self.latestTime:
-            self.speed = "%3.1f MB/s" % \
-                (float(self.bytesUploaded) / 1000000.0 / elapsedTime.total_seconds())
+            elapsedTime = self.latestTime - self.startTime
+            if elapsedTime.total_seconds():
+                self.speed = "%3.1f MB/s" % \
+                    (float(self.bytesUploaded) / 1000000.0 \
+                    / elapsedTime.total_seconds())
 
     def GetTraceback(self):
         return self.traceback
