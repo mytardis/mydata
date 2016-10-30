@@ -15,6 +15,7 @@ import traceback
 import mimetypes
 import time
 import hashlib
+from datetime import datetime
 
 import poster
 import requests
@@ -287,6 +288,7 @@ class UploadDatafileRunnable(object):
 
         message = "Uploading..."
         self.uploadsModel.SetMessage(self.uploadModel, message)
+        self.uploadModel.SetStartTime(datetime.now())
         postSuccess = False
         uploadSuccess = False
 
@@ -652,6 +654,7 @@ class UploadDatafileRunnable(object):
                                         UploadStatus.COMPLETED)
             message = "Upload complete!"
             self.uploadsModel.SetMessage(self.uploadModel, message)
+            self.uploadModel.SetLatestTime(datetime.now())
             self.uploadModel.SetProgress(100)
             self.uploadsModel.UploadProgressUpdated(self.uploadModel)
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
