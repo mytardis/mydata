@@ -6,6 +6,7 @@ subprocesses for us.
 import multiprocessing
 import time
 
+# pylint: disable=import-error
 from errand_boy.transports.unixsocket import UNIXSocketTransport
 
 ERRAND_BOY_PROCESS = None
