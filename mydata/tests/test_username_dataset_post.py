@@ -1,6 +1,5 @@
 """
-Test ability to scan folders with the Username / Dataset structure
-and upload using SCP.
+Test scanning the Username / Dataset structure and upload using POST.
 """
 import os
 import sys
@@ -19,46 +18,33 @@ from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.views.folders import FoldersView
 from mydata.controllers.folders import FoldersController
-import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
-
+if sys.platform.startswith("linux"):
+    from mydata.linuxsubprocesses import StopErrandBoy
 
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test ability to scan folders with the Username / Dataset structure
-    and upload using SCP.
+    Test scanning the Username / Dataset structure and upload using POST.
     """
     def __init__(self, *args, **kwargs):
         super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
         self.fakeMyTardisServerProcess = None
-        self.fakeSshServerProcess = None
 
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanUsernameDatasetTester')
         self.StartFakeMyTardisServer()
-        # The fake SSH server needs to know the public
-        # key so it can authenticate the test client.
-        # So we need to ensure that the MyData keypair
-        # is generated before starting the fake SSH server.
-        try:
-            self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
-        except PrivateKeyDoesNotExist:
-            self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
-        self.StartFakeSshServer()
 
     def tearDown(self):
-        self.keyPair.Delete()
         self.frame.Destroy()
         self.fakeMyTardisServerProcess.terminate()
-        self.fakeSshServerProcess.terminate()
+        if sys.platform.startswith("linux"):
+            StopErrandBoy()
 
     def test_scan_folders(self):
         """
-        Test ability to scan folders with the Username / Dataset structure
-        and upload using SCP.
+        Test scanning the Username / Dataset structure and upload using POST.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -67,13 +53,12 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
         pathToTestConfig = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdataUsernameDataset.cfg")
+            "testdata/testdataUsernameDataset_POST.cfg")
         settingsModel = SettingsModel(pathToTestConfig)
         settingsModel.SetDataDirectory(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
-        settingsModel.SetSshKeyPair(self.keyPair)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
@@ -132,20 +117,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                               verificationsModel,
                               uploadsModel,
                               settingsModel)
-
-        username = "mydata"
-        privateKeyFilePath = self.keyPair.GetPrivateKeyFilePath()
-        host = "127.0.0.1"
-        port = 2200
-        sys.stderr.write("Waiting for fake SSH server to start up...\n")
-        attempts = 0
-        while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
-                                           host, port):
-            attempts += 1
-            if attempts > 10:
-                raise Exception(
-                    "Couldn't connect to SSH server at 127.0.0.1:2200")
-            time.sleep(0.25)
 
         foldersController.InitForUploads()
         for row in range(foldersModel.GetRowCount()):
@@ -226,16 +197,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         self.fakeMyTardisServerProcess = \
             subprocess.Popen([sys.executable,
                               "mydata/tests/fake_mytardis_server.py"],
-                             env=os.environ)
-
-    def StartFakeSshServer(self):
-        """
-        Start fake SSH/SCP server.
-        """
-        os.environ['PYTHONPATH'] = os.path.realpath(".")
-        self.fakeSshServerProcess = \
-            subprocess.Popen([sys.executable,
-                              "mydata/tests/fake_ssh_server.py"],
                              env=os.environ)
 
 
