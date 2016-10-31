@@ -11,6 +11,8 @@ import threading
 import Queue
 import traceback
 import subprocess
+import datetime
+
 import requests
 
 import wx
@@ -297,6 +299,7 @@ class FoldersController(object):
         fc.SetCompleted(False)
         fc.verificationsModel.DeleteAllRows()
         fc.uploadsModel.DeleteAllRows()
+        fc.uploadsModel.SetStartTime(datetime.datetime.now())
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
         # For now, the max number of verification threads is hard-coded
@@ -671,6 +674,12 @@ class FoldersController(object):
                 "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
+            elapsedTime = self.uploadsModel.GetElapsedTime()
+            if elapsedTime:
+                averageSpeed = "%3.1f MB/s" % \
+                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0 \
+                     / elapsedTime.total_seconds())
+                message += "  Average speed: %s" % averageSpeed
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
