@@ -8,6 +8,7 @@ and the tabular data displayed on that tab view.
 
 import threading
 import traceback
+import datetime
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -55,6 +56,7 @@ class UploadsModel(DataViewIndexListModel):
         self.maxDataViewId = 0
         self.maxDataViewIdLock = threading.Lock()
         self.completedCount = 0
+        self.completedSize = 0
         self.completedCountLock = threading.Lock()
         self.failedCount = 0
         self.failedCountLock = threading.Lock()
@@ -62,6 +64,9 @@ class UploadsModel(DataViewIndexListModel):
         self.inProgressIcon = MYDATA_ICONS.GetIcon("Refresh", size="16x16")
         self.completedIcon = MYDATA_ICONS.GetIcon("Apply", size="16x16")
         self.failedIcon = MYDATA_ICONS.GetIcon("Delete", size="16x16")
+
+        self.startTime = None
+        self.finishTime = None
 
     # All of our columns are strings.  If the model or the renderers
     # in the view are other types then that should be reflected here.
@@ -171,6 +176,7 @@ class UploadsModel(DataViewIndexListModel):
 
         self.maxDataViewId = 0
         self.completedCount = 0
+        self.completedSize = 0
         self.failedCount = 0
 
     def CancelRemaining(self):
@@ -269,6 +275,8 @@ class UploadsModel(DataViewIndexListModel):
             self.completedCountLock.acquire()
             try:
                 self.completedCount += 1
+                self.completedSize += uploadModel.GetFileSize()
+                self.finishTime = datetime.datetime.now()
             finally:
                 self.completedCountLock.release()
         elif status == UploadStatus.FAILED:
@@ -279,12 +287,24 @@ class UploadsModel(DataViewIndexListModel):
                 self.failedCountLock.release()
         self.StatusUpdated(uploadModel)
 
+    def SetStartTime(self, startTime):
+        self.startTime = startTime
+
+    def GetElapsedTime(self):
+        if self.startTime and self.finishTime:
+            return self.finishTime - self.startTime
+        else:
+            return None
+
     def SetMessage(self, uploadModel, message):
         uploadModel.SetMessage(message)
         self.MessageUpdated(uploadModel)
 
     def GetCompletedCount(self):
         return self.completedCount
+
+    def GetCompletedSize(self):
+        return self.completedSize
 
     def GetFailedCount(self):
         return self.failedCount

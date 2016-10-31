@@ -183,6 +183,9 @@ class UploadModel(object):
         self.fileSize = fileSize
         self.filesize = HumanReadableSizeString(self.fileSize)
 
+    def GetFileSize(self):
+        return self.fileSize
+
     def Canceled(self):
         return self.canceled
 
