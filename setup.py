@@ -222,7 +222,7 @@ PrivilegesRequired=lowest
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Dirs]
-Name: "openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
+Name: "{app}\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
