@@ -173,11 +173,7 @@ class UploadModel(object):
                              self.GetRelativePathToUpload() +
                              "\".")
             if sys.platform.startswith("win"):
-                # pylint: disable=no-member
-                os.kill(self.scpUploadProcessPid, signal.CTRL_C_EVENT)
-            elif sys.platform.startswith("linux"):
-                # os.killpg(os.getpgid(self.scpUploadProcessPid), signal.SIGKILL)
-                os.kill(self.scpUploadProcessPid, signal.SIGKILL)
+                os.kill(self.scpUploadProcessPid, signal.SIGABRT)
             else:
                 os.kill(self.scpUploadProcessPid, signal.SIGKILL)
         except:  # pylint: disable=bare-except
