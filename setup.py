@@ -216,6 +216,7 @@ UninstallDisplayIcon={app}\{#MyDataAppExeName}
 Compression=lzma2
 SolidCompression=yes
 OutputDir=.
+PrivilegesRequired=lowest
 
 [Files]
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
