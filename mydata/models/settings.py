@@ -177,7 +177,13 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
-        self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
+        if sys.platform.startswith("win"):
+            self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
+        else:
+            # On Mac/Linux, we don't bundle SSH binaries, we
+            # just use the installed SSH version, which might
+            # be too old to support aes128-gcm@openssh.com
+            self.cipher = "aes128-ctr"
         self.use_none_cipher = False
 
         # Interval in seconds between RESTful progress queries:
@@ -259,7 +265,13 @@ class SettingsModel(object):
         # If True, don't calculate an MD5 sum, just provide a string of zeroes:
         self.fake_md5_sum = False
 
-        self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
+        if sys.platform.startswith("win"):
+            self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
+        else:
+            # On Mac/Linux, we don't bundle SSH binaries, we
+            # just use the installed SSH version, which might
+            # be too old to support aes128-gcm@openssh.com
+            self.cipher = "aes128-ctr"
         self.use_none_cipher = False
 
         # Interval in seconds between RESTful progress queries:
