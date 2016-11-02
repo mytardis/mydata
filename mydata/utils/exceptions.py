@@ -135,17 +135,6 @@ class StagingHostSshPermissionDenied(SshException):
         super(StagingHostSshPermissionDenied, self).__init__(message)
 
 
-class SshControlMasterLimit(SshException):
-    """
-    Reached max number of connections (or attempted connections)
-    in SSH ControlMaster (Mac OS X only).
-    This usually means there is a critical problem with SSHing
-    to the specified staging host.
-    """
-    def __init__(self, message):
-        super(SshControlMasterLimit, self).__init__(message)
-
-
 class ScpException(SshException):
     """
     SCP exception.
@@ -202,6 +191,14 @@ class MissingMyDataAppOnMyTardisServer(Exception):
     """
     def __init__(self, message):
         super(MissingMyDataAppOnMyTardisServer, self).__init__(message)
+
+
+class MissingMyDataReplicaApiEndpoint(Exception):
+    """
+    Missing /api/v1/mydata_replica/ endpoint on MyTardis server exception.
+    """
+    def __init__(self, message):
+        super(MissingMyDataReplicaApiEndpoint, self).__init__(message)
 
 
 class StorageBoxAttributeNotFound(Exception):

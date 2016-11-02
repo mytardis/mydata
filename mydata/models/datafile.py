@@ -110,6 +110,12 @@ class DataFileModel(object):
         """
         return self.size
 
+    def GetMd5Sum(self):
+        """
+        Returns MD5 sum.
+        """
+        return self.md5sum
+
     def GetValueForKey(self, key):
         """
         Get value for key.
@@ -162,6 +168,38 @@ class DataFileModel(object):
                 settingsModel=settingsModel,
                 dataset=dataset,
                 dataFileJson=dataFilesJson['objects'][0])
+
+    @staticmethod
+    def GetDataFileFromId(settingsModel, dataFileId):
+        """
+        Lookup datafile by ID.
+        """
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+        url = "%s/api/v1/mydata_dataset_file/%s/?format=json" \
+            % (myTardisUrl, dataFileId)
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+        response = requests.get(url=url, headers=headers)
+        if response.status_code == 404:
+            raise DoesNotExist(
+                message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
+                url=url, response=response)
+        elif response.status_code < 200 or response.status_code >= 300:
+            logger.debug("Failed to look up datafile ID \"%s\"." % dataFileId)
+            logger.debug(url)
+            logger.debug("Status: %s" % response.status_code)
+            logger.debug(response.text)
+            return None
+        dataFileJson = response.json()
+        return DataFileModel(
+            settingsModel=settingsModel,
+            dataset=None,
+            dataFileJson=dataFileJson)
 
     @staticmethod
     def Verify(settingsModel, datafileId):

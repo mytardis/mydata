@@ -3,7 +3,10 @@ Model class for MyTardis API v1's ReplicaResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
+import requests
+
 from mydata.utils import UnderscoreToCamelcase
+from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 
 # pylint: disable=too-many-instance-attributes
@@ -39,6 +42,36 @@ class ReplicaModel(object):
 
     def __repr__(self):
         return "ReplicaModel " + self.uri
+
+    @staticmethod
+    def CountBytesUploadedToStaging(settingsModel, dfoId):
+        """
+        Count bytes uploaded to staging.
+        """
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+        url = "%s/api/v1/mydata_replica/%s/?format=json" \
+            % (myTardisUrl, dfoId)
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+        response = requests.get(url=url, headers=headers)
+        if response.status_code < 200 or response.status_code >= 300:
+            if response.status_code == 404:
+                message = "Please ask your MyTardis administrator to " \
+                    "upgrade mytardis-app-mydata.  The " \
+                    "/api/v1/mydata_replica/ endpoint is missing."
+                raise MissingMyDataReplicaApiEndpoint(message)
+            else:
+                message = "Failed to look up DFO ID \"%s\".\n" % dfoId
+                message += "HTTP status: %s" % response.status_code
+                raise Exception(message)
+            return None
+        dfoJson = response.json()
+        return dfoJson['size']
 
     def GetId(self):
         """

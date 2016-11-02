@@ -27,19 +27,20 @@ import traceback
 
 import wx
 
-from mydata.utils.openssh import CountBytesUploadedToStaging
+from mydata.models.replica import ReplicaModel
 
 from mydata.models.verification import VerificationModel
 from mydata.models.verification import VerificationStatus
 from mydata.models.datafile import DataFileModel
 from mydata.controllers.uploads import UploadMethod
 from mydata.utils.exceptions import DoesNotExist
+from mydata.utils.exceptions import FileNotFoundOnStaging
+from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
+from mydata.utils.openssh import OldCountBytesUploadedToStaging
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
-from mydata.utils.exceptions import FileNotFoundOnStaging
-from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
 
@@ -77,6 +78,12 @@ class VerifyDatafileRunnable(object):
         Return the path to the DataFile.
         """
         return self.folderModel.GetDataFilePath(self.dataFileIndex)
+
+    def GetDatafileSize(self):
+        """
+        Return the size of the DataFile.
+        """
+        return self.folderModel.GetDataFileSize(self.dataFileIndex)
 
     def Run(self):
         """
@@ -160,6 +167,7 @@ class VerifyDatafileRunnable(object):
         need to wait for it to be verified.  But if it was uploaded via
         staging, we might be able to resume a partial upload.
         """
+        self.verificationModel.SetExistingUnverifiedDatafile(existingDatafile)
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         replicas = existingDatafile.GetReplicas()
         message = "Found datafile record for %s " \
@@ -185,105 +193,107 @@ class VerifyDatafileRunnable(object):
         on staging.
         """
         replicas = existingDatafile.GetReplicas()
+        bytesUploadedPreviously = None
         try:
-            uploadToStagingRequest = \
-                self.settingsModel.GetUploadToStagingRequest()
-            username = uploadToStagingRequest.GetScpUsername()
-        except IncompatibleMyTardisVersion, err:
-            self.verificationsModel.SetComplete(self.verificationModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        except StorageBoxAttributeNotFound, err:
-            self.verificationsModel.SetComplete(self.verificationModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        privateKeyFilePath = self.settingsModel\
-            .GetSshKeyPair().GetPrivateKeyFilePath()
-        host = uploadToStagingRequest.GetScpHostname()
-        port = uploadToStagingRequest.GetScpPort()
-        location = uploadToStagingRequest.GetLocation()
-        remoteFilePath = "%s/%s" % (location.rstrip('/'),
-                                    replicas[0].GetUri())
-        bytesUploadePreviously = None
-        try:
-            bytesUploadePreviously = \
-                CountBytesUploadedToStaging(
-                    remoteFilePath,
-                    username, privateKeyFilePath, host, port,
-                    self.settingsModel)
-            logger.debug("%d bytes uploaded to staging for %s"
-                         % (bytesUploadePreviously,
+            bytesUploadedPreviously = \
+                ReplicaModel.CountBytesUploadedToStaging(
+                    self.settingsModel, replicas[0].GetId())
+            logger.debug("%s bytes uploaded to staging for %s"
+                         % (bytesUploadedPreviously,
                             replicas[0].GetUri()))
         except FileNotFoundOnStaging, err:
             self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
             return
-        except StagingHostRefusedSshConnection, err:
-            self.verificationsModel.SetComplete(self.verificationModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        except StagingHostSshPermissionDenied, err:
-            self.verificationsModel.SetComplete(self.verificationModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        except SshControlMasterLimit, err:
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        if bytesUploadePreviously == long(existingDatafile.GetSize()):
+        except MissingMyDataReplicaApiEndpoint:
+            # /api/v1/mydata_replica/ is not available on this MyTardis server.
+            # mytardis-app-mydata needs updating on the server.
+            # For now, assume the unverified file is full size on staging.
+            # The old method of running "wc -c " remotely over ssh was
+            # inefficient.
+            try:
+                uploadToStagingRequest = \
+                    self.settingsModel.GetUploadToStagingRequest()
+                username = uploadToStagingRequest.GetScpUsername()
+            except IncompatibleMyTardisVersion, err:
+                self.verificationsModel.SetComplete(self.verificationModel)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.shutdownUploadsEvent(
+                        failed=True))
+                message = str(err)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                    .showMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
+                return
+            except StorageBoxAttributeNotFound, err:
+                self.verificationsModel.SetComplete(self.verificationModel)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.shutdownUploadsEvent(
+                        failed=True))
+                message = str(err)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                    .showMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
+                return
+
+            privateKeyFilePath = self.settingsModel\
+                .GetSshKeyPair().GetPrivateKeyFilePath()
+            host = uploadToStagingRequest.GetScpHostname()
+            port = uploadToStagingRequest.GetScpPort()
+            location = uploadToStagingRequest.GetLocation()
+            remoteFilePath = "%s/%s" % (location.rstrip('/'),
+                                        replicas[0].GetUri())
+            try:
+                bytesUploadedPreviously = \
+                    OldCountBytesUploadedToStaging(
+                        remoteFilePath,
+                        username, privateKeyFilePath, host, port,
+                        self.settingsModel)
+            except FileNotFoundOnStaging, err:
+                self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
+                return
+            except StagingHostRefusedSshConnection, err:
+                self.verificationsModel.SetComplete(self.verificationModel)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.shutdownUploadsEvent(
+                        failed=True))
+                message = str(err)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                    .showMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
+                return
+            except StagingHostSshPermissionDenied, err:
+                self.verificationsModel.SetComplete(self.verificationModel)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController.shutdownUploadsEvent(
+                        failed=True))
+                message = str(err)
+                wx.PostEvent(
+                    self.foldersController.notifyWindow,
+                    self.foldersController
+                    .showMessageDialogEvent(title="MyData",
+                                            message=message,
+                                            icon=wx.ICON_ERROR))
+                return
+
+        if bytesUploadedPreviously == long(existingDatafile.GetSize()):
             self.HandleFullSizeResumableUpload(existingDatafile)
         else:
             self.HandleIncompleteResumableUpload(
                 existingDatafile,
-                bytesUploadePreviously)
+                bytesUploadedPreviously)
 
     def HandleFullSizeResumableUpload(self, existingDatafile):
         """
@@ -301,7 +311,12 @@ class VerifyDatafileRunnable(object):
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         if existingDatafile and not self.testRun:
-            DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
+            if existingDatafile.GetMd5Sum() == \
+                    self.settingsModel.GetFakeMd5Sum():
+                logger.warning("MD5(%s): %s" %
+                               (dataFilePath, existingDatafile.GetMd5Sum()))
+            else:
+                DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
         wx.PostEvent(
             self.foldersController.notifyWindow,
@@ -318,7 +333,7 @@ class VerifyDatafileRunnable(object):
             logger.testrun(message)
 
     def HandleIncompleteResumableUpload(self, existingDatafile,
-                                        bytesUploadePreviously):
+                                        bytesUploadedPreviously):
         """
         Resume partial upload.
         """
@@ -331,11 +346,11 @@ class VerifyDatafileRunnable(object):
                        .FOUND_UNVERIFIED_NOT_FULL_SIZE)
         self.verificationsModel.MessageUpdated(self.verificationModel)
         logger.debug("Re-uploading \"%s\" to staging, because "
-                     "the file size is %d bytes in staging, "
-                     "but it should be %d bytes."
+                     "the file size is %s bytes in staging, "
+                     "but it should be %s bytes."
                      % (dataFilePath,
-                        bytesUploadePreviously,
-                        long(existingDatafile.GetSize())))
+                        bytesUploadedPreviously,
+                        existingDatafile.GetSize()))
         self.verificationsModel.SetComplete(self.verificationModel)
         wx.PostEvent(
             self.foldersController.notifyWindow,
@@ -345,7 +360,7 @@ class VerifyDatafileRunnable(object):
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
-                bytesUploadePreviously=bytesUploadePreviously,
+                bytesUploadedPreviously=bytesUploadedPreviously,
                 verificationModel=self.verificationModel))
 
     def HandleUnverifiedNotFoundOnStaging(self, existingDatafile):
@@ -373,7 +388,7 @@ class VerifyDatafileRunnable(object):
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
-                bytesUploadePreviously=None,
+                bytesUploadedPreviously=None,
                 verificationModel=self.verificationModel))
 
     def HandleUnresumableUpload(self, existingDatafile):
@@ -404,7 +419,12 @@ class VerifyDatafileRunnable(object):
                 .EVT_FOUND_UNVERIFIED_NO_DFOS
         self.verificationsModel.MessageUpdated(self.verificationModel)
         if existingDatafile and not self.testRun:
-            DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
+            if existingDatafile.GetMd5Sum() == \
+                    self.settingsModel.GetFakeMd5Sum():
+                logger.warning("MD5(%s): %s" %
+                               (dataFilePath, existingDatafile.GetMd5Sum()))
+            else:
+                DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
         wx.PostEvent(
             self.foldersController.notifyWindow,

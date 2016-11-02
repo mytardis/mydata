@@ -9,10 +9,8 @@ import os
 import sys
 import signal
 import traceback
-import psutil
 
 from mydata.logs import logger
-from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
 
@@ -39,6 +37,9 @@ class UploadModel(object):
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.dataFileIndex = dataFileIndex
+        self.dataFileId = None
+        self.dfoId = None
+        self.existingUnverifiedDatafile = None
         self.folder = folderModel.GetFolder()
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = folderModel.GetDataFileName(dataFileIndex)
@@ -53,12 +54,17 @@ class UploadModel(object):
         self.progress = 0  # Percentage used to render progress bar
         self.status = UploadStatus.NOT_STARTED
         self.message = ""
+        self.speed = ""
         self.traceback = None
         self.bufferedReader = None
-        self.scpUploadProcess = None
+        self.scpUploadProcessPid = None
         self.fileSize = 0  # File size long integer in bytes
         self.canceled = False
         self.retries = 0
+
+        self.startTime = None
+        # The latest time at which upload progress has been measured:
+        self.latestTime = None
 
     def GetDataViewId(self):
         return self.dataViewId
@@ -71,6 +77,12 @@ class UploadModel(object):
 
     def SetBytesUploaded(self, bytesUploaded):
         self.bytesUploaded = bytesUploaded
+        if self.bytesUploaded and self.latestTime:
+            elapsedTime = self.latestTime - self.startTime
+            if elapsedTime.total_seconds():
+                self.speed = "%3.1f MB/s" % \
+                    (float(self.bytesUploaded) / 1000000.0 \
+                    / elapsedTime.total_seconds())
 
     def GetBytesUploadedPreviously(self):
         return self.bytesUploadedPreviously
@@ -98,6 +110,21 @@ class UploadModel(object):
     def SetMessage(self, message):
         self.message = message
 
+    def GetSpeed(self):
+        return self.speed
+
+    def SetStartTime(self, startTime):
+        self.startTime = startTime
+
+    def SetLatestTime(self, latestTime):
+        self.latestTime = latestTime
+        if self.bytesUploaded and self.latestTime:
+            elapsedTime = self.latestTime - self.startTime
+            if elapsedTime.total_seconds():
+                self.speed = "%3.1f MB/s" % \
+                    (float(self.bytesUploaded) / 1000000.0 \
+                    / elapsedTime.total_seconds())
+
     def GetTraceback(self):
         return self.traceback
 
@@ -122,14 +149,14 @@ class UploadModel(object):
         """
         self.bufferedReader = bufferedReader
 
-    def GetScpUploadProcess(self):
-        if hasattr(self, "scpUploadProcess"):
-            return self.scpUploadProcess
+    def GetScpUploadProcessPid(self):
+        if hasattr(self, "scpUploadProcessPid"):
+            return self.scpUploadProcessPid
         else:
             return None
 
-    def SetScpUploadProcess(self, scpUploadProcess):
-        self.scpUploadProcess = scpUploadProcess
+    def SetScpUploadProcessPid(self, scpUploadProcessPid):
+        self.scpUploadProcessPid = scpUploadProcessPid
 
     def GetRelativePathToUpload(self):
         if self.subdirectory != "":
@@ -140,39 +167,24 @@ class UploadModel(object):
     def Cancel(self):
         try:
             self.canceled = True
-            # logger.debug("Canceling upload \"" +
-            #              self.GetRelativePathToUpload() + "\".")
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
                 logger.debug("Closed buffered reader for \"" +
                              self.GetRelativePathToUpload() +
                              "\".")
-            scpUploadProcess = self.GetScpUploadProcess()
-            if scpUploadProcess and PidIsRunning(scpUploadProcess.pid):
-                self.scpUploadProcess.terminate()
-                # Check if the process has really
-                # terminated and force kill if not.
-                try:
-                    pid = self.scpUploadProcess.pid
-                    # See if this throws psutil.NoSuchProcess:
-                    _ = psutil.Process(int(pid))
-                    if sys.platform.startswith("win"):
-                        # pylint: disable=no-member
-                        os.kill(pid, signal.CTRL_C_EVENT)
-                    else:
-                        os.kill(pid, signal.SIGKILL)  # pylint: disable=no-member
-                    logger.debug("Force killed SCP upload process for %s"
-                                 % self.GetRelativePathToUpload())
-                except psutil.NoSuchProcess:
-                    logger.debug("SCP upload process for %s was terminated "
-                                 "gracefully."
-                                 % self.GetRelativePathToUpload())
+            if sys.platform.startswith("win"):
+                os.kill(self.scpUploadProcessPid, signal.SIGABRT)
+            else:
+                os.kill(self.scpUploadProcessPid, signal.SIGKILL)
         except:  # pylint: disable=bare-except
-            logger.error(traceback.format_exc())
+            logger.warning(traceback.format_exc())
 
     def SetFileSize(self, fileSize):
         self.fileSize = fileSize
         self.filesize = HumanReadableSizeString(self.fileSize)
+
+    def GetFileSize(self):
+        return self.fileSize
 
     def Canceled(self):
         return self.canceled
@@ -182,3 +194,32 @@ class UploadModel(object):
 
     def IncrementRetries(self):
         self.retries += 1
+
+    def GetDataFileId(self):
+        return self.dataFileId
+
+    def SetDataFileId(self, dataFileId):
+        self.dataFileId = dataFileId
+
+    def GetExistingUnverifiedDatafile(self):
+        return self.existingUnverifiedDatafile
+
+    def SetExistingUnverifiedDatafile(self, existingUnverifiedDatafile):
+        self.existingUnverifiedDatafile = existingUnverifiedDatafile
+        if self.existingUnverifiedDatafile:
+            self.SetDataFileId(self.existingUnverifiedDatafile.GetId())
+            replicas = self.existingUnverifiedDatafile.GetReplicas()
+            if len(replicas) == 1:
+                self.SetDfoId(replicas[0].GetId())
+
+    def GetDfoId(self):
+        """
+        Get the DataFileObject ID, also known as the replica ID.
+        """
+        return self.dfoId
+
+    def SetDfoId(self, dfoId):
+        """
+        Set the DataFileObject ID, also known as the replica ID.
+        """
+        self.dfoId = dfoId
