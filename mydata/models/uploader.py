@@ -84,6 +84,7 @@ import traceback
 import uuid
 import threading
 
+import dateutil.parser
 import psutil
 import requests
 
@@ -133,6 +134,7 @@ class UploaderModel(object):
 
         self.id = None  # pylint: disable=invalid-name
         self.uploaderSettings = None
+        self.settingsUpdated = None
         self.uuid = self.settingsModel.GetUuid()
         if self.uuid is None:
             self.GenerateUuid()
@@ -338,6 +340,7 @@ class UploaderModel(object):
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         myTardisUsername = self.settingsModel.GetUsername()
         myTardisApiKey = self.settingsModel.GetApiKey()
@@ -374,6 +377,11 @@ class UploaderModel(object):
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
+                settingsUpdatedString = \
+                    existingUploaderRecords['objects'][0]['settings_updated']
+                if settingsUpdatedString:
+                    self.settingsUpdated = \
+                        dateutil.parser.parse(settingsUpdatedString)
 
         logger.debug("Uploading uploader info to MyTardis...")
 
@@ -552,7 +560,6 @@ class UploaderModel(object):
                 try:
                     self.UploadUploaderInfo()
                 except:
-                    print traceback.format_exc()
                     logger.error(traceback.format_exc())
                     raise
                 uploadToStagingRequest = None
@@ -656,7 +663,7 @@ class UploaderModel(object):
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                             "&uuid=" + urllib.quote(self.uuid)
         try:
-            response = requests.get(headers=headers, url=url)
+            response = requests.get(headers=headers, url=url, timeout=3)
         except Exception, err:
             logger.error(str(err))
             raise
@@ -680,6 +687,11 @@ class UploaderModel(object):
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
+                settingsUpdatedString = \
+                    existingUploaderRecords['objects'][0]['settings_updated']
+                if settingsUpdatedString:
+                    self.settingsUpdated = \
+                        dateutil.parser.parse(settingsUpdatedString)
             else:
                 self.uploaderSettings = None
 
@@ -774,6 +786,8 @@ class UploaderModel(object):
     def GetHostname(self):
         return self.hostname
 
+    def GetSettingsUpdated(self):
+        return self.settingsUpdated
 
 class UploaderRegistrationRequest(object):
     """

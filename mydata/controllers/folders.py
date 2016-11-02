@@ -11,13 +11,14 @@ import threading
 import Queue
 import traceback
 import subprocess
+import datetime
+
 import requests
 
 import wx
 import wx.lib.newevent
 import wx.dataview
 
-from mydata.utils.openssh import OPENSSH
 from mydata.utils import ConnectionStatus
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
@@ -298,6 +299,7 @@ class FoldersController(object):
         fc.SetCompleted(False)
         fc.verificationsModel.DeleteAllRows()
         fc.uploadsModel.DeleteAllRows()
+        fc.uploadsModel.SetStartTime(datetime.datetime.now())
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
         # For now, the max number of verification threads is hard-coded
@@ -635,12 +637,6 @@ class FoldersController(object):
         self.verifyDatafileRunnable = {}
         self.uploadDatafileRunnable = {}
 
-        if sys.platform == 'darwin':
-            sshControlMasterPool = \
-                OPENSSH.GetSshControlMasterPool(createIfMissing=False)
-            if sshControlMasterPool:
-                sshControlMasterPool.ShutDown()
-
         if self.testRun:
             numVerificationsCompleted = \
                 self.verificationsModel.GetCompletedCount()
@@ -678,6 +674,12 @@ class FoldersController(object):
                 "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
+            elapsedTime = self.uploadsModel.GetElapsedTime()
+            if elapsedTime:
+                averageSpeed = "%3.1f MB/s" % \
+                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0 \
+                     / elapsedTime.total_seconds())
+                message += "  Average speed: %s" % averageSpeed
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
