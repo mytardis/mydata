@@ -567,57 +567,29 @@ class MyData(wx.App):
         self.frame.Hide()
 
     # pylint: disable=unused-argument
-    def ShutDownCleanlyAndExit(self, event):
+    def ShutDownCleanlyAndExit(self, event, confirm=True):
         """
         Shut down MyData cleanly and quit.
         """
-        started = self.foldersController.Started()
-        completed = self.foldersController.Completed()
-        canceled = self.foldersController.Canceled()
-        failed = self.foldersController.Failed()
-
-        message = "Are you sure you want to shut down MyData's " \
-            "data scans and uploads?"
-        if started and not completed and not canceled and not failed:
-            message += "\n\n" \
-                "MyData will attempt to shut down any uploads currently " \
-                "in progress."
-        confirmationDialog = \
-            wx.MessageDialog(None, message, "MyData",
-                             wx.YES | wx.NO | wx.ICON_QUESTION)
-        okToExit = confirmationDialog.ShowModal()
+        okToExit = wx.ID_YES
+        if confirm and self.Processing():
+            message = "Are you sure you want to shut down MyData's " \
+                "data scans and uploads?"
+            if self.Processing():
+                message += "\n\n" \
+                    "MyData will attempt to shut down any uploads currently " \
+                    "in progress."
+            confirmationDialog = \
+                wx.MessageDialog(None, message, "MyData",
+                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+            okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
-            def ShutDownDataScansAndUploads():
-                """
-                Shut down data folder scanning, datafile lookups
-                (verifications) and uploads.
-                """
-                logger.debug("Starting ShutDownDataScansAndUploads...")
-                # pylint: disable=bare-except
-                try:
-                    wx.CallAfter(BeginBusyCursorIfRequired)
-                    self.foldersController.ShutDownUploadThreads()
-                    wx.CallAfter(EndBusyCursorIfRequired)
-                    self.tasksModel.ShutDown()
-                    sys.exit(0)
-                except:
-                    try:
-                        logger.error(traceback.format_exc())
-                        self.tasksModel.ShutDown()
-                        # pylint: disable=protected-access
-                        os._exit(1)
-                    # pylint: disable=bare-except
-                    except:
-                        logger.error(traceback.format_exc())
-                        # pylint: disable=protected-access
-                        os._exit(1)
-                logger.debug("Finishing run() method for thread %s"
-                             % threading.current_thread().name)
-
-            thread = threading.Thread(target=ShutDownDataScansAndUploads)
-            logger.debug("Starting thread %s" % thread.name)
-            thread.start()
-            logger.debug("Started thread %s" % thread.name)
+            # pylint: disable=bare-except
+            BeginBusyCursorIfRequired()
+            self.foldersController.ShutDownUploadThreads()
+            EndBusyCursorIfRequired()
+            self.tasksModel.ShutDown()
+            sys.exit(0)
 
     def OnMinimizeFrame(self, event):
         """

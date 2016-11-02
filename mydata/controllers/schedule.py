@@ -34,7 +34,7 @@ class ScheduleController(object):
         if scheduleType == "On Startup" and \
                 self.settingsModel.GetLastSettingsUpdateTrigger() == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
-            self.CreateOnStartupTask(event)
+            self.CreateOnStartupTask(event, needToValidateSettings)
         elif scheduleType == "On Settings Saved" and \
                 self.settingsModel.GetLastSettingsUpdateTrigger() == \
                 LastSettingsUpdateTrigger.UI_RESPONSE:
@@ -56,7 +56,7 @@ class ScheduleController(object):
             self.CreateTimerTask(event)
         logger.debug("Finished processing schedule type.")
 
-    def CreateOnStartupTask(self, event):
+    def CreateOnStartupTask(self, event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -72,7 +72,6 @@ class ScheduleController(object):
             wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
             while not app.Processing():
                 time.sleep(0.01)
-            needToValidateSettings = False
             wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
                          jobId)
             # Sleep this thread until the job is really

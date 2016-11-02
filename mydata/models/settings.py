@@ -114,10 +114,6 @@ class SettingsModel(object):
 
         self.connectivityCheckInterval = 30  # seconds
 
-        # Allow MyData to reuse SSH connections on POSIX systems:
-        # (See ControlMaster and ControlPath in "man ssh_config".)
-        self.useSshControlMasterIfAvailable = True
-
         # pylint: disable=invalid-name
         # MyData mostly uses lowerCamelCase for attributes, but these
         # attributes correspond to fields in MyData.cfg which we
@@ -163,7 +159,7 @@ class SettingsModel(object):
         self.dataset_grouping = ""
         self.group_prefix = ""
         self.validate_folder_structure = True
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
@@ -178,19 +174,20 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
-        # Incremental progress updates will not be provided for
-        # files smaller than this to improve speed.
-        if sys.platform.startswith("darwin"):
-            # Mac OS X instances of MyData are likely to be running on
-            # laptops just for demos, often with lower connection speeds,
-            # and Mac OS X seems to be able to handle the frequent subprocess
-            # calls spawned when using smaller chunk sizes.
-            self.largeFileSize = 1024 * 1024
-            self.defaultChunkSize = 128 * 1024
+        # If True, don't calculate an MD5 sum, just provide a string of zeroes:
+        self.fake_md5_sum = False
+
+        if sys.platform.startswith("win"):
+            self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
         else:
-            self.largeFileSize = 10 * 1024 * 1024
-            self.defaultChunkSize = 1024 * 1024
-        self.maxChunkSize = 256 * 1024 * 1024
+            # On Mac/Linux, we don't bundle SSH binaries, we
+            # just use the installed SSH version, which might
+            # be too old to support aes128-gcm@openssh.com
+            self.cipher = "aes128-ctr"
+        self.use_none_cipher = False
+
+        # Interval in seconds between RESTful progress queries:
+        self.progress_poll_interval = 1
 
         # pylint: disable=bare-except
         try:
@@ -258,12 +255,27 @@ class SettingsModel(object):
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.validate_folder_structure = True
         self.start_automatically_on_login = True
         self.upload_invalid_user_folders = True
+
+        # If True, don't calculate an MD5 sum, just provide a string of zeroes:
+        self.fake_md5_sum = False
+
+        if sys.platform.startswith("win"):
+            self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
+        else:
+            # On Mac/Linux, we don't bundle SSH binaries, we
+            # just use the installed SSH version, which might
+            # be too old to support aes128-gcm@openssh.com
+            self.cipher = "aes128-ctr"
+        self.use_none_cipher = False
+
+        # Interval in seconds between RESTful progress queries:
+        self.progress_poll_interval = 1
 
         self.locked = False
 
@@ -292,8 +304,12 @@ class SettingsModel(object):
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
+                          "max_verification_threads",
                           "max_upload_retries",
-                          "validate_folder_structure", "locked", "uuid",
+                          "validate_folder_structure", "fake_md5_sum",
+                          "use_none_cipher",
+                          "cipher", "locked", "uuid",
+                          "progress_poll_interval",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
@@ -302,14 +318,17 @@ class SettingsModel(object):
                             configParser.get(configFileSection, field)
                 booleanFields = ["ignore_old_datasets", "ignore_new_files",
                                  "use_includes_file", "use_excludes_file",
-                                 "validate_folder_structure",
+                                 "validate_folder_structure", "fake_md5_sum",
                                  "start_automatically_on_login",
+                                 "use_none_cipher",
                                  "upload_invalid_user_folders", "locked"]
                 for field in booleanFields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
                             configParser.getboolean(configFileSection, field)
-                intFields = ["ignore_interval_number", "ignore_new_files_minutes",
+                intFields = ["ignore_interval_number",
+                             "ignore_new_files_minutes",
+                             "max_verification_threads",
                              "max_upload_threads", "max_upload_retries"]
                 for field in intFields:
                     if configParser.has_option(configFileSection, field):
@@ -381,12 +400,20 @@ class SettingsModel(object):
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
             try:
+                localModTime = \
+                    datetime.fromtimestamp(os.stat(self.configPath).st_mtime)
+            except OSError:
+                localModTime = datetime.fromtimestamp(0)
+            try:
                 settingsFromServer = uploaderModel.GetSettings()
+                settingsUpdated = uploaderModel.GetSettingsUpdated()
             except requests.exceptions.RequestException as err:
                 logger.error(err)
                 settingsFromServer = None
-            if settingsFromServer:
-                logger.debug("Settings were found on the server.")
+                settingsUpdated = datetime.fromtimestamp(0)
+            if settingsFromServer and settingsUpdated and \
+                    settingsUpdated > localModTime:
+                logger.debug("Settings will be updated from the server.")
                 for setting in settingsFromServer:
                     self.__dict__[setting['key']] = setting['value']
                     if setting['key'] in (
@@ -394,7 +421,7 @@ class SettingsModel(object):
                             "validate_folder_structure",
                             "start_automatically_on_login",
                             "upload_invalid_user_folders",
-                            "locked",
+                            "fake_md5_sum", "use_none_cipher", "locked",
                             "monday_checked", "tuesday_checked",
                             "wednesday_checked", "thursday_checked",
                             "friday_checked", "saturday_checked",
@@ -405,6 +432,8 @@ class SettingsModel(object):
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
+                            "progress_poll_interval",
+                            "max_verification_threads",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
                     if setting['key'] in (
@@ -421,7 +450,7 @@ class SettingsModel(object):
 
                 logger.debug("Updated local settings from server.")
             else:
-                logger.debug("Settings were not found on the server.")
+                logger.debug("Settings were not updated from the server.")
 
         self.previousDict.update(self.__dict__)
 
@@ -607,6 +636,47 @@ class SettingsModel(object):
     def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
         self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
 
+    def FakeMd5Sum(self):
+        """
+        Whether to use a fake MD5 sum to save time.
+        It can be set later via the MyTardis API.
+        Until it is set properly, the file won't be
+        verified on MyTardis.
+        """
+        return self.fake_md5_sum
+
+    def GetFakeMd5Sum(self):
+        """
+        The fake MD5 sum to use when self.FakeMd5Sum()
+        is True.
+        """
+        return "00000000000000000000000000000000"
+
+    def GetCipher(self):
+        """
+        SSH Cipher for SCP uploads.
+        """
+        return self.cipher
+
+    def UseNoneCipher(self):
+        """
+        If True, self.cipher is ignored.
+        """
+        return self.use_none_cipher
+
+    def SetUseNoneCipher(self, useNoneCipher):
+        """
+        If True, self.cipher is ignored.
+        """
+        self.use_none_cipher = useNoneCipher
+
+    def GetProgressPollInterval(self):
+        """
+        Stored as an int in MyData.cfg, but used
+        as a float in threading.Timer(...)
+        """
+        return float(self.progress_poll_interval)
+
     def Locked(self):
         return self.locked
 
@@ -782,8 +852,11 @@ class SettingsModel(object):
                       "ignore_interval_unit",
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
+                      "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
-                      "validate_folder_structure", "locked", "uuid",
+                      "validate_folder_structure", "fake_md5_sum",
+                      "cipher", "locked", "uuid", "use_none_cipher",
+                      "progress_poll_interval",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []
@@ -1289,7 +1362,8 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
-            if self.previousDict['start_automatically_on_login'] != \
+            if 'start_automatically_on_login' in self.previousDict and \
+                    self.previousDict['start_automatically_on_login'] != \
                     self.StartAutomaticallyOnLogin():
                 message = "Settings validation - " \
                     "checking if MyData is set to start automatically..."
@@ -1975,25 +2049,9 @@ oFS.DeleteFile sLinkFile
     def GetConnectivityCheckInterval(self):
         return self.connectivityCheckInterval
 
-    def UseSshControlMasterIfAvailable(self):
-        return self.useSshControlMasterIfAvailable
-
-    def SetUseSshControlMasterIfAvailable(self,
-                                          useSshControlMasterIfAvailable):
-        self.useSshControlMasterIfAvailable = useSshControlMasterIfAvailable
-
     def ShouldAbort(self):
         app = wx.GetApp()
         if hasattr(app, "ShouldAbort"):
             return wx.GetApp().ShouldAbort()
         else:
             return False
-
-    def GetLargeFileSize(self):
-        return self.largeFileSize
-
-    def GetDefaultChunkSize(self):
-        return self.defaultChunkSize
-
-    def GetMaxChunkSize(self):
-        return self.maxChunkSize
