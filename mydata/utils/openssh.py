@@ -67,8 +67,9 @@ if sys.platform.startswith("win"):
 # interval of SLEEP_FACTOR * maxThreads.
 SLEEP_FACTOR = 0.01
 
-# pylint: disable=too-many-instance-attributes
+
 class OpenSSH(object):
+    # pylint: disable=too-many-instance-attributes
     if hasattr(sys, "frozen"):
         opensshBuildDir = "openssh-7.3p1-cygwin-2.6.0"
     else:
@@ -472,6 +473,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
     monitoringProgress = threading.Event()
 
     uploadModel.SetStartTime(datetime.now())
+
     def MonitorProgress():
         if foldersController.IsShuttingDown() or \
                 (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
@@ -490,7 +492,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
             if dataFileId is not None:
                 try:
                     dataFile = \
-                        DataFileModel.GetDataFileFromId(settingsModel, dataFileId)
+                        DataFileModel.GetDataFileFromId(settingsModel,
+                                                        dataFileId)
                     dfoId = dataFile.GetReplicas()[0].GetId()
                     uploadModel.SetDfoId(dfoId)
                 except DoesNotExist:
@@ -505,7 +508,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
         if dfoId:
             try:
                 bytesUploaded = \
-                    ReplicaModel.CountBytesUploadedToStaging(settingsModel, dfoId)
+                    ReplicaModel.CountBytesUploadedToStaging(settingsModel,
+                                                             dfoId)
                 latestUpdateTime = datetime.now()
                 # If this file already has a partial upload in staging,
                 # progress and speed estimates can be misleading.
@@ -546,7 +550,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
             if mkdirProcess.returncode != 0:
                 raise SshException(stdout, mkdirProcess.returncode)
         else:
-            stdout, stderr, returncode = GetErrandBoyTransport().run_cmd(mkdirCmdString)
+            stdout, stderr, returncode = \
+                GetErrandBoyTransport().run_cmd(mkdirCmdString)
             if returncode != 0:
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
@@ -629,6 +634,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
 
 REMOTE_DIRS_CREATED = dict()
 
+
 def UploadFileFromWindows(filePath, fileSize, username,
                           privateKeyFilePath, host, port, remoteFilePath,
                           progressCallback,
@@ -662,7 +668,8 @@ def UploadFileFromWindows(filePath, fileSize, username,
             if dataFileId is not None:
                 try:
                     dataFile = \
-                        DataFileModel.GetDataFileFromId(settingsModel, dataFileId)
+                        DataFileModel.GetDataFileFromId(settingsModel,
+                                                        dataFileId)
                     dfoId = dataFile.GetReplicas()[0].GetId()
                     uploadModel.SetDfoId(dfoId)
                 except DoesNotExist:
@@ -677,7 +684,8 @@ def UploadFileFromWindows(filePath, fileSize, username,
         if dfoId:
             try:
                 bytesUploaded = \
-                    ReplicaModel.CountBytesUploadedToStaging(settingsModel, dfoId)
+                    ReplicaModel.CountBytesUploadedToStaging(settingsModel,
+                                                             dfoId)
                 latestUpdateTime = datetime.now()
                 # If this file already has a partial upload in staging,
                 # progress and speed estimates can be misleading.
