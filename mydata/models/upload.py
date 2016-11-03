@@ -172,10 +172,11 @@ class UploadModel(object):
                 logger.debug("Closed buffered reader for \"" +
                              self.GetRelativePathToUpload() +
                              "\".")
-            if sys.platform.startswith("win"):
-                os.kill(self.scpUploadProcessPid, signal.SIGABRT)
-            else:
-                os.kill(self.scpUploadProcessPid, signal.SIGKILL)
+            if self.scpUploadProcessPid:
+                if sys.platform.startswith("win"):
+                    os.kill(self.scpUploadProcessPid, signal.SIGABRT)
+                else:
+                    os.kill(self.scpUploadProcessPid, signal.SIGKILL)
         except:  # pylint: disable=bare-except
             logger.warning(traceback.format_exc())
 
