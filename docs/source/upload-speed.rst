@@ -28,7 +28,7 @@ relatively fast on modern CPUs.  The *Amazon EC2* virtual machines had
 
 
 Upload Methods
-^^^^^^^^^^^^^^
+--------------
 
 *MyData* currently offers two upload methods: *POST* (to *MyTardis* ) and *SCP*.
 Upload methods which may be offered in the future include *globus-url-copy*,
@@ -48,10 +48,10 @@ focus exclusively on optimizing upload speed using the *SCP* upload method.
 
 
 SCP Server Load
-^^^^^^^^^^^^^^^
+---------------
 
 Overview
---------
+~~~~~~~~
 
 Modern top-of-the-line CPUs can encrypt and decrypt very quickly, but you
 shouldn't assume that your CPUs can encrypt / decrypt at wire speed, especially
@@ -59,7 +59,7 @@ if the number of concurrent *SCP* uploads your server is handling is greater tha
 the number of CPU cores on the server.
 
 A simple benchmark 
-------------------
+~~~~~~~~~~~~~~~~~~
 
 The following experiment, inspired by this blog article: https://blog.famzah.net/2015/06/26/openssh-ciphers-performance-benchmark-update-2015/ runs some
 encryption/decryption tests on a single-CPU *Intel Xeon E312xx* virtual machine,
@@ -134,7 +134,7 @@ It is clear that as we increase the number of concurrent *SSH* processes from 1
 to 8, the encryption / decryption speed decreases significantly.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. Use a monitoring tool like Nagios to check the number of concurrent *SSH*
    (or *SCP* ) processes on your *SCP* server(s), and consider load balancing
@@ -153,17 +153,17 @@ Recommendations
    
 
 Max Upload Threads
-^^^^^^^^^^^^^^^^^^
+------------------
 
 Overview
---------
+~~~~~~~~
 
 *MyData* can be configured to upload multiple files concurrently.  The maximum
 number of concurrent uploads can be configured in the Advanced tab of *MyData*'s
 Settings dialog.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. Do not set *MyData*'s maximum upload threads to be greater than the number of
    CPU cores available on the *SCP* server(s) *MyData* is uploading to.
@@ -178,16 +178,16 @@ Recommendations
 
 
 SSHFS Mounts
-^^^^^^^^^^^^
+------------
 
 Overview
---------
+~~~~~~~~
 
 If encryption/decryption is a bottleneck, using *SSHFS* storage mounts on your
 *SCP* server can slow down write speeds.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. Run some write speed tests using "dd":
 
@@ -219,10 +219,10 @@ available to your *SSH* version.  After changing the cipher (and restarting
 
 
 SSH/SCP Ciphers
-^^^^^^^^^^^^^^^
+---------------
 
 Overview
---------
+~~~~~~~~
 
 A cipher is an algorithm for encrypting or decrypting data.  If you are using
 recent top-of-the-line PCs at both ends of your *SCP* transfer and you are
@@ -236,7 +236,7 @@ decryption could easily become a bottleneck, and using the best cipher (and
 a recent *OpenSSH* version) can make a big difference.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. On your *SCP* server, you can run a benchmark like this one: https://blog.famzah.net/2015/06/26/openssh-ciphers-performance-benchmark-update-2015/ to determine which ciphers perform best for you.  If you have *AES-NI*, then the fastest ciphers are usually aes128-gcm@openssh.com and aes256-gcm@openssh.com.  If you have old CPUs without *AES-NI*, then the fastest ciphers are the "arcfour" ciphers.  Here are some results from an *Intel Xeon E312xx (Sandy Bridge)* single-CPU virtual machine:
 
@@ -260,10 +260,10 @@ Recommendations
 3. *MyTardis* administrators can set the scp_hostname storage box attribute for *MyData* uploads, so if you want *MyData* to upload to an *SCP* server with a more recent *OpenSSH* version than what you have on your *MyTardis* server, supporting additional ciphers, that is no problem.
 
 Lots of Tiny Files
-^^^^^^^^^^^^^^^^^^
+------------------
 
 Overview
---------
+~~~~~~~~
 
 *MyData* is not very efficient at uploading thousands of tiny files.  For each
 file it finds, it does a *MyTardis* API query to check whether the file has
@@ -271,7 +271,7 @@ already been uploaded, then it calculates the file's MD5 sum, then it calls
 *MyTardis*'s API again to create a DataFile record.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. If you have thousands of tiny files you want to upload, it is much more
    efficient to create a ZIP or TAR archive before uploading them.
@@ -284,10 +284,10 @@ Recommendations
 
 
 MD5 Checksums
-^^^^^^^^^^^^^
+-------------
 
 Overview
---------
+~~~~~~~~
 
 Whilst it is best to check for bottlenecks on your servers (*MyTardis* and *SCP* )
 first (because they affect all of your users), you should also consider whether
@@ -295,7 +295,7 @@ first (because they affect all of your users), you should also consider whether
 overhead.  This depends on the CPUs on the *MyData* client machine.
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. Ask any users experiencing slow *MyData* uploads to check *MyData*'s Uploads
 view and report whether they see the "Calculating MD5 checksum" message and
@@ -316,10 +316,10 @@ available.
 
 
 MyData v0.7.0 Enhancements
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
 Overview
---------
+~~~~~~~~
 
 There are number of enhancements in *MyData v0.7.0* which improve upload speeds.
 The most significant enhancement for upload speed is the scrapping of *MyData*'s
@@ -334,7 +334,7 @@ version of of *MyData's* server-side app, available at
 https://github.com/mytardis/mytardis-app-mydata
 
 Recommendations
----------------
+~~~~~~~~~~~~~~~
 
 1. Please help with beta testing *MyData v0.7.0* and let us know what you think of its performance and report any bugs, either at https://github.com/mytardis/mydata/issues or at store.star.help@monash.edu.  It is available at https://github.com/mytardis/mydata/releases
 
