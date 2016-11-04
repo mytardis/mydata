@@ -259,6 +259,61 @@ Recommendations
 
 3. MyTardis administrators can set the scp_hostname storage box attribute for MyData uploads, so if you want MyData to upload to an SCP server with a more recent OpenSSH version than what you have on your MyTardis server, supporting additional ciphers, that is no problem.
 
+
+Hardware-Accelerated Encryption (AES-NI)
+----------------------------------------
+
+Overview
+~~~~~~~~
+
+Modern CPUs offer hardware-accelerated AES encryption (AES-NI), which makes encryption/decryption must faster, especially when using the AES ciphers.  The aes128-gcm@openssh.com and aes256-gcm@openssh.com are usually the fastest ciphers on machines on AES-NI hardware.  If using older SSH versions which do not support these ciphers, aes128-ctr,
+aes192-ctr and aes256-ctr also perform very well on AES-NI hardware.  On older CPUs which do not support AES-NI, the fastest ciphers are usually arcfour, arcfour128, arcfour256 and blowfish-cbc.  Running a benchmark like the one in the following blog articles can help to determine if AES-NI is working (AES ciphers should be fast) or if it is not supported (in which case the arcfour and blowfish ciphers may perform better than the AES ciphers).
+
+- https://blog.famzah.net/2015/06/26/openssh-ciphers-performance-benchmark-update-2015/
+
+
+On Linux, you can determine if AES encryption is supported by your CPU using:
+
+::
+
+    $ cat /proc/cpuinfo | grep aes
+
+Whilst this is the simplest way, it is not guaranteed to be accurate.  Intel says:
+
+    "The Linux /proc/cpuinfo/ command does not accurately detect if Intel® AES-NI is enabled or disabled on
+    the hardware. CPUID (http://www.etallen.com/cpuid/) tool can be used to make accurate
+    determination."  https://software.intel.com/sites/default/files/m/d/4/1/d/8/AES-NI_Java_Linux_Testing_Configuration_Case_Study.pdf
+
+On Windows, you can use one of the following tools to check whether your CPU(s) have AES-NI support:
+
+- http://www.cpuid.com/softwares/cpu-z.html
+- https://www.grc.com/securable.htm
+
+However, having hardware-support for AES-NI doesn't necessarily means that your SSH/SCP software supports it!
+
+On Linux, it is generally a safe bet that if hardware support is available, then AES-NI will be available in the installed OpenSSH software.
+
+However on Windows, only some SSH/SCP clients claim to support AES-NI:
+
+- https://en.wikipedia.org/wiki/Comparison_of_SSH_clients#Features
+
+And of those SSH/SCP clients which do claim to support it, some of them don't
+offer the full range of ciphers available in the latest OpenSSH versions.  For
+example, not many Windows SSH/SCP clients (except for Cygwin OpenSSH) support
+aes128-gcm@openssh.com and aes256-gcm@openssh.com.  The best way to determine
+whether AES-NI is working is to compare speeds between an AES cipher which is
+supported by the SSH/SCP client (e.g. aes128-ctr) with one of the older ciphers (e.g. arcfour or blowfish-cbc).  If the AES cipher doesn't perform
+significantly better than the arcfour or blowfish-cbc, or if you are getting
+encryption speeds well below 100 MB/s, then AES-NI probably isn't working.
+
+Recommendations
+~~~~~~~~~~~~~~~
+1. Run some encryption benchmarks like those in the blog article linked below
+   to isolate encryption speed (as distinct from storage I/O speed or network
+   bandwidth).
+   - https://blog.famzah.net/2015/06/26/openssh-ciphers-performance-benchmark-update-2015/ 
+
+
 Lots of Tiny Files
 ------------------
 
