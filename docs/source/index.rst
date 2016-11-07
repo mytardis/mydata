@@ -13,7 +13,6 @@ Contents
    settings
    test-run
    upload-methods
-   upload-speed
    user-groups
    macosx-walkthrough
    mydata-tutorial
