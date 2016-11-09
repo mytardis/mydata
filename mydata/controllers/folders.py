@@ -389,6 +389,7 @@ class FoldersController(object):
 
     def StartUploadsForFolder(self, folderModel):
         # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-branches
         fc = self  # pylint: disable=invalid-name
         try:
             fc.finishedCountingVerifications[folderModel] = \
@@ -427,7 +428,7 @@ class FoldersController(object):
                             icon=wx.ICON_ERROR))
                     return
                 finally:
-                    self.getOrCreateExpThreadingLock.release() 
+                    self.getOrCreateExpThreadingLock.release()
                 folderModel.SetExperiment(experimentModel)
                 connected = ConnectionStatus.CONNECTED
                 wx.PostEvent(
