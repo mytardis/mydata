@@ -15,6 +15,7 @@ import traceback
 import mimetypes
 import time
 import hashlib
+import threading
 from datetime import datetime
 
 import poster
@@ -66,6 +67,7 @@ class UploadDatafileRunnable(object):
         self.verificationModel = verificationModel
         self.bytesUploadedPreviously = bytesUploadedPreviously
         self.mimeTypes = mimetypes.MimeTypes()
+        self.uploadsThreadingLock = threading.Lock()
 
     def GetDatafileIndex(self):
         return self.dataFileIndex
@@ -79,7 +81,7 @@ class UploadDatafileRunnable(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
 
-        self.foldersController.uploadsThreadingLock.acquire()
+        self.uploadsThreadingLock.acquire()
         uploadDataViewId = self.uploadsModel.GetMaxDataViewId() + 1
         self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                        folderModel=self.folderModel,
@@ -87,7 +89,7 @@ class UploadDatafileRunnable(object):
         self.uploadModel.SetExistingUnverifiedDatafile(
             self.verificationModel.GetExistingUnverifiedDatafile())
         self.uploadsModel.AddRow(self.uploadModel)
-        self.foldersController.uploadsThreadingLock.release()
+        self.uploadsThreadingLock.release()
         self.uploadModel.SetBytesUploadedPreviously(
             self.bytesUploadedPreviously)
 
