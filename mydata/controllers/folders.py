@@ -675,7 +675,7 @@ class FoldersController(object):
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
             elapsedTime = self.uploadsModel.GetElapsedTime()
-            if elapsedTime:
+            if elapsedTime and not self.testRun:
                 averageSpeed = "%3.1f MB/s" % \
                     (float(self.uploadsModel.GetCompletedSize()) / 1000000.0 \
                      / elapsedTime.total_seconds())
