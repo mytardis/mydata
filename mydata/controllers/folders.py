@@ -62,7 +62,7 @@ class FoldersController(object):
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
         self.threadingLock = threading.Lock()
-        self.uploadsThreadingLock = threading.Lock()
+        self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
         self.started = False
@@ -413,6 +413,7 @@ class FoldersController(object):
                 myTardisUrl = self.settingsModel.GetMyTardisUrl()
                 # pylint: disable=broad-except
                 try:
+                    self.getOrCreateExpThreadingLock.acquire()
                     experimentModel = ExperimentModel\
                         .GetOrCreateExperimentForFolder(folderModel,
                                                         fc.testRun)
@@ -425,6 +426,8 @@ class FoldersController(object):
                             message=str(err),
                             icon=wx.ICON_ERROR))
                     return
+                finally:
+                    self.getOrCreateExpThreadingLock.release() 
                 folderModel.SetExperiment(experimentModel)
                 connected = ConnectionStatus.CONNECTED
                 wx.PostEvent(
