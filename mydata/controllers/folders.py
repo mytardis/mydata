@@ -308,9 +308,7 @@ class FoldersController(object):
         fc.uploadsModel.SetStartTime(datetime.datetime.now())
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
-        # For now, the max number of verification threads is hard-coded
-        # to 16:
-        fc.numVerificationWorkerThreads = 16
+        fc.numVerificationWorkerThreads = settingsModel.GetMaxVerificationThreads()
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
