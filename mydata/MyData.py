@@ -584,12 +584,14 @@ class MyData(wx.App):
                                  wx.YES | wx.NO | wx.ICON_QUESTION)
             okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
-            # pylint: disable=bare-except
             BeginBusyCursorIfRequired()
             self.foldersController.ShutDownUploadThreads()
             EndBusyCursorIfRequired()
             self.tasksModel.ShutDown()
-            sys.exit(0)
+            # sys.exit can raise exceptions if the wx.App
+            # is shutting down:
+            os._exit(0)  # pylint: disable=protected-access
+
 
     def OnMinimizeFrame(self, event):
         """
