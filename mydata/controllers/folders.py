@@ -57,6 +57,8 @@ class FoldersController(object):
         self.showingWarningDialog = threading.Event()
         self.canceled = threading.Event()
         self.failed = threading.Event()
+        self.started = threading.Event()
+        self.completed = threading.Event()
 
         self.finishedCountingVerifications = dict()
         self.finishedScanningForDatasetFolders = threading.Event()
@@ -65,8 +67,6 @@ class FoldersController(object):
         self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
-        self.started = False
-        self.completed = False
         self.uploadDatafileRunnable = None
         self.numVerificationsToBePerformed = 0
         self.numVerificationsToBePerformedLock = threading.Lock()
@@ -144,10 +144,13 @@ class FoldersController(object):
                                self.CountCompletedUploadsAndVerifications)
 
     def Started(self):
-        return self.started
+        return self.started.isSet()
 
     def SetStarted(self, started=True):
-        self.started = started
+        if started:
+            self.started.set()
+        else:
+            self.started.clear()
 
     def Canceled(self):
         return self.canceled.isSet()
@@ -168,10 +171,13 @@ class FoldersController(object):
             self.failed.clear()
 
     def Completed(self):
-        return self.completed
+        return self.completed.isSet()
 
     def SetCompleted(self, completed=True):
-        self.completed = completed
+        if completed:
+            self.completed.set()
+        else:
+            self.completed.clear()
 
     def IsShuttingDown(self):
         return self.shuttingDown.isSet()
@@ -316,6 +322,7 @@ class FoldersController(object):
         fc.uploadsQueue = Queue.Queue()
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.uploadMethod = UploadMethod.HTTP_POST
+        fc.getOrCreateExpThreadingLock = threading.Lock()
 
         # pylint: disable=broad-except
         try:
