@@ -752,7 +752,10 @@ class MyDataEvent(wx.PyCommandEvent):
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
         startDataUploadsForFolderThread = \
-            threading.Thread(target=StartDataUploadsForFolderWorker,
-                             name="StartDataUploadsThread")
+            threading.Thread(target=StartDataUploadsForFolderWorker)
+        threadName = startDataUploadsForFolderThread.name
+        threadName = \
+            threadName.replace("Thread", "StartDataUploadsForFolderThread")
+        startDataUploadsForFolderThread.name = threadName
         MYDATA_THREADS.Add(startDataUploadsForFolderThread)
         startDataUploadsForFolderThread.start()
