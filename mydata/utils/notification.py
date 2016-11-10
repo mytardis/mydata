@@ -40,7 +40,7 @@ class Notification(object):
             return
         path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
         executable = "MyData Notifications"
-        args = ["-message", message, "-title", title, "-sound", "Purr"]
+        args = ["-message", message, "-title", title]
         if subtitle:
             args = args + ["-subtitle", subtitle]
         if hasattr(sys, "frozen"):
