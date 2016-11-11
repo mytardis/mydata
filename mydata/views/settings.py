@@ -12,6 +12,7 @@ Classes for MyData's settings dialog.
 from datetime import datetime
 from datetime import timedelta
 import sys
+import platform
 import os
 import traceback
 
@@ -103,13 +104,21 @@ class SettingsDialog(wx.Dialog):
 
         sizer.Add(self.dialogPanel, 1, wx.EXPAND | wx.ALL, 5)
 
+        # Default vertical spacing between settings fields:
+        defaultVgap = 5
         if sys.platform.startswith("linux"):
             self.SetMinSize(wx.Size(-1, 490))
+            distroName, distroVersion, _ = platform.linux_distribution()
+            if (distroName.startswith("Red Hat") or
+                    distroName.startswith("CentOS")) and \
+                    distroVersion.startswith("7"):
+                # GNOME 3 on RHEL7 automatically adds vertical spacing:
+                defaultVgap = 0
 
         # General tab
 
         self.generalPanelSizer = wx.FlexGridSizer(rows=11, cols=3,
-                                                  vgap=5, hgap=5)
+                                                  vgap=defaultVgap, hgap=5)
         self.generalPanel.SetSizer(self.generalPanelSizer)
         self.generalPanelSizer.AddGrowableCol(1)
 
@@ -479,7 +488,7 @@ class SettingsDialog(wx.Dialog):
         # Filters tab
 
         self.filtersPanelSizer = wx.FlexGridSizer(rows=9, cols=3,
-                                                  vgap=5, hgap=5)
+                                                  vgap=defaultVgap, hgap=5)
         self.filtersPanel.SetSizer(self.filtersPanelSizer)
         # self.filtersPanelSizer.AddGrowableCol(1)
 
@@ -675,7 +684,7 @@ class SettingsDialog(wx.Dialog):
         # Advanced tab
 
         self.advancedPanelSizer = wx.FlexGridSizer(rows=10, cols=3,
-                                                   vgap=5, hgap=5)
+                                                   vgap=defaultVgap, hgap=5)
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
 
