@@ -1395,7 +1395,7 @@ class SettingsModel(object):
                 self.validation = \
                     SettingsValidation(False, message,
                                        "scheduled_time")
-                return
+                return self.validation
 
         if self.UseIncludesFile():
             message = "Settings validation - checking includes file..."
@@ -1448,19 +1448,19 @@ class SettingsModel(object):
             message = "No %s file was specified." % lower
             self.validation = \
                 SettingsValidation(False, message, field)
-            return
+            return self.validation
         if not os.path.exists(filePath):
             message = "Specified %s file doesn't exist." \
                 % lower
             self.validation = \
                 SettingsValidation(False, message, field)
-            return
+            return self.validation
         if not os.path.isfile(filePath):
             message = "Specified %s file path is not a file." \
                 % lower
             self.validation = \
                 SettingsValidation(False, message, field)
-            return
+            return self.validation
         with open(filePath, 'r') as globsFile:
             for line in globsFile.readlines():
                 try:
@@ -1473,7 +1473,7 @@ class SettingsModel(object):
                         "(UTF-8) file." % upper
                     self.validation = \
                         SettingsValidation(False, message, field)
-                    return
+                    return self.validation
 
 
     # pylint: disable=too-many-locals
