@@ -913,8 +913,14 @@ class MyData(wx.App):
                         self.frame.SetStatusMessage(message)
                         return
 
+                    # If settings validation is run automatically shortly after
+                    # a scheduled task begins, ignore complaints from settings
+                    # validation about the "scheduled_time" being in the past.
+                    # Any other settings validation failure will be reported.
+                    field = self.settingsValidation.GetField()
                     if needToValidateSettings and not \
-                            self.settingsValidation.valid:
+                            self.settingsValidation.IsValid() and \
+                            field != "scheduled_time":
                         logger.debug(
                             "Displaying result from settings validation.")
                         message = self.settingsValidation.message
@@ -922,7 +928,8 @@ class MyData(wx.App):
                         wx.CallAfter(EndBusyCursorIfRequired)
                         wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
                         self.SetScanningFolders(False)
-                        self.frame.SetStatusMessage("Settings validation failed.")
+                        self.frame.SetStatusMessage(
+                            "Settings validation failed.")
                         if testRun:
                             wx.CallAfter(self.GetTestRunFrame().Hide)
                         wx.CallAfter(self.OnSettings, None,
