@@ -31,6 +31,9 @@ from mydata.controllers.verifications import VerifyDatafileRunnable
 
 from mydata.logs import logger
 
+if sys.platform.startswith("linux"):
+    from mydata.linuxsubprocesses import RestartErrandBoy
+
 
 class FoldersController(object):
     # pylint: disable=too-many-public-methods
@@ -321,6 +324,9 @@ class FoldersController(object):
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.uploadMethod = UploadMethod.HTTP_POST
         fc.getOrCreateExpThreadingLock = threading.Lock()
+
+        if sys.platform.startswith("linux"):
+            RestartErrandBoy()
 
         # pylint: disable=broad-except
         try:
