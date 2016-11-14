@@ -66,6 +66,12 @@ class UploadModel(object):
         # The latest time at which upload progress has been measured:
         self.latestTime = None
 
+        # After the file is uploaded, MyData will request verification
+        # after a short delay.  During that delay, the countdown timer
+        # will be stored in the UploadModel so that it can be canceled
+        # if necessary:
+        self.verificationTimer = None
+
     def GetDataViewId(self):
         return self.dataViewId
 
@@ -177,6 +183,8 @@ class UploadModel(object):
                     os.kill(self.scpUploadProcessPid, signal.SIGABRT)
                 else:
                     os.kill(self.scpUploadProcessPid, signal.SIGKILL)
+            if self.verificationTimer:
+                self.verificationTimer.cancel()
         except:  # pylint: disable=bare-except
             logger.warning(traceback.format_exc())
 
@@ -224,3 +232,21 @@ class UploadModel(object):
         Set the DataFileObject ID, also known as the replica ID.
         """
         self.dfoId = dfoId
+
+    def GetVerificationTimer(self):
+        """
+        After the file is uploaded, MyData will request verification
+        after a short delay.  During that delay, the countdown timer
+        will be stored in the UploadModel so that it can be canceled
+        if necessary
+        """
+        return self.verificationTimer
+
+    def SetVerificationTimer(self, verificationTimer):
+        """
+        After the file is uploaded, MyData will request verification
+        after a short delay.  During that delay, the countdown timer
+        will be stored in the UploadModel so that it can be canceled
+        if necessary
+        """
+        self.verificationTimer = verificationTimer

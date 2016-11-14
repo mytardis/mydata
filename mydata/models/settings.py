@@ -189,6 +189,10 @@ class SettingsModel(object):
         # Interval in seconds between RESTful progress queries:
         self.progress_poll_interval = 1
 
+        # Upon a successful upload, MyData will request verification
+        # after a short delay, defaulting to 3 seconds:
+        self.verification_delay = 3
+
         # pylint: disable=bare-except
         try:
             self.LoadSettings()
@@ -277,6 +281,10 @@ class SettingsModel(object):
         # Interval in seconds between RESTful progress queries:
         self.progress_poll_interval = 1
 
+        # Upon a successful upload, MyData will request verification
+        # after a short delay, defaulting to 3 seconds:
+        self.verification_delay = 3
+
         self.locked = False
 
         self.uuid = None
@@ -309,7 +317,7 @@ class SettingsModel(object):
                           "validate_folder_structure", "fake_md5_sum",
                           "use_none_cipher",
                           "cipher", "locked", "uuid",
-                          "progress_poll_interval",
+                          "progress_poll_interval", "verification_delay",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
@@ -432,7 +440,7 @@ class SettingsModel(object):
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
-                            "progress_poll_interval",
+                            "progress_poll_interval", "verification_delay",
                             "max_verification_threads",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
@@ -677,6 +685,13 @@ class SettingsModel(object):
         """
         return float(self.progress_poll_interval)
 
+    def GetVerificationDelay(self):
+        """
+        Upon a successful upload, MyData will request verification
+        after a short delay, defaulting to 3 seconds:
+        """
+        return float(self.verification_delay)
+
     def Locked(self):
         return self.locked
 
@@ -856,7 +871,7 @@ class SettingsModel(object):
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "fake_md5_sum",
                       "cipher", "locked", "uuid", "use_none_cipher",
-                      "progress_poll_interval",
+                      "progress_poll_interval", "verification_delay",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []
