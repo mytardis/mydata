@@ -62,9 +62,6 @@ class ScanUserGroupInstrumentTester(unittest.TestCase):
                 "testdata", "testdataGroupInstrument"))
         settingsModel.SetMyTardisUrl(
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
-        validation = settingsModel.CheckStructureAndCountDatasets()
-        assert validation.IsValid()
-        assert validation.GetDatasetCount() == 8
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:

@@ -482,6 +482,10 @@ class SettingsModel(object):
     def SetFolderStructure(self, folderStructure):
         self.mydataConfig['folder_structure'] = folderStructure
 
+    # pylint: disable=no-self-use
+    def AlertUserAboutMissingFolders(self):
+        return False
+
     def ValidateFolderStructure(self):
         return self.mydataConfig['validate_folder_structure']
 
@@ -515,7 +519,6 @@ class SettingsModel(object):
         The fake MD5 sum to use when self.FakeMd5Sum()
         is True.
         """
-        # pylint: disable=no-self-use
         return "00000000000000000000000000000000"
 
     def GetCipher(self):
@@ -958,7 +961,7 @@ class SettingsModel(object):
                 logger.debug(message)
                 if setStatusMessage:
                     setStatusMessage(message)
-                self.validation = self.CheckStructureAndCountDatasets()
+                self.validation = self.PerformFolderStructureValidation()
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
@@ -1349,15 +1352,7 @@ class SettingsModel(object):
                         SettingsValidation(False, message, field)
                     return self.validation
 
-    def CheckStructureAndCountDatasets(self):
-        """
-        Counts datasets, while traversing the folder structure.
-        Previous versions of this method would alert the user
-        about missing folders.  That functionality has now
-        been removed, so the primary purpose of this method is
-        to count datasets, although the Settings dialog checkbox
-        which enables it is still called "Validate folder structure"
-        """
+    def PerformFolderStructureValidation(self):
         # pylint: disable=too-many-locals
         datasetCount = -1
         userOrGroupFilterString = "*%s*" % self.GetUserFilter()
@@ -1366,6 +1361,30 @@ class SettingsModel(object):
         filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
                                         userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
+        if len(dirsDepth1) == 0:
+            message = "The data directory: \"%s\" doesn't contain any " \
+                % self.GetDataDirectory()
+            if self.GetFolderStructure() == 'Username / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                message += "email folders!"
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message += "email folders!"
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message += "user folders!"
+            elif self.GetFolderStructure().startswith("User Group "):
+                message += "user group folders!"
+            if self.AlertUserAboutMissingFolders():
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
+                return self.validation
+            else:
+                logger.warning(message)
 
         seconds = {}
         seconds['day'] = 24 * 60 * 60
@@ -1393,7 +1412,7 @@ class SettingsModel(object):
 
         if self.GetFolderStructure() == 'Dataset':
             logger.debug(
-                "SettingsModel dataset counting succeeded!")
+                "SettingsModel folder structure validation succeeded!")
             self.validation = SettingsValidation(True,
                                                  datasetCount=datasetCount)
             return self.validation
@@ -1422,6 +1441,48 @@ class SettingsModel(object):
                                             userOrGroupFilterString,
                                             filterString))
         dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
+        if len(dirsDepth2) == 0:
+            if self.GetFolderStructure() == 'Username / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within user folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == 'Email / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within email folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within user folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within email folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'User Group / Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "experiment folders within user group folders." % \
+                    self.GetDataDirectory()
+            elif self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each user folder should contain a " \
+                    "\"MyTardis\" folder."
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each user group folder should contain an " \
+                    "instrument name folder."
+            elif self.GetFolderStructure() == 'Experiment / Dataset':
+                message = "The data directory: \"%s\" should contain " \
+                    "dataset folders within experiment folders." % \
+                    self.GetDataDirectory()
+            if self.AlertUserAboutMissingFolders():
+                self.validation = SettingsValidation(False, message,
+                                                     "data_directory")
+                return self.validation
+            else:
+                logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / "MyTardis" / Experiment / Dataset':
@@ -1451,7 +1512,7 @@ class SettingsModel(object):
 
         if self.GetFolderStructure() == 'Experiment / Dataset':
             logger.debug(
-                "SettingsModel dataset counting succeeded!")
+                "SettingsModel folder structure validation succeeded!")
             self.validation = SettingsValidation(True,
                                                  datasetCount=datasetCount)
             return self.validation
@@ -1497,6 +1558,47 @@ class SettingsModel(object):
                                                 filterString1,
                                                 filterString2))
         dirsDepth3 = [item for item in filesDepth3 if os.path.isdir(item)]
+        if len(dirsDepth3) == 0:
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each \"MyTardis\" folder should contain at " \
+                    "least one experiment folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'Username / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'Email / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each instrument folder should contain at " \
+                    "least one full name (dataset group) folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / Experiment / Dataset' or \
@@ -1528,6 +1630,27 @@ class SettingsModel(object):
                                             expFilterString,
                                             datasetFilterString))
         dirsDepth4 = [item for item in filesDepth4 if os.path.isdir(item)]
+        if len(dirsDepth4) == 0:
+            if self.GetFolderStructure() == \
+                    'Username / "MyTardis" / Experiment / Dataset':
+                message = "Each experiment folder should contain at " \
+                    "least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
+            elif self.GetFolderStructure() == \
+                    'User Group / Instrument / Full Name / Dataset':
+                message = "Each full name (dataset group) folder " \
+                    "should contain at least one dataset folder."
+                if self.AlertUserAboutMissingFolders():
+                    self.validation = \
+                        SettingsValidation(False, message, "data_directory")
+                    return self.validation
+                else:
+                    logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / "MyTardis" / Experiment / Dataset' or \
@@ -1544,10 +1667,10 @@ class SettingsModel(object):
             else:
                 datasetCount = len(dirsDepth4)
 
-        logger.debug("SettingsModel dataset counting succeeded!")
+        logger.debug("SettingsModel folder structure validation succeeded!")
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
-        # End CheckStructureAndCountDatasets
+        # End PerformFolderStructureValidation
 
     def RequiredFieldIsBlank(self):
         return self.GetInstrumentName() == "" or \
@@ -1805,7 +1928,6 @@ oFS.DeleteFile sLinkFile
         return self.connectivityCheckInterval
 
     def ShouldAbort(self):
-        # pylint: disable=no-self-use
         app = wx.GetApp()
         if hasattr(app, "ShouldAbort"):
             return wx.GetApp().ShouldAbort()
