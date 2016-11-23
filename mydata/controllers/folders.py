@@ -60,8 +60,8 @@ class FoldersController(object):
         self.finishedCountingVerifications = dict()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
-        self.threadingLock = threading.Lock()
-        self.uploadsThreadingLock = threading.Lock()
+        self.lastErrorMessageThreadingLock = threading.Lock()
+        self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
         self.started = False
@@ -194,9 +194,9 @@ class FoldersController(object):
         return self.lastErrorMessage
 
     def SetLastErrorMessage(self, message):
-        self.threadingLock.acquire()
+        self.lastErrorMessageThreadingLock.acquire()
         self.lastErrorMessage = message
-        self.threadingLock.release()
+        self.lastErrorMessageThreadingLock.release()
 
     def UpdateStatusBar(self, event):
         if event.connectionStatus == ConnectionStatus.CONNECTED:
@@ -314,6 +314,7 @@ class FoldersController(object):
         fc.uploadsQueue = Queue.Queue()
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
         fc.uploadMethod = UploadMethod.HTTP_POST
+        fc.getOrCreateExpThreadingLock = threading.Lock()
 
         # pylint: disable=broad-except
         try:
@@ -387,6 +388,7 @@ class FoldersController(object):
 
     def StartUploadsForFolder(self, folderModel):
         # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-branches
         fc = self  # pylint: disable=invalid-name
         try:
             fc.finishedCountingVerifications[folderModel] = \
@@ -411,6 +413,7 @@ class FoldersController(object):
                 myTardisUrl = self.settingsModel.GetMyTardisUrl()
                 # pylint: disable=broad-except
                 try:
+                    self.getOrCreateExpThreadingLock.acquire()
                     experimentModel = ExperimentModel\
                         .GetOrCreateExperimentForFolder(folderModel,
                                                         fc.testRun)
@@ -423,6 +426,8 @@ class FoldersController(object):
                             message=str(err),
                             icon=wx.ICON_ERROR))
                     return
+                finally:
+                    self.getOrCreateExpThreadingLock.release()
                 folderModel.SetExperiment(experimentModel)
                 connected = ConnectionStatus.CONNECTED
                 wx.PostEvent(
