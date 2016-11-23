@@ -71,7 +71,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
         settingsModel.SetSshKeyPair(self.keyPair)
-        settingsModel.SetUseSshControlMasterIfAvailable(False)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:

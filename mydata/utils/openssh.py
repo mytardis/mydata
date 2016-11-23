@@ -23,14 +23,12 @@ otherwise we need to worry about escaping special characters like
 # pylint: disable=wrong-import-position
 
 import sys
-from datetime import datetime
 import os
 import subprocess
 import traceback
 import re
 import tempfile
 import getpass
-import threading
 import time
 import pkgutil
 
@@ -43,10 +41,8 @@ from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
-from mydata.utils.exceptions import SshControlMasterLimit
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.utils.exceptions import FileNotFoundOnStaging
-from mydata.utils import PidIsRunning
 from mydata.utils import HumanReadableSizeString
 
 
@@ -149,30 +145,6 @@ class OpenSSH(object):
             # of command strings, and in some cases, I don't trust
             # subprocess to quote the command lists correctly.
             self.preferToUseShellInSubprocess = True
-
-        # Only useful on POSIX systems:
-        self.sshControlMasterPool = None
-        self.createMasterPoolThreadingLock = threading.Lock()
-
-    def GetSshControlMasterPool(self, username=None, privateKeyFilePath=None,
-                                host=None, port=None, createIfMissing=True):
-        """
-        -oControlMaster is only available in POSIX implementations of ssh.
-        """
-        # pylint: disable=too-many-arguments
-        if sys.platform.startswith("win"):
-            raise NotImplementedError("-oControlMaster is not implemented "
-                                      "in MinGW or Cygwin builds of OpenSSH.")
-        if not self.sshControlMasterPool:
-            if createIfMissing:
-                self.createMasterPoolThreadingLock.acquire()
-                self.sshControlMasterPool = \
-                    SshControlMasterPool(username, privateKeyFilePath,
-                                         host, port)
-                self.createMasterPoolThreadingLock.release()
-            else:
-                return None
-        return self.sshControlMasterPool
 
 
 class KeyPair(object):
@@ -480,21 +452,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       OPENSSH.DoubleQuoteRemotePath(
                           "wc -c %s" % quotedRemoteFilePath)]
     else:
-        if settingsModel.UseSshControlMasterIfAvailable():
-            sshControlMasterPool = \
-                OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                                host, port)
-            sshControlMasterProcess = \
-                sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
-            sshControlPathOptionValuePair = \
-                sshControlMasterProcess.GetControlPathOptionValuePair()
-        else:
-            sshControlPathOptionValuePair = ""
-
-        # The authentication options below (-i privateKeyFilePath etc.)
-        # shouldn't be necessary if the socket created by the SSH master
-        # process (sshControlPath) is ready), but we can't guarantee that
-        # it will be ready immediately.
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", port,
                       "-c", OPENSSH.cipher,
@@ -504,7 +461,6 @@ def CountBytesUploadedToStaging(remoteFilePath, username, privateKeyFilePath,
                       "-oNoHostAuthenticationForLocalhost=yes",
                       "-oStrictHostKeyChecking=no",
                       "-l", username,
-                      sshControlPathOptionValuePair,
                       host,
                       OPENSSH.DoubleQuoteRemotePath(
                           "wc -c %s" % quotedRemoteFilePath)]
@@ -749,10 +705,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
                                    foldersController, uploadModel,
                                    bytesUploaded):
     """
-    On POSIX systems, we use SSH connection caching (the ControlMaster
-    and ControlPath options in "man ssh_config"), but they are not
-    available on Windows.
-
     We want to ensure that the partially uploaded datafile in MyTardis's
     staging area always has a whole number of chunks.  If we were to
     append each chunk directly to the datafile at the same time as
@@ -767,17 +719,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
     settingsModel = foldersController.settingsModel
     maxThreads = settingsModel.GetMaxUploadThreads()
 
-    if settingsModel.UseSshControlMasterIfAvailable():
-        sshControlMasterPool = \
-            OPENSSH.GetSshControlMasterPool(username, privateKeyFilePath,
-                                            host, port)
-        sshControlMasterProcess = \
-            sshControlMasterPool.GetSshControlMasterProcess(maxThreads)
-        sshControlPathOptionValuePair = \
-            sshControlMasterProcess.GetControlPathOptionValuePair()
-    else:
-        sshControlPathOptionValuePair = ""
-
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     mkdirCmdAndArgs = \
@@ -785,7 +726,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
          "-p", port,
          "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
          "-c", OPENSSH.cipher,
-         sshControlPathOptionValuePair,
          "-oIdentitiesOnly=yes",
          "-oPasswordAuthentication=no",
          "-oNoHostAuthenticationForLocalhost=yes",
@@ -816,7 +756,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
-        "%s -p %s -i %s -c %s %s " \
+        "%s -p %s -i %s -c %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
@@ -824,7 +764,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
         % (OPENSSH.DoubleQuote(OPENSSH.ssh),
            port,
            privateKeyFilePath, OPENSSH.cipher,
-           sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
     logger.debug(rmCommandString)
@@ -911,7 +850,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
         skip += 1
 
         scpCommandString = \
-            '%s -v -P %s -i %s -c %s %s ' \
+            '%s -v -P %s -i %s -c %s ' \
             '-oIdentitiesOnly=yes -oPasswordAuthentication=no ' \
             '-oNoHostAuthenticationForLocalhost=yes ' \
             '-oStrictHostKeyChecking=no ' \
@@ -920,7 +859,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
                port,
                privateKeyFilePath,
                OPENSSH.cipher,
-               sshControlPathOptionValuePair,
                chunkFilePath,
                username, host,
                remoteChunkPath
@@ -968,7 +906,7 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
                               redirect,
                               OPENSSH.DoubleQuoteRemotePath(remoteFilePath))
         catCommandString = \
-            "%s -p %s -i %s -c %s %s " \
+            "%s -p %s -i %s -c %s " \
             "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
             "-oNoHostAuthenticationForLocalhost=yes " \
             "-oStrictHostKeyChecking=no " \
@@ -976,7 +914,6 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
             % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
                privateKeyFilePath,
                OPENSSH.cipher,
-               sshControlPathOptionValuePair,
                username, host,
                OPENSSH.DoubleQuote(remoteCatCommand))
         # logger.debug(catCommandString)
@@ -1007,14 +944,13 @@ def UploadLargeFileFromPosixSystem(filePath, fileSize, username,
     remoteRemoveChunkCommand = \
         "/bin/rm -f %s" % OPENSSH.DoubleQuoteRemotePath(remoteChunkPath)
     rmCommandString = \
-        "%s -p %s -i %s -c %s %s " \
+        "%s -p %s -i %s -c %s " \
         "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
         "-oNoHostAuthenticationForLocalhost=yes " \
         "-oStrictHostKeyChecking=no " \
         "%s@%s %s" \
         % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
            privateKeyFilePath, OPENSSH.cipher,
-           sshControlPathOptionValuePair,
            username, host,
            OPENSSH.DoubleQuote(remoteRemoveChunkCommand))
     # logger.debug(rmCommandString)
@@ -1342,156 +1278,3 @@ def GetCygwinPath(path):
 
 # Singleton instance of OpenSSH class:
 OPENSSH = OpenSSH()
-
-
-class SshControlMasterProcess(object):
-    """
-    See "ControlMaster" in "man ssh_config"
-    Only available on POSIX systems.
-    """
-    CHECK_INTERVAL = 5  # seconds  # pylint: disable=invalid-name
-
-    def __init__(self, username, privateKeyFilePath, host, port):
-        self.username = username
-        self.privateKeyFilePath = privateKeyFilePath
-        self.host = host
-        self.port = port
-
-        tempFile = tempfile.NamedTemporaryFile(delete=True)
-        tempFile.close()
-        if sys.platform.startswith("win"):
-            self.sshControlPath = GetCygwinPath(tempFile.name)
-        else:
-            self.sshControlPath = tempFile.name
-        sshControlMasterCommandString = \
-            "%s -p %s -N -i %s -c %s " \
-            "-oControlMaster=yes -oControlPath=%s " \
-            "-oIdentitiesOnly=yes -oPasswordAuthentication=no " \
-            "-oNoHostAuthenticationForLocalhost=yes " \
-            "-oStrictHostKeyChecking=no " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh), port,
-               privateKeyFilePath,
-               OPENSSH.cipher,
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               username, host)
-        logger.debug(sshControlMasterCommandString)
-        self.proc = subprocess.Popen(
-            sshControlMasterCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        self.pid = self.proc.pid
-        self.lastCheckTime = datetime.fromtimestamp(0)
-        self.lastCheckResult = True
-
-    def Check(self, maxThreads):
-        intervalSinceLastCheck = datetime.now() - self.lastCheckTime
-        if intervalSinceLastCheck.total_seconds() < self.CHECK_INTERVAL:
-            return self.lastCheckResult
-        self.lastCheckTime = datetime.now()
-        checkSshControlMasterCommand = \
-            "%s -oControlPath=%s -O check " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh),
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               self.username, self.host)
-        logger.debug(checkSshControlMasterCommand)
-        proc = subprocess.Popen(
-            checkSshControlMasterCommand,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        while True:
-            poll = proc.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        proc.communicate()
-        self.lastCheckResult = (proc.returncode == 0)
-        return self.lastCheckResult
-
-    def Exit(self):
-        exitSshControlMasterCommand = \
-            "%s -oControlPath=%s -O exit " \
-            "%s@%s" \
-            % (OPENSSH.DoubleQuote(OPENSSH.ssh),
-               OPENSSH.DoubleQuote(self.sshControlPath),
-               self.username, self.host)
-        logger.debug(exitSshControlMasterCommand)
-        proc = subprocess.Popen(
-            exitSshControlMasterCommand,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        proc.communicate()
-
-    def GetControlPath(self):
-        return self.sshControlPath
-
-    def GetControlPathOptionValuePair(self):
-        return "-oControlPath=%s" % OPENSSH.DoubleQuote(self.sshControlPath)
-
-    def GetPid(self):
-        return self.pid
-
-
-class SshControlMasterPool(object):
-    """
-    Re-using an SSH connection with -oControlPath=...
-    only works on POSIX systems, not on Windows.
-
-    To avoid having too many frequent SSH connections on Windows, we can
-    use larger chunk sizes (see UploadLargeFileFromWindows).
-    """
-
-    def __init__(self, username, privateKeyFilePath, host, port):
-        if sys.platform.startswith("win"):
-            raise NotImplementedError("-oControlMaster is not implemented "
-                                      "in MinGW or Cygwin builds of OpenSSH.")
-        self.username = username
-        self.privateKeyFilePath = privateKeyFilePath
-        self.host = host
-        self.port = port
-        # self.maxConnections should be less than
-        # MaxSessions in staging server's sshd_config
-        self.maxConnections = 5
-        self.sshControlMasterProcesses = []
-        self.timeout = 1
-
-    def GetSshControlMasterProcess(self, maxThreads):
-        for sshControlMasterProcess in self.sshControlMasterProcesses:
-            if sshControlMasterProcess.Check(maxThreads):
-                return sshControlMasterProcess
-        if len(self.sshControlMasterProcesses) < self.maxConnections:
-            newSshControlMasterProcess = \
-                SshControlMasterProcess(self.username, self.privateKeyFilePath,
-                                        self.host, self.port)
-            self.sshControlMasterProcesses.append(newSshControlMasterProcess)
-            return newSshControlMasterProcess
-        else:
-            wait = 0
-            while wait < self.timeout:
-                time.sleep(0.1)
-                wait += 0.1
-                for sshControlMasterProcess in self.sshControlMasterProcesses:
-                    if sshControlMasterProcess.Check(maxThreads):
-                        return sshControlMasterProcess
-            message = "Exceeded max connections in SshControlMasterPool\n\n" \
-                "This suggests a problem with the scp_hostname and/or " \
-                "scp_username attributes of the assigned storage box."
-            logger.error(message)
-            logger.info("scp_hostname: %s" % self.host)
-            logger.info("scp_username: %s" % self.username)
-            logger.info("Private key path: %s" % self.privateKeyFilePath)
-            raise SshControlMasterLimit(message)
-
-    def ShutDown(self):
-        for sshControlMasterProcess in self.sshControlMasterProcesses:
-            if PidIsRunning(sshControlMasterProcess.GetPid()):
-                sshControlMasterProcess.Exit()
-        self.sshControlMasterProcesses = []

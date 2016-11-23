@@ -114,10 +114,6 @@ class SettingsModel(object):
 
         self.connectivityCheckInterval = 30  # seconds
 
-        # Allow MyData to reuse SSH connections on POSIX systems:
-        # (See ControlMaster and ControlPath in "man ssh_config".)
-        self.useSshControlMasterIfAvailable = True
-
         # pylint: disable=invalid-name
         # MyData mostly uses lowerCamelCase for attributes, but these
         # attributes correspond to fields in MyData.cfg which we
@@ -1985,13 +1981,6 @@ oFS.DeleteFile sLinkFile
 
     def GetConnectivityCheckInterval(self):
         return self.connectivityCheckInterval
-
-    def UseSshControlMasterIfAvailable(self):
-        return self.useSshControlMasterIfAvailable
-
-    def SetUseSshControlMasterIfAvailable(self,
-                                          useSshControlMasterIfAvailable):
-        self.useSshControlMasterIfAvailable = useSshControlMasterIfAvailable
 
     def ShouldAbort(self):
         app = wx.GetApp()

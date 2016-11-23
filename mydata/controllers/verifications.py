@@ -39,7 +39,6 @@ from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils.exceptions import FileNotFoundOnStaging
-from mydata.utils.exceptions import SshControlMasterLimit
 
 from mydata.logs import logger
 
@@ -253,19 +252,6 @@ class VerifyDatafileRunnable(object):
             return
         except StagingHostSshPermissionDenied, err:
             self.verificationsModel.SetComplete(self.verificationModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
-                    failed=True))
-            message = str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController
-                .showMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
-            return
-        except SshControlMasterLimit, err:
             wx.PostEvent(
                 self.foldersController.notifyWindow,
                 self.foldersController.shutdownUploadsEvent(
