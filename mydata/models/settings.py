@@ -163,7 +163,7 @@ class SettingsModel(object):
         self.dataset_grouping = ""
         self.group_prefix = ""
         self.validate_folder_structure = True
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.start_automatically_on_login = True
@@ -258,7 +258,7 @@ class SettingsModel(object):
         self.folder_structure = "Username / Dataset"
         self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
         self.group_prefix = ""
-        self.max_verification_threads = 16
+        self.max_verification_threads = 5
         self.max_upload_threads = 5
         self.max_upload_retries = 1
         self.validate_folder_structure = True
@@ -292,7 +292,7 @@ class SettingsModel(object):
                           "folder_structure",
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
-                          "max_upload_retries",
+                          "max_upload_retries", "max_verification_threads",
                           "validate_folder_structure", "locked", "uuid",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
@@ -310,7 +310,8 @@ class SettingsModel(object):
                         self.__dict__[field] = \
                             configParser.getboolean(configFileSection, field)
                 intFields = ["ignore_interval_number", "ignore_new_files_minutes",
-                             "max_upload_threads", "max_upload_retries"]
+                             "max_upload_threads", "max_upload_retries",
+                             "max_verification_threads"]
                 for field in intFields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -413,6 +414,7 @@ class SettingsModel(object):
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
+                            "max_verification_threads",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
                     if setting['key'] in (
@@ -790,6 +792,7 @@ class SettingsModel(object):
                       "ignore_interval_unit",
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
+                      "max_verification_threads",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",
