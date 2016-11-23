@@ -114,7 +114,7 @@ class OpenSSH(object):
             self.rm = os.path.join(baseDir, self.opensshBuildDir,
                                    "bin", "rm.exe")
 
-            self.cipher = "arcfour128"
+            self.cipher = "aes128-gcm@openssh.com,aes128-ctr"
             self.preferToUseShellInSubprocess = False
 
             # This is not where we store the MyData private key.
@@ -131,7 +131,7 @@ class OpenSSH(object):
             self.ssh = "/usr/bin/ssh"
             self.scp = "/usr/bin/scp"
             self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.cipher = "arcfour128"
+            self.cipher = "aes128-ctr"
             self.ddCmd = "/bin/dd"
             # False would be better below, but then (on POSIX
             # systems), I'd have to use command lists, instead
@@ -142,7 +142,7 @@ class OpenSSH(object):
             self.ssh = "/usr/bin/ssh"
             self.scp = "/usr/bin/scp"
             self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.cipher = "arcfour128"
+            self.cipher = "aes128-ctr"
             self.ddCmd = "/bin/dd"
             # False would be better below, but then (on POSIX
             # systems), I'd have to use command lists, instead
