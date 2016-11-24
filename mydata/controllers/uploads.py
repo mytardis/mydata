@@ -359,6 +359,9 @@ class UploadDatafileRunnable(object):
                             except ScpException, err:
                                 self.uploadModel.SetTraceback(
                                     traceback.format_exc())
+                                if self.foldersController.IsShuttingDown() or \
+                                        self.uploadModel.Canceled():
+                                    return
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -376,6 +379,9 @@ class UploadDatafileRunnable(object):
                             except SshException, err:
                                 self.uploadModel.SetTraceback(
                                     traceback.format_exc())
+                                if self.foldersController.IsShuttingDown() or \
+                                        self.uploadModel.Canceled():
+                                    return
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -407,8 +413,21 @@ class UploadDatafileRunnable(object):
                             else:
                                 location = response.headers['location']
                                 datafileId = location.split("/")[-2]
-                            DataFileModel.Verify(self.settingsModel,
-                                                 datafileId)
+                            verificationDelay = \
+                                self.settingsModel.GetVerificationDelay()
+                            def RequestVerification():
+                                DataFileModel.Verify(self.settingsModel,
+                                                     datafileId)
+                            if hasattr(wx.GetApp(), "GetMainFrame") and \
+                                    int(verificationDelay) > 0:
+                                timer = threading.Timer(verificationDelay,
+                                                        RequestVerification)
+                                timer.start()
+                                self.uploadModel.SetVerificationTimer(timer)
+                            else:
+                                # Don't use a timer if we are running
+                                # unit tests:
+                                RequestVerification()
                         else:
                             raise Exception(
                                 "Only %d of %d bytes were uploaded for %s"

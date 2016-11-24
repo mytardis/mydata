@@ -7,9 +7,7 @@ and saved to disk in MyData.cfg
 # pylint: disable=missing-docstring
 # pylint: disable=too-many-statements
 # pylint: disable=too-many-branches
-# pylint: disable=too-many-return-statements
 # pylint: disable=too-many-lines
-# pylint: disable=too-many-instance-attributes
 # pylint: disable=wrong-import-position
 
 import sys
@@ -90,8 +88,9 @@ class SettingsValidation(object):
         return self.aborted
 
 
-# pylint: disable=too-many-public-methods
 class SettingsModel(object):
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     """
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
@@ -114,79 +113,16 @@ class SettingsModel(object):
 
         self.connectivityCheckInterval = 30  # seconds
 
-        # pylint: disable=invalid-name
-        # MyData mostly uses lowerCamelCase for attributes, but these
-        # attributes correspond to fields in MyData.cfg which we
-        # are using underscore_separated names for.
+        # Saved in MyData.cfg:
+        self.mydataConfig = dict()
 
-        self.facility_name = ""
-        self.instrument_name = ""
-        self.contact_name = ""
-        self.contact_email = ""
-        self.data_directory = ""
-        self.mytardis_url = ""
-        self.username = ""
-        self.api_key = ""
-
-        self.schedule_type = "Manually"
-        self.scheduled_date = None
-        self.scheduled_time = None
-        self.monday_checked = False
-        self.tuesday_checked = False
-        self.wednesday_checked = False
-        self.thursday_checked = False
-        self.friday_checked = False
-        self.saturday_checked = False
-        self.sunday_checked = False
-        self.timer_from_time = None
-        self.timer_to_time = None
-        self.timer_minutes = 15
-
-        self.user_filter = ""
-        self.dataset_filter = ""
-        self.experiment_filter = ""
-        self.ignore_old_datasets = False
-        self.ignore_interval_number = 0
-        self.ignore_interval_unit = "months"
-        self.ignore_new_files = True
-        self.ignore_new_files_minutes = 1
-        self.use_includes_file = False
-        self.includes_file = ""
-        self.use_excludes_file = False
-        self.excludes_file = ""
-
-        self.folder_structure = "Username / Dataset"
-        self.dataset_grouping = ""
-        self.group_prefix = ""
-        self.validate_folder_structure = True
-        self.max_verification_threads = 5
-        self.max_upload_threads = 5
-        self.max_upload_retries = 1
-        self.start_automatically_on_login = True
-        self.upload_invalid_user_folders = True
-
-        self.locked = False
-        self.uuid = ""
+        self.SetDefaultConfig()
 
         self.defaultOwner = None
         self.facility = None
         self.instrument = None
 
         self.createUploaderThreadingLock = threading.Lock()
-
-        # Incremental progress updates will not be provided for
-        # files smaller than this to improve speed.
-        if sys.platform.startswith("darwin"):
-            # Mac OS X instances of MyData are likely to be running on
-            # laptops just for demos, often with lower connection speeds,
-            # and Mac OS X seems to be able to handle the frequent subprocess
-            # calls spawned when using smaller chunk sizes.
-            self.largeFileSize = 1024 * 1024
-            self.defaultChunkSize = 128 * 1024
-        else:
-            self.largeFileSize = 10 * 1024 * 1024
-            self.defaultChunkSize = 1024 * 1024
-        self.maxChunkSize = 256 * 1024 * 1024
 
         # pylint: disable=bare-except
         try:
@@ -204,66 +140,12 @@ class SettingsModel(object):
         e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
         """
         # pylint: disable=too-many-locals
-        # General tab
-        self.instrument_name = ""
+
+        self.SetDefaultConfig()
+
+        self.defaultOwner = None
         self.instrument = None
-        self.facility_name = ""
         self.facility = None
-        self.contact_name = ""
-        self.contact_email = ""
-        self.data_directory = ""
-        self.mytardis_url = ""
-        self.username = ""
-        self.api_key = ""
-
-        # Schedule tab
-        self.schedule_type = "Manually"
-        self.monday_checked = False
-        self.tuesday_checked = False
-        self.wednesday_checked = False
-        self.thursday_checked = False
-        self.friday_checked = False
-        self.saturday_checked = False
-        self.sunday_checked = False
-        self.scheduled_date = \
-            datetime.date(datetime.now())
-        self.scheduled_time = \
-            datetime.time(datetime.now().replace(microsecond=0) +
-                          timedelta(minutes=1))
-        self.timer_minutes = 15
-        self.timer_from_time = \
-            datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
-        self.timer_to_time = \
-            datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
-
-        # Filters tab
-        self.user_filter = ""
-        self.dataset_filter = ""
-        self.experiment_filter = ""
-        self.ignore_old_datasets = False
-        self.ignore_interval_number = 0
-        self.ignore_interval_unit = "months"
-        self.ignore_new_files = True
-        self.ignore_new_files_minutes = 1
-        self.use_includes_file = False
-        self.includes_file = ""
-        self.use_excludes_file = False
-        self.excludes_file = ""
-
-        # Advanced tab
-        self.folder_structure = "Username / Dataset"
-        self.dataset_grouping = "Instrument Name - Dataset Owner's Full Name"
-        self.group_prefix = ""
-        self.max_verification_threads = 5
-        self.max_upload_threads = 5
-        self.max_upload_retries = 1
-        self.validate_folder_structure = True
-        self.start_automatically_on_login = True
-        self.upload_invalid_user_folders = True
-
-        self.locked = False
-
-        self.uuid = None
 
         if configPath is None:
             configPath = self.GetConfigPath()
@@ -289,12 +171,13 @@ class SettingsModel(object):
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
                           "max_upload_retries", "max_verification_threads",
+                          "verification_delay",
                           "validate_folder_structure", "locked", "uuid",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
                 for field in fields:
                     if configParser.has_option(configFileSection, field):
-                        self.__dict__[field] = \
+                        self.mydataConfig[field] = \
                             configParser.get(configFileSection, field)
                 booleanFields = ["ignore_old_datasets", "ignore_new_files",
                                  "use_includes_file", "use_excludes_file",
@@ -303,78 +186,77 @@ class SettingsModel(object):
                                  "upload_invalid_user_folders", "locked"]
                 for field in booleanFields:
                     if configParser.has_option(configFileSection, field):
-                        self.__dict__[field] = \
+                        self.mydataConfig[field] = \
                             configParser.getboolean(configFileSection, field)
                 intFields = ["ignore_interval_number", "ignore_new_files_minutes",
                              "max_upload_threads", "max_upload_retries",
-                             "max_verification_threads"]
+                             "max_verification_threads", "verification_delay"]
                 for field in intFields:
                     if configParser.has_option(configFileSection, field):
-                        self.__dict__[field] = \
+                        self.mydataConfig[field] = \
                             configParser.getint(configFileSection, field)
                 if configParser.has_option(configFileSection,
                                            "scheduled_date"):
                     datestring = configParser.get(configFileSection,
                                                   "scheduled_date")
-                    self.scheduled_date = \
+                    self.mydataConfig['scheduled_date'] = \
                         datetime.date(datetime.strptime(datestring,
                                                         "%Y-%m-%d"))
                 if configParser.has_option(configFileSection,
                                            "scheduled_time"):
                     timestring = configParser.get(configFileSection,
                                                   "scheduled_time")
-                    self.scheduled_time = datetime.strptime(timestring,
-                                                            "%H:%M:%S")
-                    self.scheduled_time = datetime.time(self.scheduled_time)
-                if self.schedule_type == "Timer":
+                    self.mydataConfig['scheduled_time'] = \
+                        datetime.time(datetime.strptime(timestring,
+                                                        "%H:%M:%S"))
+                if self.mydataConfig['schedule_type'] == "Timer":
                     if configParser.has_option(configFileSection,
                                                "timer_minutes"):
-                        self.timer_minutes = \
+                        self.mydataConfig['timer_minutes'] = \
                             configParser.getint(configFileSection,
                                                 "timer_minutes")
                     if configParser.has_option(configFileSection,
                                                "timer_from_time"):
                         timestring = configParser.get(configFileSection,
                                                       "timer_from_time")
-                        self.timer_from_time = datetime.strptime(timestring,
-                                                                 "%H:%M:%S")
-                        self.timer_from_time = \
-                            datetime.time(self.timer_from_time)
+                        self.mydataConfig['timer_from_time'] = \
+                            datetime.time(datetime.strptime(timestring,
+                                                            "%H:%M:%S"))
                     if configParser.has_option(configFileSection,
                                                "timer_to_time"):
                         timestring = configParser.get(configFileSection,
                                                       "timer_to_time")
-                        self.timer_to_time = datetime.strptime(timestring,
-                                                               "%H:%M:%S")
-                    self.timer_to_time = datetime.time(self.timer_to_time)
+                        self.mydataConfig['timer_to_time'] = \
+                            datetime.time(datetime.strptime(timestring,
+                                                            "%H:%M:%S"))
                 else:
-                    self.timer_minutes = 15
-                    self.timer_from_time = \
+                    self.mydataConfig['timer_minutes'] = 15
+                    self.mydataConfig['timer_from_time'] = \
                         datetime.time(datetime.strptime("12:00 AM",
                                                         "%I:%M %p"))
-                    self.timer_to_time = \
+                    self.mydataConfig['timer_to_time'] = \
                         datetime.time(datetime.strptime("11:59 PM",
                                                         "%I:%M %p"))
-                if self.schedule_type == "Weekly":
+                if self.mydataConfig['schedule_type'] == "Weekly":
                     for day in ["monday_checked", "tuesday_checked",
                                 "wednesday_checked", "thursday_checked",
                                 "friday_checked", "saturday_checked",
                                 "sunday_checked"]:
                         if configParser.has_option(configFileSection, day):
-                            self.__dict__[day] = \
+                            self.mydataConfig[day] = \
                                 configParser.getboolean(configFileSection, day)
                 else:
-                    self.monday_checked = False
-                    self.tuesday_checked = False
-                    self.wednesday_checked = False
-                    self.thursday_checked = False
-                    self.friday_checked = False
-                    self.saturday_checked = False
-                    self.sunday_checked = False
+                    self.mydataConfig['monday_checked'] = False
+                    self.mydataConfig['tuesday_checked'] = False
+                    self.mydataConfig['wednesday_checked'] = False
+                    self.mydataConfig['thursday_checked'] = False
+                    self.mydataConfig['friday_checked'] = False
+                    self.mydataConfig['saturday_checked'] = False
+                    self.mydataConfig['sunday_checked'] = False
             except:
                 logger.error(traceback.format_exc())
 
-        if self.uuid and checkForUpdates:
+        if self.mydataConfig['uuid'] and checkForUpdates:
             # Check for updated settings on server.
             uploaderModel = self.GetUploaderModel()
             try:
@@ -393,7 +275,7 @@ class SettingsModel(object):
                     settingsUpdated > localModTime:
                 logger.debug("Settings will be updated from the server.")
                 for setting in settingsFromServer:
-                    self.__dict__[setting['key']] = setting['value']
+                    self.mydataConfig[setting['key']] = setting['value']
                     if setting['key'] in (
                             "ignore_old_datasets", "ignore_new_files",
                             "validate_folder_structure",
@@ -405,23 +287,24 @@ class SettingsModel(object):
                             "friday_checked", "saturday_checked",
                             "sunday_checked", "use_includes_file",
                             "use_excludes_file"):
-                        self.__dict__[setting['key']] = \
+                        self.mydataConfig[setting['key']] = \
                             (setting['value'] == "True")
                     if setting['key'] in (
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
                             "max_verification_threads",
+                            "verification_delay",
                             "max_upload_threads", "max_upload_retries"):
-                        self.__dict__[setting['key']] = int(setting['value'])
+                        self.mydataConfig[setting['key']] = int(setting['value'])
                     if setting['key'] in (
                             "scheduled_date"):
-                        self.__dict__[setting['key']] = \
+                        self.mydataConfig[setting['key']] = \
                             datetime.date(datetime.strptime(setting['value'],
                                                             "%Y-%m-%d"))
                     if setting['key'] in (
                             "scheduled_time", "timer_from_time",
                             "timer_to_time"):
-                        self.__dict__[setting['key']] = \
+                        self.mydataConfig[setting['key']] = \
                             datetime.time(datetime.strptime(setting['value'],
                                                             "%H:%M:%S"))
 
@@ -446,52 +329,52 @@ class SettingsModel(object):
         self.instrument = instrument
 
     def GetInstrumentName(self):
-        return self.instrument_name
+        return self.mydataConfig['instrument_name']
 
     def SetInstrumentName(self, instrumentName):
-        self.instrument_name = instrumentName
+        self.mydataConfig['instrument_name'] = instrumentName
 
     def GetFacilityName(self):
-        return self.facility_name
+        return self.mydataConfig['facility_name']
 
     def GetFacility(self):
         return self.facility
 
     def SetFacilityName(self, facilityName):
-        self.facility_name = facilityName
+        self.mydataConfig['facility_name'] = facilityName
 
     def GetContactName(self):
-        return self.contact_name
+        return self.mydataConfig['contact_name']
 
     def SetContactName(self, contactName):
-        self.contact_name = contactName
+        self.mydataConfig['contact_name'] = contactName
 
     def GetContactEmail(self):
-        return self.contact_email
+        return self.mydataConfig['contact_email']
 
     def SetContactEmail(self, contactEmail):
-        self.contact_email = contactEmail
+        self.mydataConfig['contact_email'] = contactEmail
 
     def GetDataDirectory(self):
-        return self.data_directory
+        return self.mydataConfig['data_directory']
 
     def SetDataDirectory(self, dataDirectory):
-        self.data_directory = dataDirectory
+        self.mydataConfig['data_directory'] = dataDirectory
 
     def GetMyTardisUrl(self):
-        return self.mytardis_url
+        return self.mydataConfig['mytardis_url']
 
     def GetMyTardisApiUrl(self):
-        return self.mytardis_url + "/api/v1/?format=json"
+        return self.mydataConfig['mytardis_url'] + "/api/v1/?format=json"
 
     def SetMyTardisUrl(self, myTardisUrl):
-        self.mytardis_url = myTardisUrl.rstrip('/')
+        self.mydataConfig['mytardis_url'] = myTardisUrl.rstrip('/')
 
     def GetUsername(self):
-        return self.username
+        return self.mydataConfig['username']
 
     def SetUsername(self, username):
-        self.username = username
+        self.mydataConfig['username'] = username
 
     def GetDefaultOwner(self):
         if self.defaultOwner and \
@@ -502,231 +385,238 @@ class SettingsModel(object):
         return self.defaultOwner
 
     def GetApiKey(self):
-        return self.api_key
+        return self.mydataConfig['api_key']
 
     def SetApiKey(self, apiKey):
-        self.api_key = apiKey
+        self.mydataConfig['api_key'] = apiKey
 
     def GetScheduleType(self):
-        return self.schedule_type
+        return self.mydataConfig['schedule_type']
 
     def SetScheduleType(self, scheduleType):
-        self.schedule_type = scheduleType
+        self.mydataConfig['schedule_type'] = scheduleType
 
     def IsMondayChecked(self):
-        return self.monday_checked
+        return self.mydataConfig['monday_checked']
 
     def SetMondayChecked(self, checked):
-        self.monday_checked = checked
+        self.mydataConfig['monday_checked'] = checked
 
     def IsTuesdayChecked(self):
-        return self.tuesday_checked
+        return self.mydataConfig['tuesday_checked']
 
     def SetTuesdayChecked(self, checked):
-        self.tuesday_checked = checked
+        self.mydataConfig['tuesday_checked'] = checked
 
     def IsWednesdayChecked(self):
-        return self.wednesday_checked
+        return self.mydataConfig['wednesday_checked']
 
     def SetWednesdayChecked(self, checked):
-        self.wednesday_checked = checked
+        self.mydataConfig['wednesday_checked'] = checked
 
     def IsThursdayChecked(self):
-        return self.thursday_checked
+        return self.mydataConfig['thursday_checked']
 
     def SetThursdayChecked(self, checked):
-        self.thursday_checked = checked
+        self.mydataConfig['thursday_checked'] = checked
 
     def IsFridayChecked(self):
-        return self.friday_checked
+        return self.mydataConfig['friday_checked']
 
     def SetFridayChecked(self, checked):
-        self.friday_checked = checked
+        self.mydataConfig['friday_checked'] = checked
 
     def IsSaturdayChecked(self):
-        return self.saturday_checked
+        return self.mydataConfig['saturday_checked']
 
     def SetSaturdayChecked(self, checked):
-        self.saturday_checked = checked
+        self.mydataConfig['saturday_checked'] = checked
 
     def IsSundayChecked(self):
-        return self.sunday_checked
+        return self.mydataConfig['sunday_checked']
 
     def SetSundayChecked(self, checked):
-        self.sunday_checked = checked
+        self.mydataConfig['sunday_checked'] = checked
 
     def GetScheduledDate(self):
-        return self.scheduled_date
+        return self.mydataConfig['scheduled_date']
 
     def SetScheduledDate(self, scheduledDate):
-        self.scheduled_date = scheduledDate
+        self.mydataConfig['scheduled_date'] = scheduledDate
 
     def GetScheduledTime(self):
-        return self.scheduled_time
+        return self.mydataConfig['scheduled_time']
 
     def SetScheduledTime(self, scheduledTime):
-        self.scheduled_time = scheduledTime
+        self.mydataConfig['scheduled_time'] = scheduledTime
 
     def GetTimerMinutes(self):
-        return self.timer_minutes
+        return self.mydataConfig['timer_minutes']
 
     def SetTimerMinutes(self, timerMinutes):
-        self.timer_minutes = timerMinutes
+        self.mydataConfig['timer_minutes'] = timerMinutes
 
     def GetTimerFromTime(self):
-        return self.timer_from_time
+        return self.mydataConfig['timer_from_time']
 
     def SetTimerFromTime(self, timerFromTime):
-        self.timer_from_time = timerFromTime
+        self.mydataConfig['timer_from_time'] = timerFromTime
 
     def GetTimerToTime(self):
-        return self.timer_to_time
+        return self.mydataConfig['timer_to_time']
 
     def SetTimerToTime(self, timerToTime):
-        self.timer_to_time = timerToTime
+        self.mydataConfig['timer_to_time'] = timerToTime
 
     def GetFolderStructure(self):
-        return self.folder_structure
+        return self.mydataConfig['folder_structure']
 
     def SetFolderStructure(self, folderStructure):
-        self.folder_structure = folderStructure
+        self.mydataConfig['folder_structure'] = folderStructure
 
     # pylint: disable=no-self-use
     def AlertUserAboutMissingFolders(self):
         return False
 
     def ValidateFolderStructure(self):
-        return self.validate_folder_structure
+        return self.mydataConfig['validate_folder_structure']
 
     def SetValidateFolderStructure(self, validateFolderStructure):
-        self.validate_folder_structure = validateFolderStructure
+        self.mydataConfig['validate_folder_structure'] = validateFolderStructure
 
     def StartAutomaticallyOnLogin(self):
-        return self.start_automatically_on_login
+        return self.mydataConfig['start_automatically_on_login']
 
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
-        self.start_automatically_on_login = startAutomaticallyOnLogin
+        self.mydataConfig['start_automatically_on_login'] = startAutomaticallyOnLogin
 
     def UploadInvalidUserOrGroupFolders(self):
-        return self.upload_invalid_user_folders
+        return self.mydataConfig['upload_invalid_user_folders']
 
     def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
-        self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
+        self.mydataConfig['upload_invalid_user_folders'] = uploadInvalidUserOrGroupFolders
+
+    def GetVerificationDelay(self):
+        """
+        Upon a successful upload, MyData will request verification
+        after a short delay, defaulting to 3 seconds:
+        """
+        return float(self.mydataConfig['verification_delay'])
 
     def Locked(self):
-        return self.locked
+        return self.mydataConfig['locked']
 
     def SetLocked(self, locked):
-        self.locked = locked
+        self.mydataConfig['locked'] = locked
 
     def GetDatasetGrouping(self):
-        return self.dataset_grouping
+        return self.mydataConfig['dataset_grouping']
 
     def SetDatasetGrouping(self, datasetGrouping):
-        self.dataset_grouping = datasetGrouping
+        self.mydataConfig['dataset_grouping'] = datasetGrouping
 
     def GetGroupPrefix(self):
-        return self.group_prefix
+        return self.mydataConfig['group_prefix']
 
     def SetGroupPrefix(self, groupPrefix):
-        self.group_prefix = groupPrefix
+        self.mydataConfig['group_prefix'] = groupPrefix
 
     def GetUserFilter(self):
-        return self.user_filter
+        return self.mydataConfig['user_filter']
 
     def SetUserFilter(self, userFilter):
-        self.user_filter = userFilter
+        self.mydataConfig['user_filter'] = userFilter
 
     def GetDatasetFilter(self):
-        return self.dataset_filter
+        return self.mydataConfig['dataset_filter']
 
     def SetDatasetFilter(self, datasetFilter):
-        self.dataset_filter = datasetFilter
+        self.mydataConfig['dataset_filter'] = datasetFilter
 
     def GetExperimentFilter(self):
-        return self.experiment_filter
+        return self.mydataConfig['experiment_filter']
 
     def SetExperimentFilter(self, experimentFilter):
-        self.experiment_filter = experimentFilter
+        self.mydataConfig['experiment_filter'] = experimentFilter
 
     def IgnoreOldDatasets(self):
-        return self.ignore_old_datasets
+        return self.mydataConfig['ignore_old_datasets']
 
     def SetIgnoreOldDatasets(self, ignoreOldDatasets):
-        self.ignore_old_datasets = ignoreOldDatasets
+        self.mydataConfig['ignore_old_datasets'] = ignoreOldDatasets
 
     def GetIgnoreOldDatasetIntervalNumber(self):
-        return self.ignore_interval_number
+        return self.mydataConfig['ignore_interval_number']
 
     def SetIgnoreOldDatasetIntervalNumber(self,
                                           ignoreOldDatasetIntervalNumber):
-        self.ignore_interval_number = ignoreOldDatasetIntervalNumber
+        self.mydataConfig['ignore_interval_number'] = ignoreOldDatasetIntervalNumber
 
     def GetIgnoreOldDatasetIntervalUnit(self):
-        return self.ignore_interval_unit
+        return self.mydataConfig['ignore_interval_unit']
 
     def SetIgnoreOldDatasetIntervalUnit(self, ignoreOldDatasetIntervalUnit):
-        self.ignore_interval_unit = ignoreOldDatasetIntervalUnit
+        self.mydataConfig['ignore_interval_unit'] = ignoreOldDatasetIntervalUnit
 
     def IgnoreNewFiles(self):
-        return self.ignore_new_files
+        return self.mydataConfig['ignore_new_files']
 
     def SetIgnoreNewFiles(self, ignoreNewFiles):
-        self.ignore_new_files = ignoreNewFiles
+        self.mydataConfig['ignore_new_files'] = ignoreNewFiles
 
     def GetIgnoreNewFilesMinutes(self):
-        return self.ignore_new_files_minutes
+        return self.mydataConfig['ignore_new_files_minutes']
 
     def SetIgnoreNewFilesMinutes(self, ignoreNewFilesMinutes):
-        self.ignore_new_files_minutes = ignoreNewFilesMinutes
+        self.mydataConfig['ignore_new_files_minutes'] = ignoreNewFilesMinutes
 
     def UseIncludesFile(self):
-        return self.use_includes_file
+        return self.mydataConfig['use_includes_file']
 
     def SetUseIncludesFile(self, useIncludesFile):
-        self.use_includes_file = useIncludesFile
+        self.mydataConfig['use_includes_file'] = useIncludesFile
 
     def GetIncludesFile(self):
-        return self.includes_file
+        return self.mydataConfig['includes_file']
 
     def SetIncludesFile(self, includesFile):
-        self.includes_file = includesFile
+        self.mydataConfig['includes_file'] = includesFile
 
     def UseExcludesFile(self):
-        return self.use_excludes_file
+        return self.mydataConfig['use_excludes_file']
 
     def SetUseExcludesFile(self, useExcludesFile):
-        self.use_excludes_file = useExcludesFile
+        self.mydataConfig['use_excludes_file'] = useExcludesFile
 
     def GetExcludesFile(self):
-        return self.excludes_file
+        return self.mydataConfig['excludes_file']
 
     def SetExcludesFile(self, excludesFile):
-        self.excludes_file = excludesFile
+        self.mydataConfig['excludes_file'] = excludesFile
 
     def GetMaxVerificationThreads(self):
-        return self.max_verification_threads
+        return self.mydataConfig['max_verification_threads']
 
     def SetMaxVerificationThreads(self, maxVerificationThreads):
-        self.max_verification_threads = maxVerificationThreads
+        self.mydataConfig['max_verification_threads'] = maxVerificationThreads
 
     def GetMaxUploadThreads(self):
-        return self.max_upload_threads
+        return self.mydataConfig['max_upload_threads']
 
     def SetMaxUploadThreads(self, maxUploadThreads):
-        self.max_upload_threads = maxUploadThreads
+        self.mydataConfig['max_upload_threads'] = maxUploadThreads
 
     def GetMaxUploadRetries(self):
-        return self.max_upload_retries
+        return self.mydataConfig['max_upload_retries']
 
     def SetMaxUploadRetries(self, maxUploadRetries):
-        self.max_upload_retries = maxUploadRetries
+        self.mydataConfig['max_upload_retries'] = maxUploadRetries
 
     def GetUuid(self):
-        return self.uuid
+        return self.mydataConfig['uuid']
 
     def SetUuid(self, uuid):
-        self.uuid = uuid
+        self.mydataConfig['uuid'] = uuid
 
     def GetUploadToStagingRequest(self):
         return self.uploadToStagingRequest
@@ -761,7 +651,7 @@ class SettingsModel(object):
         self.incompatibleMyTardisVersion = incompatibleMyTardisVersion
 
     def GetValueForKey(self, key):
-        return self.__dict__[key]
+        return self.mydataConfig[key]
 
     def SaveToDisk(self, configPath=None):
         if configPath is None:
@@ -789,13 +679,14 @@ class SettingsModel(object):
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
                       "max_verification_threads",
+                      "verification_delay",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",
                       "upload_invalid_user_folders"]
             settingsList = []
             for field in fields:
-                value = self.__dict__[field]
+                value = self.mydataConfig[field]
                 configParser.set("MyData", field, value)
                 settingsList.append(dict(key=field, value=str(value)))
             configParser.write(configFile)
@@ -882,6 +773,7 @@ class SettingsModel(object):
             LastSettingsUpdateTrigger.UI_RESPONSE
 
     # pylint: disable=too-many-locals
+    # pylint: disable=too-many-return-statements
     def Validate(self, setStatusMessage=None, testRun=False):
         datasetCount = -1
         # pylint: disable=bare-except
@@ -1296,7 +1188,8 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, aborted=True)
                 return self.validation
 
-            if self.previousDict['start_automatically_on_login'] != \
+            previousConfig = self.previousDict['mydataConfig']
+            if previousConfig['start_automatically_on_login'] != \
                     self.StartAutomaticallyOnLogin():
                 message = "Settings validation - " \
                     "checking if MyData is set to start automatically..."
@@ -1409,8 +1302,9 @@ class SettingsModel(object):
                     return self.validation
 
 
-    # pylint: disable=too-many-locals
     def PerformFolderStructureValidation(self):
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-return-statements
         datasetCount = -1
         userOrGroupFilterString = "*%s*" % self.GetUserFilter()
         datasetFilterString = "*%s*" % self.GetDatasetFilter()
@@ -1448,10 +1342,12 @@ class SettingsModel(object):
         seconds['week'] = 7 * seconds['day']
         seconds['year'] = int(365.25 * seconds['day'])
         seconds['month'] = seconds['year'] / 12
-        singularIgnoreIntervalUnit = self.ignore_interval_unit.rstrip('s')
+        singularIgnoreIntervalUnit = \
+            self.GetIgnoreOldDatasetIntervalUnit().rstrip('s')
         ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
         ignoreIntervalSeconds = \
-            self.ignore_interval_number * ignoreIntervalUnitSeconds
+            self.GetIgnoreOldDatasetIntervalNumber() * \
+            ignoreIntervalUnitSeconds
 
         if self.GetFolderStructure() == 'Dataset':
             if self.IgnoreOldDatasets():
@@ -1990,10 +1886,115 @@ oFS.DeleteFile sLinkFile
             return False
 
     def GetLargeFileSize(self):
-        return self.largeFileSize
+        return self.mydataConfig['largeFileSize']
 
     def GetDefaultChunkSize(self):
-        return self.defaultChunkSize
+        return self.mydataConfig['defaultChunkSize']
 
     def GetMaxChunkSize(self):
-        return self.maxChunkSize
+        return self.mydataConfig['maxChunkSize']
+
+    def SetDefaultConfig(self):
+        """
+        Set default values for configuration parameters
+        that will appear in MyData.cfg
+        """
+
+        #################################
+        # Settings Dialog's General tab #
+        #################################
+
+        self.mydataConfig['facility_name'] = ""
+        self.mydataConfig['instrument_name'] = ""
+        self.mydataConfig['contact_name'] = ""
+        self.mydataConfig['contact_email'] = ""
+        self.mydataConfig['data_directory'] = ""
+        self.mydataConfig['mytardis_url'] = ""
+        self.mydataConfig['username'] = ""
+        self.mydataConfig['api_key'] = ""
+
+        ##################################
+        # Settings Dialog's Schedule tab #
+        ##################################
+
+        self.mydataConfig['schedule_type'] = "Manually"
+        self.mydataConfig['scheduled_date'] = datetime.date(datetime.now())
+        self.mydataConfig['scheduled_time'] = \
+            datetime.time(datetime.now().replace(microsecond=0) + \
+            timedelta(minutes=1))
+        self.mydataConfig['monday_checked'] = False
+        self.mydataConfig['tuesday_checked'] = False
+        self.mydataConfig['wednesday_checked'] = False
+        self.mydataConfig['thursday_checked'] = False
+        self.mydataConfig['friday_checked'] = False
+        self.mydataConfig['saturday_checked'] = False
+        self.mydataConfig['sunday_checked'] = False
+        self.mydataConfig['timer_from_time'] = \
+            datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
+        self.mydataConfig['timer_to_time'] = \
+            datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
+        self.mydataConfig['timer_minutes'] = 15
+
+        #################################
+        # Settings Dialog's Filters tab #
+        #################################
+
+        self.mydataConfig['user_filter'] = ""
+        self.mydataConfig['dataset_filter'] = ""
+        self.mydataConfig['experiment_filter'] = ""
+        self.mydataConfig['ignore_old_datasets'] = False
+        self.mydataConfig['ignore_interval_number'] = 0
+        self.mydataConfig['ignore_interval_unit'] = "months"
+        self.mydataConfig['ignore_new_files'] = True
+        self.mydataConfig['ignore_new_files_minutes'] = 1
+        self.mydataConfig['use_includes_file'] = False
+        self.mydataConfig['includes_file'] = ""
+        self.mydataConfig['use_excludes_file'] = False
+        self.mydataConfig['excludes_file'] = ""
+
+        ##################################
+        # Settings Dialog's Advanced tab #
+        ##################################
+
+        self.mydataConfig['folder_structure'] = "Username / Dataset"
+        self.mydataConfig['dataset_grouping'] = \
+            "Instrument Name - Dataset Owner's Full Name"
+        self.mydataConfig['group_prefix'] = ""
+        self.mydataConfig['validate_folder_structure'] = True
+        self.mydataConfig['max_upload_threads'] = 5
+        self.mydataConfig['max_upload_retries'] = 1
+        self.mydataConfig['start_automatically_on_login'] = True
+        self.mydataConfig['upload_invalid_user_folders'] = True
+
+        ########################################
+        # Settings Dialog's Lock/Unlock button #
+        ########################################
+
+        self.mydataConfig['locked'] = False
+
+        ##################################################################
+        # Settings configurable in MyData.cfg but not in Settings Dialog #
+        ##################################################################
+
+        # MyData instance's unique ID:
+        self.mydataConfig['uuid'] = None
+
+        # Upon a successful upload, MyData will request verification
+        # after a short delay, defaulting to 3 seconds:
+        self.mydataConfig['verification_delay'] = 3
+
+        self.mydataConfig['max_verification_threads'] = 5
+
+        # Incremental progress updates will not be provided for
+        # files smaller than this to improve speed.
+        if sys.platform.startswith("darwin"):
+            # Mac OS X instances of MyData are likely to be running on
+            # laptops just for demos, often with lower connection speeds,
+            # and Mac OS X seems to be able to handle the frequent subprocess
+            # calls spawned when using smaller chunk sizes.
+            self.mydataConfig['largeFileSize'] = 1024 * 1024
+            self.mydataConfig['defaultChunkSize'] = 128 * 1024
+        else:
+            self.mydataConfig['largeFileSize'] = 10 * 1024 * 1024
+            self.mydataConfig['defaultChunkSize'] = 1024 * 1024
+        self.mydataConfig['maxChunkSize'] = 256 * 1024 * 1024
