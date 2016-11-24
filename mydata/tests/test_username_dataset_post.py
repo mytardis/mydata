@@ -19,8 +19,6 @@ from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.views.folders import FoldersView
 from mydata.controllers.folders import FoldersController
 from mydata.models.upload import UploadStatus
-if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
 
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
@@ -39,8 +37,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
     def tearDown(self):
         self.frame.Destroy()
         self.fakeMyTardisServerProcess.terminate()
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()
 
     def test_scan_folders(self):
         """
