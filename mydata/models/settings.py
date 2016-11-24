@@ -188,6 +188,10 @@ class SettingsModel(object):
             self.defaultChunkSize = 1024 * 1024
         self.maxChunkSize = 256 * 1024 * 1024
 
+        # Upon a successful upload, MyData will request verification
+        # after a short delay, defaulting to 3 seconds:
+        self.verification_delay = 3
+
         # pylint: disable=bare-except
         try:
             self.LoadSettings()
@@ -261,6 +265,10 @@ class SettingsModel(object):
         self.start_automatically_on_login = True
         self.upload_invalid_user_folders = True
 
+        # Upon a successful upload, MyData will request verification
+        # after a short delay, defaulting to 3 seconds:
+        self.verification_delay = 3
+
         self.locked = False
 
         self.uuid = None
@@ -289,6 +297,7 @@ class SettingsModel(object):
                           "dataset_grouping", "group_prefix",
                           "ignore_interval_unit", "max_upload_threads",
                           "max_upload_retries", "max_verification_threads",
+                          "verification_delay",
                           "validate_folder_structure", "locked", "uuid",
                           "start_automatically_on_login",
                           "upload_invalid_user_folders"]
@@ -307,7 +316,7 @@ class SettingsModel(object):
                             configParser.getboolean(configFileSection, field)
                 intFields = ["ignore_interval_number", "ignore_new_files_minutes",
                              "max_upload_threads", "max_upload_retries",
-                             "max_verification_threads"]
+                             "max_verification_threads", "verification_delay"]
                 for field in intFields:
                     if configParser.has_option(configFileSection, field):
                         self.__dict__[field] = \
@@ -411,6 +420,7 @@ class SettingsModel(object):
                             "timer_minutes", "ignore_interval_number",
                             "ignore_new_files_minutes",
                             "max_verification_threads",
+                            "verification_delay",
                             "max_upload_threads", "max_upload_retries"):
                         self.__dict__[setting['key']] = int(setting['value'])
                     if setting['key'] in (
@@ -613,6 +623,13 @@ class SettingsModel(object):
     def SetUploadInvalidUserOrGroupFolders(self, uploadInvalidUserOrGroupFolders):
         self.upload_invalid_user_folders = uploadInvalidUserOrGroupFolders
 
+    def GetVerificationDelay(self):
+        """
+        Upon a successful upload, MyData will request verification
+        after a short delay, defaulting to 3 seconds:
+        """
+        return float(self.verification_delay)
+
     def Locked(self):
         return self.locked
 
@@ -789,6 +806,7 @@ class SettingsModel(object):
                       "ignore_new_files", "ignore_new_files_minutes",
                       "use_includes_file", "use_excludes_file",
                       "max_verification_threads",
+                      "verification_delay",
                       "max_upload_threads", "max_upload_retries",
                       "validate_folder_structure", "locked", "uuid",
                       "start_automatically_on_login",

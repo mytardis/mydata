@@ -60,6 +60,12 @@ class UploadModel(object):
         self.canceled = False
         self.retries = 0
 
+        # After the file is uploaded, MyData will request verification
+        # after a short delay.  During that delay, the countdown timer
+        # will be stored in the UploadModel so that it can be canceled
+        # if necessary:
+        self.verificationTimer = None
+
     def GetDataViewId(self):
         return self.dataViewId
 
@@ -140,8 +146,11 @@ class UploadModel(object):
     def Cancel(self):
         try:
             self.canceled = True
-            # logger.debug("Canceling upload \"" +
-            #              self.GetRelativePathToUpload() + "\".")
+            if self.verificationTimer:
+                try:
+                    self.verificationTimer.cancel()
+                except:  # pylint: disable=bare-except
+                    logger.error(traceback.format_exc())
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
                 logger.debug("Closed buffered reader for \"" +
@@ -182,3 +191,22 @@ class UploadModel(object):
 
     def IncrementRetries(self):
         self.retries += 1
+
+
+    def GetVerificationTimer(self):
+        """
+        After the file is uploaded, MyData will request verification
+        after a short delay.  During that delay, the countdown timer
+        will be stored in the UploadModel so that it can be canceled
+        if necessary
+        """
+        return self.verificationTimer
+
+    def SetVerificationTimer(self, verificationTimer):
+        """
+        After the file is uploaded, MyData will request verification
+        after a short delay.  During that delay, the countdown timer
+        will be stored in the UploadModel so that it can be canceled
+        if necessary
+        """
+        self.verificationTimer = verificationTimer
