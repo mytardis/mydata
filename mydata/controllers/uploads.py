@@ -359,6 +359,9 @@ class UploadDatafileRunnable(object):
                             except ScpException, err:
                                 self.uploadModel.SetTraceback(
                                     traceback.format_exc())
+                                if self.foldersController.IsShuttingDown() or \
+                                        self.uploadModel.Canceled():
+                                    return
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
@@ -376,6 +379,9 @@ class UploadDatafileRunnable(object):
                             except SshException, err:
                                 self.uploadModel.SetTraceback(
                                     traceback.format_exc())
+                                if self.foldersController.IsShuttingDown() or \
+                                        self.uploadModel.Canceled():
+                                    return
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
