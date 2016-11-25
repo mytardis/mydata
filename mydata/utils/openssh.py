@@ -32,6 +32,8 @@ import getpass
 import time
 import pkgutil
 
+import psutil
+
 if sys.platform.startswith("win"):
     # pylint: disable=import-error
     import win32process
@@ -65,7 +67,7 @@ class OpenSSH(object):
     if hasattr(sys, "frozen"):
         opensshBuildDir = "openssh-7.1p1-cygwin-2.2.1"
     else:
-        opensshBuildDir = "resources/win32/openssh-7.1p1-cygwin-2.2.1"
+        opensshBuildDir = r"resources\win32\openssh-7.1p1-cygwin-2.2.1"
 
     # pylint: disable=no-self-use
     def DoubleQuote(self, string):
@@ -1267,6 +1269,21 @@ def GetCygwinPath(path):
     else:
         raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
                         "a valid path." % path)
+
+def KillSshProcesses():
+    """
+    SCP can leave orphaned SSH processes which need to be
+    cleaned up.
+    """
+    for proc in psutil.process_iter():
+        try:
+            if proc.exe() == OPENSSH.ssh:
+                try:
+                    proc.kill()
+                except:  # pylint: disable=bare-except
+                    pass
+        except psutil.AccessDenied:
+            pass
 
 # Singleton instance of OpenSSH class:
 OPENSSH = OpenSSH()

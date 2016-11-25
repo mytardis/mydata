@@ -27,6 +27,7 @@ class UploadStatus(object):
     COMPLETED = 2
     FAILED = 3
     PAUSED = 4
+    CANCELED = 5
 
 
 class UploadModel(object):
