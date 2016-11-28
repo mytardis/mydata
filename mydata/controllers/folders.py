@@ -22,6 +22,7 @@ import wx.dataview
 from mydata.utils import ConnectionStatus
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
+from mydata.utils.openssh import CleanUpSshProcesses
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -66,7 +67,7 @@ class FoldersController(object):
         self.finishedCountingVerifications = dict()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
-        self.threadingLock = threading.Lock()
+        self.lastErrorMessageThreadingLock = threading.Lock()
         self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
@@ -204,9 +205,9 @@ class FoldersController(object):
         return self.lastErrorMessage
 
     def SetLastErrorMessage(self, message):
-        self.threadingLock.acquire()
+        self.lastErrorMessageThreadingLock.acquire()
         self.lastErrorMessage = message
-        self.threadingLock.release()
+        self.lastErrorMessageThreadingLock.release()
 
     def UpdateStatusBar(self, event):
         if event.connectionStatus == ConnectionStatus.CONNECTED:
@@ -311,7 +312,8 @@ class FoldersController(object):
         fc.uploadsModel.SetStartTime(datetime.datetime.now())
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
-        fc.numVerificationWorkerThreads = settingsModel.GetMaxVerificationThreads()
+        fc.numVerificationWorkerThreads = \
+            settingsModel.GetMaxVerificationThreads()
         fc.verificationWorkerThreads = []
 
         for i in range(fc.numVerificationWorkerThreads):
@@ -640,6 +642,10 @@ class FoldersController(object):
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
+        if self.uploadMethod == UploadMethod.VIA_STAGING:
+            # SCP can leave orphaned SSH processes which need to be
+            # cleaned up.
+            CleanUpSshProcesses(self.settingsModel)
         for thread in self.uploadWorkerThreads:
             thread.join()
         logger.debug("Shutting down FoldersController verification "
