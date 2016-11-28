@@ -75,7 +75,7 @@ class OpenSSH(object):
     if hasattr(sys, "frozen"):
         opensshBuildDir = "openssh-7.3p1-cygwin-2.6.0"
     else:
-        opensshBuildDir = "resources/win64/openssh-7.3p1-cygwin-2.6.0"
+        opensshBuildDir = r"resources\win64\openssh-7.3p1-cygwin-2.6.0"
 
     # pylint: disable=no-self-use
     def DoubleQuote(self, string):
