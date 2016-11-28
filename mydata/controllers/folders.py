@@ -20,7 +20,7 @@ import wx.dataview
 from mydata.utils import ConnectionStatus
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
-from mydata.utils.openssh import KillSshProcesses
+from mydata.utils.openssh import CleanUpSshProcesses
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.dataset import DatasetModel
@@ -633,14 +633,10 @@ class FoldersController(object):
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
-        if sys.platform.startswith('win') and \
-                self.uploadMethod == UploadMethod.VIA_STAGING:
+        if self.uploadMethod == UploadMethod.VIA_STAGING:
             # SCP can leave orphaned SSH processes which need to be
-            # cleaned up.  Only do this on Windows for now, because
-            # on Windows, we bundle our own SSH binary with MyData,
-            # so we can check that the absolute path of the SSH
-            # executable to be terminated matches MyData's SSH path.
-            KillSshProcesses()
+            # cleaned up.
+            CleanUpSshProcesses(self.settingsModel)
         for thread in self.uploadWorkerThreads:
             thread.join()
         logger.debug("Shutting down FoldersController verification "

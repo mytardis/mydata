@@ -1270,16 +1270,27 @@ def GetCygwinPath(path):
         raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
                         "a valid path." % path)
 
-def KillSshProcesses():
+def CleanUpSshProcesses(settingsModel):
     """
-    SCP can leave orphaned SSH processes which need to be
-    cleaned up.
+    SCP can leave orphaned SSH processes which need to be cleaned up.
+    On Windows, we bundle our own SSH binary with MyData, so we can
+    check that the absolute path of the SSH executable to be terminated
+    matches MyData's SSH path.  On other platforms, we can use proc.cmdline()
+    to ensure that the SSH process we're killing uses MyData's private key.
     """
+    privateKeyPath = settingsModel.GetSshKeyPair().GetPrivateKeyFilePath()
     for proc in psutil.process_iter():
         try:
             if proc.exe() == OPENSSH.ssh:
                 try:
-                    proc.kill()
+                    if privateKeyPath in proc.cmdline():
+                        proc.kill()
+                    elif sys.platform.startswith("win"):
+                        # On Windows, proc.cmdline() is unreliable, but
+                        # with proc.exe() == OPENSSH.ssh we are matching
+                        # the absolute path of the SSH binary bundled
+                        # with MyData.
+                        proc.kill()
                 except:  # pylint: disable=bare-except
                     pass
         except psutil.AccessDenied:
