@@ -25,6 +25,7 @@ class UploadStatus(object):
     COMPLETED = 2
     FAILED = 3
     PAUSED = 4
+    CANCELED = 5
 
 
 class UploadModel(object):
@@ -173,6 +174,11 @@ class UploadModel(object):
     def Cancel(self):
         try:
             self.canceled = True
+            if self.verificationTimer:
+                try:
+                    self.verificationTimer.cancel()
+                except:  # pylint: disable=bare-except
+                    logger.error(traceback.format_exc())
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
                 logger.debug("Closed buffered reader for \"" +
@@ -183,8 +189,6 @@ class UploadModel(object):
                     os.kill(self.scpUploadProcessPid, signal.SIGABRT)
                 else:
                     os.kill(self.scpUploadProcessPid, signal.SIGKILL)
-            if self.verificationTimer:
-                self.verificationTimer.cancel()
         except:  # pylint: disable=bare-except
             logger.warning(traceback.format_exc())
 
