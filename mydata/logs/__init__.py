@@ -10,15 +10,11 @@ via HTTP POST for analysis by developers / sys admins.
 import threading
 import logging
 from StringIO import StringIO
-from ConfigParser import ConfigParser
-import HTMLParser
 import os
 import time
-import subprocess
 import sys
 import inspect
 import pkgutil
-import traceback
 
 import requests
 import wx
