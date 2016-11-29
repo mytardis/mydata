@@ -236,6 +236,8 @@ class UploadDatafileRunnable(object):
             if self.uploadModel.Canceled():
                 self.foldersController.SetCanceled()
                 return
+            elif self.uploadModel.GetStatus() == UploadStatus.COMPLETED:
+                return
             if current is None:
                 # For a zero-sized file, current will be None
                 # before its upload, and 0 after is upload.
@@ -343,6 +345,9 @@ class UploadDatafileRunnable(object):
                             except IOError, err:
                                 self.uploadModel.SetTraceback(
                                     traceback.format_exc())
+                                if self.foldersController.IsShuttingDown() or \
+                                        self.uploadModel.Canceled():
+                                    return
                                 if self.uploadModel.GetRetries() < \
                                         self.settingsModel.GetMaxUploadRetries():
                                     logger.warning(str(err))
