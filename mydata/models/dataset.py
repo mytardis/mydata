@@ -8,7 +8,6 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import urllib
 import json
 import traceback
-import threading
 import requests
 
 from mydata.logs import logger
@@ -24,8 +23,6 @@ class DatasetModel(object):
     def __init__(self, settingsModel, datasetJson):
         self.settingsModel = settingsModel
         self.json = datasetJson
-        self.datafiles = None
-        self.getDatasetFilesThreadingLock = threading.Lock()
 
     def GetJson(self):
         return self.json
@@ -45,82 +42,6 @@ class DatasetModel(object):
 
     def GetViewUri(self):
         return "dataset/%d" % (self.GetId(),)
-
-    def GetDataFiles(self):
-        # pylint: disable=too-many-nested-blocks
-        if not self.datafiles:
-            try:
-                self.getDatasetFilesThreadingLock.acquire()
-                if self.datafiles:
-                    return self.datafiles
-                myTardisUrl = self.settingsModel.GetMyTardisUrl()
-                myTardisUsername = self.settingsModel.GetUsername()
-                myTardisApiKey = self.settingsModel.GetApiKey()
-
-                # limit=0 can still encounter a limit of 1000 unless
-                # API_LIMIT_PER_PAGE is set to 0 in MyTardis's settings.py
-                limit = 0
-                url = "%s/api/v1/dataset/%d/files/?format=json&limit=%d" \
-                    % (myTardisUrl, self.GetId(), limit)
-                headers = {
-                    "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                                       myTardisApiKey)}
-                logger.debug(url)
-                response = requests.get(headers=headers, url=url)
-                if response.status_code >= 200 and response.status_code < 300:
-                    from .datafile import DataFileModel
-                    self.datafiles = []
-                    datafilesJson = response.json()['objects']
-                    for datafileJson in datafilesJson:
-                        self.datafiles.append(DataFileModel(self.settingsModel,
-                                                            self,
-                                                            datafileJson))
-                    offset = 0
-                    while response.json()['meta']['next']:
-                        # We should be able to use
-                        # response.json()['meta']['next'] in the URL,
-                        # instead of manually constructing the next
-                        # URL using offset.
-                        # But response.json()['meta']['next'] seems to give
-                        # the wrong URL for /api/v1/dataset/%d/files/
-                        offset += 1
-                        url = "%s/api/v1/dataset/%d/files/?format=json" \
-                            "&limit=%d&offset=%d" % (myTardisUrl, self.GetId(),
-                                                     limit, offset)
-                        logger.debug(url)
-                        response = requests.get(headers=headers, url=url)
-                        if response.status_code >= 200 and \
-                                response.status_code < 300:
-                            datafilesJson = response.json()['objects']
-                            for datafileJson in datafilesJson:
-                                self.datafiles\
-                                    .append(DataFileModel(self.settingsModel,
-                                                          self, datafileJson))
-                        else:
-                            logger.error(url)
-                            logger.error("response.status_code = " +
-                                         str(response.status_code))
-                            logger.error(response.text)
-
-                else:
-                    logger.error(url)
-                    logger.error("response.status_code = " +
-                                 str(response.status_code))
-                    logger.error(response.text)
-                    if response.status_code == 401:
-                        message = "Couldn't list files for dataset \"%s\". " \
-                                  % (self.GetDescription())
-                        message += "\n\n"
-                        message += "Please ask your MyTardis administrator " \
-                                   "to check the permissions of the \"%s\" " \
-                                   "user account." % myTardisUsername
-                        self.getDatasetFilesThreadingLock.release()
-                        raise Unauthorized(message)
-                    self.getDatasetFilesThreadingLock.release()
-                    raise Exception(response.text)
-            finally:
-                self.getDatasetFilesThreadingLock.release()
-        return self.datafiles
 
     @staticmethod
     def CreateDatasetIfNecessary(folderModel, testRun=False):
