@@ -2,15 +2,12 @@
 Custom events for MyData.
 """
 import threading
-import os
 from datetime import datetime
 import traceback
 import sys
 import wx
 
-from mydata.models.settings import SettingsModel
 from mydata.models.uploader import UploaderModel
-from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils import BeginBusyCursorIfRequired

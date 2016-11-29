@@ -91,8 +91,9 @@ class UploadsModel(DataViewIndexListModel):
                 elif self.uploadsData[row].GetStatus() == \
                         UploadStatus.COMPLETED:
                     icon = self.completedIcon
-                elif self.uploadsData[row].GetStatus() == \
-                        UploadStatus.FAILED:
+                elif self.uploadsData[row].GetStatus() in \
+                        (UploadStatus.FAILED,
+                         UploadStatus.CANCELED):
                     icon = self.failedIcon
                 return icon
             columnKey = self.GetColumnKeyName(col)
@@ -187,7 +188,10 @@ class UploadsModel(DataViewIndexListModel):
                     self.uploadsData[row].GetStatus() != UploadStatus.FAILED:
                 rowsToCancel.append(row)
         for row in rowsToCancel:
-            self.uploadsData[row].Cancel()
+            uploadModel = self.uploadsData[row]
+            uploadModel.Cancel()
+            self.SetStatus(uploadModel, UploadStatus.CANCELED)
+            self.SetMessage(uploadModel, 'Canceled')
 
     def GetMaxDataViewId(self):
         return self.maxDataViewId
@@ -232,8 +236,6 @@ class UploadsModel(DataViewIndexListModel):
             logger.debug(traceback.format_exc())
 
     def UploadFileSizeUpdated(self, uploadModel):
-        if uploadModel.Canceled():
-            return
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("File Size")
@@ -241,8 +243,6 @@ class UploadsModel(DataViewIndexListModel):
                 break
 
     def UploadProgressUpdated(self, uploadModel):
-        if uploadModel.Canceled():
-            return
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
@@ -252,8 +252,6 @@ class UploadsModel(DataViewIndexListModel):
                 break
 
     def StatusUpdated(self, uploadModel):
-        if uploadModel.Canceled():
-            return
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
@@ -261,8 +259,6 @@ class UploadsModel(DataViewIndexListModel):
                 break
 
     def MessageUpdated(self, uploadModel):
-        if uploadModel.Canceled():
-            return
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
