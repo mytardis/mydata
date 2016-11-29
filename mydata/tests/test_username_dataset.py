@@ -7,6 +7,7 @@ import sys
 import time
 import unittest
 import threading
+import socket
 import select
 from BaseHTTPServer import HTTPServer
 
@@ -263,7 +264,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             """ Run fake SSH server """
             try:
                 self.sshd.serve_forever()
-            except (OSError, select.error):
+            except (OSError, socket.error, select.error):
                 pass
         self.fakeSshServerThread = \
             threading.Thread(target=FakeSshServer,
