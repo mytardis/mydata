@@ -23,8 +23,8 @@ if wx.version().startswith("3.0.3.dev"):
     from wx.lib.agw.aui import AUI_NB_TOP
 else:
     import wx.lib.masked
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
+    from wx.aui import AuiNotebook  # pylint: disable=no-name-in-module
+    from wx.aui import AUI_NB_TOP  # pylint: disable=no-name-in-module
 
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
