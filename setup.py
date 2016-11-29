@@ -216,12 +216,13 @@ UninstallDisplayIcon={app}\{#MyDataAppExeName}
 Compression=lzma2
 SolidCompression=yes
 OutputDir=.
+PrivilegesRequired=lowest
 
 [Files]
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Dirs]
-Name: "{pf}\{#MyDataAppName}\openssh-7.1p1-cygwin-2.2.1\home"; Permissions: "users-modify"
+Name: "{app}\openssh-7.1p1-cygwin-2.2.1\home"; Permissions: "users-modify"
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"
