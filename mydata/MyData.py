@@ -61,7 +61,6 @@ from mydata.views.log import LogView
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
 from mydata.utils.exceptions import InvalidFolderStructure
-from mydata.views.statusbar import EnhancedStatusBar
 from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
 import mydata.events as mde
@@ -97,7 +96,7 @@ class MyDataFrame(wx.Frame):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
-        self.statusbar = EnhancedStatusBar(self)
+        self.statusbar = wx.StatusBar(self)
         if sys.platform.startswith("win"):
             self.statusbar.SetSize(wx.Size(-1, 28))
         else:
@@ -108,48 +107,27 @@ class MyDataFrame(wx.Frame):
         self.connectedBitmap = MYDATA_ICONS.GetIcon("Connect")
         self.disconnectedBitmap = MYDATA_ICONS.GetIcon("Disconnect")
         self.connected = False
-        self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
     def SetStatusMessage(self, msg):
         """
         Update status bar's message.
         """
-        self.statusbar.SetStatusMessage(msg)
+        if sys.platform.startswith("win"):
+            # On Windows, a tab can be used to center status text,
+            # which look similar to the old EnhancedStatusBar.
+            self.statusbar.SetStatusText("\t%s" % msg)
+        else:
+            self.statusbar.SetStatusText(msg)
         if sys.platform.startswith("win"):
             wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
 
-    def SetConnected(self, myTardisUrl, connected):
-        """
-        Update status bar's connected/disconnected icon.
-        """
-        if self.connected == connected:
-            return
 
-        self.myTardisUrl = myTardisUrl
-        self.connected = connected
-
-        if self.myTardisUrl != self.settingsModel.GetMyTardisUrl():
-            # This probably came from an old thread which took a while to
-            # return a connection error.  While it was attempting to connect,
-            # the user may have corrected the MyTardis URL in the Settings
-            # dialog.
-            return
-
-        if connected:
-            if sys.platform.startswith("win"):
-                self.statusbar.SetStatusConnectionIcon(self.connectedBitmap)
-        else:
-            if sys.platform.startswith("win"):
-                self.statusbar.SetStatusConnectionIcon(self.disconnectedBitmap)
-
-
-# pylint: disable=too-many-public-methods
 class MyData(wx.App):
     """
     Encapsulates the MyData application.
     """
-
     # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
 
     def __init__(self, argv):
         self.name = "MyData"
@@ -792,9 +770,6 @@ class MyData(wx.App):
             wx.PostEvent(wx.GetApp().GetMainFrame(), shutdownForRefreshEvent)
             return
 
-        # Reset the status message to the connection status:
-        self.frame.SetConnected(self.settingsModel.GetMyTardisUrl(),
-                                False)
         self.foldersController.SetShuttingDown(False)
 
         self.searchCtrl.SetValue("")
@@ -868,8 +843,6 @@ class MyData(wx.App):
                             dlg.ShowModal()
                             wx.CallAfter(EndBusyCursorIfRequired)
                             self.frame.SetStatusMessage("")
-                            self.frame.SetConnected(
-                                self.settingsModel.GetMyTardisUrl(), False)
                         wx.CallAfter(ShowDialog)
                         return
 
@@ -1145,10 +1118,6 @@ class MyData(wx.App):
                                         validationMessage=validationMessage)
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
-            myTardisUrlChanged = (self.settingsModel.GetMyTardisUrl() !=
-                                  settingsDialog.GetMyTardisUrl())
-            if myTardisUrlChanged:
-                self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
             self.tasksModel.DeleteAllRows()

@@ -521,12 +521,3 @@ class ThreadedSshServer(ThreadedTCPServer):
     def close_request(self, request):
         # Prevent TCPServer from closing the connection prematurely
         return
-
-
-if __name__ == "__main__":
-    SERVER = ThreadedSshServer(("127.0.0.1", 2200))
-    try:
-        logger.info("Listening on port 2200...")
-        SERVER.serve_forever()
-    except (SystemExit, KeyboardInterrupt):
-        SERVER.server_close()

@@ -28,7 +28,6 @@ from mydata.utils.openssh import UploadFile
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
-from mydata.utils import ConnectionStatus
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
@@ -623,12 +622,6 @@ class UploadDatafileRunnable(object):
             self.uploadsModel.SetMessage(self.uploadModel, str(err))
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
-            if not self.foldersController.IsShuttingDown():
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.connectionStatusEvent(
-                        myTardisUrl=self.settingsModel.GetMyTardisUrl(),
-                        connectionStatus=ConnectionStatus.DISCONNECTED))
             if dataFileDirectory != "":
                 logger.error("Upload failed for datafile " + dataFileName +
                              " in subdirectory " + dataFileDirectory +

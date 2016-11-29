@@ -9,7 +9,6 @@ responses and hard-coded below.  In some cases, unnecessary
 fields have been removed from the JSON responses.
 """
 import sys
-import time
 import BaseHTTPServer
 import traceback
 import re
@@ -899,15 +898,3 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Supressing logging of HTTP requests to STDERR.
         """
         return
-
-
-if __name__ == '__main__':
-    HTTPD = BaseHTTPServer.HTTPServer((HOST_NAME, PORT_NUMBER),
-                                      FakeMyTardisHandler)
-    print time.asctime(), "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER)
-    try:
-        HTTPD.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    HTTPD.server_close()
-    print time.asctime(), "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER)

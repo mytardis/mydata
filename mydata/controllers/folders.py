@@ -5,12 +5,10 @@ and uploads from each of the folders in the Folders view.
 
 # pylint: disable=missing-docstring
 
-import os
 import sys
 import threading
 import Queue
 import traceback
-import subprocess
 import datetime
 
 import requests
@@ -19,7 +17,6 @@ import wx
 import wx.lib.newevent
 import wx.dataview
 
-from mydata.utils import ConnectionStatus
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.utils.openssh import CleanUpSshProcesses
@@ -87,11 +84,6 @@ class FoldersController(object):
 
         self.testRun = False
 
-        self.foldersView.Bind(wx.EVT_BUTTON, self.OnOpenFolder,
-                              self.foldersView.GetOpenFolderButton())
-        self.foldersView.GetDataViewControl()\
-            .Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self.OnOpenFolder)
-
         self.didntFindDatafileOnServerEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
         self.EVT_DIDNT_FIND_FILE_ON_SERVER = wx.NewId()  # pylint: disable=invalid-name
@@ -106,9 +98,6 @@ class FoldersController(object):
             wx.lib.newevent.NewEvent()
         self.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING = wx.NewId()  # pylint: disable=invalid-name
         self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
-
-        self.connectionStatusEvent, eventBinder = wx.lib.newevent.NewEvent()
-        self.notifyWindow.Bind(eventBinder, self.UpdateStatusBar)
 
         self.showMessageDialogEvent, eventBinder = \
             wx.lib.newevent.NewEvent()
@@ -208,12 +197,6 @@ class FoldersController(object):
         self.lastErrorMessageThreadingLock.acquire()
         self.lastErrorMessage = message
         self.lastErrorMessageThreadingLock.release()
-
-    def UpdateStatusBar(self, event):
-        if event.connectionStatus == ConnectionStatus.CONNECTED:
-            self.notifyWindow.SetConnected(event.myTardisUrl, True)
-        else:
-            self.notifyWindow.SetConnected(event.myTardisUrl, False)
 
     def ShowMessageDialog(self, event):
         if self.IsShowingErrorDialog():
@@ -419,12 +402,6 @@ class FoldersController(object):
             if self.IsShuttingDown():
                 return
             try:
-                # Save MyTardis URL, so if it's changing in the
-                # Settings Dialog while this thread is
-                # attempting to connect, we ensure that any
-                # exception thrown by this thread refers to the
-                # old version of the URL.
-                myTardisUrl = self.settingsModel.GetMyTardisUrl()
                 # pylint: disable=broad-except
                 try:
                     self.getOrCreateExpThreadingLock.acquire()
@@ -443,12 +420,6 @@ class FoldersController(object):
                 finally:
                     self.getOrCreateExpThreadingLock.release()
                 folderModel.SetExperiment(experimentModel)
-                connected = ConnectionStatus.CONNECTED
-                wx.PostEvent(
-                    self.notifyWindow,
-                    self.connectionStatusEvent(
-                        myTardisUrl=myTardisUrl,
-                        connectionStatus=connected))
                 # pylint: disable=broad-except
                 try:
                     datasetModel = DatasetModel\
@@ -465,14 +436,7 @@ class FoldersController(object):
                 folderModel.SetDatasetModel(datasetModel)
                 self.VerifyDatafiles(folderModel)
             except requests.exceptions.ConnectionError, err:
-                if not self.IsShuttingDown():
-                    disconnected = \
-                        ConnectionStatus.DISCONNECTED
-                    wx.PostEvent(
-                        self.notifyWindow,
-                        self.connectionStatusEvent(
-                            myTardisUrl=myTardisUrl,
-                            connectionStatus=disconnected))
+                logger.error(str(err))
                 return
             except ValueError, err:
                 logger.error("Failed to retrieve experiment "
@@ -739,44 +703,3 @@ class FoldersController(object):
                                                self.testRun))
             self.verificationsQueue\
                 .put(self.verifyDatafileRunnable[folderModel][dfi])
-
-    # pylint: disable=unused-argument
-    def OnOpenFolder(self, event):
-        items = self.foldersView.GetDataViewControl().GetSelections()
-        rows = [self.foldersModel.GetRow(item) for item in items]
-        if len(rows) != 1:
-            if len(rows) > 1:
-                message = "Please select a single folder."
-            else:
-                message = "Please select a folder to open."
-            dlg = wx.MessageDialog(self.notifyWindow, message, "Open Folder",
-                                   wx.OK)
-            dlg.ShowModal()
-            return
-        row = rows[0]
-
-        path = os.path.join(self.foldersModel
-                            .GetValueForRowColumnKeyName(row, "location"),
-                            self.foldersModel
-                            .GetValueForRowColumnKeyName(row, "folder"))
-        if not os.path.exists(path):
-            message = "Path doesn't exist: " + path
-            dlg = wx.MessageDialog(None, message, "Open Folder", wx.OK)
-            dlg.ShowModal()
-            return
-        if sys.platform == 'darwin':
-            def OpenFolder(path):
-                """Open folder."""
-                subprocess.check_call(['open', '--', path])
-        elif sys.platform.startswith('linux'):
-            def OpenFolder(path):
-                """Open folder."""
-                subprocess.check_call(['xdg-open', '--', path])
-        elif sys.platform.startswith('win'):
-            def OpenFolder(path):
-                """Open folder."""
-                subprocess.call(['explorer', path])
-        else:
-            logger.debug("sys.platform = " + sys.platform)
-
-        OpenFolder(path)

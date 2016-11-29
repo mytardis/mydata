@@ -207,8 +207,6 @@ class MyDataEvent(wx.PyCommandEvent):
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
                     wx.GetApp().GetMainFrame().SetStatusMessage("")
-                    wx.GetApp().GetMainFrame().SetConnected(
-                        event.settingsModel.GetMyTardisUrl(), False)
                 wx.CallAfter(ShowDialog)
 
         checkConnectivityThread = \

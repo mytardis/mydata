@@ -67,16 +67,6 @@ def BytesToHuman(numBytes):
     return "%sB" % numBytes
 
 
-class ConnectionStatus(object):
-    """
-    Enumerated data type
-    """
-    # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
-    CONNECTED = 0
-    DISCONNECTED = 1
-
-
 def BeginBusyCursorIfRequired():
     """
     Begin busy cursor if it's not already being displayed.

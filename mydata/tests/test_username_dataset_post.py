@@ -4,8 +4,9 @@ Test scanning the Username / Dataset structure and upload using POST.
 import os
 import sys
 import time
-import subprocess
 import unittest
+import threading
+from BaseHTTPServer import HTTPServer
 
 import requests
 import wx
@@ -19,6 +20,8 @@ from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.views.folders import FoldersView
 from mydata.controllers.folders import FoldersController
 from mydata.models.upload import UploadStatus
+from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
+from mydata.tests.utils import GetEphemeralPort
 if sys.platform.startswith("linux"):
     from mydata.linuxsubprocesses import StopErrandBoy
 
@@ -28,7 +31,12 @@ class ScanUsernameDatasetTester(unittest.TestCase):
     """
     def __init__(self, *args, **kwargs):
         super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
-        self.fakeMyTardisServerProcess = None
+        self.app = None
+        self.frame = None
+        self.httpd = None
+        self.fakeMyTardisHost = "127.0.0.1"
+        self.fakeMyTardisPort = None
+        self.fakeMyTardisServerThread = None
 
     def setUp(self):
         self.app = wx.App()
@@ -38,7 +46,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
     def tearDown(self):
         self.frame.Destroy()
-        self.fakeMyTardisServerProcess.terminate()
+        self.httpd.shutdown()
+        self.fakeMyTardisServerThread.join()
         if sys.platform.startswith("linux"):
             StopErrandBoy()
 
@@ -59,6 +68,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
+        settingsModel.SetMyTardisUrl(
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
@@ -193,11 +204,17 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         """
         Start fake MyTardis server.
         """
-        os.environ['PYTHONPATH'] = os.path.realpath(".")
-        self.fakeMyTardisServerProcess = \
-            subprocess.Popen([sys.executable,
-                              "mydata/tests/fake_mytardis_server.py"],
-                             env=os.environ)
+        self.fakeMyTardisPort = GetEphemeralPort()
+        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
+                                FakeMyTardisHandler)
+
+        def FakeMyTardisServer():
+            """ Run fake MyTardis server """
+            self.httpd.serve_forever()
+        self.fakeMyTardisServerThread = \
+            threading.Thread(target=FakeMyTardisServer,
+                             name="FakeMyTardisServerThread")
+        self.fakeMyTardisServerThread.start()
 
 
 if __name__ == '__main__':
