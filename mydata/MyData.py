@@ -92,6 +92,7 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, title, style, settingsModel):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
