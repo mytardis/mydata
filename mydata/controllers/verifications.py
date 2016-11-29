@@ -223,15 +223,15 @@ class VerifyDatafileRunnable(object):
         location = uploadToStagingRequest.GetLocation()
         remoteFilePath = "%s/%s" % (location.rstrip('/'),
                                     replicas[0].GetUri())
-        bytesUploadePreviously = None
+        bytesUploadedPreviously = None
         try:
-            bytesUploadePreviously = \
+            bytesUploadedPreviously = \
                 CountBytesUploadedToStaging(
                     remoteFilePath,
                     username, privateKeyFilePath, host, port,
                     self.settingsModel)
             logger.debug("%d bytes uploaded to staging for %s"
-                         % (bytesUploadePreviously,
+                         % (bytesUploadedPreviously,
                             replicas[0].GetUri()))
         except FileNotFoundOnStaging, err:
             self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
@@ -264,12 +264,12 @@ class VerifyDatafileRunnable(object):
                                         message=message,
                                         icon=wx.ICON_ERROR))
             return
-        if bytesUploadePreviously == long(existingDatafile.GetSize()):
+        if bytesUploadedPreviously == long(existingDatafile.GetSize()):
             self.HandleFullSizeResumableUpload(existingDatafile)
         else:
             self.HandleIncompleteResumableUpload(
                 existingDatafile,
-                bytesUploadePreviously)
+                bytesUploadedPreviously)
 
     def HandleFullSizeResumableUpload(self, existingDatafile):
         """
@@ -304,7 +304,7 @@ class VerifyDatafileRunnable(object):
             logger.testrun(message)
 
     def HandleIncompleteResumableUpload(self, existingDatafile,
-                                        bytesUploadePreviously):
+                                        bytesUploadedPreviously):
         """
         Resume partial upload.
         """
@@ -320,7 +320,7 @@ class VerifyDatafileRunnable(object):
                      "the file size is %d bytes in staging, "
                      "but it should be %d bytes."
                      % (dataFilePath,
-                        bytesUploadePreviously,
+                        bytesUploadedPreviously,
                         long(existingDatafile.GetSize())))
         self.verificationsModel.SetComplete(self.verificationModel)
         wx.PostEvent(
@@ -331,7 +331,7 @@ class VerifyDatafileRunnable(object):
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
-                bytesUploadePreviously=bytesUploadePreviously,
+                bytesUploadedPreviously=bytesUploadedPreviously,
                 verificationModel=self.verificationModel))
 
     def HandleUnverifiedNotFoundOnStaging(self, existingDatafile):
@@ -359,7 +359,7 @@ class VerifyDatafileRunnable(object):
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
-                bytesUploadePreviously=None,
+                bytesUploadedPreviously=None,
                 verificationModel=self.verificationModel))
 
     def HandleUnresumableUpload(self, existingDatafile):
