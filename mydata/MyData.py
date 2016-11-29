@@ -36,6 +36,7 @@ else:
     from wx import EVT_TASKBAR_LEFT_UP
     from wx import EVT_TASKBAR_LEFT_DOWN
     # pylint: disable=import-error
+    # pylint: disable=no-name-in-module
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
