@@ -1,17 +1,40 @@
+r"""
+setup.py
+
+Build binary executable with:
+
+    python setup.py build
+
+    On Windows, additional arguments are required to configure code-signing:
+
+    python setup.py build unsigned
+    python setup.py build C:\path\to\certificate.pfx password
+
+Build binary distributable (Setup Wizard / DMG / RPM) with:
+
+    python setup.py bdist
+
+    On Windows, additional arguments are required to configure code-signing:
+
+    python setup.py bdist unsigned
+    python setup.py bdist C:\path\to\certificate.pfx password
+"""
 import os
 import sys
-import requests
-import pkgutil
 import tempfile
 import commands
 import subprocess
 import shutil
 
-from setuptools import setup
 from distutils.command.build import build
 from distutils.command.bdist import bdist
 from distutils.command.install import install
 import distutils.dir_util
+
+import requests
+from setuptools import setup
+
+# pylint: disable=invalid-name
 
 # Ensure latest commit hash is recorded, so that
 # it is available in the About dialog when MyData
@@ -29,12 +52,12 @@ if sys.platform.startswith("win"):
     # On Windows, we require the code-signing certificate filename (or path)
     # to be specified and the password associated with the certificate.
     if len(sys.argv) == 4:
-        whether_to_sign = True
+        whether_to_sign_on_windows = True
         certificate_path = sys.argv[2]
         certificate_password = sys.argv[3]
         del sys.argv[2:4]
     elif len(sys.argv) == 3 and sys.argv[2] == 'unsigned':
-        whether_to_sign = False
+        whether_to_sign_on_windows = False
         del sys.argv[2:3]
     elif len(sys.argv) >= 2 and sys.argv[1] == 'nosetests':
         pass
@@ -81,10 +104,8 @@ if sys.platform.startswith("darwin"):
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + mydata.__version__,
             LSArchitecturePriority=["x86_64"],
-            LSUIElement=True
-            )
-        )
-    )
+            LSUIElement=True)
+        ))
 else:
     setup_requires = ["nose", "coverage"]
     options = {}
@@ -154,9 +175,7 @@ class CustomBuildCommand(build):
             cacert = requests.certs.where()
             os.system(r"COPY /Y %s dist\MyData" % cacert)
 
-            thismodule = sys.modules[__name__]
-            whether_to_sign = thismodule.whether_to_sign
-            if whether_to_sign:
+            if whether_to_sign_on_windows:
                 sign_exe_cmd = 'signtool sign -f "%s" -p "%s" %s' \
                     % (certificate_path, certificate_password,
                        r" dist\MyData\*.exe")
@@ -191,16 +210,19 @@ if sys.platform.startswith("darwin"):
 
 
 class CustomBdistCommand(bdist):
-    """
+    r"""
     On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
     On Mac OS X, create dist/MyData_vX.Y.Z.dmg
     """
     def run(self):
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-branches
         # bdist.run(self)
         if sys.platform.startswith("win"):
             self.run_command("build")
             print "Building binary distributable for Windows..."
-            innosetup_script = """
+            innosetup_script = r"""
 ;MyData InnoSetup script
 ;Change OutputDir to suit your build environment
 
@@ -240,10 +262,8 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
                     r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
                     % mydata.__version__
             os.system(cmd)
-            thismodule = sys.modules[__name__]
-            whether_to_sign = thismodule.whether_to_sign
-            if whether_to_sign:
-                os.system('signtool sign -f "%s" -p "%s" dist\MyData_v%s.exe'
+            if whether_to_sign_on_windows:
+                os.system(r'signtool sign -f "%s" -p "%s" dist\MyData_v%s.exe'
                           % (certificate_path, certificate_password,
                              mydata.__version__))
         elif sys.platform.startswith("darwin"):
@@ -272,7 +292,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
                 certificateName = certificateLine.split(": ", 1)[1]
                 print "certificateName: " + certificateName
                 whether_to_sign = True
-            except:
+            except IndexError:
                 whether_to_sign = False
 
             # Digitally sign application:
@@ -496,7 +516,7 @@ class CustomInstallCommand(install):
         if sys.platform.startswith("win"):
             print "\nLaunching MyData_v%s.exe...\n" % mydata.__version__
             installer_filename = "%s_v%s.exe" % (app_name, mydata.__version__)
-            cmd = 'dist\%s' % installer_filename
+            cmd = r'dist\%s' % installer_filename
             os.system(cmd)
         elif sys.platform.startswith("darwin"):
             print "\nOpening dist/MyData_v%s.dmg...\n" % mydata.__version__

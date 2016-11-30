@@ -1,10 +1,8 @@
 #!/bin/bash
 
-SRC=`pwd`
-
-VERSION=`grep '^__version__' ../mydata/__init__.py | cut -f 2 -d '"'`
-RPM_VERSION=`echo ${VERSION} | tr -d '-'`
-ARCHITECTURE=`uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g`
+VERSION=$(grep '^__version__' ../mydata/__init__.py | cut -f 2 -d '"')
+RPM_VERSION=$(echo ${VERSION} | tr -d '-')
+ARCHITECTURE=$(uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g)
 
 ./package_linux_version.sh
 
@@ -14,8 +12,8 @@ cd rpmbuild
 mkdir  BUILD BUILDROOT RPMS SOURCES SPECS SRPMS tmp
 
 rm -f ~/.rpmmacros
-echo "%_topdir  "`pwd`     >> ~/.rpmmacros
-echo "%_tmppath "`pwd`/tmp >> ~/.rpmmacros
+echo "%_topdir  "$(pwd)     >> ~/.rpmmacros
+echo "%_tmppath "$(pwd)/tmp >> ~/.rpmmacros
 
 sed s/VERSION/${RPM_VERSION}/g ../mydata.spec.template > SPECS/mydata.spec
 
