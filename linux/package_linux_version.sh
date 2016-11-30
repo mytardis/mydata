@@ -5,7 +5,7 @@
 # You may have to change PYINSTALLERDIR to point to the directory where
 # pyinstaller was unpacked.
 
-PYINSTALLERDIR=$(pwd)/../pyinstaller
+PYINSTALLERDIR=`pwd`/../pyinstaller
 
 set -o nounset
 set -e
@@ -15,13 +15,13 @@ set -e
 # is frozen into a platform-specific bundle:
 (cd .. && python mydata/__init__.py)
 
-VERSION=$(grep '^__version__' ../mydata/__init__.py | cut -f 2 -d '"')
-ARCHITECTURE=$(uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g)
+VERSION=`grep '^__version__' ../mydata/__init__.py | cut -f 2 -d '"'`
+ARCHITECTURE=`uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g`
 
 rm -fr dist
 
 # PyInstaller 2.1
-PATHS=$(python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)')
+PATHS=`python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)'`
 python ${PYINSTALLERDIR}/pyinstaller.py --paths=$PATHS --name=MyData --icon=../mydata/media/MyData.ico --windowed ../run.py
 
 cp "MyData.desktop" 	dist/MyData/
@@ -31,7 +31,7 @@ cp README_LINUX dist/MyData/
 mkdir dist/MyData/media
 cp -r ../mydata/media/* dist/MyData/media/
 
-cp $(python -c 'import requests; print requests.certs.where()') dist/MyData/
+cp `python -c 'import requests; print requests.certs.where()'` dist/MyData/
 
 mkdir dist/MyData-${VERSION}_${ARCHITECTURE}
 cp MyData.sh    dist/MyData-${VERSION}_${ARCHITECTURE}
