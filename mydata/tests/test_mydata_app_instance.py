@@ -11,7 +11,7 @@ class MyDataAppInstanceTester(unittest.TestCase):
     Test ability to create MyData App instance.
     """
     def setUp(self):
-        self.mydataApp = MyData(argv=[])
+        self.mydataApp = MyData(argv=['MyData', '--test'])
 
     def test_mydata_app_instance(self):
         """
@@ -21,4 +21,4 @@ class MyDataAppInstanceTester(unittest.TestCase):
         pass
 
     def tearDown(self):
-        self.mydataApp.Destroy()
+        self.mydataApp.GetMainFrame().Destroy()

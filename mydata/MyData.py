@@ -241,6 +241,8 @@ class MyData(wx.App):
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
+        parser.add_argument("--test", action="store_true",
+                            help="test app instantiation")
         args, _ = parser.parse_known_args(self.argv[1:])
         if args.version:
             print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
@@ -365,7 +367,8 @@ class MyData(wx.App):
         event = None
         if self.settingsModel.RequiredFieldIsBlank():
             self.frame.Show(True)
-            self.OnSettings(event)
+            if not args.test:
+                self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
