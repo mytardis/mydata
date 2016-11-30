@@ -12,6 +12,7 @@ class MyDataAppInstanceTester(unittest.TestCase):
     """
     def setUp(self):
         self.mydataApp = MyData(argv=['MyData', '--test'])
+        self.mydataApp.taskBarIcon.CreatePopupMenu()
 
     def test_mydata_app_instance(self):
         """

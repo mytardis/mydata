@@ -1621,7 +1621,8 @@ class SettingsDialog(wx.Dialog):
             self.uploadInvalidUserFoldersLabel.SetLabel(
                 "Upload invalid user folders:")
 
-        event.Skip()
+        if event:
+            event.Skip()
 
     def OnDropFiles(self, filePaths):
         """

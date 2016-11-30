@@ -31,6 +31,9 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsModel = SettingsModel(configPath=None)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
         self.settingsDialog.Show()
+        for folderStructure in self.settingsDialog.folderStructures:
+            self.settingsDialog.SetFolderStructure(folderStructure)
+            self.settingsDialog.OnSelectFolderStructure(event=None)
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
