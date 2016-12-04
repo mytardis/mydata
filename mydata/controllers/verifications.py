@@ -4,21 +4,20 @@ The main controller class for managing datafile verifications.
 class VerifyDatafileRunnable(object):
   Run:
     HandleNonExistentDataFile:
-      Post EVT_DIDNT_FIND_FILE_ON_SERVER  # DataFile record doesn't exist
+      Post DidntFindDatafileOnServerEvent  # DataFile record doesn't exist
     HandleExistingDatafile:
       HandleExistingVerifiedDatafile:
-        Post EVT_FOUND_VERIFIED_DATAFILE  # Verified DFO exists!
+        Post FoundVerifiedDatafileEvent  # Verified DFO exists!
       HandleExistingUnverifiedDatafile:
         HandleResumableUpload:
           HandleUnverifiedNotFoundOnStaging:
-            Post EVT_UNVERIFIED_NOT_FOUND_ON_STAGING
+            Post UnverifiedNotFoundOnStagingEvent
           HandleFullSizeResumableUpload:
-            Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
+            Post FoundUnverifiedDatafileEvent
           HandleIncompleteResumableUpload:
-            Post EVT_INCOMPLETE_FILE_ON_STAGING
+            Post UnverifiedDatafileOnServerEvent
         HandleUnresumableUpload:
-          Either: Post EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
-              or: Post EVT_FOUND_UNVERIFIED_NO_DFOS
+          Post FoundUnverifiedDatafileEvent
 """
 
 import os
@@ -28,7 +27,6 @@ import traceback
 import wx
 
 from mydata.models.replica import ReplicaModel
-
 from mydata.models.verification import VerificationModel
 from mydata.models.verification import VerificationStatus
 from mydata.models.datafile import DataFileModel
@@ -41,7 +39,7 @@ from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
-
+import mydata.events as mde
 from mydata.logs import logger
 
 
@@ -102,13 +100,15 @@ class VerifyDatafileRunnable(object):
         if not hasattr(fc, "verificationsThreadingLock"):
             fc.verificationsThreadingLock = threading.Lock()
         fc.verificationsThreadingLock.acquire()
-        verificationDataViewId = self.verificationsModel.GetMaxDataViewId() + 1
-        self.verificationModel = \
-            VerificationModel(dataViewId=verificationDataViewId,
-                              folderModel=self.folderModel,
-                              dataFileIndex=self.dataFileIndex)
-        self.verificationsModel.AddRow(self.verificationModel)
-        fc.verificationsThreadingLock.release()
+        try:
+            verificationDataViewId = self.verificationsModel.GetMaxDataViewId() + 1
+            self.verificationModel = \
+                VerificationModel(dataViewId=verificationDataViewId,
+                                  folderModel=self.folderModel,
+                                  dataFileIndex=self.dataFileIndex)
+            self.verificationsModel.AddRow(self.verificationModel)
+        finally:
+            fc.verificationsThreadingLock.release()
         self.verificationModel.SetMessage("Looking for matching file on "
                                           "MyTardis server...")
         self.verificationModel.SetStatus(VerificationStatus.IN_PROGRESS)
@@ -142,14 +142,12 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.SetStatus(VerificationStatus.NOT_FOUND)
         self.verificationsModel.MessageUpdated(self.verificationModel)
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.didntFindDatafileOnServerEvent(
-                id=self.foldersController.EVT_DIDNT_FIND_FILE_ON_SERVER,
-                foldersController=self.foldersController,
-                folderModel=self.folderModel,
-                dataFileIndex=self.dataFileIndex,
-                verificationModel=self.verificationModel))
+        event = self.foldersController.DidntFindDatafileOnServerEvent(
+            foldersController=self.foldersController,
+            folderModel=self.folderModel,
+            dataFileIndex=self.dataFileIndex,
+            verificationModel=self.verificationModel)
+        mde.PostEvent(event)
 
     def HandleExistingDatafile(self, existingDatafile):
         """
@@ -216,29 +214,25 @@ class VerifyDatafileRunnable(object):
                 username = uploadToStagingRequest.GetScpUsername()
             except IncompatibleMyTardisVersion, err:
                 self.verificationsModel.SetComplete(self.verificationModel)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                mde.PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                mde.PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StorageBoxAttributeNotFound, err:
                 self.verificationsModel.SetComplete(self.verificationModel)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                mde.PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                mde.PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -261,29 +255,25 @@ class VerifyDatafileRunnable(object):
                 return
             except StagingHostRefusedSshConnection, err:
                 self.verificationsModel.SetComplete(self.verificationModel)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                mde.PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                mde.PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
                 self.verificationsModel.SetComplete(self.verificationModel)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                mde.PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                mde.PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -318,12 +308,9 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
+        mde.PostEvent(
             self.foldersController
-            .foundUnverifiedDatafileEvent(
-                id=self.foldersController
-                .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE,
+            .FoundUnverifiedDatafileEvent(
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 dataFilePath=dataFilePath))
@@ -352,10 +339,8 @@ class VerifyDatafileRunnable(object):
                         bytesUploadedPreviously,
                         existingDatafile.GetSize()))
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.unverifiedDatafileOnServerEvent(
-                id=self.foldersController.EVT_INCOMPLETE_FILE_ON_STAGING,
+        mde.PostEvent(
+            self.foldersController.UnverifiedDatafileOnServerEvent(
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
@@ -380,10 +365,8 @@ class VerifyDatafileRunnable(object):
                      "it was not there. It does have a DataFileObject."
                      % dataFilePath)
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.unverifiedDatafileOnServerEvent(
-                id=self.foldersController.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING,
+        mde.PostEvent(
+            self.foldersController.UnverifiedNotFoundOnStagingEvent(
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
@@ -410,13 +393,9 @@ class VerifyDatafileRunnable(object):
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             self.verificationModel.SetStatus(
                 VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE)
-            eventId = self.foldersController\
-                .EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE
         else:
             self.verificationModel.SetStatus(
                 VerificationStatus.FOUND_UNVERIFIED_NO_DFOS)
-            eventId = self.foldersController\
-                .EVT_FOUND_UNVERIFIED_NO_DFOS
         self.verificationsModel.MessageUpdated(self.verificationModel)
         if existingDatafile and not self.testRun:
             if existingDatafile.GetMd5Sum() == \
@@ -426,11 +405,9 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
+        mde.PostEvent(
             self.foldersController
-            .foundUnverifiedDatafileEvent(
-                id=eventId,
+            .FoundUnverifiedDatafileEvent(
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 dataFilePath=dataFilePath))
@@ -447,10 +424,8 @@ class VerifyDatafileRunnable(object):
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.foundVerifiedDatafileEvent(
-                id=self.foldersController.EVT_FOUND_VERIFIED_DATAFILE,
+        mde.PostEvent(
+            self.foldersController.FoundVerifiedDatafileEvent(
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
                 dataFilePath=dataFilePath))

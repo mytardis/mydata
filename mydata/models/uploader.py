@@ -117,6 +117,8 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
+DEFAULT_TIMEOUT = 3
+
 
 class UploaderModel(object):
     """
@@ -354,7 +356,8 @@ class UploaderModel(object):
             "Accept": "application/json"}
 
         try:
-            response = requests.get(headers=headers, url=url)
+            response = requests.get(headers=headers, url=url,
+                                    timeout=DEFAULT_TIMEOUT)
         except Exception, err:
             logger.error(str(err))
             raise
@@ -444,9 +447,11 @@ class UploaderModel(object):
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
         if numExistingUploaderRecords > 0:
-            response = requests.put(headers=headers, url=url, data=data)
+            response = requests.put(headers=headers, url=url, data=data,
+                                    timeout=DEFAULT_TIMEOUT)
         else:
-            response = requests.post(headers=headers, url=url, data=data)
+            response = requests.post(headers=headers, url=url, data=data,
+                                     timeout=DEFAULT_TIMEOUT)
         if response.status_code >= 200 and response.status_code < 300:
             logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
@@ -663,7 +668,8 @@ class UploaderModel(object):
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                             "&uuid=" + urllib.quote(self.uuid)
         try:
-            response = requests.get(headers=headers, url=url, timeout=3)
+            response = requests.get(headers=headers, url=url,
+                                    timeout=DEFAULT_TIMEOUT)
         except Exception, err:
             logger.error(str(err))
             raise

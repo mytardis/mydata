@@ -8,6 +8,7 @@ have been copied and pasted from a real MyTardis server's
 responses and hard-coded below.  In some cases, unnecessary
 fields have been removed from the JSON responses.
 """
+# pylint: disable=too-many-lines
 import sys
 import BaseHTTPServer
 import traceback
@@ -21,8 +22,7 @@ import logging
 
 from mydata.utils.openssh import GetCygwinPath
 
-HOST_NAME = '127.0.0.1'
-PORT_NUMBER = 9000
+DEBUG = False
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,21 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(facilitiesJson))
+        elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=New%20Instrument":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 0
+                },
+                "objects": []
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
         elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -151,6 +166,37 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         "id": 17,
                         "name": "Test Instrument",
                         "resource_uri": "/api/v1/instrument/17/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
+        elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument2":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "facility": {
+                            "id": 2,
+                            "manager_group": {
+                                "id": 2,
+                                "name": "test_facility_managers",
+                                "resource_uri": "/api/v1/group/2/"
+                            },
+                            "name": "Test Facility",
+                            "resource_uri": "/api/v1/facility/2/"
+                        },
+                        "id": 18,
+                        "name": "Test Instrument2",
+                        "resource_uri": "/api/v1/instrument/18/"
                     }
                 ]
             }
@@ -236,6 +282,22 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         "id": 149,
                         "resource_uri": "/api/v1/user/149/"
                     }
+                ]
+            }
+            self.wfile.write(json.dumps(usersJson))
+        elif self.path == "/api/v1/user/?format=json&username=INVALID_USER":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            usersJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 0
+                },
+                "objects": [
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
@@ -684,6 +746,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Respond to a POST request
         """
         # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements
         length = int(self.headers['Content-Length'])
         ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
         if ctype == 'multipart/form-data':
@@ -833,6 +896,27 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "resource_uri": "/api/v1/dataset/4457/"
             }
             self.wfile.write(json.dumps(datasetJson))
+        elif self.path == "/api/v1/instrument/":
+            self.send_response(201)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            name = postData['name']
+            instrumentJson = {
+                "id": 32,
+                "name": name,
+                "facility": {
+                    "id": 2,
+                    "manager_group": {
+                        "id": 2,
+                        "name": "test_facility_managers",
+                        "resource_uri": "/api/v1/group/2/"
+                    },
+                    "name": "Test Facility",
+                    "resource_uri": "/api/v1/facility/2/"
+                },
+                "resource_uri": "/api/v1/instrument/32/"
+            }
+            self.wfile.write(json.dumps(instrumentJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to POST: %s" % self.path)
@@ -889,12 +973,55 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(uploadersJson))
+        elif self.path.startswith("/api/v1/instrument/17/"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "id": 31,
+                        "name": "New Instrument",
+                        "facility": {
+                            "id": 2,
+                            "manager_group": {
+                                "id": 2,
+                                "name": "test_facility_managers",
+                                "resource_uri": "/api/v1/group/2/"
+                            },
+                            "name": "Test Facility",
+                            "resource_uri": "/api/v1/facility/2/"
+                        },
+                        "resource_uri": "/api/v1/instrument/17/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to PUT: %s" % self.path)
+
+    def do_PATCH(self):  # pylint: disable=invalid-name
+        """
+        Respond to a PATCH request
+        """
+        self.send_response(202)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
 
     def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         """
         Supressing logging of HTTP requests to STDERR.
         """
-        return
+        if DEBUG:
+            return BaseHTTPServer.BaseHTTPRequestHandler.log_message(
+                self, format, *args)
+        else:
+            return

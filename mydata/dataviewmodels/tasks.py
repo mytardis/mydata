@@ -300,6 +300,7 @@ class TasksModel(DataViewIndexListModel):
             logger.warning(traceback.format_exc())
 
     def AddRow(self, taskModel):
+        """ Add a task to the Tasks view and activate it. """
         self.Filter("")
         self.tasksData.append(taskModel)
         # Ensure that we save the largest ID used so far:
@@ -394,9 +395,12 @@ class TasksModel(DataViewIndexListModel):
 
             app = wx.GetApp()
             if not app.ShouldAbort():
-                thread = threading.Thread(target=TaskJobFunc)
-                logger.debug("Starting task %s" % taskModel.GetJobDesc())
-                thread.start()
+                if wx.PyApp.IsMainLoopRunning():
+                    thread = threading.Thread(target=TaskJobFunc)
+                    logger.debug("Starting task %s" % taskModel.GetJobDesc())
+                    thread.start()
+                else:
+                    TaskJobFunc()
             else:
                 logger.info("Not starting task because we are aborting.")
                 app.EnableTestAndUploadToolbarButtons()
@@ -423,7 +427,10 @@ class TasksModel(DataViewIndexListModel):
             callLater = wx.CallLater(millis, JobFunc, *args)
             taskModel.SetCallLater(callLater)
 
-        wx.CallAfter(ScheduleTask)
+        if wx.PyApp.IsMainLoopRunning():
+            wx.CallAfter(ScheduleTask)
+        else:
+            JobFunc(*args)
 
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()

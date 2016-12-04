@@ -22,7 +22,6 @@ mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 
 import SocketServer
 import sys
-import threading
 import traceback
 import subprocess
 import time
@@ -155,7 +154,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         self.transport = None
 
         # These are used for SCP only:
-        self.verbose = False
+        self.verbose = True
         # modified: Only populated if scp client uses "-p".
         self.modified = None
         # accessed: Only populated if scp client uses "-p".
@@ -407,32 +406,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             logger.error(traceback.format_exc())
                         return
 
-                def read_remote_stderr():
-                    try:
-                        buf = ""
-                        while True:
-                            char = proc.stderr.read(1)
-                            if len(char) < 1:
-                                break
-                            buf += char
-                            if char == '\n' and self.verbose:
-                                self.chan.send_stderr(buf)
-                                buf = ""
-                                break
-                    except:  # pylint: disable=bare-except
-                        logger.error("read_remote_stderr error.")
-                        logger.error(traceback.format_exc())
-                        try:
-                            self.transport.close()
-                        except:  # pylint: disable=bare-except
-                            logger.error(traceback.format_exc())
-                        return
-                stderr_thread = \
-                    threading.Thread(target=read_remote_stderr)
-                stderr_thread.daemon = True
-                if self.verbose:
-                    stderr_thread.start()
-
                 logger.info("Reading protocol messages...")
                 read_protocol_messages()
                 logger.info("Finished reading protocol messages.")
@@ -455,11 +428,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 # Tell the SCP client that the progress meter has been stopped,
                 # so it can report the output to the user.
                 self.chan.send("\n")
-
-                if self.verbose:
-                    logger.info("Joining stderr")
-                    stderr_thread.join()
-                    logger.info("Joined stderr.")
 
                 if not proc.returncode:
                     logger.info("Waiting for 'scp -t' process to finish running.")

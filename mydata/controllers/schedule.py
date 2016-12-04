@@ -161,16 +161,20 @@ class ScheduleController(object):
             "Sync Now" menu item.
             """
             app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId, testRun)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
+            if wx.PyApp.IsMainLoopRunning():
+                wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+                while not app.Processing():
+                    time.sleep(0.01)
+                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+                             jobId, testRun)
+            else:
+                app.OnRefresh(event, needToValidateSettings, jobId, testRun)
+            if wx.PyApp.IsMainLoopRunning():
+                # Sleep this thread until the job is really
+                # finished, so we can determine the job's
+                # finish time.
+                while app.Processing():
+                    time.sleep(0.01)
 
         jobDesc = "Scan folders and upload datafiles"
         startTime = datetime.now() + timedelta(seconds=1)

@@ -25,7 +25,8 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils import EndBusyCursorIfRequired
-import mydata.events as mde
+from mydata.events import MYDATA_EVENTS
+from mydata.events import PostEvent
 
 
 # pylint: disable=too-many-instance-attributes
@@ -420,12 +421,10 @@ class FoldersModel(DataViewIndexListModel):
         self.ffd = list()
         self.Filter(self.searchString)
 
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            startDataUploadsForFolderEvent = \
-                mde.MyDataEvent(mde.EVT_START_UPLOADS_FOR_FOLDER,
-                                folderModel=folderModel)
-            wx.PostEvent(wx.GetApp().GetMainFrame(),
-                         startDataUploadsForFolderEvent)
+        startDataUploadsForFolderEvent = \
+            MYDATA_EVENTS.StartUploadsForFolderEvent(
+                folderModel=folderModel)
+        PostEvent(startDataUploadsForFolderEvent)
 
     def FolderStatusUpdated(self, folderModel):
         """

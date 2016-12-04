@@ -37,7 +37,7 @@ from mydata.utils.exceptions import SshException
 from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
-
+from mydata.events import PostEvent
 from mydata.logs import logger
 
 
@@ -108,10 +108,8 @@ class UploadDatafileRunnable(object):
             logger.warning(message.replace('file', dataFilePath))
             self.uploadsModel.SetMessage(self.uploadModel, message)
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.uploadCompleteEvent(
-                    id=self.foldersController.EVT_UPLOAD_FAILED,
+            PostEvent(
+                self.foldersController.UploadCompleteEvent(
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
@@ -418,7 +416,7 @@ class UploadDatafileRunnable(object):
                             def RequestVerification():
                                 DataFileModel.Verify(self.settingsModel,
                                                      datafileId)
-                            if hasattr(wx.GetApp(), "GetMainFrame") and \
+                            if wx.PyApp.IsMainLoopRunning() and \
                                     int(verificationDelay) > 0:
                                 timer = threading.Timer(verificationDelay,
                                                         RequestVerification)
@@ -498,45 +496,39 @@ class UploadDatafileRunnable(object):
                 # (key="Staging", value=True). The staging storage box should
                 # also have a storage box option with
                 # (key="location", value="/mnt/.../MYTARDIS_STAGING")
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostRefusedSshConnection, err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StagingHostSshPermissionDenied, err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -563,30 +555,26 @@ class UploadDatafileRunnable(object):
             except IncompatibleMyTardisVersion, err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
             except StorageBoxAttributeNotFound, err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
-                    self.foldersController.shutdownUploadsEvent(
+                PostEvent(
+                    self.foldersController.ShutdownUploadsEvent(
                         failed=True))
                 message = str(err)
-                wx.PostEvent(
-                    self.foldersController.notifyWindow,
+                PostEvent(
                     self.foldersController
-                    .showMessageDialogEvent(title="MyData",
+                    .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
@@ -597,9 +585,8 @@ class UploadDatafileRunnable(object):
             logger.error(traceback.format_exc())
             errorResponse = err.read()
             logger.error(errorResponse)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.shutdownUploadsEvent(
+            PostEvent(
+                self.foldersController.ShutdownUploadsEvent(
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
@@ -611,10 +598,9 @@ class UploadDatafileRunnable(object):
                     % json.loads(errorResponse)['error_message']
             except:
                 message += str(err)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
+            PostEvent(
                 self.foldersController
-                .showMessageDialogEvent(title="MyData",
+                .ShowMessageDialogEvent(title="MyData",
                                         message=message,
                                         icon=wx.ICON_ERROR))
             return
@@ -668,18 +654,16 @@ class UploadDatafileRunnable(object):
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                  uploaded=True)
             self.foldersModel.FolderStatusUpdated(self.folderModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.uploadCompleteEvent(
-                    id=self.foldersController.EVT_UPLOAD_COMPLETE,
-                    folderModel=self.folderModel,
-                    dataFileIndex=self.dataFileIndex,
-                    uploadModel=self.uploadModel))
+            event = self.foldersController.UploadCompleteEvent(
+                folderModel=self.folderModel,
+                dataFileIndex=self.dataFileIndex,
+                uploadModel=self.uploadModel)
+            PostEvent(event)
         else:
             if self.foldersController.IsShuttingDown() or \
                     self.uploadModel.Canceled():
                 return
-            logger.error("Upload failed for " + dataFilePath)
+            logger.error("Upload failed for " + dataFileName)
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             if not postSuccess and response is not None:
                 message = "Internal Server Error: " \
@@ -697,13 +681,11 @@ class UploadDatafileRunnable(object):
             self.folderModel.SetDataFileUploaded(self.dataFileIndex,
                                                  uploaded=False)
             self.foldersModel.FolderStatusUpdated(self.folderModel)
-            wx.PostEvent(
-                self.foldersController.notifyWindow,
-                self.foldersController.uploadCompleteEvent(
-                    id=self.foldersController.EVT_UPLOAD_COMPLETE,
-                    folderModel=self.folderModel,
-                    dataFileIndex=self.dataFileIndex,
-                    uploadModel=self.uploadModel))
+            event = self.foldersController.UploadCompleteEvent(
+                folderModel=self.folderModel,
+                dataFileIndex=self.dataFileIndex,
+                uploadModel=self.uploadModel)
+            PostEvent(event)
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
             # pylint: disable=bare-except
             try:

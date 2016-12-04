@@ -18,6 +18,10 @@ Build binary distributable (Setup Wizard / DMG / RPM) with:
 
     python setup.py bdist unsigned
     python setup.py bdist C:\path\to\certificate.pfx password
+
+Run tests with:
+
+    python setup.py nosetests
 """
 import os
 import sys

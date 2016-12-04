@@ -61,7 +61,7 @@ class LogView(wx.Panel):
         (currently hard-coded to be a server managed by the MyData core
         developers - https://cvl.massive.org.au).
         """
-        logger.DumpLog(self.parent, self.settingsModel, submitDebugLog=True)
+        logger.SubmitLog(self.parent, self.settingsModel)
         event.Skip()
 
     def OnDebugLogging(self, event):

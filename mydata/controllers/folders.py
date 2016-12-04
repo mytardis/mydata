@@ -27,6 +27,8 @@ from mydata.controllers.uploads import UploadMethod
 from mydata.controllers.uploads import UploadDatafileRunnable
 from mydata.controllers.verifications import VerifyDatafileRunnable
 
+import mydata.events as mde
+
 from mydata.logs import logger
 
 if sys.platform.startswith("linux"):
@@ -84,57 +86,42 @@ class FoldersController(object):
 
         self.testRun = False
 
-        self.didntFindDatafileOnServerEvent, eventBinder = \
-            wx.lib.newevent.NewEvent()
-        self.EVT_DIDNT_FIND_FILE_ON_SERVER = wx.NewId()  # pylint: disable=invalid-name
-        self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
-
-        self.unverifiedDatafileOnServerEvent, eventBinder = \
-            wx.lib.newevent.NewEvent()
-        self.EVT_INCOMPLETE_FILE_ON_STAGING = wx.NewId()  # pylint: disable=invalid-name
-        self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
-
-        self.unverifiedNotFoundOnStagingEvent, eventBinder = \
-            wx.lib.newevent.NewEvent()
-        self.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING = wx.NewId()  # pylint: disable=invalid-name
-        self.notifyWindow.Bind(eventBinder, self.UploadDatafile)
-
-        self.showMessageDialogEvent, eventBinder = \
-            wx.lib.newevent.NewEvent()
-        self.notifyWindow.Bind(eventBinder, self.ShowMessageDialog)
-
-        self.shutdownUploadsEvent, eventBinder = wx.lib.newevent.NewEvent()
-        self.notifyWindow.Bind(eventBinder, self.ShutDownUploadThreads)
-
-        self.foundVerifiedDatafileEvent, eventBinder = \
-            wx.lib.newevent.NewCommandEvent()
-        self.EVT_FOUND_VERIFIED_DATAFILE = wx.NewId()  # pylint: disable=invalid-name
-        self.notifyWindow.Bind(eventBinder,
-                               self.CountCompletedUploadsAndVerifications)
-
-        self.foundUnverifiedDatafileEvent, eventBinder = \
-            wx.lib.newevent.NewCommandEvent()
-        self.EVT_FOUND_UNVERIFIED_BUT_FULL_SIZE_DATAFILE = wx.NewId()  # pylint:disable=invalid-name
-        self.notifyWindow.Bind(eventBinder,
-                               self.CountCompletedUploadsAndVerifications)
-
-        self.foundUnverifiedNoDfosDatafileEvent, eventBinder = \
-            wx.lib.newevent.NewCommandEvent()
-        self.EVT_FOUND_UNVERIFIED_NO_DFOS = wx.NewId()  # pylint:disable=invalid-name
-        self.notifyWindow.Bind(eventBinder,
-                               self.CountCompletedUploadsAndVerifications)
-
-        self.uploadCompleteEvent, eventBinder = \
-            wx.lib.newevent.NewCommandEvent()
-        self.EVT_UPLOAD_COMPLETE = wx.NewId()  # pylint:disable=invalid-name
-        self.notifyWindow.Bind(eventBinder,
-                               self.CountCompletedUploadsAndVerifications)
-
-        self.uploadFailedEvent, eventBinder = \
-            wx.lib.newevent.NewCommandEvent()
-        self.EVT_UPLOAD_FAILED = wx.NewId()  # pylint:disable=invalid-name
-        self.notifyWindow.Bind(eventBinder,
-                               self.CountCompletedUploadsAndVerifications)
+        # pylint: disable=invalid-name
+        self.DidntFindDatafileOnServerEvent, \
+            self.EVT_DIDNT_FIND_FILE_ON_SERVER, _ = \
+            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
+        self.UnverifiedDatafileOnServerEvent, \
+            self.EVT_UNVERIFIED_DATAFILE_ON_SERVER, _ = \
+            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
+        self.UnverifiedNotFoundOnStagingEvent, \
+            self.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING, _ = \
+            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
+        self.ShowMessageDialogEvent, \
+            self.EVT_SHOW_MESSAGE_DIALOG, _ = \
+            mde.NewEvent(self.notifyWindow, self.ShowMessageDialog)
+        self.ShutdownUploadsEvent, \
+            self.EVT_SHUTDOWN_UPLOADS, _ = \
+            mde.NewEvent(self.notifyWindow, self.ShutDownUploadThreads)
+        self.FoundVerifiedDatafileEvent, \
+            self.EVT_FOUND_VERIFIED_DATAFILE, _ = \
+            mde.NewEvent(self.notifyWindow,
+                         self.CountCompletedUploadsAndVerifications)
+        self.FoundUnverifiedDatafileEvent, \
+            self.EVT_FOUND_UNVERIFIED_DATAFILE, _ = \
+            mde.NewEvent(self.notifyWindow,
+                         self.CountCompletedUploadsAndVerifications)
+        self.FoundUnverifiedNoDfosDatafileEvent, \
+            self.EVT_FOUND_UNVERIFIED_NO_DFOS, _ = \
+            mde.NewEvent(self.notifyWindow,
+                         self.CountCompletedUploadsAndVerifications)
+        self.UploadCompleteEvent, \
+            self.EVT_UPLOAD_COMPLETE, _ = \
+            mde.NewEvent(self.notifyWindow,
+                         self.CountCompletedUploadsAndVerifications)
+        self.UploadFailedEvent, \
+            self.EVT_UPLOAD_FAILED, _ = \
+            mde.NewEvent(self.notifyWindow,
+                         self.CountCompletedUploadsAndVerifications)
 
     def Started(self):
         return self.started.isSet()
@@ -236,8 +223,8 @@ class FoldersController(object):
 
     def UploadDatafile(self, event):
         """
-        Called in response to didntFindDatafileOnServerEvent or
-        unverifiedDatafileOnServerEvent.
+        Called in response to DidntFindDatafileOnServerEvent or
+        UnverifiedDatafileOnServerEvent.
 
         This method runs in the main thread, so it shouldn't do anything
         time-consuming or blocking, unless it launches another thread.
@@ -275,10 +262,14 @@ class FoldersController(object):
                                    existingUnverifiedDatafile,
                                    verificationModel,
                                    bytesUploadedPreviously)
-        self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
+        if wx.PyApp.IsMainLoopRunning():
+            self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
+        else:
+            self.uploadDatafileRunnable[folderModel][dfi].Run()
         self.CountCompletedUploadsAndVerifications(event=None)
 
     def InitForUploads(self):
+        # pylint: disable=too-many-branches
         fc = self  # pylint: disable=invalid-name
         app = wx.GetApp()
         if hasattr(app, "TestRunRunning"):
@@ -299,11 +290,12 @@ class FoldersController(object):
             settingsModel.GetMaxVerificationThreads()
         fc.verificationWorkerThreads = []
 
-        for i in range(fc.numVerificationWorkerThreads):
-            thread = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
-                                      target=fc.VerificationWorker)
-            fc.verificationWorkerThreads.append(thread)
-            thread.start()
+        if wx.PyApp.IsMainLoopRunning():
+            for i in range(fc.numVerificationWorkerThreads):
+                thread = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
+                                          target=fc.VerificationWorker)
+                fc.verificationWorkerThreads.append(thread)
+                thread.start()
         fc.uploadDatafileRunnable = {}
         fc.uploadsQueue = Queue.Queue()
         fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
@@ -320,10 +312,10 @@ class FoldersController(object):
                 .GetUploadToStagingRequest()
         except Exception, err:
             # MyData app could be missing from MyTardis server.
+            sys.stderr.write(traceback.format_exc())
             logger.error(traceback.format_exc())
-            wx.PostEvent(
-                self.notifyWindow,
-                self.showMessageDialogEvent(
+            mde.PostEvent(
+                self.ShowMessageDialogEvent(
                     title="MyData",
                     message=str(err),
                     icon=wx.ICON_ERROR))
@@ -348,9 +340,8 @@ class FoldersController(object):
                 "files (up to 100 MB each)."
         if message:
             logger.warning(message)
-            wx.PostEvent(
-                self.notifyWindow,
-                self.showMessageDialogEvent(
+            mde.PostEvent(
+                self.ShowMessageDialogEvent(
                     title="MyData",
                     message=message,
                     icon=wx.ICON_WARNING))
@@ -364,11 +355,12 @@ class FoldersController(object):
             fc.numUploadWorkerThreads = 1
 
         fc.uploadWorkerThreads = []
-        for i in range(fc.numUploadWorkerThreads):
-            thread = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
-                                      target=fc.UploadWorker, args=())
-            fc.uploadWorkerThreads.append(thread)
-            thread.start()
+        if wx.PyApp.IsMainLoopRunning():
+            for i in range(fc.numUploadWorkerThreads):
+                thread = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
+                                          target=fc.UploadWorker, args=())
+                fc.uploadWorkerThreads.append(thread)
+                thread.start()
         # pylint: disable=bare-except
 
         fc.finishedScanningForDatasetFolders = threading.Event()
@@ -382,6 +374,7 @@ class FoldersController(object):
         self.foldersModel with dataset folders.
         """
         self.finishedScanningForDatasetFolders.set()
+        self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
         # pylint: disable=too-many-return-statements
@@ -410,9 +403,8 @@ class FoldersController(object):
                                                         fc.testRun)
                 except Exception, err:
                     logger.error(traceback.format_exc())
-                    wx.PostEvent(
-                        self.notifyWindow,
-                        self.showMessageDialogEvent(
+                    mde.PostEvent(
+                        self.ShowMessageDialogEvent(
                             title="MyData",
                             message=str(err),
                             icon=wx.ICON_ERROR))
@@ -426,9 +418,8 @@ class FoldersController(object):
                         .CreateDatasetIfNecessary(folderModel, fc.testRun)
                 except Exception, err:
                     logger.error(traceback.format_exc())
-                    wx.PostEvent(
-                        self.notifyWindow,
-                        self.showMessageDialogEvent(
+                    mde.PostEvent(
+                        self.ShowMessageDialogEvent(
                             title="MyData",
                             message=str(err),
                             icon=wx.ICON_ERROR))
@@ -547,6 +538,7 @@ class FoldersController(object):
 
         uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
             self.uploadsQueue.qsize()
+
         uploadsCompleted = self.uploadsModel.GetCompletedCount()
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
@@ -569,6 +561,7 @@ class FoldersController(object):
             if not self.finishedCountingVerifications[folder]:
                 finishedVerificationCounting = False
                 break
+
         if numVerificationsCompleted == \
                     self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
@@ -579,8 +572,10 @@ class FoldersController(object):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
-            wx.PostEvent(self.notifyWindow,
-                         self.shutdownUploadsEvent(completed=True))
+            mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
+        elif not wx.PyApp.IsMainLoopRunning() and self.testRun and \
+                finishedVerificationCounting:
+            mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
 
     def ShutDownUploadThreads(self, event=None):
         # pylint: disable=too-many-branches
@@ -701,5 +696,8 @@ class FoldersController(object):
                                                folderModel, dfi,
                                                self.settingsModel,
                                                self.testRun))
-            self.verificationsQueue\
-                .put(self.verifyDatafileRunnable[folderModel][dfi])
+            if wx.PyApp.IsMainLoopRunning():
+                self.verificationsQueue\
+                    .put(self.verifyDatafileRunnable[folderModel][dfi])
+            else:
+                self.verifyDatafileRunnable[folderModel][dfi].Run()

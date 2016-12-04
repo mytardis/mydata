@@ -1,11 +1,14 @@
 """
-Test scanning the Username / Dataset structure and upload using POST.
+Test ability to scan folders with the Username / Dataset structure
+and upload using SCP.
 """
 import os
 import sys
 import time
 import unittest
 import threading
+import socket
+import select
 from BaseHTTPServer import HTTPServer
 
 import requests
@@ -19,16 +22,23 @@ from mydata.dataviewmodels.uploads import UploadsModel
 from mydata.dataviewmodels.verifications import VerificationsModel
 from mydata.views.folders import FoldersView
 from mydata.controllers.folders import FoldersController
+import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
+from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
+from mydata.tests.fake_ssh_server import ThreadedSshServer
 from mydata.tests.utils import GetEphemeralPort
+from mydata.events import MYDATA_EVENTS
 if sys.platform.startswith("linux"):
     from mydata.linuxsubprocesses import StopErrandBoy
 
+
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test scanning the Username / Dataset structure and upload using POST.
+    Test ability to scan folders with the Username / Dataset structure
+    and upload using SCP.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
         self.app = None
@@ -37,23 +47,38 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         self.fakeMyTardisHost = "127.0.0.1"
         self.fakeMyTardisPort = None
         self.fakeMyTardisServerThread = None
+        self.fakeSshServerThread = None
 
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanUsernameDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
+        # The fake SSH server needs to know the public
+        # key so it can authenticate the test client.
+        # So we need to ensure that the MyData keypair
+        # is generated before starting the fake SSH server.
+        try:
+            self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
+        except PrivateKeyDoesNotExist:
+            self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
+        self.StartFakeSshServer()
 
     def tearDown(self):
+        self.keyPair.Delete()
         self.frame.Destroy()
         self.httpd.shutdown()
         self.fakeMyTardisServerThread.join()
+        self.sshd.server_close()
+        self.fakeSshServerThread.join()
         if sys.platform.startswith("linux"):
             StopErrandBoy()
 
     def test_scan_folders(self):
         """
-        Test scanning the Username / Dataset structure and upload using POST.
+        Test ability to scan folders with the Username / Dataset structure
+        and upload using SCP.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -62,7 +87,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
         pathToTestConfig = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdataUsernameDataset_POST.cfg")
+            "testdata/testdataUsernameDataset.cfg")
         settingsModel = SettingsModel(pathToTestConfig)
         settingsModel.SetDataDirectory(
             os.path.join(
@@ -70,6 +95,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                 "testdata", "testdataUsernameDataset"))
         settingsModel.SetMyTardisUrl(
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
+        settingsModel.SetSshKeyPair(self.keyPair)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
@@ -104,8 +130,10 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             return False
 
         foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
-        assert sorted(usersModel.GetValuesForColname("Username")) == \
-            ["testuser1", "testuser2"]
+        # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
+        # so the "INVALID_USER" folder is not included:
+        self.assertEqual(sorted(usersModel.GetValuesForColname("Username")),
+                         ["testuser1", "testuser2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
@@ -128,6 +156,20 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                               verificationsModel,
                               uploadsModel,
                               settingsModel)
+
+        username = "mydata"
+        privateKeyFilePath = self.keyPair.GetPrivateKeyFilePath()
+        host = "127.0.0.1"
+        port = 2200
+        sys.stderr.write("Waiting for fake SSH server to start up...\n")
+        attempts = 0
+        while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
+                                           host, port):
+            attempts += 1
+            if attempts > 10:
+                raise Exception(
+                    "Couldn't connect to SSH server at 127.0.0.1:2200")
+            time.sleep(0.25)
 
         foldersController.InitForUploads()
         for row in range(foldersModel.GetRowCount()):
@@ -154,23 +196,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             time.sleep(0.1)
         assert numVerificationsCompleted == numFiles
 
-        # Verifications won't be able to trigger uploads via PostEvent,
-        # because there is no running event loop, so we'll manually call
-        # UploadDatafile for each datafile.
-
-        uploadsToBePerformed = numVerificationsCompleted
-        for i in range(numVerificationsCompleted):
-            verificationModel = verificationsModel.verificationsData[i]
-            folderModelId = verificationModel.GetFolderModelId()
-            folderModel = foldersModel.GetFolderRecord(folderModelId-1)
-            dataFileIndex = verificationModel.GetDataFileIndex()
-            event = foldersController.didntFindDatafileOnServerEvent(
-                foldersController=foldersController,
-                folderModel=folderModel,
-                dataFileIndex=dataFileIndex,
-                verificationModel=verificationModel)
-            foldersController.UploadDatafile(event)
-
         sys.stderr.write("Waiting for uploads to complete...\n")
         while True:
             uploadsCompleted = uploadsModel.GetCompletedCount()
@@ -179,6 +204,9 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
             if uploadsProcessed == uploadsToBePerformed:
                 break
+            if uploadsProcessed > uploadsToBePerformed:
+                raise Exception("Processed %s/%s uploads!"
+                                % (uploadsProcessed, uploadsToBePerformed))
             time.sleep(0.1)
         foldersController.ShutDownUploadThreads()
 
@@ -215,6 +243,23 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             threading.Thread(target=FakeMyTardisServer,
                              name="FakeMyTardisServerThread")
         self.fakeMyTardisServerThread.start()
+
+    def StartFakeSshServer(self):
+        """
+        Start fake SSH server.
+        """
+        self.sshd = ThreadedSshServer(("127.0.0.1", 2200))
+
+        def FakeSshServer():
+            """ Run fake SSH server """
+            try:
+                self.sshd.serve_forever()
+            except (OSError, socket.error, select.error):
+                pass
+        self.fakeSshServerThread = \
+            threading.Thread(target=FakeSshServer,
+                             name="FakeSshServerThread")
+        self.fakeSshServerThread.start()
 
 
 if __name__ == '__main__':

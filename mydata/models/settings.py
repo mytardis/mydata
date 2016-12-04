@@ -95,7 +95,7 @@ class SettingsModel(object):
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
     """
-    def __init__(self, configPath):
+    def __init__(self, configPath, checkForUpdates=True):
 
         self.previousDict = {}
 
@@ -126,7 +126,7 @@ class SettingsModel(object):
 
         # pylint: disable=bare-except
         try:
-            self.LoadSettings()
+            self.LoadSettings(checkForUpdates=checkForUpdates)
         except:
             # We don't want to raise an exception if invalid
             # settings are encountered when MyData is first

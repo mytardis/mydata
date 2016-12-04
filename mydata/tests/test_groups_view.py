@@ -28,4 +28,5 @@ class GroupsViewTester(unittest.TestCase):
         pass
 
     def tearDown(self):
+        self.frame.Hide()
         self.frame.Destroy()

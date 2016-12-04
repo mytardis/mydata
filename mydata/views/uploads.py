@@ -11,6 +11,7 @@ import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
 from mydata.utils import BeginBusyCursorIfRequired
+from mydata.events import PostEvent
 
 
 class UploadsView(wx.Panel):
@@ -75,9 +76,6 @@ class UploadsView(wx.Panel):
 
     def OnCancelRemainingUploads(self, event):
         wx.CallAfter(BeginBusyCursorIfRequired)
-        wx.PostEvent(
-            self.foldersController.notifyWindow,
-            self.foldersController.shutdownUploadsEvent(
-                canceled=True))
+        PostEvent(self.foldersController.ShutdownUploadsEvent(canceled=True))
         if event:
             event.Skip()

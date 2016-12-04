@@ -15,6 +15,7 @@ from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
 from mydata.dataviewmodels.groups import GroupsModel
+from mydata.events import MYDATA_EVENTS
 from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
 from mydata.tests.utils import GetEphemeralPort
 
@@ -36,6 +37,7 @@ class ScanDatasetTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
 
     def tearDown(self):

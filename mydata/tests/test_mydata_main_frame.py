@@ -26,6 +26,7 @@ class MyDataMainFrameTester(unittest.TestCase):
         self.mydataFrame.Show()
 
     def tearDown(self):
+        self.mydataFrame.Hide()
         self.mydataFrame.Destroy()
 
     def test_mydata_main_frame(self):
