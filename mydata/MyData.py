@@ -271,8 +271,6 @@ class MyData(wx.App):
         self.uploadsModel = UploadsModel()
         self.tasksModel = TasksModel(self.settingsModel)
 
-        self.frame.Bind(wx.EVT_ACTIVATE, self.OnActivateFrame)
-
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
         if sys.platform.startswith("linux"):
             self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
@@ -466,14 +464,6 @@ class MyData(wx.App):
                 self.frame.Show(True)
                 self.frame.Raise()
         event.Skip()
-
-    def OnActivateFrame(self, event):
-        """
-        Called when MyData's main window is activated.
-        """
-        if event.GetActive():
-            self.frame.Show(True)
-            self.frame.Raise()
 
     # pylint: disable=no-self-use
     def OnUndo(self, event):
