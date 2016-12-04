@@ -62,6 +62,10 @@ class SettingsDialogTester(unittest.TestCase):
         self.StartFakeMyTardisServer()
         self.settingsModel.SetMyTardisUrl(
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
+        self.settingsModel.SetDataDirectory(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "testdata", "testdataUsernameDataset"))
         self.settingsModel.SaveToDisk()
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
 
