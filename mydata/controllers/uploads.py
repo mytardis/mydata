@@ -401,7 +401,6 @@ class UploadDatafileRunnable(object):
                                          % self.uploadModel
                                          .GetRelativePathToUpload())
                             return
-                        bytesUploaded = 0
                         bytesUploaded = self.uploadModel.GetBytesUploaded()
                         if bytesUploaded == dataFileSize:
                             uploadSuccess = True

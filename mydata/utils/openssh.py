@@ -565,7 +565,6 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
 
     maxThreads = settingsModel.GetMaxUploadThreads()
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if settingsModel.UseNoneCipher():
         cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
     else:
@@ -700,7 +699,6 @@ def UploadFileFromWindows(filePath, fileSize, username,
     MonitorProgress()
 
     cipher = settingsModel.GetCipher()
-    bytesUploaded = long(0)
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
@@ -737,7 +735,6 @@ def UploadFileFromWindows(filePath, fileSize, username,
         return
 
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     scpCommandString = \
         '%s -v -P %s -i %s -c %s ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \

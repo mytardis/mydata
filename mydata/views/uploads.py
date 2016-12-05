@@ -41,7 +41,7 @@ class UploadsView(wx.Panel):
 
         for col in range(0, self.uploadsModel.GetColumnCount()):
             if self.uploadsModel.columnTypes[col] == ColumnType.TEXT:
-                column = self.uploadsDataViewControl\
+                self.uploadsDataViewControl\
                     .AppendTextColumn(self.uploadsModel.GetColumnName(col),
                                       col,
                                       width=self.uploadsModel

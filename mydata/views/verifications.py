@@ -36,7 +36,7 @@ class VerificationsView(wx.Panel):
 
         for col in range(0, self.verificationsModel.GetColumnCount()):
             if self.verificationsModel.columnTypes[col] == ColumnType.TEXT:
-                column = self.verificationsDataViewControl\
+                self.verificationsDataViewControl\
                     .AppendTextColumn(self.verificationsModel
                                       .GetColumnName(col),
                                       col,

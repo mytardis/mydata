@@ -429,7 +429,7 @@ class FoldersController(object):
             except requests.exceptions.ConnectionError, err:
                 logger.error(str(err))
                 return
-            except ValueError, err:
+            except ValueError:
                 logger.error("Failed to retrieve experiment "
                              "for folder " +
                              str(folderModel.GetFolder()))

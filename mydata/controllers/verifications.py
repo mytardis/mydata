@@ -191,7 +191,6 @@ class VerifyDatafileRunnable(object):
         on staging.
         """
         replicas = existingDatafile.GetReplicas()
-        bytesUploadedPreviously = None
         try:
             bytesUploadedPreviously = \
                 ReplicaModel.CountBytesUploadedToStaging(
@@ -199,7 +198,7 @@ class VerifyDatafileRunnable(object):
             logger.debug("%s bytes uploaded to staging for %s"
                          % (bytesUploadedPreviously,
                             replicas[0].GetUri()))
-        except FileNotFoundOnStaging, err:
+        except FileNotFoundOnStaging:
             self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
             return
         except MissingMyDataReplicaApiEndpoint:
@@ -250,7 +249,7 @@ class VerifyDatafileRunnable(object):
                         remoteFilePath,
                         username, privateKeyFilePath, host, port,
                         self.settingsModel)
-            except FileNotFoundOnStaging, err:
+            except FileNotFoundOnStaging:
                 self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
                 return
             except StagingHostRefusedSshConnection, err:

@@ -47,7 +47,7 @@ def NewEvent(defaultTarget=None, defaultHandler=None):
     return Event, eventType, eventBinder
 
 
-def PostEvent(event, target=None):
+def PostEvent(event):
     """
     For now, just call wx.PostEvent, but later this will be able to call the
     event's default handler directly if necessary, eliminating the dependency

@@ -567,7 +567,6 @@ class UploaderModel(object):
                 except:
                     logger.error(traceback.format_exc())
                     raise
-                uploadToStagingRequest = None
                 try:
                     uploadToStagingRequest = \
                         self.ExistingUploadToStagingRequest()

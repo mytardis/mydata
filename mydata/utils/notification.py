@@ -38,7 +38,6 @@ class Notification(object):
             except:  # pylint: disable=bare-except
                 sys.stderr.write(message + "\n")
             return
-        path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
         executable = "MyData Notifications"
         args = ["-message", message, "-title", title]
         if subtitle:

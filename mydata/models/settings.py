@@ -1125,7 +1125,8 @@ class SettingsModel(object):
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
                     self.validation = SettingsValidation(False, message,
-                                                         "facility_name")
+                                                         "facility_name",
+                                                         suggestion)
                     return self.validation
                 except:
                     logger.error(traceback.format_exc())
@@ -1341,7 +1342,7 @@ class SettingsModel(object):
                     # Lines starting with '#' or ';' will be ignored.
                     # Other non-blank lines are expected to be globs,
                     # e.g. *.txt
-                    line = line.decode('utf-8').strip()
+                    _ = line.decode('utf-8').strip()
                 except UnicodeDecodeError:
                     message = "%s file is not a valid plain text " \
                         "(UTF-8) file." % upper

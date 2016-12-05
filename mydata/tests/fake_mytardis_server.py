@@ -714,10 +714,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif self.path.startswith("/api/v1/dataset_file") and "verify" in self.path:
             # e.g. /api/v1/dataset_file/1/verify/
             match = re.match(r"^/api/v1/dataset_file/([0-9]+)/verify/$", self.path)
-            if match:
-                # pylint: disable=unused-variable
-                datafileId = match.groups()[0]
-            else:
+            if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
