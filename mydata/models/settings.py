@@ -1485,6 +1485,9 @@ class SettingsModel(object):
                     'Username / "MyTardis" / Experiment / Dataset':
                 filterString1 = '*'
                 filterString2 = expFilterString
+            else:
+                filterString1 = '*'
+                filterString2 = '*'
             if self.GetFolderStructure().startswith("Username") or \
                     self.GetFolderStructure().startswith("Email") or \
                     self.GetFolderStructure().startswith("User Group"):

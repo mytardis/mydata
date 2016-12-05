@@ -198,21 +198,6 @@ class CustomBuildCommand(build):
             print "Custom build command."
 
 
-if sys.platform.startswith("darwin"):
-    class CustomPy2appCommand(py2app):
-        """
-        On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
-        """
-        def run(self):
-            py2app.run(self)
-            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
-                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
-            distutils.dir_util\
-                .copy_tree("resources/macosx/MyData Notifications.app/Contents"
-                           "/Resources/en.lproj",
-                           "dist/MyData.app/Contents/Resources/en.lproj")
-
-
 class CustomBdistCommand(bdist):
     r"""
     On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
@@ -292,6 +277,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
             print cmd
             certificateLine = commands.getoutput(cmd)
             print "certificateLine: " + certificateLine
+            certificateName = None
             try:
                 certificateName = certificateLine.split(": ", 1)[1]
                 print "certificateName: " + certificateName
@@ -565,6 +551,20 @@ setup_args = dict(name=app_name,
                       "Topic :: System :: Archiving",
                   ])
 if sys.platform.startswith("darwin"):
+
+    class CustomPy2appCommand(py2app):
+        """
+        On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
+        """
+        def run(self):
+            py2app.run(self)
+            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
+                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
+            distutils.dir_util\
+                .copy_tree("resources/macosx/MyData Notifications.app/Contents"
+                           "/Resources/en.lproj",
+                           "dist/MyData.app/Contents/Resources/en.lproj")
+
     setup_args['app'] = ["run.py"]  # Used by py2app
     setup_args['cmdclass']['py2app'] = CustomPy2appCommand
 setup(**setup_args)

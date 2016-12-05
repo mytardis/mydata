@@ -79,6 +79,16 @@ class DatasetModel(object):
                              description)
         else:
             numExistingMatchingDatasets = 0
+            existingMatchingDatasets = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 0
+                },
+                "objects": []
+            }
 
         if numExistingMatchingDatasets == 0:
             logger.debug("Creating dataset record for folder: " + description)

@@ -799,6 +799,7 @@ class MyData(wx.App):
                 logger.debug("Starting run() method for thread %s"
                              % threading.current_thread().name)
                 # pylint: disable=bare-except
+                activeNetworkInterfaces = []
                 try:
                     wx.CallAfter(BeginBusyCursorIfRequired)
                     # pylint: disable=broad-except

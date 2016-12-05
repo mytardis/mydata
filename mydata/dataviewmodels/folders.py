@@ -518,7 +518,8 @@ class FoldersModel(DataViewIndexListModel):
                     userRecord = \
                         UserModel.GetUserByEmail(self.settingsModel,
                                                  userFolderName)
-
+                else:
+                    userRecord = None
             except DoesNotExist:
                 userRecord = None
             if shouldAbort():
