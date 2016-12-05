@@ -366,7 +366,7 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
             logger.error("An error occurred while retrieving uploader info.")
@@ -452,7 +452,7 @@ class UploaderModel(object):
         else:
             response = requests.post(headers=headers, url=url, data=data,
                                      timeout=DEFAULT_TIMEOUT)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code in (200, 201):
             logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
         else:
@@ -484,7 +484,7 @@ class UploaderModel(object):
             "Content-Type": "application/json",
             "Accept": "application/json"}
         response = requests.get(headers=headers, url=url)
-        if response.status_code < 200 or response.status_code >= 300:
+        if response.status_code != 200:
             if response.status_code == 404:
                 response.close()
                 raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
@@ -539,7 +539,7 @@ class UploaderModel(object):
              "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 201:
             responseJson = response.json()
             response.close()
             return UploaderRegistrationRequest(
@@ -620,7 +620,7 @@ class UploaderModel(object):
                 logger.error(url)
                 logger.error(message)
                 raise MissingMyDataAppOnMyTardisServer(message)
-            if response.status_code >= 200 and response.status_code < 300:
+            if response.status_code == 200:
                 existingUploaderRecords = response.json()
             else:
                 logger.error("An error occurred while retrieving uploader id.")
@@ -677,7 +677,7 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
             logger.error("An error occurred while retrieving uploader.")

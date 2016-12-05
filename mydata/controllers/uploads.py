@@ -308,8 +308,7 @@ class UploadDatafileRunnable(object):
                     if not self.existingUnverifiedDatafile:
                         response = requests.post(headers=headers, url=url,
                                                  data=data)
-                        postSuccess = response.status_code >= 200 and \
-                            response.status_code < 300
+                        postSuccess = (response.status_code == 201)
                         logger.debug(response.text)
                     if postSuccess or self.existingUnverifiedDatafile:
                         uploadToStagingRequest = self.settingsModel\

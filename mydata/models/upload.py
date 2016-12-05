@@ -102,7 +102,7 @@ class UploadModel(object):
 
     def SetProgress(self, progress):
         self.progress = progress
-        if progress > 0 and progress < 100:
+        if 0 < progress < 100:
             self.status = UploadStatus.IN_PROGRESS
 
     def GetStatus(self):

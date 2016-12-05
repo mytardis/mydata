@@ -304,7 +304,7 @@ class Logger(object):
                                          verify="cacert.pem", timeout=TIMEOUT)
             else:
                 response = requests.post(url, files=fileInfo, timeout=TIMEOUT)
-            if response.status_code >= 200 and response.status_code < 300:
+            if response.status_code == 200:
                 logger.debug("Debug log was submitted successfully!")
             else:
                 logger.error("An error occurred while attempting to submit "

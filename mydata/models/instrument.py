@@ -97,7 +97,7 @@ class InstrumentModel(object):
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
         content = response.text
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 201:
             instrumentJson = response.json()
             return InstrumentModel(settingsModel=settingsModel, name=name,
                                    instrumentJson=instrumentJson)
@@ -177,7 +177,7 @@ class InstrumentModel(object):
         uploaderJson = {"name": name}
         data = json.dumps(uploaderJson)
         response = requests.put(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             logger.info("Renaming instrument succeeded.")
         else:
             logger.info("Renaming instrument failed.")

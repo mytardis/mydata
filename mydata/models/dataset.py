@@ -113,7 +113,7 @@ class DatasetModel(object):
                 logger.testrun(message)
                 return
             response = requests.post(headers=headers, url=url, data=data)
-            if response.status_code >= 200 and response.status_code < 300:
+            if response.status_code == 201:
                 newDatasetJson = response.json()
                 return DatasetModel(settingsModel, newDatasetJson)
             else:

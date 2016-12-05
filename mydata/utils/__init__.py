@@ -28,7 +28,7 @@ def HumanReadableSizeString(num):
     Returns human-readable string.
     """
     for unit in ['bytes', 'KB', 'MB', 'GB']:
-        if num < 1024.0 and num > -1024.0:
+        if -1024.0 < num < 1024.0:
             return "%3.1f %s" % (num, unit)
         num /= 1024.0
     return "%3.1f %s" % (num, 'TB')
