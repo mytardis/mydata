@@ -1185,7 +1185,7 @@ class MyData(wx.App):
               "MyData is being developed at the Monash e-Research Centre " \
               "(Monash University, Australia)\n\n" \
               "MyData is open source (GPL3) software available from " \
-              "https://github.com/monash-merc/mydata\n\n" \
+              "https://github.com/mytardis/mydata\n\n" \
               "Version:   " + VERSION + "\n" \
               "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
