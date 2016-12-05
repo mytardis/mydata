@@ -9,7 +9,6 @@ import logging
 import wx
 
 from mydata.models.uploader import UploaderModel
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
@@ -524,46 +523,11 @@ def SettingsDialogValidation(event):
                         wx.GetApp().GetMainFrame().SetStatusMessage, message)
             settingsModel.Validate(SetStatusMessage)
             wx.CallAfter(EndBusyCursorIfRequired, event)
-            if settingsModel.IsIncompatibleMyTardisVersion():
-                wx.CallAfter(event.settingsDialog.okButton.Enable)
-                wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
-                return
             provideValidationResultsEvent = \
                 MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
                     settingsDialog=event.settingsDialog,
                     settingsModel=event.settingsModel)
             PostEvent(provideValidationResultsEvent)
-        except IncompatibleMyTardisVersion as err:
-            wx.CallAfter(EndBusyCursorIfRequired, event)
-
-            def ShowDialog(message):
-                """
-                Show error dialog in main thread.
-                """
-                logger.error(message)
-                # pylint: disable=no-member
-                # Otherwise pylint complains about PyAssertionError.
-                # pylint: disable=protected-access
-                try:
-                    wx.EndBusyCursor()
-                    if wx.version().startswith("3.0.3.dev"):
-                        arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
-                    else:
-                        arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-                    event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-                except wx._core.PyAssertionError, err:
-                    if "no matching wxBeginBusyCursor()" \
-                            not in str(err):
-                        logger.error(str(err))
-                        raise
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-            message = str(err)
-            if wx.PyApp.IsMainLoopRunning():
-                wx.CallAfter(ShowDialog, message)
-            else:
-                raise Exception(message)
         finally:
             wx.CallAfter(event.settingsDialog.okButton.Enable)
             wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)

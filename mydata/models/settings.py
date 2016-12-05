@@ -40,7 +40,6 @@ from mydata.models.instrument import InstrumentModel
 from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
@@ -691,12 +690,6 @@ class SettingsModel(object):
     def SetSshKeyPair(self, sshKeyPair):
         self.sshKeyPair = sshKeyPair
 
-    def IsIncompatibleMyTardisVersion(self):
-        return self.incompatibleMyTardisVersion
-
-    def SetIncompatibleMyTardisVersion(self, incompatibleMyTardisVersion):
-        self.incompatibleMyTardisVersion = incompatibleMyTardisVersion
-
     def GetValueForKey(self, key):
         return self.mydataConfig[key]
 
@@ -1246,10 +1239,6 @@ class SettingsModel(object):
                 if setStatusMessage:
                     setStatusMessage(message)
                 self.UpdateAutostartFile()
-        except IncompatibleMyTardisVersion:
-            logger.debug("Incompatible MyTardis Version.")
-            self.SetIncompatibleMyTardisVersion(True)
-            raise
         except:
             message = traceback.format_exc()
             logger.error(message)

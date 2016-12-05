@@ -3,8 +3,13 @@ Model class for MyTardis API v1's DataFileResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
+import io
+import json
 import urllib
+import urllib2
+
 import requests
+import poster
 
 from mydata.logs import logger
 from mydata.utils.exceptions import DoesNotExist
@@ -227,3 +232,54 @@ class DataFileModel(object):
         # so it might not happen immediately if there is congestion in the
         # Celery queue.
         return True
+
+    @staticmethod
+    def CreateDataFileForStagingUpload(settingsModel, dataFileDict):
+        """
+        Create a DataFile record and return a temporary URL to upload
+        to (e.g. by SCP).
+        """
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+        url = myTardisUrl + "/api/v1/mydata_dataset_file/"
+        headers = {
+            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
+                                               myTardisApiKey),
+            "Content-Type": "application/json",
+            "Accept": "application/json"}
+        dataFileJson = json.dumps(dataFileDict)
+        response = requests.post(headers=headers, url=url, data=dataFileJson)
+        return response
+
+    @staticmethod
+    def UploadDataFileWithPost(settingsModel, dataFilePath, dataFileDict,
+                               uploadsModel, uploadModel, posterCallback):
+        """
+        Upload a file to the MyTardis API via POST, creating a new
+        DataFile record.
+        """
+        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-locals
+        myTardisUsername = settingsModel.GetUsername()
+        myTardisApiKey = settingsModel.GetApiKey()
+        myTardisUrl = settingsModel.GetMyTardisUrl()
+        url = myTardisUrl + "/api/v1/dataset_file/"
+        message = "Initializing buffered reader..."
+        uploadsModel.SetMessage(uploadModel, message)
+        datafileBufferedReader = io.open(dataFilePath, 'rb')
+        uploadModel.SetBufferedReader(datafileBufferedReader)
+
+        datagen, headers = poster.encode.multipart_encode(
+            {"json_data": json.dumps(dataFileDict),
+             "attached_file": datafileBufferedReader},
+            cb=posterCallback)
+        opener = poster.streaminghttp.register_openers()
+        opener.addheaders = [("Authorization", "ApiKey " +
+                              myTardisUsername +
+                              ":" + myTardisApiKey),
+                             ("Content-Type", "application/json"),
+                             ("Accept", "application/json")]
+        request = urllib2.Request(url, datagen, headers)
+        response = urllib2.urlopen(request)
+        return response

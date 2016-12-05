@@ -3,7 +3,6 @@ Model class for MyTardis API v1's StorageBoxResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils import UnderscoreToCamelcase
 
 
@@ -31,15 +30,9 @@ class StorageBox(object):
                     attr = "storageBoxId"
                 if hasattr(self, attr):
                     self.__dict__[attr] = storageBoxJson[key]
-            if 'options' not in storageBoxJson:
-                message = "Couldn't access storage box options from MyTardis API."
-                raise IncompatibleMyTardisVersion(message)
             self.options = []
             for optionJson in storageBoxJson['options']:
                 self.options.append(StorageBoxOption(optionJson=optionJson))
-            if 'attributes' not in storageBoxJson:
-                message = "Couldn't access storage box attributes from MyTardis API."
-                raise IncompatibleMyTardisVersion(message)
             self.attributes = []
             for attrJson in storageBoxJson['attributes']:
                 self.attributes.append(StorageBoxAttribute(attrJson=attrJson))

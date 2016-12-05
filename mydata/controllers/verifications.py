@@ -37,7 +37,6 @@ from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 from mydata.utils.openssh import OldCountBytesUploadedToStaging
 from mydata.utils.exceptions import StagingHostRefusedSshConnection
 from mydata.utils.exceptions import StagingHostSshPermissionDenied
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 import mydata.events as mde
 from mydata.logs import logger
@@ -211,18 +210,6 @@ class VerifyDatafileRunnable(object):
                 uploadToStagingRequest = \
                     self.settingsModel.GetUploadToStagingRequest()
                 username = uploadToStagingRequest.GetScpUsername()
-            except IncompatibleMyTardisVersion, err:
-                self.verificationsModel.SetComplete(self.verificationModel)
-                mde.PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = str(err)
-                mde.PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
             except StorageBoxAttributeNotFound, err:
                 self.verificationsModel.SetComplete(self.verificationModel)
                 mde.PostEvent(
