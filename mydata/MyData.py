@@ -979,11 +979,11 @@ class MyData(wx.App):
             folderStructure = self.settingsModel.GetFolderStructure()
             # pylint: disable=too-many-boolean-expressions
             if self.usersModel.GetNumUserOrGroupFolders() == 0 or \
-                    (folderStructure.startswith("Username") and \
+                    (folderStructure.startswith("Username") and
                      self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("Email") and \
+                    (folderStructure.startswith("Email") and
                      self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("User Group") and \
+                    (folderStructure.startswith("User Group") and
                      self.groupsModel.GetCount() == 0):
                 if self.usersModel.GetNumUserOrGroupFolders() == 0:
                     message = "No folders were found to upload from."

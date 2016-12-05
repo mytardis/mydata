@@ -106,32 +106,32 @@ class SshServerInterface(paramiko.ServerInterface):
 # Default host key used by ThreadedSshServer
 #
 DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
-    "-----BEGIN RSA PRIVATE KEY-----\n" \
-    "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n" \
-    "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n" \
-    "DiN+GmGxCSFfxRQtyA0pa7qMDnXUKnFVViDc1r6WlzkOjmFPVRvvOO/fisumN8qM\n" \
-    "72N82wFzI9cWPMg1cx60ioRFHJ56Oz1D43IEc7jLw4weIxp+1HDciVwN1FMGcpf5\n" \
-    "9MkwYKqsu3zJKsrOJq59NwDwvGPZ0ZJHXOk8jvAdjH5fOyleQQCLdTmHZFR4gLMA\n" \
-    "cz9puMjUJwHQ0+YZ+SI9w8pkmIo1EEXWo2MV3wIDAQABAoIBAQCJGPkrXhvkAVck\n" \
-    "PwhnlqT/DOgZQ+cee+lTRCFmRjP2HWL0jqQwzwJjoXkNYcLXZ2STjBEqTKBl3ZvT\n" \
-    "Rk9Wf8R8tYuPGu7NzwgMYvHj+a2Rd6kGM2AFzT9mkjYE120hDzk3xjFDwRKDMLVn\n" \
-    "ebtEOCYOjN09+0z4/U+21QmK+ZRwoc283kJz4RcHI64GhzHxvvzVONHIgjWWzP15\n" \
-    "Cnjnn3CjNTJYoa/oP6/XF7gcZqMmKN95YVkBlqcC23QAncRCmKNadShiggVEms9z\n" \
-    "6nZu+0vHKUEjgSPTuq0G0yavCv/4jtWyKywdt2C+RZf1TZg4ng5jgIXVbPzzRGL/\n" \
-    "gwzccvgRAoGBANxavLHltKGvNg4nxvI13GXlTEURhtOAOGpRu64/drQml+BhRf5H\n" \
-    "IiR1esaVYJvwIWmAiccH/ATQ5x32EDOZnhBKE3eZxhOr1ms4MQqJlVWxKQgC6Ee+\n" \
-    "NzXfdhrj9ryvdt5/CfXupsTAZkFDSCJdJ0aBCpQpamiq7qcqQvAxSCZdAoGBAM0R\n" \
-    "nCrU4MMW+tWzGi/UvpMXTc74yKqG83GUl5zuuZmTE5gZmcx7+8XAhXRFe5piEPmV\n" \
-    "XKIth6cNg3NFUdgfZeeUPeffbFUj8egSkMrqUBiLDQ9WasXg9Ju0aYfXiA9WkqJM\n" \
-    "u6C6T7pLzxWOOt2jKZzQLjonlSv5/jebU47JvHFrAoGAfKnk+SxAjfyHM2jzl9I6\n" \
-    "93bLOIQa6AsxX40QBhund3IiGHJP2/S4bzH7nN+jwXUQIhTzXaO5w6vAJWYxck/l\n" \
-    "acfOzao0sqpT62Ll89U0pD9PPFYQvY3yxErBEaOI0uTd9jCfHQDAXq2O7Ds5Ux+q\n" \
-    "eavFpV7s8XxK+k3hguwOqo0CgYBlRZYW/OxGzBlx4bJD/s9iurZ9SRVoSZ7974D0\n" \
-    "Sly0QBMEIVh3yJ7s6Qe/BPVmp5l0eFO37743PJA3I/uoPNFJjUcJNKg+X7L+hfSl\n" \
-    "kROfG0SG14mBUXfbUTxwjnst//YIWtaqKHhpKzkIjyX5ALPzMkgyBgxAHIR0F6wr\n" \
-    "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n" \
-    "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n" \
-    "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n" \
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n"
+    "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n"
+    "DiN+GmGxCSFfxRQtyA0pa7qMDnXUKnFVViDc1r6WlzkOjmFPVRvvOO/fisumN8qM\n"
+    "72N82wFzI9cWPMg1cx60ioRFHJ56Oz1D43IEc7jLw4weIxp+1HDciVwN1FMGcpf5\n"
+    "9MkwYKqsu3zJKsrOJq59NwDwvGPZ0ZJHXOk8jvAdjH5fOyleQQCLdTmHZFR4gLMA\n"
+    "cz9puMjUJwHQ0+YZ+SI9w8pkmIo1EEXWo2MV3wIDAQABAoIBAQCJGPkrXhvkAVck\n"
+    "PwhnlqT/DOgZQ+cee+lTRCFmRjP2HWL0jqQwzwJjoXkNYcLXZ2STjBEqTKBl3ZvT\n"
+    "Rk9Wf8R8tYuPGu7NzwgMYvHj+a2Rd6kGM2AFzT9mkjYE120hDzk3xjFDwRKDMLVn\n"
+    "ebtEOCYOjN09+0z4/U+21QmK+ZRwoc283kJz4RcHI64GhzHxvvzVONHIgjWWzP15\n"
+    "Cnjnn3CjNTJYoa/oP6/XF7gcZqMmKN95YVkBlqcC23QAncRCmKNadShiggVEms9z\n"
+    "6nZu+0vHKUEjgSPTuq0G0yavCv/4jtWyKywdt2C+RZf1TZg4ng5jgIXVbPzzRGL/\n"
+    "gwzccvgRAoGBANxavLHltKGvNg4nxvI13GXlTEURhtOAOGpRu64/drQml+BhRf5H\n"
+    "IiR1esaVYJvwIWmAiccH/ATQ5x32EDOZnhBKE3eZxhOr1ms4MQqJlVWxKQgC6Ee+\n"
+    "NzXfdhrj9ryvdt5/CfXupsTAZkFDSCJdJ0aBCpQpamiq7qcqQvAxSCZdAoGBAM0R\n"
+    "nCrU4MMW+tWzGi/UvpMXTc74yKqG83GUl5zuuZmTE5gZmcx7+8XAhXRFe5piEPmV\n"
+    "XKIth6cNg3NFUdgfZeeUPeffbFUj8egSkMrqUBiLDQ9WasXg9Ju0aYfXiA9WkqJM\n"
+    "u6C6T7pLzxWOOt2jKZzQLjonlSv5/jebU47JvHFrAoGAfKnk+SxAjfyHM2jzl9I6\n"
+    "93bLOIQa6AsxX40QBhund3IiGHJP2/S4bzH7nN+jwXUQIhTzXaO5w6vAJWYxck/l\n"
+    "acfOzao0sqpT62Ll89U0pD9PPFYQvY3yxErBEaOI0uTd9jCfHQDAXq2O7Ds5Ux+q\n"
+    "eavFpV7s8XxK+k3hguwOqo0CgYBlRZYW/OxGzBlx4bJD/s9iurZ9SRVoSZ7974D0\n"
+    "Sly0QBMEIVh3yJ7s6Qe/BPVmp5l0eFO37743PJA3I/uoPNFJjUcJNKg+X7L+hfSl\n"
+    "kROfG0SG14mBUXfbUTxwjnst//YIWtaqKHhpKzkIjyX5ALPzMkgyBgxAHIR0F6wr\n"
+    "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n"
+    "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n"
+    "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n"
     "-----END RSA PRIVATE KEY-----\n"
 ))
 

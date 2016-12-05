@@ -657,7 +657,7 @@ class FoldersController(object):
             elapsedTime = self.uploadsModel.GetElapsedTime()
             if elapsedTime and not self.testRun:
                 averageSpeed = "%3.1f MB/s" % \
-                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0 \
+                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0
                      / elapsedTime.total_seconds())
                 message += "  Average speed: %s" % averageSpeed
         else:
