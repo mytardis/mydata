@@ -273,6 +273,9 @@ def CheckConnectivity(event):
                                            wx.OK | wx.ICON_ERROR)
                     dlg.ShowModal()
                 wx.CallAfter(ShowErrorDialog, message)
+                return
+            else:
+                raise
         wx.CallAfter(EndBusyCursorIfRequired, event)
         if len(activeNetworkInterfaces) > 0:
             logger.debug("Found at least one active network interface: %s."
