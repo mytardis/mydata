@@ -50,7 +50,7 @@ paramiko_logger = logging.getLogger("paramiko")
 paramiko_logger.setLevel(logging.WARNING)
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter(
-    '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d ' \
+    '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d '
     '%(name)s: %(message)s', '%Y%m%d-%H:%M:%S'))
 paramiko_logger.addHandler(handler)
 
@@ -319,7 +319,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                                     break
                                 buf += char
                         match2 = re.match(
-                            r"^([C,D])([0-7][0-7][0-7][0-7])\s+" \
+                            r"^([C,D])([0-7][0-7][0-7][0-7])\s+"
                             r"([0-9]+)\s+(\S+)$", buf)
                         if match2:
                             logger.info("Received file mode/size/filename "
