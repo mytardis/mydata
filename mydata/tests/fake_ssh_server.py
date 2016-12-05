@@ -455,7 +455,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         try:
             self.transport.close()
         finally:
-            SocketServer.BaseRequestHandler.handle_timeout(self)
+            self.server.handle_timeout()
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
