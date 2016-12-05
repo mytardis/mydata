@@ -71,13 +71,10 @@ def BeginBusyCursorIfRequired():
     """
     Begin busy cursor if it's not already being displayed.
     """
-    # pylint: disable=no-member
-    # Otherwise pylint complains about PyAssertionError.
-    # pylint: disable=protected-access
     try:
         if not wx.IsBusy():
             wx.BeginBusyCursor()
-    except wx._core.PyAssertionError, err:
+    except wx.PyAssertionError, err:
         logger.warning(err)
 
 
@@ -86,9 +83,6 @@ def EndBusyCursorIfRequired(event=None):
     The built in wx.EndBusyCursor raises an ugly exception if the
     busy cursor has already been stopped.
     """
-    # pylint: disable=no-member
-    # Otherwise pylint complains about PyAssertionError.
-    # pylint: disable=protected-access
     try:
         wx.EndBusyCursor()
         if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
@@ -97,7 +91,7 @@ def EndBusyCursorIfRequired(event=None):
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-    except wx._core.PyAssertionError, err:
+    except wx.PyAssertionError, err:
         if "no matching wxBeginBusyCursor()" \
                 not in str(err):
             logger.warning(str(err))
