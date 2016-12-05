@@ -99,7 +99,7 @@ class SettingsModel(object):
 
         self.previousDict = {}
 
-        self.SetConfigPath(configPath)
+        self.configPath = configPath
 
         self.uploaderModel = None
         self.uploadToStagingRequest = None

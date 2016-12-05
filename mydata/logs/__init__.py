@@ -34,6 +34,7 @@ class Logger(object):
     def __init__(self, name):
         self.name = name
         self.loggerObject = logging.getLogger(self.name)
+        self.logFormatString = ""
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.myDataConfigPath = None

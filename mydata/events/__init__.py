@@ -98,9 +98,31 @@ class MyDataEvents(object):
     """
     Custom events for MyData.
     """
-    # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
-    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=invalid-name
+    def __init__(self):
+        self.notifyWindow = None
+        self.ShutdownForRefreshEvent = None
+        self.EVT_SHUTDOWN_FOR_REFRESH = None
+        self.ShutdownForRefreshCompleteEvent = None
+        self.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE = None
+        self.ValidateSettingsForRefreshEvent = None
+        self.EVT_VALIDATE_SETTINGS_FOR_REFRESH = None
+        self.CheckConnectivityEvent = None
+        self.EVT_CHECK_CONNECTIVITY = None
+        self.InstrumentNameMismatchEvent = None
+        self.EVT_INSTRUMENT_NAME_MISMATCH = None
+        self.RenameInstrumentEvent = None
+        self.EVT_RENAME_INSTRUMENT = None
+        self.SettingsDialogValidationEvent = None
+        self.EVT_SETTINGS_DIALOG_VALIDATION = None
+        self.ProvideSettingsValidationResultsEvent = None
+        self.EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS = None
+        self.SettingsValidationCompleteEvent = None
+        self.EVT_SETTINGS_VALIDATION_COMPLETE = None
+        self.StartUploadsForFolderEvent = None
+        self.EVT_START_UPLOADS_FOR_FOLDER = None
+
     def InitializeWithNotifyWindow(self, notifyWindow):
         """
         Set notify window (main frame), and create event classes using the
@@ -108,7 +130,6 @@ class MyDataEvents(object):
         default handler.
         """
         self.notifyWindow = notifyWindow
-        # pylint: disable=invalid-name
         self.ShutdownForRefreshEvent, \
             self.EVT_SHUTDOWN_FOR_REFRESH, _ = \
             NewEvent(notifyWindow, ShutdownForRefresh)
