@@ -1368,8 +1368,7 @@ class SettingsModel(object):
                                         userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
 
-        seconds = {}
-        seconds['day'] = 24 * 60 * 60
+        seconds = dict(day=24 * 60 * 60)
         seconds['week'] = 7 * seconds['day']
         seconds['year'] = int(365.25 * seconds['day'])
         seconds['month'] = seconds['year'] / 12
