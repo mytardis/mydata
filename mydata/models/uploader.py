@@ -315,8 +315,8 @@ class UploaderModel(object):
                 self.userAgentInstallLocation = os.getcwd()
 
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
-        diskUsage = (fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
-                            "Mount"))
+        diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
+                           "Mount")
 
         for part in psutil.disk_partitions(all=False):
             if os.name == 'nt':
@@ -326,14 +326,14 @@ class UploaderModel(object):
                     # partition or just hang.
                     continue
             usage = psutil.disk_usage(part.mountpoint)
-            diskUsage = diskUsage + (fmt % (
+            diskUsage += fmt % (
                 part.device,
                 BytesToHuman(usage.total),
                 BytesToHuman(usage.used),
                 BytesToHuman(usage.free),
                 int(usage.percent),
                 part.fstype,
-                part.mountpoint))
+                part.mountpoint)
 
         self.diskUsage = diskUsage.strip()
         self.dataPath = self.settingsModel.GetDataDirectory()

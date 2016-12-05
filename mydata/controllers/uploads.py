@@ -703,7 +703,7 @@ class UploadDatafileRunnable(object):
         maxChunkSize = 16 * 1024 * 1024
         chunkSize = defaultChunkSize
         while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
-            chunkSize = chunkSize * 2
+            chunkSize *= 2
         bytesProcessed = 0
         with open(filePath, 'rb') as fileHandle:
             # Note that the iter() func needs an empty byte string

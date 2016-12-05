@@ -914,7 +914,7 @@ class MyData(wx.App):
             """
             Write progress update to status bar.
             """
-            self.numUserFoldersScanned = self.numUserFoldersScanned + 1
+            self.numUserFoldersScanned += 1
             message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),

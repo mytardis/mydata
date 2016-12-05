@@ -77,7 +77,7 @@ class GroupsModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareGroupRecords(self.groupsData[row],
                                                  fgd, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.groupsData.append(fgd)

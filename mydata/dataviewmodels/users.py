@@ -83,7 +83,7 @@ class UsersModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareUserRecords(self.usersData[row],
                                                 fud, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.usersData.append(fud)

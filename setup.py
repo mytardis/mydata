@@ -409,12 +409,12 @@ tell application "Finder"
         set theViewOptions to the icon view options of container window
              """ % title
             if ATTEMPT_TO_SET_ICON_SIZE_IN_DMG:
-                applescript = applescript + """
+                applescript += """
         set icon size of theViewOptions to 96
         delay 1
 """
             if ATTEMPT_TO_LAY_OUT_ICONS_ON_DMG:
-                applescript = applescript + """
+                applescript += """
         set the bounds of container window to {400, 100, 885, 270}
         delay 1
         set arrangement of theViewOptions to not arranged
@@ -430,10 +430,10 @@ tell application "Finder"
         delay 1
 """
             if ATTEMPT_TO_SET_BACKGROUND_IMAGE:
-                applescript = applescript + """
+                applescript += """
            set background picture of theViewOptions to file ".background:%s"
 """ % dmg_background_picture_filename
-            applescript = applescript + """
+            applescript += """
            delay 1
            close
            open

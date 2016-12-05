@@ -157,7 +157,7 @@ class FoldersModel(DataViewIndexListModel):
                         self.CompareFolderRecords(self.foldersData[row],
                                                   self.ffd[filteredRow],
                                                   col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.foldersData\

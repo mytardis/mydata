@@ -223,43 +223,41 @@ class Logger(object):
 
         debugLog = "\n"
         if settingsModel is not None:
-            debugLog = debugLog + "Username: " + \
+            debugLog += "Username: " + \
                 settingsModel.GetUsername() + "\n"
-        debugLog = debugLog + "Name: %s\n" % self.contactName
-        debugLog = debugLog + "Email: %s\n" % self.contactEmail
-        debugLog = debugLog + "Contact me? "
+        debugLog += "Name: %s\n" % self.contactName
+        debugLog += "Email: %s\n" % self.contactEmail
+        debugLog += "Contact me? "
         if self.pleaseContactMe:
-            debugLog = debugLog + "Yes" + "\n"
+            debugLog += "Yes" + "\n"
         else:
-            debugLog = debugLog + "No" + "\n"
-        debugLog = debugLog + "Comments:\n\n" + self.comments + "\n\n"
+            debugLog += "No" + "\n"
+        debugLog += "Comments:\n\n" + self.comments + "\n\n"
         errorCount = 0
         logLines = self.loggerOutput.getvalue().splitlines(True)
         for line in logLines:
             if "ERROR" in line:
                 if errorCount == 0:
-                    debugLog = debugLog + "\n"
-                    debugLog = debugLog + "*** ERROR SUMMARY ***\n"
-                    debugLog = debugLog + "\n"
+                    debugLog += "\n"
+                    debugLog += "*** ERROR SUMMARY ***\n"
+                    debugLog += "\n"
                 errorCount += 1
                 if errorCount >= 100:
-                    debugLog = debugLog + "\n"
-                    debugLog = debugLog + \
-                        "*** TRUNCATING ERROR SUMMARY " \
+                    debugLog += "\n"
+                    debugLog += "*** TRUNCATING ERROR SUMMARY " \
                         "AFTER 100 ERRORS ***\n"
                     break
-                debugLog = debugLog + line
+                debugLog += line
         if errorCount > 0:
-            debugLog = debugLog + "\n"
+            debugLog += "\n"
         if len(logLines) <= 5000:
-            debugLog = debugLog + self.loggerOutput.getvalue()
+            debugLog += self.loggerOutput.getvalue()
         else:
-            debugLog = debugLog + "".join(logLines[1:125])
-            debugLog = debugLog + "\n\n"
-            debugLog = debugLog + \
-                "*** CONTENT REMOVED BECAUSE OF LARGE LOG SIZE ***\n"
-            debugLog = debugLog + "\n\n"
-            debugLog = debugLog + "".join(logLines[-4000:])
+            debugLog += "".join(logLines[1:125])
+            debugLog += "\n\n"
+            debugLog += "*** CONTENT REMOVED BECAUSE OF LARGE LOG SIZE ***\n"
+            debugLog += "\n\n"
+            debugLog += "".join(logLines[-4000:])
         return debugLog
 
     def SubmitLog(self, myDataMainFrame, settingsModel,

@@ -80,7 +80,7 @@ class TasksModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareTaskRecords(self.tasksData[row],
                                                 ftd, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.tasksData.append(ftd)
