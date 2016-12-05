@@ -376,7 +376,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
 
             cmd = "hdiutil attach -readwrite -noverify -noautoopen " \
                 "\"%s\" | egrep '^/dev/' | sed 1q | awk '{print $1}'" \
-                % (temp_dmg_filename)
+                % temp_dmg_filename
             print cmd
             device = commands.getoutput(cmd)
 
@@ -384,7 +384,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
             print cmd
             os.system(cmd)
 
-            cmd = 'mkdir "/Volumes/%s/.background/"' % (title)
+            cmd = 'mkdir "/Volumes/%s/.background/"' % title
             print cmd
             os.system(cmd)
 
@@ -407,7 +407,7 @@ tell application "Finder"
         set toolbar visible of container window to false
         set statusbar visible of container window to false
         set theViewOptions to the icon view options of container window
-             """ % (title)
+             """ % title
             if ATTEMPT_TO_SET_ICON_SIZE_IN_DMG:
                 applescript = applescript + """
         set icon size of theViewOptions to 96
@@ -432,7 +432,7 @@ tell application "Finder"
             if ATTEMPT_TO_SET_BACKGROUND_IMAGE:
                 applescript = applescript + """
            set background picture of theViewOptions to file ".background:%s"
-""" % (dmg_background_picture_filename)
+""" % dmg_background_picture_filename
             applescript = applescript + """
            delay 1
            close
@@ -499,7 +499,7 @@ tell application "Finder"
                 print cmd
                 os.system(cmd)
 
-            cmd = 'ls -lh "dist/%s.dmg"' % (final_dmg_name)
+            cmd = 'ls -lh "dist/%s.dmg"' % final_dmg_name
             print "\n" + cmd
             os.system(cmd)
         elif sys.platform.startswith("linux"):

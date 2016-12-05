@@ -291,7 +291,7 @@ class KeyPair(object):
                 keyType = sshKeyGenOutComponents[-1]\
                     .strip().strip('(').strip(')')
 
-        return (fingerprint, keyType)
+        return fingerprint, keyType
 
     def GetFingerprint(self):
         if self.fingerprint is None:
