@@ -69,7 +69,6 @@ class ReplicaModel(object):
                 message = "Failed to look up DFO ID \"%s\".\n" % dfoId
                 message += "HTTP status: %s" % response.status_code
                 raise Exception(message)
-            return None
         dfoJson = response.json()
         return dfoJson['size']
 
