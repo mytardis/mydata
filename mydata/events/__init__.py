@@ -79,16 +79,9 @@ def PostEvent(event):
         if hasattr(event, "GetDefaultHandler"):
             if not eventTypeString:
                 eventTypeString = str(eventTypeId)
-            if hasattr(app, "foldersController") and \
-                    eventTypeId == app.foldersController.EVT_SHOW_MESSAGE_DIALOG:
-                # Veto handlers which open modal dialogs
-                # if we don't have an event loop:
-                logger.debug("Vetoing call to default handler for %s" % eventTypeString)
-                return
-            else:
-                logger.debug("Calling default handler for %s" % eventTypeString)
-                event.GetDefaultHandler()(event)
-                logger.debug("Called default handler for %s" % eventTypeString)
+            logger.debug("Calling default handler for %s" % eventTypeString)
+            event.GetDefaultHandler()(event)
+            logger.debug("Called default handler for %s" % eventTypeString)
         else:
             logger.debug("Didn't find default handler for %s" % eventTypeString)
 

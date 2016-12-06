@@ -186,19 +186,23 @@ class FoldersController(object):
         self.lastErrorMessageThreadingLock.release()
 
     def ShowMessageDialog(self, event):
+        """
+        Display a message dialog.
+
+        Sometimes multiple threads can encounter the same exception
+        at around the same time.  The first thread's exception leads
+        to a modal error dialog, which blocks the events queue, so
+        the next thread's (identical) show message dialog event doesn't
+        get caught until after the first message dialog has been closed.
+        In this case, we check if we already showed an error dialog with
+        the same message.
+        """
         if self.IsShowingErrorDialog():
             logger.warning("Refusing to show message dialog for message "
                            "\"%s\" because we are already showing an error "
                            "dialog." % event.message)
             return
         elif event.message == self.GetLastErrorMessage():
-            # Sometimes multiple threads can encounter the same exception
-            # at around the same time.  The first thread's exception leads
-            # to a modal error dialog, which blocks the events queue, so
-            # the next thread's (identical) show message dialog event doesn't
-            # get caught until after the first message dialog has been closed.
-            # In this case, the above check (to prevent two error dialogs
-            # from appearing at the same time) doesn't help.
             logger.warning("Refusing to show message dialog for message "
                            "\"%s\" because we already showed an error "
                            "dialog with the same message." % event.message)
@@ -214,7 +218,10 @@ class FoldersController(object):
             needToRestartBusyCursor = True
         except:
             needToRestartBusyCursor = False
-        dlg.ShowModal()
+        if wx.PyApp.IsMainLoopRunning():
+            dlg.ShowModal()
+        else:
+            sys.stderr.write("%s\n" % event.message)
         if needToRestartBusyCursor and not self.IsShuttingDown() \
                 and wx.GetApp().PerformingLookupsAndUploads():
             BeginBusyCursorIfRequired()
