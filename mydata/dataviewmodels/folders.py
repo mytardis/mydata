@@ -330,27 +330,6 @@ class FoldersModel(DataViewIndexListModel):
             return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
 
-    def DeleteRows(self, rows):
-        """
-        Delete rows.
-        """
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            del self.foldersData[row]
-            del self.ufd[row]
-            # Notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
-
     def DeleteFolderById(self, dataViewId):
         """
         Delete folder by ID.
