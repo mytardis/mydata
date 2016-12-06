@@ -34,11 +34,7 @@ from mydata.controllers.uploads import UploadMethod
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import FileNotFoundOnStaging
 from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
-from mydata.utils.openssh import OldCountBytesUploadedToStaging
-from mydata.utils.exceptions import StagingHostRefusedSshConnection
-from mydata.utils.exceptions import StagingHostSshPermissionDenied
-from mydata.utils.exceptions import StorageBoxAttributeNotFound
-import mydata.events as mde
+from mydata.events import PostEvent
 from mydata.logs import logger
 
 
@@ -146,7 +142,7 @@ class VerifyDatafileRunnable(object):
             folderModel=self.folderModel,
             dataFileIndex=self.dataFileIndex,
             verificationModel=self.verificationModel)
-        mde.PostEvent(event)
+        PostEvent(event)
 
     def HandleExistingDatafile(self, existingDatafile):
         """
@@ -188,6 +184,10 @@ class VerifyDatafileRunnable(object):
         """
         Determine whether part of the file is already available
         on staging.
+
+        MyData uses the /api/v1/mydata_replica/ API endpoint
+        on the MyTardis server, which is provided by the
+        mytardis-app-mydata app.
         """
         replicas = existingDatafile.GetReplicas()
         try:
@@ -201,69 +201,16 @@ class VerifyDatafileRunnable(object):
             self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
             return
         except MissingMyDataReplicaApiEndpoint:
-            # /api/v1/mydata_replica/ is not available on this MyTardis server.
-            # mytardis-app-mydata needs updating on the server.
-            # For now, assume the unverified file is full size on staging.
-            # The old method of running "wc -c " remotely over ssh was
-            # inefficient.
-            try:
-                uploadToStagingRequest = \
-                    self.settingsModel.GetUploadToStagingRequest()
-                username = uploadToStagingRequest.GetScpUsername()
-            except StorageBoxAttributeNotFound, err:
-                self.verificationsModel.SetComplete(self.verificationModel)
-                mde.PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = str(err)
-                mde.PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
-
-            privateKeyFilePath = self.settingsModel\
-                .GetSshKeyPair().GetPrivateKeyFilePath()
-            host = uploadToStagingRequest.GetScpHostname()
-            port = uploadToStagingRequest.GetScpPort()
-            location = uploadToStagingRequest.GetLocation()
-            remoteFilePath = "%s/%s" % (location.rstrip('/'),
-                                        replicas[0].GetUri())
-            try:
-                bytesUploadedPreviously = \
-                    OldCountBytesUploadedToStaging(
-                        remoteFilePath,
-                        username, privateKeyFilePath, host, port,
-                        self.settingsModel)
-            except FileNotFoundOnStaging:
-                self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
-                return
-            except StagingHostRefusedSshConnection, err:
-                self.verificationsModel.SetComplete(self.verificationModel)
-                mde.PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = str(err)
-                mde.PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
-            except StagingHostSshPermissionDenied, err:
-                self.verificationsModel.SetComplete(self.verificationModel)
-                mde.PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = str(err)
-                mde.PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
-
+            message = (
+                "Please ask your MyTardis administrator to "
+                "upgrad the mytardis-app-mydata app to include "
+                "the /api/v1/mydata_replica/ API endpoint.")
+            PostEvent(
+                self.foldersController
+                .ShowMessageDialogEvent(title="MyData",
+                                        message=message,
+                                        icon=wx.ICON_ERROR))
+            return
         if bytesUploadedPreviously == long(existingDatafile.GetSize()):
             self.HandleFullSizeResumableUpload(existingDatafile)
         else:
@@ -294,7 +241,7 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
-        mde.PostEvent(
+        PostEvent(
             self.foldersController
             .FoundUnverifiedDatafileEvent(
                 folderModel=self.folderModel,
@@ -325,7 +272,7 @@ class VerifyDatafileRunnable(object):
                         bytesUploadedPreviously,
                         existingDatafile.GetSize()))
         self.verificationsModel.SetComplete(self.verificationModel)
-        mde.PostEvent(
+        PostEvent(
             self.foldersController.UnverifiedDatafileOnServerEvent(
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
@@ -351,7 +298,7 @@ class VerifyDatafileRunnable(object):
                      "it was not there. It does have a DataFileObject."
                      % dataFilePath)
         self.verificationsModel.SetComplete(self.verificationModel)
-        mde.PostEvent(
+        PostEvent(
             self.foldersController.UnverifiedNotFoundOnStagingEvent(
                 foldersController=self.foldersController,
                 folderModel=self.folderModel,
@@ -391,7 +338,7 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(self.settingsModel, existingDatafile.GetId())
         self.verificationsModel.SetComplete(self.verificationModel)
-        mde.PostEvent(
+        PostEvent(
             self.foldersController
             .FoundUnverifiedDatafileEvent(
                 folderModel=self.folderModel,
@@ -410,7 +357,7 @@ class VerifyDatafileRunnable(object):
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)
-        mde.PostEvent(
+        PostEvent(
             self.foldersController.FoundVerifiedDatafileEvent(
                 folderModel=self.folderModel,
                 dataFileIndex=self.dataFileIndex,
