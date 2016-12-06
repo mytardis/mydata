@@ -330,7 +330,11 @@ class UploadDatafileRunnable(object):
             postSuccess = (response.status_code == 201)
             logger.debug(response.text)
             if not postSuccess:
-                self.HandleFailedCreateDataFile(response)
+                dataFileName = os.path.basename(dataFilePath)
+                folderName = self.folderModel.GetFolder()
+                myTardisUsername = self.settingsModel.GetMyTardisUsername()
+                UploadDatafileRunnable.HandleFailedCreateDataFile(
+                    response, dataFileName, folderName, myTardisUsername)
                 return
         uploadToStagingRequest = self.settingsModel\
             .GetUploadToStagingRequest()
@@ -472,27 +476,26 @@ class UploadDatafileRunnable(object):
             raise Exception("Only %d of %d bytes were uploaded for %s"
                             % (bytesUploaded, dataFileSize, dataFilePath))
 
-    def HandleFailedCreateDataFile(self, response):
+    @staticmethod
+    def HandleFailedCreateDataFile(response, dataFileName, folderName,
+                                   myTardisUsername):
         """
         Handle DataFile creation exceptions for staging upload method.
         """
-        dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        dataFileName = os.path.basename(dataFilePath)
         if response.status_code == 401:
             message = "Couldn't create datafile \"%s\" " \
-                      "for folder \"%s\"." \
-                      % (dataFileName, self.folderModel.GetFolder())
+                      "for folder \"%s\"." % (dataFileName, folderName)
             message += "\n\n"
             message += \
                 "Please ask your MyTardis administrator to " \
                 "check the permissions of the \"%s\" user " \
-                "account." % self.settingsModel.GetMyTardisUsername()
+                "account." % myTardisUsername
             raise Unauthorized(message)
         elif response.status_code == 404:
             message = "Encountered a 404 (Not Found) error " \
                 "while attempting to create a datafile " \
                 "record for \"%s\" in folder \"%s\"." \
-                      % (dataFileName, self.folderModel.GetFolder())
+                      % (dataFileName, folderName)
             message += "\n\n"
             message += \
                 "Please ask your MyTardis administrator to " \
@@ -502,8 +505,7 @@ class UploadDatafileRunnable(object):
         elif response.status_code == 500:
             message = "Couldn't create datafile \"%s\" " \
                       "for folder \"%s\"." \
-                      % (dataFileName,
-                         self.folderModel.GetFolder())
+                      % (dataFileName, folderName)
             message += "\n\n"
             message += "An Internal Server Error occurred."
             message += "\n\n"
@@ -522,6 +524,7 @@ class UploadDatafileRunnable(object):
                 message = "Internal Server Error: " \
                     "See MyData's log for further " \
                     "information."
+            finally:
                 raise InternalServerError(message)
 
     def FinalizeUpload(self, response, postSuccess, uploadSuccess):
