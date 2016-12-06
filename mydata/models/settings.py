@@ -935,7 +935,7 @@ class SettingsModel(object):
             elif self.UseIncludesFile() and self.UseExcludesFile():
                 message = "Files matching patterns in excludes " \
                     "file will not be scanned for upload, " \
-                    "unless they match pattersn in the includes file."
+                    "unless they match patterns in the includes file."
                 logger.warning(message)
                 if testRun:
                     logger.testrun("WARNING: %s" % message)
@@ -1044,20 +1044,27 @@ class SettingsModel(object):
                                                      "mytardis_url")
                 logger.error(traceback.format_exc())
                 return self.validation
-            except:
-                if not self.GetMyTardisUrl().startswith("http"):
-                    message = "Please enter a valid MyTardis URL, " \
-                        "beginning with \"http://\" or \"https://\"."
+            except requests.exceptions.InvalidSchema:
+                message = "Please enter a valid MyTardis URL, " \
+                    "beginning with \"http://\" or \"https://\"."
+                if ":" not in self.GetMyTardisUrl():
                     suggestion = "http://" + self.GetMyTardisUrl()
                 else:
-                    logger.debug(traceback.format_exc())
-                    message = "Please enter a valid MyTardis URL.\n\n"
-                    etype, evalue = sys.exc_info()[:2]
-                    excOnlyList = \
-                        traceback.format_exception_only(etype, evalue)
-                    for excOnly in excOnlyList:
-                        message += excOnly
                     suggestion = None
+                self.validation = SettingsValidation(False, message,
+                                                     "mytardis_url",
+                                                     suggestion)
+                logger.error(traceback.format_exc())
+                return self.validation
+            except:
+                logger.debug(traceback.format_exc())
+                message = "Please enter a valid MyTardis URL.\n\n"
+                etype, evalue = sys.exc_info()[:2]
+                excOnlyList = \
+                    traceback.format_exception_only(etype, evalue)
+                for excOnly in excOnlyList:
+                    message += excOnly
+                suggestion = None
                 self.validation = SettingsValidation(False, message,
                                                      "mytardis_url",
                                                      suggestion)

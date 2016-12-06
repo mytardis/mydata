@@ -65,6 +65,19 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-return-statements
+        if self.path.startswith("/request/http/code/"):
+            match = re.match(r"^/request/http/code/(\d+)/.*$", self.path)
+            if match:
+                httpCode = int(match.groups()[0])
+            else:
+                httpCode = 500
+            self.send_response(httpCode)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            fakeJson = "{}"
+            self.wfile.write(json.dumps(fakeJson))
+            return
+
         if self.path.startswith("/api/v1/"):
             if self.path == "/api/v1/?format=json":
                 # We use this path to test that the MyTardis servers is

@@ -25,14 +25,17 @@ def NewEvent(defaultTarget=None, defaultHandler=None):
         """ Custom event class """
         defaultEventTarget = defaultTarget
         defaultEventHandler = defaultHandler
+
         @staticmethod
         def GetDefaultTarget():
             """ Return default target. """
             return Event.defaultEventTarget
+
         @staticmethod
         def GetDefaultHandler():
             """ Return default handler. """
             return Event.defaultEventHandler
+
         def __init__(self, **kw):
             wx.PyEvent.__init__(self)
             self.SetEventType(eventType)
@@ -562,8 +565,6 @@ def ProvideSettingsValidationResults(event):
             not settingsValidation.IsValid():
         message = settingsValidation.GetMessage()
         logger.error(message)
-        if not wx.PyApp.IsMainLoopRunning():
-            raise Exception(message)
         app = wx.GetApp()
         if hasattr(app, "GetMainFrame"):
             app.GetMainFrame().SetStatusMessage("")
@@ -587,7 +588,12 @@ def ProvideSettingsValidationResults(event):
                     % settingsValidation.GetSuggestion()
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.CANCEL | wx.ICON_ERROR)
-            okToUseSuggestion = dlg.ShowModal()
+            if wx.PyApp.IsMainLoopRunning():
+                okToUseSuggestion = dlg.ShowModal()
+            else:
+                sys.stderr.write("%s\n" % message)
+                sys.stderr.write("Assuming it's OK to use suggestion.\n")
+                okToUseSuggestion = True
             if okToUseSuggestion == wx.ID_OK:
                 if settingsValidation.GetField() == "instrument_name":
                     event.settingsDialog\
@@ -602,7 +608,10 @@ def ProvideSettingsValidationResults(event):
         else:
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
+            if wx.PyApp.IsMainLoopRunning():
+                dlg.ShowModal()
+            else:
+                sys.stderr.write("%s\n" % message)
         if settingsValidation.GetField() == "instrument_name":
             event.settingsDialog.instrumentNameField.SetFocus()
             event.settingsDialog.instrumentNameField.SelectAll()
