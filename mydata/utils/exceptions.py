@@ -119,22 +119,6 @@ class SshException(Exception):
         self.returncode = returncode
 
 
-class StagingHostRefusedSshConnection(SshException):
-    """
-    Staging host refused SSH connection exception.
-    """
-    def __init__(self, message):
-        super(StagingHostRefusedSshConnection, self).__init__(message)
-
-
-class StagingHostSshPermissionDenied(SshException):
-    """
-    Staging host permission denied exception.
-    """
-    def __init__(self, message):
-        super(StagingHostSshPermissionDenied, self).__init__(message)
-
-
 class ScpException(SshException):
     """
     SCP exception.
