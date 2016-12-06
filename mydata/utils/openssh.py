@@ -18,7 +18,6 @@ otherwise we need to worry about escaping special characters like
 
 # Disabling some Pylint warnings for now...
 # pylint: disable=missing-docstring
-# pylint: disable=too-many-lines
 # pylint: disable=wrong-import-position
 
 import sys
