@@ -1,5 +1,5 @@
 """
-Test ability to create a MyData App instance.
+Test ability to create a MyData App instance and uploads files using POST.
 """
 import os
 import sys
@@ -25,8 +25,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 class MyDataAppInstanceTester(unittest.TestCase):
     """
-    Test ability to create MyData App instance
-    and upload files using POST.
+    Test ability to create MyData App instance and upload files using POST.
     """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
@@ -57,8 +56,7 @@ class MyDataAppInstanceTester(unittest.TestCase):
 
     def test_mydata_app_post_uploads(self):
         """
-        Test ability to create MyData App instance
-        and upload files using POST.
+        Test ability to create MyData App instance and upload files using POST.
         """
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0

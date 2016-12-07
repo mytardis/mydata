@@ -1,6 +1,5 @@
 """
-Test ability to scan folders with the Username / Dataset structure
-and upload using SCP.
+Test ability to scan the Username / Dataset structure and upload using SCP.
 """
 import os
 import sys
@@ -35,8 +34,7 @@ if sys.platform.startswith("linux"):
 
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test ability to scan folders with the Username / Dataset structure
-    and upload using SCP.
+    Test ability to scan the Username / Dataset structure and upload using SCP.
     """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
@@ -77,8 +75,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
     def test_scan_folders(self):
         """
-        Test ability to scan folders with the Username / Dataset structure
-        and upload using SCP.
+        Test ability to scan the Username / Dataset structure and upload using SCP.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
