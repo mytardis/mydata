@@ -299,14 +299,12 @@ class FolderModel(object):
         modified too recently and might require further local modifications
         before its upload.
         """
-        absoluteFilePath = self.GetDataFilePath(dataFileIndex)
-        ignoreNewFiles = self.settingsModel.IgnoreNewFiles()
-        ignoreNewFilesMinutes = self.settingsModel.GetIgnoreNewFilesMinutes()
-        ignoreNewFilesSeconds = 0
-        if ignoreNewFiles:
-            ignoreNewFilesSeconds = ignoreNewFilesMinutes * 60
-        return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
-                ignoreNewFilesSeconds
+        if self.settingsModel.IgnoreNewFiles():
+            absoluteFilePath = self.GetDataFilePath(dataFileIndex)
+            return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
+                (self.settingsModel.GetIgnoreNewFilesMinutes() * 60)
+        else:
+            return False
 
     def CalculateMd5Sum(self, dataFileIndex, progressCallback=None,
                         canceledCallback=None):
