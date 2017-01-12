@@ -9,7 +9,6 @@ with MyData.
 An example of MyData running faster than Gigabit speeds is shown below:
 
 .. image:: images/MyDataEC2.png
-   :width: 600px
    :align: center
 
 An overall upload speed of 414.5 MB/s was achieved by MyData v0.7.0-beta1
