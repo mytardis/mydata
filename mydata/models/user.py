@@ -6,7 +6,6 @@ import traceback
 import urllib2
 import requests
 
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 from mydata.utils.exceptions import DoesNotExist
 from mydata.logs import logger
 from .group import GroupModel
@@ -45,25 +44,9 @@ class UserModel(object):
                     userRecordJson['last_name']
             if email is None:
                 self.email = userRecordJson['email']
-            try:
-                for group in userRecordJson['groups']:
-                    self.groups.append(GroupModel(settingsModel=settingsModel,
-                                                  groupJson=group))
-            except KeyError:
-                # 'groups' should be available in the user record's JSON
-                # if using https://github.com/monash-merc/mytardis/tree/mydata
-                message = "Incompatible MyTardis version" \
-                    "\n\n" \
-                    "You appear to be connecting to a MyTardis server whose " \
-                    "MyTardis version doesn't provide some of the " \
-                    "functionality required by MyData." \
-                    "\n\n" \
-                    "Please check that you are using the correct MyTardis " \
-                    "URL and ask your MyTardis administrator to check " \
-                    "that an appropriate version of MyTardis is installed."
-                logger.error(traceback.format_exc())
-                logger.error(message)
-                raise IncompatibleMyTardisVersion(message)
+            for group in userRecordJson['groups']:
+                self.groups.append(GroupModel(settingsModel=settingsModel,
+                                              groupJson=group))
 
     def GetId(self):
         return self.userId

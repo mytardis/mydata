@@ -117,6 +117,8 @@ if sys.platform.startswith("win"):
     DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
+DEFAULT_TIMEOUT = 3
+
 
 class UploaderModel(object):
     """
@@ -313,8 +315,8 @@ class UploaderModel(object):
                 self.userAgentInstallLocation = os.getcwd()
 
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
-        diskUsage = (fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
-                            "Mount"))
+        diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
+                           "Mount")
 
         for part in psutil.disk_partitions(all=False):
             if os.name == 'nt':
@@ -324,14 +326,14 @@ class UploaderModel(object):
                     # partition or just hang.
                     continue
             usage = psutil.disk_usage(part.mountpoint)
-            diskUsage = diskUsage + (fmt % (
+            diskUsage += fmt % (
                 part.device,
                 BytesToHuman(usage.total),
                 BytesToHuman(usage.used),
                 BytesToHuman(usage.free),
                 int(usage.percent),
                 part.fstype,
-                part.mountpoint))
+                part.mountpoint)
 
         self.diskUsage = diskUsage.strip()
         self.dataPath = self.settingsModel.GetDataDirectory()
@@ -354,7 +356,8 @@ class UploaderModel(object):
             "Accept": "application/json"}
 
         try:
-            response = requests.get(headers=headers, url=url)
+            response = requests.get(headers=headers, url=url,
+                                    timeout=DEFAULT_TIMEOUT)
         except Exception, err:
             logger.error(str(err))
             raise
@@ -363,7 +366,7 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
             logger.error("An error occurred while retrieving uploader info.")
@@ -444,10 +447,12 @@ class UploaderModel(object):
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
         if numExistingUploaderRecords > 0:
-            response = requests.put(headers=headers, url=url, data=data)
+            response = requests.put(headers=headers, url=url, data=data,
+                                    timeout=DEFAULT_TIMEOUT)
         else:
-            response = requests.post(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+            response = requests.post(headers=headers, url=url, data=data,
+                                     timeout=DEFAULT_TIMEOUT)
+        if response.status_code in (200, 201):
             logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
         else:
@@ -479,7 +484,7 @@ class UploaderModel(object):
             "Content-Type": "application/json",
             "Accept": "application/json"}
         response = requests.get(headers=headers, url=url)
-        if response.status_code < 200 or response.status_code >= 300:
+        if response.status_code != 200:
             if response.status_code == 404:
                 response.close()
                 raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
@@ -534,7 +539,7 @@ class UploaderModel(object):
              "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 201:
             responseJson = response.json()
             response.close()
             return UploaderRegistrationRequest(
@@ -562,7 +567,6 @@ class UploaderModel(object):
                 except:
                     logger.error(traceback.format_exc())
                     raise
-                uploadToStagingRequest = None
                 try:
                     uploadToStagingRequest = \
                         self.ExistingUploadToStagingRequest()
@@ -616,7 +620,7 @@ class UploaderModel(object):
                 logger.error(url)
                 logger.error(message)
                 raise MissingMyDataAppOnMyTardisServer(message)
-            if response.status_code >= 200 and response.status_code < 300:
+            if response.status_code == 200:
                 existingUploaderRecords = response.json()
             else:
                 logger.error("An error occurred while retrieving uploader id.")
@@ -663,7 +667,8 @@ class UploaderModel(object):
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                             "&uuid=" + urllib.quote(self.uuid)
         try:
-            response = requests.get(headers=headers, url=url, timeout=3)
+            response = requests.get(headers=headers, url=url,
+                                    timeout=DEFAULT_TIMEOUT)
         except Exception, err:
             logger.error(str(err))
             raise
@@ -672,7 +677,7 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
             logger.error("An error occurred while retrieving uploader.")

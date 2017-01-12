@@ -5,8 +5,7 @@ import unittest
 import wx
 
 from mydata.models.settings import SettingsModel
-from mydata.events import MyDataEvent
-from mydata.events import EVT_CHECK_CONNECTIVITY
+import mydata.events as mde
 
 
 class ConnectivityCheckTester(unittest.TestCase):
@@ -17,6 +16,7 @@ class ConnectivityCheckTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title="Connectivity check test")
+        mde.MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.settingsModel = SettingsModel(configPath=None)
 
     def tearDown(self):
@@ -26,9 +26,9 @@ class ConnectivityCheckTester(unittest.TestCase):
         """
         Test ability to perform connectivity check.
         """
-        event = MyDataEvent(EVT_CHECK_CONNECTIVITY,
-                            settingsModel=self.settingsModel)
-        MyDataEvent.CheckConnectivity(event)
+        event = mde.MYDATA_EVENTS.CheckConnectivityEvent(
+            settingsModel=self.settingsModel)
+        mde.CheckConnectivity(event)
 
 
 if __name__ == '__main__':

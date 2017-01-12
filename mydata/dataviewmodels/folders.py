@@ -25,7 +25,8 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils import EndBusyCursorIfRequired
-import mydata.events as mde
+from mydata.events import MYDATA_EVENTS
+from mydata.events import PostEvent
 
 
 # pylint: disable=too-many-instance-attributes
@@ -156,7 +157,7 @@ class FoldersModel(DataViewIndexListModel):
                         self.CompareFolderRecords(self.foldersData[row],
                                                   self.ffd[filteredRow],
                                                   col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.foldersData\
@@ -329,27 +330,6 @@ class FoldersModel(DataViewIndexListModel):
             return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
 
-    def DeleteRows(self, rows):
-        """
-        Delete rows.
-        """
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            del self.foldersData[row]
-            del self.ufd[row]
-            # Notify the view(s) using this model that it has been removed
-            if threading.current_thread().name == "MainThread":
-                self.RowDeleted(row)
-            else:
-                wx.CallAfter(self.RowDeleted, row)
-
     def DeleteFolderById(self, dataViewId):
         """
         Delete folder by ID.
@@ -420,12 +400,10 @@ class FoldersModel(DataViewIndexListModel):
         self.ffd = list()
         self.Filter(self.searchString)
 
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            startDataUploadsForFolderEvent = \
-                mde.MyDataEvent(mde.EVT_START_UPLOADS_FOR_FOLDER,
-                                folderModel=folderModel)
-            wx.PostEvent(wx.GetApp().GetMainFrame(),
-                         startDataUploadsForFolderEvent)
+        startDataUploadsForFolderEvent = \
+            MYDATA_EVENTS.StartUploadsForFolderEvent(
+                folderModel=folderModel)
+        PostEvent(startDataUploadsForFolderEvent)
 
     def FolderStatusUpdated(self, folderModel):
         """
@@ -454,8 +432,7 @@ class FoldersModel(DataViewIndexListModel):
         folderStructure = self.settingsModel.GetFolderStructure()
         self.ignoreOldDatasets = self.settingsModel.IgnoreOldDatasets()
         if self.ignoreOldDatasets:
-            seconds = {}
-            seconds['day'] = 24 * 60 * 60
+            seconds = dict(day=24 * 60 * 60)
             seconds['week'] = 7 * seconds['day']
             seconds['year'] = int(365.25 * seconds['day'])
             seconds['month'] = seconds['year'] / 12
@@ -520,7 +497,8 @@ class FoldersModel(DataViewIndexListModel):
                     userRecord = \
                         UserModel.GetUserByEmail(self.settingsModel,
                                                  userFolderName)
-
+                else:
+                    userRecord = None
             except DoesNotExist:
                 userRecord = None
             if shouldAbort():

@@ -61,10 +61,10 @@ from mydata.views.log import LogView
 from mydata.models.settings import SettingsModel
 from mydata.views.settings import SettingsDialog
 from mydata.utils.exceptions import InvalidFolderStructure
-from mydata.views.statusbar import EnhancedStatusBar
 from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
-import mydata.events as mde
+from mydata.events import MYDATA_EVENTS
+from mydata.events import PostEvent
 from mydata.media import MYDATA_ICONS
 from mydata.media import IconStyle
 from mydata.utils.notification import Notification
@@ -93,11 +93,12 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, title, style, settingsModel):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
-        self.statusbar = EnhancedStatusBar(self)
+        self.statusbar = wx.StatusBar(self)
         if sys.platform.startswith("win"):
             self.statusbar.SetSize(wx.Size(-1, 28))
         else:
@@ -108,50 +109,30 @@ class MyDataFrame(wx.Frame):
         self.connectedBitmap = MYDATA_ICONS.GetIcon("Connect")
         self.disconnectedBitmap = MYDATA_ICONS.GetIcon("Disconnect")
         self.connected = False
-        self.SetConnected(settingsModel.GetMyTardisUrl(), False)
 
     def SetStatusMessage(self, msg):
         """
         Update status bar's message.
         """
-        self.statusbar.SetStatusMessage(msg)
         if sys.platform.startswith("win"):
-            wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
-
-    def SetConnected(self, myTardisUrl, connected):
-        """
-        Update status bar's connected/disconnected icon.
-        """
-        if self.connected == connected:
-            return
-
-        self.myTardisUrl = myTardisUrl
-        self.connected = connected
-
-        if self.myTardisUrl != self.settingsModel.GetMyTardisUrl():
-            # This probably came from an old thread which took a while to
-            # return a connection error.  While it was attempting to connect,
-            # the user may have corrected the MyTardis URL in the Settings
-            # dialog.
-            return
-
-        if connected:
-            if sys.platform.startswith("win"):
-                self.statusbar.SetStatusConnectionIcon(self.connectedBitmap)
+            # On Windows, a tab can be used to center status text,
+            # which look similar to the old EnhancedStatusBar.
+            self.statusbar.SetStatusText("\t%s" % msg)
         else:
-            if sys.platform.startswith("win"):
-                self.statusbar.SetStatusConnectionIcon(self.disconnectedBitmap)
+            self.statusbar.SetStatusText(msg)
+        if sys.platform.startswith("win"):
+            if wx.PyApp.IsMainLoopRunning():
+                wx.GetApp().taskBarIcon.SetIcon(wx.GetApp().taskBarIcon.icon, msg)
 
 
-# pylint: disable=too-many-public-methods
 class MyData(wx.App):
     """
     Encapsulates the MyData application.
     """
-
     # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv):
+    def __init__(self, argv, settingsModel=None):
         self.name = "MyData"
         self.argv = argv
 
@@ -181,8 +162,6 @@ class MyData(wx.App):
 
         self.searchCtrl = None
 
-        self.myDataEvents = None
-
         self.scanningFolders = threading.Event()
         self.performingLookupsAndUploads = threading.Event()
         self.testRunRunning = threading.Event()
@@ -195,7 +174,7 @@ class MyData(wx.App):
         self.lastConnectivityCheckSuccess = False
         self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
 
-        self.settingsModel = None
+        self.settingsModel = settingsModel
         self.settingsValidation = None
         self.foldersModel = None
         self.foldersView = None
@@ -246,18 +225,6 @@ class MyData(wx.App):
             os.environ['REQUESTS_CA_BUNDLE'] = \
                 os.path.join(certPath, 'cacert.pem')
 
-        # MyData.cfg stores settings in INI format, readable by ConfigParser
-        self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
-        logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
-
-        self.settingsModel = SettingsModel(self.GetConfigPath())
-        self.frame = MyDataFrame(self.name,
-                                 style=wx.DEFAULT_FRAME_STYLE,
-                                 settingsModel=self.settingsModel)
-
-        self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
-        self.testRunFrame = TestRunFrame(self.frame)
-
         parser = argparse.ArgumentParser()
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
@@ -276,6 +243,19 @@ class MyData(wx.App):
             elif args.loglevel == "ERROR":
                 logger.SetLevel(logging.ERROR)
 
+        if not self.settingsModel:
+            # MyData.cfg stores settings in INI format, readable by ConfigParser
+            self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
+            logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
+            self.settingsModel = SettingsModel(self.GetConfigPath())
+        self.frame = MyDataFrame(self.name,
+                                 style=wx.DEFAULT_FRAME_STYLE,
+                                 settingsModel=self.settingsModel)
+
+        self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
+        self.testRunFrame = TestRunFrame(self.frame)
+
         if sys.platform.startswith("win"):
             self.CheckIfAlreadyRunning(appdirPath)
 
@@ -290,9 +270,6 @@ class MyData(wx.App):
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
         self.tasksModel = TasksModel(self.settingsModel)
-
-        self.frame.Bind(wx.EVT_ACTIVATE, self.OnActivateFrame)
-        self.myDataEvents = mde.MyDataEvents(notifyWindow=self.frame)
 
         self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
         if sys.platform.startswith("linux"):
@@ -386,7 +363,8 @@ class MyData(wx.App):
         event = None
         if self.settingsModel.RequiredFieldIsBlank():
             self.frame.Show(True)
-            self.OnSettings(event)
+            if wx.PyApp.IsMainLoopRunning():
+                self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
@@ -426,9 +404,13 @@ class MyData(wx.App):
         """
         self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
         if self.instance.IsAnotherRunning():
-            wx.MessageBox("MyData is already running!", "MyData",
-                          wx.ICON_ERROR)
-            sys.exit(1)
+            message = "MyData is already running!"
+            if wx.PyApp.IsMainLoopRunning():
+                wx.MessageBox("MyData is already running!", "MyData",
+                              wx.ICON_ERROR)
+                sys.exit(1)
+            else:
+                sys.stderr.write("%s\n" % message)
 
     def CreateMacMenu(self):
         """
@@ -482,14 +464,6 @@ class MyData(wx.App):
                 self.frame.Show(True)
                 self.frame.Raise()
         event.Skip()
-
-    def OnActivateFrame(self, event):
-        """
-        Called when MyData's main window is activated.
-        """
-        if event.GetActive():
-            self.frame.Show(True)
-            self.frame.Raise()
 
     # pylint: disable=no-self-use
     def OnUndo(self, event):
@@ -764,9 +738,9 @@ class MyData(wx.App):
         """
         self.LogOnRefreshCaller(event, jobId)
         shutdownForRefreshComplete = event and \
-            event.GetId() in (mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
-                              mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE)
-
+            event.GetEventType() in \
+                (MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
+                 MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE)
         if hasattr(event, "needToValidateSettings") and \
                 not event.needToValidateSettings:
             needToValidateSettings = False
@@ -775,26 +749,24 @@ class MyData(wx.App):
         if hasattr(event, "testRun") and event.testRun:
             testRun = True
 
-        # Shutting down existing data scan and upload processes:
-
         if (self.ScanningFolders() or self.PerformingLookupsAndUploads()) \
                 and not shutdownForRefreshComplete:
+            # Shuts down upload threads before restarting them when
+            # a scan and upload task is due to start while another
+            # scan and upload task is already running:
             message = \
                 "Shutting down existing data scan and upload processes..."
             logger.debug(message)
             self.frame.SetStatusMessage(message)
 
             shutdownForRefreshEvent = \
-                mde.MyDataEvent(mde.EVT_SHUTDOWN_FOR_REFRESH,
-                                foldersController=self.foldersController,
-                                testRun=testRun)
+                MYDATA_EVENTS.ShutdownForRefreshEvent(
+                    foldersController=self.foldersController,
+                    testRun=testRun)
             logger.debug("Posting shutdownForRefreshEvent")
-            wx.PostEvent(wx.GetApp().GetMainFrame(), shutdownForRefreshEvent)
+            PostEvent(shutdownForRefreshEvent)
             return
 
-        # Reset the status message to the connection status:
-        self.frame.SetConnected(self.settingsModel.GetMyTardisUrl(),
-                                False)
         self.foldersController.SetShuttingDown(False)
 
         self.searchCtrl.SetValue("")
@@ -803,9 +775,9 @@ class MyData(wx.App):
 
         if needToValidateSettings:
             validateSettingsForRefreshEvent = \
-                mde.MyDataEvent(mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH,
-                                needToValidateSettings=needToValidateSettings,
-                                testRun=testRun)
+                MYDATA_EVENTS.ValidateSettingsForRefreshEvent(
+                    needToValidateSettings=needToValidateSettings,
+                    testRun=testRun)
             if self.CheckConnectivityForRefresh(
                     nextEvent=validateSettingsForRefreshEvent):
                 # Wait for the event to be handled, which will result
@@ -827,6 +799,7 @@ class MyData(wx.App):
                 logger.debug("Starting run() method for thread %s"
                              % threading.current_thread().name)
                 # pylint: disable=bare-except
+                activeNetworkInterfaces = []
                 try:
                     wx.CallAfter(BeginBusyCursorIfRequired)
                     # pylint: disable=broad-except
@@ -868,8 +841,6 @@ class MyData(wx.App):
                             dlg.ShowModal()
                             wx.CallAfter(EndBusyCursorIfRequired)
                             self.frame.SetStatusMessage("")
-                            self.frame.SetConnected(
-                                self.settingsModel.GetMyTardisUrl(), False)
                         wx.CallAfter(ShowDialog)
                         return
 
@@ -911,11 +882,10 @@ class MyData(wx.App):
                                      validationMessage=message)
                         return
 
-                    event = mde.MyDataEvent(
-                        mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE,
+                    event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
                         needToValidateSettings=False,
                         testRun=testRun)
-                    wx.PostEvent(self.frame, event)
+                    PostEvent(event)
                     wx.CallAfter(EndBusyCursorIfRequired)
                 except:
                     logger.error(traceback.format_exc())
@@ -923,11 +893,14 @@ class MyData(wx.App):
                 logger.debug("Finishing run() method for thread %s"
                              % threading.current_thread().name)
 
-            thread = threading.Thread(target=ValidateSettings,
-                                      name="OnRefreshValidateSettings")
-            logger.debug("Starting thread %s" % thread.name)
-            thread.start()
-            logger.debug("Started thread %s" % thread.name)
+            if wx.PyApp.IsMainLoopRunning():
+                thread = threading.Thread(target=ValidateSettings,
+                                          name="OnRefreshValidateSettingsThread")
+                logger.debug("Starting thread %s" % thread.name)
+                thread.start()
+                logger.debug("Started thread %s" % thread.name)
+            else:
+                ValidateSettings()
             return
 
         if "Group" in self.settingsModel.GetFolderStructure():
@@ -942,7 +915,7 @@ class MyData(wx.App):
             """
             Write progress update to status bar.
             """
-            self.numUserFoldersScanned = self.numUserFoldersScanned + 1
+            self.numUserFoldersScanned += 1
             message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
                 self.usersModel.GetNumUserOrGroupFolders(),
@@ -1007,11 +980,11 @@ class MyData(wx.App):
             folderStructure = self.settingsModel.GetFolderStructure()
             # pylint: disable=too-many-boolean-expressions
             if self.usersModel.GetNumUserOrGroupFolders() == 0 or \
-                    (folderStructure.startswith("Username") and \
+                    (folderStructure.startswith("Username") and
                      self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("Email") and \
+                    (folderStructure.startswith("Email") and
                      self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("User Group") and \
+                    (folderStructure.startswith("User Group") and
                      self.groupsModel.GetCount() == 0):
                 if self.usersModel.GetNumUserOrGroupFolders() == 0:
                     message = "No folders were found to upload from."
@@ -1029,11 +1002,14 @@ class MyData(wx.App):
             logger.debug("Finishing run() method for thread %s"
                          % threading.current_thread().name)
 
-        thread = threading.Thread(target=ScanDataDirs,
-                                  name="ScanDataDirectoriesThread")
-        logger.debug("OnRefresh: Starting ScanDataDirs thread.")
-        thread.start()
-        logger.debug("OnRefresh: Started ScanDataDirs thread.")
+        if wx.PyApp.IsMainLoopRunning():
+            thread = threading.Thread(target=ScanDataDirs,
+                                      name="ScanDataDirectoriesThread")
+            logger.debug("OnRefresh: Starting ScanDataDirs thread.")
+            thread.start()
+            logger.debug("OnRefresh: Started ScanDataDirs thread.")
+        else:
+            ScanDataDirs()
 
     def LogOnRefreshCaller(self, event, jobId):
         """
@@ -1058,17 +1034,25 @@ class MyData(wx.App):
                 self.taskBarIcon.GetSyncNowMenuItem().GetId():
             logger.debug("OnRefresh triggered by 'Sync Now' "
                          "task bar menu item.")
-        elif event.GetId() == mde.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
+        elif event.GetEventType() == \
+                MYDATA_EVENTS.EVT_VALIDATE_SETTINGS_FOR_REFRESH:
             logger.debug("OnRefresh called from "
                          "EVT_VALIDATE_SETTINGS_FOR_REFRESH event.")
-        elif event.GetId() == mde.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
+        elif event.GetEventType() == \
+                MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE:
+            logger.debug("OnRefresh called from "
+                         "EVT_SETTINGS_VALIDATION_COMPLETE event.")
+        elif event.GetEventType() == \
+                MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE:
             logger.debug("OnRefresh called from "
                          "EVT_SHUTDOWN_FOR_REFRESH_COMPLETE event.")
-        elif event.GetId() == mde.EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE:
+        elif event.GetEventType() == \
+                MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE:
             logger.debug("OnRefresh called from "
-                         "EVT_SETTINGS_VALIDATION_FOR_REFRESH_COMPLETE event.")
+                         "EVT_SETTINGS_VALIDATION_COMPLETE event.")
         else:
-            logger.debug("OnRefresh: event.GetId() = %d" % event.GetId())
+            logger.debug("OnRefresh: event.GetEventType() = %s"
+                         % event.GetEventType())
 
     def CheckConnectivityForRefresh(self, nextEvent=None):
         """
@@ -1085,10 +1069,10 @@ class MyData(wx.App):
                 not self.lastConnectivityCheckSuccess:
             logger.debug("Checking network connectivity...")
             checkConnectivityEvent = \
-                mde.MyDataEvent(mde.EVT_CHECK_CONNECTIVITY,
-                                settingsModel=self.settingsModel,
-                                nextEvent=nextEvent)
-            wx.PostEvent(wx.GetApp().GetMainFrame(), checkConnectivityEvent)
+                MYDATA_EVENTS.CheckConnectivityEvent(
+                    settingsModel=self.settingsModel,
+                    nextEvent=nextEvent)
+            PostEvent(checkConnectivityEvent)
             return True
         return False
 
@@ -1145,10 +1129,6 @@ class MyData(wx.App):
                                         validationMessage=validationMessage)
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
-            myTardisUrlChanged = (self.settingsModel.GetMyTardisUrl() !=
-                                  settingsDialog.GetMyTardisUrl())
-            if myTardisUrlChanged:
-                self.frame.SetConnected(settingsDialog.GetMyTardisUrl(), False)
             self.frame.SetTitle("MyData - " +
                                 self.settingsModel.GetInstrumentName())
             self.tasksModel.DeleteAllRows()
@@ -1206,7 +1186,7 @@ class MyData(wx.App):
               "MyData is being developed at the Monash e-Research Centre " \
               "(Monash University, Australia)\n\n" \
               "MyData is open source (GPL3) software available from " \
-              "https://github.com/monash-merc/mydata\n\n" \
+              "https://github.com/mytardis/mydata\n\n" \
               "Version:   " + VERSION + "\n" \
               "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
@@ -1226,13 +1206,6 @@ class MyData(wx.App):
         results of a dry run.
         """
         return self.testRunFrame
-
-    def GetMyDataEvents(self):
-        """
-        Returns the MyData events object, which is
-        an instance of mydata.events.MyDataEvents
-        """
-        return self.myDataEvents
 
     def GetScheduleController(self):
         """

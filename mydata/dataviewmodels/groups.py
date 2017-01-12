@@ -77,7 +77,7 @@ class GroupsModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareGroupRecords(self.groupsData[row],
                                                  fgd, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.groupsData.append(fgd)
@@ -210,25 +210,6 @@ class GroupsModel(DataViewIndexListModel):
         else:
             return cmp(groupRecord1.GetValueForKey(self.columnKeys[col]),
                        groupRecord2.GetValueForKey(self.columnKeys[col]))
-
-    def DeleteRows(self, rows):
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            del self.groupsData[row]
-            del self.unfilteredGroupsData[row]
-
-        # Notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rows)
-        else:
-            wx.CallAfter(self.RowsDeleted, rows)
 
     def DeleteAllRows(self):
         rowsDeleted = []

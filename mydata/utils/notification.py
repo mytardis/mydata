@@ -38,15 +38,14 @@ class Notification(object):
             except:  # pylint: disable=bare-except
                 sys.stderr.write(message + "\n")
             return
-        path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
         executable = "MyData Notifications"
         args = ["-message", message, "-title", title]
         if subtitle:
-            args = args + ["-subtitle", subtitle]
+            args += ["-subtitle", subtitle]
         if hasattr(sys, "frozen"):
-            args = args + ["-activate", "org.mytardis.MyData"]
+            args += ["-activate", "org.mytardis.MyData"]
         else:
-            args = args + ["-activate", "org.python.python"]
+            args += ["-activate", "org.python.python"]
         if hasattr(sys, "frozen"):
             path = "../MacOS"
         else:

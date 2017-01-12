@@ -6,7 +6,9 @@ have a corresponding dataset record in MyTardis.
 # pylint: disable=missing-docstring
 
 import os
+import time
 from datetime import datetime
+import hashlib
 import traceback
 from fnmatch import fnmatch
 
@@ -88,6 +90,12 @@ class FolderModel(object):
 
         self.numFilesUploaded = 0
         self.numFilesVerified = 0
+
+    def __hash__(self):
+        return hash(self.dataViewId)
+
+    def __eq__(self, other):
+        return self.dataViewId == other.dataViewId
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
         self.dataFileUploaded[dataFileIndex] = uploaded
@@ -285,8 +293,46 @@ class FolderModel(object):
                 match = match or fnmatch(filename, glob)
         return match
 
-    def __hash__(self):
-        return hash(self.dataViewId)
+    def FileIsTooNewToUpload(self, dataFileIndex):
+        """
+        Check whether this file's upload should be skipped because it has been
+        modified too recently and might require further local modifications
+        before its upload.
+        """
+        if self.settingsModel.IgnoreNewFiles():
+            absoluteFilePath = self.GetDataFilePath(dataFileIndex)
+            return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
+                (self.settingsModel.GetIgnoreNewFilesMinutes() * 60)
+        else:
+            return False
 
-    def __eq__(self, other):
-        return self.dataViewId == other.dataViewId
+    def CalculateMd5Sum(self, dataFileIndex, progressCallback=None,
+                        canceledCallback=None):
+        """
+        Calculate MD5 checksum.
+        """
+        absoluteFilePath = self.GetDataFilePath(dataFileIndex)
+        fileSize = self.GetDataFileSize(dataFileIndex)
+        md5 = hashlib.md5()
+
+        defaultChunkSize = 128 * 1024
+        maxChunkSize = 16 * 1024 * 1024
+        chunkSize = defaultChunkSize
+        while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
+            chunkSize *= 2
+        bytesProcessed = 0
+        with open(absoluteFilePath, 'rb') as fileHandle:
+            # Note that the iter() func needs an empty byte string
+            # for the returned iterator to halt at EOF, since read()
+            # returns b'' (not just '').
+            for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
+                if canceledCallback():
+                    logger.debug("Aborting MD5 calculation for "
+                                 "%s" % absoluteFilePath)
+                    return None
+                md5.update(chunk)
+                bytesProcessed += len(chunk)
+                del chunk
+                if progressCallback:
+                    progressCallback(bytesProcessed)
+        return md5.hexdigest()

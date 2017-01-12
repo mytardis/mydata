@@ -92,8 +92,6 @@ class ExperimentModel(object):
             "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
                                                myTardisDefaultUserApiKey)}
         response = requests.get(url=url, headers=headers)
-        numExperimentsFound = 0
-        experimentsJson = []
         try:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']

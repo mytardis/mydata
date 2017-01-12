@@ -4,8 +4,9 @@ Test ability to scan the Dataset folder structure.
 import os
 import sys
 import time
-import subprocess
 import unittest
+import threading
+from BaseHTTPServer import HTTPServer
 
 import requests
 import wx
@@ -14,6 +15,9 @@ from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
 from mydata.dataviewmodels.groups import GroupsModel
+from mydata.events import MYDATA_EVENTS
+from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
+from mydata.tests.utils import GetEphemeralPort
 
 
 class ScanDatasetTester(unittest.TestCase):
@@ -22,17 +26,24 @@ class ScanDatasetTester(unittest.TestCase):
     """
     def __init__(self, *args, **kwargs):
         super(ScanDatasetTester, self).__init__(*args, **kwargs)
-        self.fakeMyTardisServerProcess = None
+        self.app = None
+        self.frame = None
+        self.httpd = None
+        self.fakeMyTardisHost = "127.0.0.1"
+        self.fakeMyTardisPort = None
+        self.fakeMyTardisServerThread = None
 
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
 
     def tearDown(self):
         self.frame.Destroy()
-        self.fakeMyTardisServerProcess.terminate()
+        self.httpd.shutdown()
+        self.fakeMyTardisServerThread.join()
 
     def test_scan_folders(self):
         """
@@ -51,6 +62,8 @@ class ScanDatasetTester(unittest.TestCase):
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataDataset"))
+        settingsModel.SetMyTardisUrl(
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
@@ -100,11 +113,17 @@ class ScanDatasetTester(unittest.TestCase):
         """
         Start fake MyTardis server.
         """
-        os.environ['PYTHONPATH'] = os.path.realpath(".")
-        self.fakeMyTardisServerProcess = \
-            subprocess.Popen([sys.executable,
-                              "mydata/tests/fake_mytardis_server.py"],
-                             env=os.environ)
+        self.fakeMyTardisPort = GetEphemeralPort()
+        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
+                                FakeMyTardisHandler)
+
+        def FakeMyTardisServer():
+            """ Run fake MyTardis server """
+            self.httpd.serve_forever()
+        self.fakeMyTardisServerThread = \
+            threading.Thread(target=FakeMyTardisServer,
+                             name="FakeMyTardisServerThread")
+        self.fakeMyTardisServerThread.start()
 
 
 if __name__ == '__main__':

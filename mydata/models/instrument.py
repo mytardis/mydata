@@ -97,7 +97,7 @@ class InstrumentModel(object):
         data = json.dumps(instrumentJson)
         response = requests.post(headers=headers, url=url, data=data)
         content = response.text
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 201:
             instrumentJson = response.json()
             return InstrumentModel(settingsModel=settingsModel, name=name,
                                    instrumentJson=instrumentJson)
@@ -159,40 +159,6 @@ class InstrumentModel(object):
                 settingsModel=settingsModel, name=name,
                 instrumentJson=instrumentJson)
 
-    @staticmethod
-    def GetMyInstruments(settingsModel):
-        """
-        Get my instruments.
-        """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
-
-        instruments = []
-
-        myFacilities = FacilityModel.GetMyFacilities(settingsModel)
-
-        for facility in myFacilities:
-            url = myTardisUrl + "/api/v1/instrument/?format=json" + \
-                "&facility__id=" + str(facility.GetId())
-            headers = {
-                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                                   myTardisApiKey)}
-            session = requests.Session()
-            response = session.get(url=url, headers=headers)
-            if response.status_code != 200:
-                message = response.text
-                raise Exception(message)
-            instrumentsJson = response.json()
-            response.close()
-            session.close()
-            for instrumentJson in instrumentsJson['objects']:
-                instruments.append(InstrumentModel(
-                    settingsModel=settingsModel,
-                    instrumentJson=instrumentJson))
-
-        return instruments
-
     def Rename(self, name):
         """
         Rename instrument.
@@ -211,7 +177,7 @@ class InstrumentModel(object):
         uploaderJson = {"name": name}
         data = json.dumps(uploaderJson)
         response = requests.put(headers=headers, url=url, data=data)
-        if response.status_code >= 200 and response.status_code < 300:
+        if response.status_code == 200:
             logger.info("Renaming instrument succeeded.")
         else:
             logger.info("Renaming instrument failed.")

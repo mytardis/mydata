@@ -29,7 +29,8 @@ else:
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.logs import logger
-import mydata.events as mde
+from mydata.events import MYDATA_EVENTS
+from mydata.events import PostEvent
 
 
 class SettingsDropTarget(wx.FileDropTarget):
@@ -1250,24 +1251,22 @@ class SettingsDialog(wx.Dialog):
         if self.GetInstrumentName() != \
                 self.settingsModel.GetInstrumentName() and \
                 self.settingsModel.GetInstrumentName() != "":
-            instrumentNameMismatchEvent = mde.MyDataEvent(
-                mde.EVT_INSTRUMENT_NAME_MISMATCH,
-                settingsDialog=self,
-                settingsModel=self.settingsModel,
-                facilityName=self.GetFacilityName(),
-                oldInstrumentName=self.settingsModel.GetInstrumentName(),
-                newInstrumentName=self.GetInstrumentName())
-            wx.PostEvent(wx.GetApp().GetMainFrame(),
-                         instrumentNameMismatchEvent)
+            instrumentNameMismatchEvent = \
+                MYDATA_EVENTS.InstrumentNameMismatchEvent(
+                    settingsDialog=self,
+                    settingsModel=self.settingsModel,
+                    facilityName=self.GetFacilityName(),
+                    oldInstrumentName=self.settingsModel.GetInstrumentName(),
+                    newInstrumentName=self.GetInstrumentName())
+            PostEvent(instrumentNameMismatchEvent)
             return
 
         settingsDialogValidationEvent = \
-            mde.MyDataEvent(mde.EVT_SETTINGS_DIALOG_VALIDATION,
-                            settingsDialog=self,
-                            settingsModel=self.settingsModel,
-                            okEvent=event)
-        wx.PostEvent(wx.GetApp().GetMainFrame(),
-                     settingsDialogValidationEvent)
+            MYDATA_EVENTS.SettingsDialogValidationEvent(
+                settingsDialog=self,
+                settingsModel=self.settingsModel,
+                okEvent=event)
+        PostEvent(settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
         dlg = wx.DirDialog(self, "Choose a directory:",
@@ -1621,7 +1620,8 @@ class SettingsDialog(wx.Dialog):
             self.uploadInvalidUserFoldersLabel.SetLabel(
                 "Upload invalid user folders:")
 
-        event.Skip()
+        if event:
+            event.Skip()
 
     def OnDropFiles(self, filePaths):
         """

@@ -80,7 +80,7 @@ class TasksModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareTaskRecords(self.tasksData[row],
                                                 ftd, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.tasksData.append(ftd)
@@ -229,26 +229,6 @@ class TasksModel(DataViewIndexListModel):
             return cmp(taskRecord1.GetValueForKey(self.columnKeys[col]),
                        taskRecord2.GetValueForKey(self.columnKeys[col]))
 
-    def DeleteRows(self, rows):
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            self.tasksData[row].Cancel()
-            del self.tasksData[row]
-            del self.unfilteredTasksData[row]
-
-        # Notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rows)
-        else:
-            wx.CallAfter(self.RowsDeleted, rows)
-
     def DeleteAllRows(self):
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
@@ -300,6 +280,7 @@ class TasksModel(DataViewIndexListModel):
             logger.warning(traceback.format_exc())
 
     def AddRow(self, taskModel):
+        """ Add a task to the Tasks view and activate it. """
         self.Filter("")
         self.tasksData.append(taskModel)
         # Ensure that we save the largest ID used so far:
@@ -394,9 +375,12 @@ class TasksModel(DataViewIndexListModel):
 
             app = wx.GetApp()
             if not app.ShouldAbort():
-                thread = threading.Thread(target=TaskJobFunc)
-                logger.debug("Starting task %s" % taskModel.GetJobDesc())
-                thread.start()
+                if wx.PyApp.IsMainLoopRunning():
+                    thread = threading.Thread(target=TaskJobFunc)
+                    logger.debug("Starting task %s" % taskModel.GetJobDesc())
+                    thread.start()
+                else:
+                    TaskJobFunc()
             else:
                 logger.info("Not starting task because we are aborting.")
                 app.EnableTestAndUploadToolbarButtons()
@@ -423,7 +407,10 @@ class TasksModel(DataViewIndexListModel):
             callLater = wx.CallLater(millis, JobFunc, *args)
             taskModel.SetCallLater(callLater)
 
-        wx.CallAfter(ScheduleTask)
+        if wx.PyApp.IsMainLoopRunning():
+            wx.CallAfter(ScheduleTask)
+        else:
+            JobFunc(*args)
 
         self.unfilteredTasksData = self.tasksData
         self.filteredTasksData = list()

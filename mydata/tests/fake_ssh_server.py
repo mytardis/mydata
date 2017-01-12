@@ -22,7 +22,6 @@ mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 
 import SocketServer
 import sys
-import threading
 import traceback
 import subprocess
 import time
@@ -51,7 +50,7 @@ paramiko_logger = logging.getLogger("paramiko")
 paramiko_logger.setLevel(logging.WARNING)
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter(
-    '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d ' \
+    '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d '
     '%(name)s: %(message)s', '%Y%m%d-%H:%M:%S'))
 paramiko_logger.addHandler(handler)
 
@@ -107,32 +106,32 @@ class SshServerInterface(paramiko.ServerInterface):
 # Default host key used by ThreadedSshServer
 #
 DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
-    "-----BEGIN RSA PRIVATE KEY-----\n" \
-    "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n" \
-    "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n" \
-    "DiN+GmGxCSFfxRQtyA0pa7qMDnXUKnFVViDc1r6WlzkOjmFPVRvvOO/fisumN8qM\n" \
-    "72N82wFzI9cWPMg1cx60ioRFHJ56Oz1D43IEc7jLw4weIxp+1HDciVwN1FMGcpf5\n" \
-    "9MkwYKqsu3zJKsrOJq59NwDwvGPZ0ZJHXOk8jvAdjH5fOyleQQCLdTmHZFR4gLMA\n" \
-    "cz9puMjUJwHQ0+YZ+SI9w8pkmIo1EEXWo2MV3wIDAQABAoIBAQCJGPkrXhvkAVck\n" \
-    "PwhnlqT/DOgZQ+cee+lTRCFmRjP2HWL0jqQwzwJjoXkNYcLXZ2STjBEqTKBl3ZvT\n" \
-    "Rk9Wf8R8tYuPGu7NzwgMYvHj+a2Rd6kGM2AFzT9mkjYE120hDzk3xjFDwRKDMLVn\n" \
-    "ebtEOCYOjN09+0z4/U+21QmK+ZRwoc283kJz4RcHI64GhzHxvvzVONHIgjWWzP15\n" \
-    "Cnjnn3CjNTJYoa/oP6/XF7gcZqMmKN95YVkBlqcC23QAncRCmKNadShiggVEms9z\n" \
-    "6nZu+0vHKUEjgSPTuq0G0yavCv/4jtWyKywdt2C+RZf1TZg4ng5jgIXVbPzzRGL/\n" \
-    "gwzccvgRAoGBANxavLHltKGvNg4nxvI13GXlTEURhtOAOGpRu64/drQml+BhRf5H\n" \
-    "IiR1esaVYJvwIWmAiccH/ATQ5x32EDOZnhBKE3eZxhOr1ms4MQqJlVWxKQgC6Ee+\n" \
-    "NzXfdhrj9ryvdt5/CfXupsTAZkFDSCJdJ0aBCpQpamiq7qcqQvAxSCZdAoGBAM0R\n" \
-    "nCrU4MMW+tWzGi/UvpMXTc74yKqG83GUl5zuuZmTE5gZmcx7+8XAhXRFe5piEPmV\n" \
-    "XKIth6cNg3NFUdgfZeeUPeffbFUj8egSkMrqUBiLDQ9WasXg9Ju0aYfXiA9WkqJM\n" \
-    "u6C6T7pLzxWOOt2jKZzQLjonlSv5/jebU47JvHFrAoGAfKnk+SxAjfyHM2jzl9I6\n" \
-    "93bLOIQa6AsxX40QBhund3IiGHJP2/S4bzH7nN+jwXUQIhTzXaO5w6vAJWYxck/l\n" \
-    "acfOzao0sqpT62Ll89U0pD9PPFYQvY3yxErBEaOI0uTd9jCfHQDAXq2O7Ds5Ux+q\n" \
-    "eavFpV7s8XxK+k3hguwOqo0CgYBlRZYW/OxGzBlx4bJD/s9iurZ9SRVoSZ7974D0\n" \
-    "Sly0QBMEIVh3yJ7s6Qe/BPVmp5l0eFO37743PJA3I/uoPNFJjUcJNKg+X7L+hfSl\n" \
-    "kROfG0SG14mBUXfbUTxwjnst//YIWtaqKHhpKzkIjyX5ALPzMkgyBgxAHIR0F6wr\n" \
-    "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n" \
-    "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n" \
-    "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n" \
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n"
+    "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n"
+    "DiN+GmGxCSFfxRQtyA0pa7qMDnXUKnFVViDc1r6WlzkOjmFPVRvvOO/fisumN8qM\n"
+    "72N82wFzI9cWPMg1cx60ioRFHJ56Oz1D43IEc7jLw4weIxp+1HDciVwN1FMGcpf5\n"
+    "9MkwYKqsu3zJKsrOJq59NwDwvGPZ0ZJHXOk8jvAdjH5fOyleQQCLdTmHZFR4gLMA\n"
+    "cz9puMjUJwHQ0+YZ+SI9w8pkmIo1EEXWo2MV3wIDAQABAoIBAQCJGPkrXhvkAVck\n"
+    "PwhnlqT/DOgZQ+cee+lTRCFmRjP2HWL0jqQwzwJjoXkNYcLXZ2STjBEqTKBl3ZvT\n"
+    "Rk9Wf8R8tYuPGu7NzwgMYvHj+a2Rd6kGM2AFzT9mkjYE120hDzk3xjFDwRKDMLVn\n"
+    "ebtEOCYOjN09+0z4/U+21QmK+ZRwoc283kJz4RcHI64GhzHxvvzVONHIgjWWzP15\n"
+    "Cnjnn3CjNTJYoa/oP6/XF7gcZqMmKN95YVkBlqcC23QAncRCmKNadShiggVEms9z\n"
+    "6nZu+0vHKUEjgSPTuq0G0yavCv/4jtWyKywdt2C+RZf1TZg4ng5jgIXVbPzzRGL/\n"
+    "gwzccvgRAoGBANxavLHltKGvNg4nxvI13GXlTEURhtOAOGpRu64/drQml+BhRf5H\n"
+    "IiR1esaVYJvwIWmAiccH/ATQ5x32EDOZnhBKE3eZxhOr1ms4MQqJlVWxKQgC6Ee+\n"
+    "NzXfdhrj9ryvdt5/CfXupsTAZkFDSCJdJ0aBCpQpamiq7qcqQvAxSCZdAoGBAM0R\n"
+    "nCrU4MMW+tWzGi/UvpMXTc74yKqG83GUl5zuuZmTE5gZmcx7+8XAhXRFe5piEPmV\n"
+    "XKIth6cNg3NFUdgfZeeUPeffbFUj8egSkMrqUBiLDQ9WasXg9Ju0aYfXiA9WkqJM\n"
+    "u6C6T7pLzxWOOt2jKZzQLjonlSv5/jebU47JvHFrAoGAfKnk+SxAjfyHM2jzl9I6\n"
+    "93bLOIQa6AsxX40QBhund3IiGHJP2/S4bzH7nN+jwXUQIhTzXaO5w6vAJWYxck/l\n"
+    "acfOzao0sqpT62Ll89U0pD9PPFYQvY3yxErBEaOI0uTd9jCfHQDAXq2O7Ds5Ux+q\n"
+    "eavFpV7s8XxK+k3hguwOqo0CgYBlRZYW/OxGzBlx4bJD/s9iurZ9SRVoSZ7974D0\n"
+    "Sly0QBMEIVh3yJ7s6Qe/BPVmp5l0eFO37743PJA3I/uoPNFJjUcJNKg+X7L+hfSl\n"
+    "kROfG0SG14mBUXfbUTxwjnst//YIWtaqKHhpKzkIjyX5ALPzMkgyBgxAHIR0F6wr\n"
+    "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n"
+    "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n"
+    "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n"
     "-----END RSA PRIVATE KEY-----\n"
 ))
 
@@ -155,7 +154,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         self.transport = None
 
         # These are used for SCP only:
-        self.verbose = False
+        self.verbose = True
         # modified: Only populated if scp client uses "-p".
         self.modified = None
         # accessed: Only populated if scp client uses "-p".
@@ -320,7 +319,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                                     break
                                 buf += char
                         match2 = re.match(
-                            r"^([C,D])([0-7][0-7][0-7][0-7])\s+" \
+                            r"^([C,D])([0-7][0-7][0-7][0-7])\s+"
                             r"([0-9]+)\s+(\S+)$", buf)
                         if match2:
                             logger.info("Received file mode/size/filename "
@@ -407,32 +406,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             logger.error(traceback.format_exc())
                         return
 
-                def read_remote_stderr():
-                    try:
-                        buf = ""
-                        while True:
-                            char = proc.stderr.read(1)
-                            if len(char) < 1:
-                                break
-                            buf += char
-                            if char == '\n' and self.verbose:
-                                self.chan.send_stderr(buf)
-                                buf = ""
-                                break
-                    except:  # pylint: disable=bare-except
-                        logger.error("read_remote_stderr error.")
-                        logger.error(traceback.format_exc())
-                        try:
-                            self.transport.close()
-                        except:  # pylint: disable=bare-except
-                            logger.error(traceback.format_exc())
-                        return
-                stderr_thread = \
-                    threading.Thread(target=read_remote_stderr)
-                stderr_thread.daemon = True
-                if self.verbose:
-                    stderr_thread.start()
-
                 logger.info("Reading protocol messages...")
                 read_protocol_messages()
                 logger.info("Finished reading protocol messages.")
@@ -455,11 +428,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 # Tell the SCP client that the progress meter has been stopped,
                 # so it can report the output to the user.
                 self.chan.send("\n")
-
-                if self.verbose:
-                    logger.info("Joining stderr")
-                    stderr_thread.join()
-                    logger.info("Joined stderr.")
 
                 if not proc.returncode:
                     logger.info("Waiting for 'scp -t' process to finish running.")
@@ -487,7 +455,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         try:
             self.transport.close()
         finally:
-            SocketServer.BaseRequestHandler.handle_timeout(self)
+            self.server.handle_timeout()
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -521,12 +489,3 @@ class ThreadedSshServer(ThreadedTCPServer):
     def close_request(self, request):
         # Prevent TCPServer from closing the connection prematurely
         return
-
-
-if __name__ == "__main__":
-    SERVER = ThreadedSshServer(("127.0.0.1", 2200))
-    try:
-        logger.info("Listening on port 2200...")
-        SERVER.serve_forever()
-    except (SystemExit, KeyboardInterrupt):
-        SERVER.server_close()

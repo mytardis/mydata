@@ -26,4 +26,5 @@ class LogViewTester(unittest.TestCase):
         pass
 
     def tearDown(self):
+        self.frame.Hide()
         self.frame.Destroy()

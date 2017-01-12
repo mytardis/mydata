@@ -40,7 +40,6 @@ from mydata.models.instrument import InstrumentModel
 from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import IncompatibleMyTardisVersion
 
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
@@ -95,11 +94,11 @@ class SettingsModel(object):
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
     """
-    def __init__(self, configPath):
+    def __init__(self, configPath, checkForUpdates=True):
 
         self.previousDict = {}
 
-        self.SetConfigPath(configPath)
+        self.configPath = configPath
 
         self.uploaderModel = None
         self.uploadToStagingRequest = None
@@ -126,7 +125,7 @@ class SettingsModel(object):
 
         # pylint: disable=bare-except
         try:
-            self.LoadSettings()
+            self.LoadSettings(checkForUpdates=checkForUpdates)
         except:
             # We don't want to raise an exception if invalid
             # settings are encountered when MyData is first
@@ -482,10 +481,6 @@ class SettingsModel(object):
     def SetFolderStructure(self, folderStructure):
         self.mydataConfig['folder_structure'] = folderStructure
 
-    # pylint: disable=no-self-use
-    def AlertUserAboutMissingFolders(self):
-        return False
-
     def ValidateFolderStructure(self):
         return self.mydataConfig['validate_folder_structure']
 
@@ -519,6 +514,7 @@ class SettingsModel(object):
         The fake MD5 sum to use when self.FakeMd5Sum()
         is True.
         """
+        # pylint: disable=no-self-use
         return "00000000000000000000000000000000"
 
     def GetCipher(self):
@@ -693,12 +689,6 @@ class SettingsModel(object):
 
     def SetSshKeyPair(self, sshKeyPair):
         self.sshKeyPair = sshKeyPair
-
-    def IsIncompatibleMyTardisVersion(self):
-        return self.incompatibleMyTardisVersion
-
-    def SetIncompatibleMyTardisVersion(self, incompatibleMyTardisVersion):
-        self.incompatibleMyTardisVersion = incompatibleMyTardisVersion
 
     def GetValueForKey(self, key):
         return self.mydataConfig[key]
@@ -945,7 +935,7 @@ class SettingsModel(object):
             elif self.UseIncludesFile() and self.UseExcludesFile():
                 message = "Files matching patterns in excludes " \
                     "file will not be scanned for upload, " \
-                    "unless they match pattersn in the includes file."
+                    "unless they match patterns in the includes file."
                 logger.warning(message)
                 if testRun:
                     logger.testrun("WARNING: %s" % message)
@@ -961,7 +951,7 @@ class SettingsModel(object):
                 logger.debug(message)
                 if setStatusMessage:
                     setStatusMessage(message)
-                self.validation = self.PerformFolderStructureValidation()
+                self.validation = self.CheckStructureAndCountDatasets()
                 if not self.validation.IsValid():
                     return self.validation
                 datasetCount = self.validation.GetDatasetCount()
@@ -1054,20 +1044,27 @@ class SettingsModel(object):
                                                      "mytardis_url")
                 logger.error(traceback.format_exc())
                 return self.validation
-            except:
-                if not self.GetMyTardisUrl().startswith("http"):
-                    message = "Please enter a valid MyTardis URL, " \
-                        "beginning with \"http://\" or \"https://\"."
+            except requests.exceptions.InvalidSchema:
+                message = "Please enter a valid MyTardis URL, " \
+                    "beginning with \"http://\" or \"https://\"."
+                if ":" not in self.GetMyTardisUrl():
                     suggestion = "http://" + self.GetMyTardisUrl()
                 else:
-                    logger.debug(traceback.format_exc())
-                    message = "Please enter a valid MyTardis URL.\n\n"
-                    etype, evalue = sys.exc_info()[:2]
-                    excOnlyList = \
-                        traceback.format_exception_only(etype, evalue)
-                    for excOnly in excOnlyList:
-                        message += excOnly
                     suggestion = None
+                self.validation = SettingsValidation(False, message,
+                                                     "mytardis_url",
+                                                     suggestion)
+                logger.error(traceback.format_exc())
+                return self.validation
+            except:
+                logger.debug(traceback.format_exc())
+                message = "Please enter a valid MyTardis URL.\n\n"
+                etype, evalue = sys.exc_info()[:2]
+                excOnlyList = \
+                    traceback.format_exception_only(etype, evalue)
+                for excOnly in excOnlyList:
+                    message += excOnly
+                suggestion = None
                 self.validation = SettingsValidation(False, message,
                                                      "mytardis_url",
                                                      suggestion)
@@ -1128,7 +1125,8 @@ class SettingsModel(object):
                     if len(facilities) == 1:
                         suggestion = facilities[0].GetName()
                     self.validation = SettingsValidation(False, message,
-                                                         "facility_name")
+                                                         "facility_name",
+                                                         suggestion)
                     return self.validation
                 except:
                     logger.error(traceback.format_exc())
@@ -1248,10 +1246,6 @@ class SettingsModel(object):
                 if setStatusMessage:
                     setStatusMessage(message)
                 self.UpdateAutostartFile()
-        except IncompatibleMyTardisVersion:
-            logger.debug("Incompatible MyTardis Version.")
-            self.SetIncompatibleMyTardisVersion(True)
-            raise
         except:
             message = traceback.format_exc()
             logger.error(message)
@@ -1344,7 +1338,7 @@ class SettingsModel(object):
                     # Lines starting with '#' or ';' will be ignored.
                     # Other non-blank lines are expected to be globs,
                     # e.g. *.txt
-                    line = line.decode('utf-8').strip()
+                    _ = line.decode('utf-8').strip()
                 except UnicodeDecodeError:
                     message = "%s file is not a valid plain text " \
                         "(UTF-8) file." % upper
@@ -1352,7 +1346,15 @@ class SettingsModel(object):
                         SettingsValidation(False, message, field)
                     return self.validation
 
-    def PerformFolderStructureValidation(self):
+    def CheckStructureAndCountDatasets(self):
+        """
+        Counts datasets, while traversing the folder structure.
+        Previous versions of this method would alert the user
+        about missing folders.  That functionality has now
+        been removed, so the primary purpose of this method is
+        to count datasets, although the Settings dialog checkbox
+        which enables it is still called "Validate folder structure"
+        """
         # pylint: disable=too-many-locals
         datasetCount = -1
         userOrGroupFilterString = "*%s*" % self.GetUserFilter()
@@ -1361,33 +1363,8 @@ class SettingsModel(object):
         filesDepth1 = glob(os.path.join(self.GetDataDirectory(),
                                         userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
-        if len(dirsDepth1) == 0:
-            message = "The data directory: \"%s\" doesn't contain any " \
-                % self.GetDataDirectory()
-            if self.GetFolderStructure() == 'Username / Dataset':
-                message += "user folders!"
-            elif self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset':
-                message += "user folders!"
-            elif self.GetFolderStructure() == 'Email / Dataset':
-                message += "email folders!"
-            elif self.GetFolderStructure() == \
-                    'Email / Experiment / Dataset':
-                message += "email folders!"
-            elif self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                message += "user folders!"
-            elif self.GetFolderStructure().startswith("User Group "):
-                message += "user group folders!"
-            if self.AlertUserAboutMissingFolders():
-                self.validation = SettingsValidation(False, message,
-                                                     "data_directory")
-                return self.validation
-            else:
-                logger.warning(message)
 
-        seconds = {}
-        seconds['day'] = 24 * 60 * 60
+        seconds = dict(day=24 * 60 * 60)
         seconds['week'] = 7 * seconds['day']
         seconds['year'] = int(365.25 * seconds['day'])
         seconds['month'] = seconds['year'] / 12
@@ -1412,7 +1389,7 @@ class SettingsModel(object):
 
         if self.GetFolderStructure() == 'Dataset':
             logger.debug(
-                "SettingsModel folder structure validation succeeded!")
+                "SettingsModel dataset counting succeeded!")
             self.validation = SettingsValidation(True,
                                                  datasetCount=datasetCount)
             return self.validation
@@ -1441,48 +1418,6 @@ class SettingsModel(object):
                                             userOrGroupFilterString,
                                             filterString))
         dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
-        if len(dirsDepth2) == 0:
-            if self.GetFolderStructure() == 'Username / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "dataset folders within user folders." % \
-                    self.GetDataDirectory()
-            elif self.GetFolderStructure() == 'Email / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "dataset folders within email folders." % \
-                    self.GetDataDirectory()
-            elif self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "experiment folders within user folders." % \
-                    self.GetDataDirectory()
-            elif self.GetFolderStructure() == \
-                    'Email / Experiment / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "experiment folders within email folders." % \
-                    self.GetDataDirectory()
-            elif self.GetFolderStructure() == \
-                    'User Group / Experiment / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "experiment folders within user group folders." % \
-                    self.GetDataDirectory()
-            elif self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                message = "Each user folder should contain a " \
-                    "\"MyTardis\" folder."
-            elif self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                message = "Each user group folder should contain an " \
-                    "instrument name folder."
-            elif self.GetFolderStructure() == 'Experiment / Dataset':
-                message = "The data directory: \"%s\" should contain " \
-                    "dataset folders within experiment folders." % \
-                    self.GetDataDirectory()
-            if self.AlertUserAboutMissingFolders():
-                self.validation = SettingsValidation(False, message,
-                                                     "data_directory")
-                return self.validation
-            else:
-                logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / "MyTardis" / Experiment / Dataset':
@@ -1512,7 +1447,7 @@ class SettingsModel(object):
 
         if self.GetFolderStructure() == 'Experiment / Dataset':
             logger.debug(
-                "SettingsModel folder structure validation succeeded!")
+                "SettingsModel dataset counting succeeded!")
             self.validation = SettingsValidation(True,
                                                  datasetCount=datasetCount)
             return self.validation
@@ -1546,6 +1481,9 @@ class SettingsModel(object):
                     'Username / "MyTardis" / Experiment / Dataset':
                 filterString1 = '*'
                 filterString2 = expFilterString
+            else:
+                filterString1 = '*'
+                filterString2 = '*'
             if self.GetFolderStructure().startswith("Username") or \
                     self.GetFolderStructure().startswith("Email") or \
                     self.GetFolderStructure().startswith("User Group"):
@@ -1558,47 +1496,6 @@ class SettingsModel(object):
                                                 filterString1,
                                                 filterString2))
         dirsDepth3 = [item for item in filesDepth3 if os.path.isdir(item)]
-        if len(dirsDepth3) == 0:
-            if self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                message = "Each \"MyTardis\" folder should contain at " \
-                    "least one experiment folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
-            elif self.GetFolderStructure() == \
-                    'Username / Experiment / Dataset':
-                message = "Each experiment folder should contain at " \
-                    "least one dataset folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
-            elif self.GetFolderStructure() == \
-                    'Email / Experiment / Dataset':
-                message = "Each experiment folder should contain at " \
-                    "least one dataset folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
-            elif self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                message = "Each instrument folder should contain at " \
-                    "least one full name (dataset group) folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / Experiment / Dataset' or \
@@ -1630,27 +1527,6 @@ class SettingsModel(object):
                                             expFilterString,
                                             datasetFilterString))
         dirsDepth4 = [item for item in filesDepth4 if os.path.isdir(item)]
-        if len(dirsDepth4) == 0:
-            if self.GetFolderStructure() == \
-                    'Username / "MyTardis" / Experiment / Dataset':
-                message = "Each experiment folder should contain at " \
-                    "least one dataset folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
-            elif self.GetFolderStructure() == \
-                    'User Group / Instrument / Full Name / Dataset':
-                message = "Each full name (dataset group) folder " \
-                    "should contain at least one dataset folder."
-                if self.AlertUserAboutMissingFolders():
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-                else:
-                    logger.warning(message)
 
         if self.GetFolderStructure() == \
                 'Username / "MyTardis" / Experiment / Dataset' or \
@@ -1667,10 +1543,10 @@ class SettingsModel(object):
             else:
                 datasetCount = len(dirsDepth4)
 
-        logger.debug("SettingsModel folder structure validation succeeded!")
+        logger.debug("SettingsModel dataset counting succeeded!")
         self.validation = SettingsValidation(True, datasetCount=datasetCount)
         return self.validation
-        # End PerformFolderStructureValidation
+        # End CheckStructureAndCountDatasets
 
     def RequiredFieldIsBlank(self):
         return self.GetInstrumentName() == "" or \
@@ -1928,6 +1804,7 @@ oFS.DeleteFile sLinkFile
         return self.connectivityCheckInterval
 
     def ShouldAbort(self):
+        # pylint: disable=no-self-use
         app = wx.GetApp()
         if hasattr(app, "ShouldAbort"):
             return wx.GetApp().ShouldAbort()

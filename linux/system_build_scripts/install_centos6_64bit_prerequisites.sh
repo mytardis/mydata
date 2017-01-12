@@ -97,7 +97,7 @@ module load python/2.7.11
 tar jxf wxPython-src-2.9.5.0.tar.bz2
 
 cd wxPython-src-2.9.5.0
-export WXDIR=`pwd`
+export WXDIR=$(pwd)
 mkdir -p bld
 cd bld
 

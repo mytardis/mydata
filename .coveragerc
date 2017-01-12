@@ -1,0 +1,4 @@
+[report]
+omit = 
+    mydata/tests/*
+    mydata/logs/mydata_log_drop.py

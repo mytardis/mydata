@@ -18,7 +18,6 @@ otherwise we need to worry about escaping special characters like
 
 # Disabling some Pylint warnings for now...
 # pylint: disable=missing-docstring
-# pylint: disable=too-many-lines
 # pylint: disable=wrong-import-position
 
 import sys
@@ -47,9 +46,6 @@ from mydata.utils.exceptions import ScpException
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
 from mydata.utils.exceptions import DoesNotExist
 
-from mydata.utils.exceptions import StagingHostRefusedSshConnection
-from mydata.utils.exceptions import StagingHostSshPermissionDenied
-from mydata.utils.exceptions import FileNotFoundOnStaging
 from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 if sys.platform.startswith("linux"):
@@ -291,7 +287,7 @@ class KeyPair(object):
                 keyType = sshKeyGenOutComponents[-1]\
                     .strip().strip('(').strip(')')
 
-        return (fingerprint, keyType)
+        return fingerprint, keyType
 
     def GetFingerprint(self):
         if self.fingerprint is None:
@@ -565,7 +561,6 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
 
     maxThreads = settingsModel.GetMaxUploadThreads()
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if settingsModel.UseNoneCipher():
         cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
     else:
@@ -700,7 +695,6 @@ def UploadFileFromWindows(filePath, fileSize, username,
     MonitorProgress()
 
     cipher = settingsModel.GetCipher()
-    bytesUploaded = long(0)
 
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
@@ -737,7 +731,6 @@ def UploadFileFromWindows(filePath, fileSize, username,
         return
 
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     scpCommandString = \
         '%s -v -P %s -i %s -c %s ' \
         '-oNoHostAuthenticationForLocalhost=yes ' \
@@ -812,134 +805,6 @@ def CleanUpSshProcesses(settingsModel):
                     pass
         except psutil.AccessDenied:
             pass
-
-
-def OldCountBytesUploadedToStaging(remoteFilePath, username,
-                                   privateKeyFilePath,
-                                   host, port, settingsModel):
-    """
-    Deprecated.  Use ReplicaModel.CountBytesUploadedToStaging instead.
-    """
-    # pylint: disable=too-many-arguments
-    # pylint: disable=too-many-locals
-    # pylint: disable=too-many-branches
-    if sys.platform.startswith("win"):
-        privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
-    quotedRemoteFilePath = OPENSSH.DoubleQuoteRemotePath(remoteFilePath)
-    maxThreads = settingsModel.GetMaxVerificationThreads()
-
-    cipher = settingsModel.GetCipher()
-
-    if sys.platform.startswith("win"):
-        cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
-                      "-p", port,
-                      "-n",
-                      "-c", cipher,
-                      "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oPasswordAuthentication=no",
-                      "-oNoHostAuthenticationForLocalhost=yes",
-                      "-oStrictHostKeyChecking=no",
-                      "-l", username,
-                      host,
-                      OPENSSH.DoubleQuoteRemotePath(
-                          "wc -c %s" % quotedRemoteFilePath)]
-    else:
-        cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
-                      "-p", port,
-                      "-c", cipher,
-                      "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oPasswordAuthentication=no",
-                      "-oNoHostAuthenticationForLocalhost=yes",
-                      "-oStrictHostKeyChecking=no",
-                      "-l", username,
-                      host,
-                      OPENSSH.DoubleQuoteRemotePath(
-                          "wc -c %s" % quotedRemoteFilePath)]
-    cmdString = " ".join(cmdAndArgs)
-    logger.debug(cmdString)
-    proc = subprocess.Popen(cmdString,
-                            shell=OPENSSH.preferToUseShellInSubprocess,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            startupinfo=DEFAULT_STARTUP_INFO,
-                            creationflags=DEFAULT_CREATION_FLAGS)
-    while True:
-        poll = proc.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = proc.communicate()
-    lines = stdout.splitlines()
-    bytesUploaded = long(0)
-    for line in lines:
-        match = re.search(r"^(\d+)\s+\S+", line)
-        if match:
-            bytesUploaded = long(match.groups()[0])
-            return bytesUploaded
-        elif "No such file or directory" in line:
-            raise FileNotFoundOnStaging(remoteFilePath)
-        elif line == "ssh_exchange_identification: read: " \
-                "Connection reset by peer" or \
-                line == "ssh_exchange_identification: " \
-                        "Connection closed by remote host":
-            message = "The MyTardis staging host assigned to your " \
-                "MyData instance (%s) refused MyData's attempted " \
-                "SSH connection." \
-                "\n\n" \
-                "There are a few possible reasons why this could occur." \
-                "\n\n" \
-                "1. Your MyTardis administrator could have forgotten to " \
-                "grant your IP address access to MyTardis's staging " \
-                "host, or" \
-                "\n\n" \
-                "2. Your IP address could have changed sinced you were " \
-                "granted access to MyTardis's staging host, or" \
-                "\n\n" \
-                "3. MyData's attempts to log in to MyTardis's staging host " \
-                "could have been flagged as suspicious, and your IP " \
-                "address could have been temporarily banned." \
-                "\n\n" \
-                "4. MyData could be running more simultaneous upload " \
-                "threads than your staging server can handle.  Ask your " \
-                "server administrator to check the values of MaxStartups " \
-                "and MaxSessions in the server's /etc/ssh/sshd_config" \
-                "\n\n" \
-                "In any of these cases, it is best to contact your " \
-                "MyTardis administrator for assistance." % host
-            logger.error(stdout)
-            logger.error(message)
-            raise StagingHostRefusedSshConnection(message)
-        elif line == "Permission denied (publickey,password).":
-            message = "MyData was unable to authenticate into the " \
-                "MyTardis staging host assigned to your MyData instance " \
-                "(%s)." \
-                "\n\n" \
-                "There are a few possible reasons why this could occur." \
-                "\n\n" \
-                "1. Your MyTardis administrator could have failed to add " \
-                "the public key generated by your MyData instance to the " \
-                "appropriate ~/.ssh/authorized_keys file on MyTardis's " \
-                "staging host, or" \
-                "\n\n" \
-                "2. The private key generated by MyData (a file called " \
-                "\"MyData\" in the \".ssh\" folder within your " \
-                "user home folder (%s) could have been deleted or moved." \
-                "\n\n" \
-                "3. The permissions on %s could be too open - only the " \
-                "current user account should be able to access this private " \
-                "key file." \
-                "\n\n" \
-                "In any of these cases, it is best to contact your " \
-                "MyTardis administrator for assistance." \
-                % (host, os.path.expanduser("~"),
-                   os.path.join(os.path.expanduser("~"), ".ssh",
-                                "MyData"))
-
-            logger.error(message)
-            raise StagingHostSshPermissionDenied(message)
-        else:
-            logger.debug(line)
-    return bytesUploaded
 
 
 # Singleton instance of OpenSSH class:

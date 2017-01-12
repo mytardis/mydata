@@ -1,12 +1,14 @@
 """
-Test ability to scan folders with the Username / Dataset structure
-and upload using SCP.
+Test ability to scan the Username / Dataset structure and upload using SCP.
 """
 import os
 import sys
 import time
-import subprocess
 import unittest
+import threading
+import socket
+import select
+from BaseHTTPServer import HTTPServer
 
 import requests
 import wx
@@ -22,23 +24,34 @@ from mydata.controllers.folders import FoldersController
 import mydata.utils.openssh as OpenSSH
 from mydata.models.upload import UploadStatus
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
+from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
+from mydata.tests.fake_ssh_server import ThreadedSshServer
+from mydata.tests.utils import GetEphemeralPort
+from mydata.events import MYDATA_EVENTS
 if sys.platform.startswith("linux"):
     from mydata.linuxsubprocesses import StopErrandBoy
 
+
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test ability to scan folders with the Username / Dataset structure
-    and upload using SCP.
+    Test ability to scan the Username / Dataset structure and upload using SCP.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
-        self.fakeMyTardisServerProcess = None
-        self.fakeSshServerProcess = None
+        self.app = None
+        self.frame = None
+        self.httpd = None
+        self.fakeMyTardisHost = "127.0.0.1"
+        self.fakeMyTardisPort = None
+        self.fakeMyTardisServerThread = None
+        self.fakeSshServerThread = None
 
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanUsernameDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
         # The fake SSH server needs to know the public
         # key so it can authenticate the test client.
@@ -53,15 +66,16 @@ class ScanUsernameDatasetTester(unittest.TestCase):
     def tearDown(self):
         self.keyPair.Delete()
         self.frame.Destroy()
-        self.fakeMyTardisServerProcess.terminate()
-        self.fakeSshServerProcess.terminate()
+        self.httpd.shutdown()
+        self.fakeMyTardisServerThread.join()
+        self.sshd.server_close()
+        self.fakeSshServerThread.join()
         if sys.platform.startswith("linux"):
             StopErrandBoy()
 
     def test_scan_folders(self):
         """
-        Test ability to scan folders with the Username / Dataset structure
-        and upload using SCP.
+        Test ability to scan the Username / Dataset structure and upload using SCP.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -76,6 +90,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "testdata", "testdataUsernameDataset"))
+        settingsModel.SetMyTardisUrl(
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
         settingsModel.SetSshKeyPair(self.keyPair)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
@@ -111,8 +127,10 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             return False
 
         foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
-        assert sorted(usersModel.GetValuesForColname("Username")) == \
-            ["testuser1", "testuser2"]
+        # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
+        # so the "INVALID_USER" folder is not included:
+        self.assertEqual(sorted(usersModel.GetValuesForColname("Username")),
+                         ["testuser1", "testuser2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
@@ -175,23 +193,6 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             time.sleep(0.1)
         assert numVerificationsCompleted == numFiles
 
-        # Verifications won't be able to trigger uploads via PostEvent,
-        # because there is no running event loop, so we'll manually call
-        # UploadDatafile for each datafile.
-
-        uploadsToBePerformed = numVerificationsCompleted
-        for i in range(numVerificationsCompleted):
-            verificationModel = verificationsModel.verificationsData[i]
-            folderModelId = verificationModel.GetFolderModelId()
-            folderModel = foldersModel.GetFolderRecord(folderModelId-1)
-            dataFileIndex = verificationModel.GetDataFileIndex()
-            event = foldersController.didntFindDatafileOnServerEvent(
-                foldersController=foldersController,
-                folderModel=folderModel,
-                dataFileIndex=dataFileIndex,
-                verificationModel=verificationModel)
-            foldersController.UploadDatafile(event)
-
         sys.stderr.write("Waiting for uploads to complete...\n")
         while True:
             uploadsCompleted = uploadsModel.GetCompletedCount()
@@ -200,6 +201,9 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
             if uploadsProcessed == uploadsToBePerformed:
                 break
+            if uploadsProcessed > uploadsToBePerformed:
+                raise Exception("Processed %s/%s uploads!"
+                                % (uploadsProcessed, uploadsToBePerformed))
             time.sleep(0.1)
         foldersController.ShutDownUploadThreads()
 
@@ -225,21 +229,34 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         """
         Start fake MyTardis server.
         """
-        os.environ['PYTHONPATH'] = os.path.realpath(".")
-        self.fakeMyTardisServerProcess = \
-            subprocess.Popen([sys.executable,
-                              "mydata/tests/fake_mytardis_server.py"],
-                             env=os.environ)
+        self.fakeMyTardisPort = GetEphemeralPort()
+        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
+                                FakeMyTardisHandler)
+
+        def FakeMyTardisServer():
+            """ Run fake MyTardis server """
+            self.httpd.serve_forever()
+        self.fakeMyTardisServerThread = \
+            threading.Thread(target=FakeMyTardisServer,
+                             name="FakeMyTardisServerThread")
+        self.fakeMyTardisServerThread.start()
 
     def StartFakeSshServer(self):
         """
-        Start fake SSH/SCP server.
+        Start fake SSH server.
         """
-        os.environ['PYTHONPATH'] = os.path.realpath(".")
-        self.fakeSshServerProcess = \
-            subprocess.Popen([sys.executable,
-                              "mydata/tests/fake_ssh_server.py"],
-                             env=os.environ)
+        self.sshd = ThreadedSshServer(("127.0.0.1", 2200))
+
+        def FakeSshServer():
+            """ Run fake SSH server """
+            try:
+                self.sshd.serve_forever()
+            except (OSError, socket.error, select.error):
+                pass
+        self.fakeSshServerThread = \
+            threading.Thread(target=FakeSshServer,
+                             name="FakeSshServerThread")
+        self.fakeSshServerThread.start()
 
 
 if __name__ == '__main__':

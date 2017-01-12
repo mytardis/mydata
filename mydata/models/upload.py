@@ -88,8 +88,8 @@ class UploadModel(object):
             elapsedTime = self.latestTime - self.startTime
             if elapsedTime.total_seconds():
                 self.speed = "%3.1f MB/s" % \
-                    (float(self.bytesUploaded) / 1000000.0 \
-                    / elapsedTime.total_seconds())
+                    (float(self.bytesUploaded) / 1000000.0
+                     / elapsedTime.total_seconds())
 
     def GetBytesUploadedPreviously(self):
         return self.bytesUploadedPreviously
@@ -102,7 +102,7 @@ class UploadModel(object):
 
     def SetProgress(self, progress):
         self.progress = progress
-        if progress > 0 and progress < 100:
+        if 0 < progress < 100:
             self.status = UploadStatus.IN_PROGRESS
 
     def GetStatus(self):
@@ -129,8 +129,8 @@ class UploadModel(object):
             elapsedTime = self.latestTime - self.startTime
             if elapsedTime.total_seconds():
                 self.speed = "%3.1f MB/s" % \
-                    (float(self.bytesUploaded) / 1000000.0 \
-                    / elapsedTime.total_seconds())
+                    (float(self.bytesUploaded) / 1000000.0
+                     / elapsedTime.total_seconds())
 
     def GetTraceback(self):
         return self.traceback

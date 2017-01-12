@@ -79,6 +79,16 @@ class DatasetModel(object):
                              description)
         else:
             numExistingMatchingDatasets = 0
+            existingMatchingDatasets = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 0
+                },
+                "objects": []
+            }
 
         if numExistingMatchingDatasets == 0:
             logger.debug("Creating dataset record for folder: " + description)
@@ -113,7 +123,7 @@ class DatasetModel(object):
                 logger.testrun(message)
                 return
             response = requests.post(headers=headers, url=url, data=data)
-            if response.status_code >= 200 and response.status_code < 300:
+            if response.status_code == 201:
                 newDatasetJson = response.json()
                 return DatasetModel(settingsModel, newDatasetJson)
             else:

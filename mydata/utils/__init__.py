@@ -28,7 +28,7 @@ def HumanReadableSizeString(num):
     Returns human-readable string.
     """
     for unit in ['bytes', 'KB', 'MB', 'GB']:
-        if num < 1024.0 and num > -1024.0:
+        if -1024.0 < num < 1024.0:
             return "%3.1f %s" % (num, unit)
         num /= 1024.0
     return "%3.1f %s" % (num, 'TB')
@@ -67,41 +67,31 @@ def BytesToHuman(numBytes):
     return "%sB" % numBytes
 
 
-class ConnectionStatus(object):
-    """
-    Enumerated data type
-    """
-    # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
-    CONNECTED = 0
-    DISCONNECTED = 1
-
-
 def BeginBusyCursorIfRequired():
     """
     Begin busy cursor if it's not already being displayed.
     """
-    # pylint: disable=no-member
-    # Otherwise pylint complains about PyAssertionError.
-    # pylint: disable=protected-access
     try:
         if not wx.IsBusy():
             wx.BeginBusyCursor()
-    except wx._core.PyAssertionError, err:
+    except wx.PyAssertionError, err:
         logger.warning(err)
 
 
-def EndBusyCursorIfRequired():
+def EndBusyCursorIfRequired(event=None):
     """
     The built in wx.EndBusyCursor raises an ugly exception if the
     busy cursor has already been stopped.
     """
-    # pylint: disable=no-member
-    # Otherwise pylint complains about PyAssertionError.
-    # pylint: disable=protected-access
     try:
         wx.EndBusyCursor()
-    except wx._core.PyAssertionError, err:
+        if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
+            if wx.version().startswith("3.0.3.dev"):
+                arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+            else:
+                arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+            event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
+    except wx.PyAssertionError, err:
         if "no matching wxBeginBusyCursor()" \
                 not in str(err):
             logger.warning(str(err))

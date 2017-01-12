@@ -83,7 +83,7 @@ class UsersModel(DataViewIndexListModel):
                 while row < self.GetRowCount() and \
                         self.CompareUserRecords(self.usersData[row],
                                                 fud, col, ascending) < 0:
-                    row = row + 1
+                    row += 1
 
                 if row == self.GetRowCount():
                     self.usersData.append(fud)
@@ -212,25 +212,6 @@ class UsersModel(DataViewIndexListModel):
         else:
             return cmp(userRecord1.GetValueForKey(self.columnKeys[col]),
                        userRecord2.GetValueForKey(self.columnKeys[col]))
-
-    def DeleteRows(self, rows):
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        # make a copy since we'll be sorting(mutating) the list
-        rows = list(rows)
-        # use reverse order so the indexes don't change as we remove items
-        rows.sort(reverse=True)
-
-        for row in rows:
-            del self.usersData[row]
-            del self.unfilteredUsersData[row]
-
-        # Notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rows)
-        else:
-            wx.CallAfter(self.RowsDeleted, rows)
 
     def DeleteAllRows(self):
         rowsDeleted = []
