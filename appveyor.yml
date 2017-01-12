@@ -79,7 +79,7 @@ test_script:
   - "SET CI_BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%"
   - "SET CI_BUILD_URL=https://ci.appveyor.com/project/wettenhj/mydata/%APPVEYOR_BUILD_VERSION%"
   - "SET CI_BRANCH=%APPVEYOR_REPO_BRANCH%"
-  - "%CMD_IN_ENV% coveralls"
+  - "coveralls"
 
 after_test:
   # If tests are successful, create binary packages for the project.
