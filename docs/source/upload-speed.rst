@@ -3,27 +3,28 @@ Upload Speed
 
 How fast is MyData?
 
-This page lists the key considerations for achieving faster uploads
-with MyData.
+This page lists the key considerations for achieving faster uploads with MyData.
 
-An example of MyData running faster than Gigabit speeds is shown below:
+An example of MyData uploading at faster than Gigabit speeds is shown below:
 
 .. image:: images/MyDataEC2.png
    :align: center
 
 An overall upload speed of 414.5 MB/s was achieved by MyData v0.7.0-beta1
 while uploading sixteen 1 GB files.  MyData was configured to run with
-concurrent 8 upload threads on an Amazon EC2 Windows virtual machine
+8 concurrent upload threads on an Amazon EC2 Windows virtual machine
 with 8 CPU cores, and was uploading to an Amazon EC2 Ubuntu virtual
 machine, also with 8 CPU cores, using MyData's SCP upload method.
-The upload speed per SSH channel is not impressive, and suggests that
-perhaps SCP is not taking advantage of hardware-accelerated encryption
-(AES-NI) on the Windows client.  However the overall speed (with 8
-upload threads) is not too bad.  The "Average speed" displayed at the
-bottom (414.5 MB/s) was calculated from the total elapsed time, including
-the time taken to calculate an MD5 sum before each upload, which is
-relatively fast on modern CPUs.  The Amazon EC2 virtual machines had
-*Intel(R) Xeon(R) CPU E5-2676*  CPUs.
+
+The "Average speed" of 414.5 MB/s displayed in MyData's status bar was
+calculated from the total elapsed time, including the time taken to
+calculate an MD5 sum before each upload.
+
+The "raw" upload speed (excluding elapsed time for MD5 calculations) can be
+determined by adding the individual upload speeds (shown in the "Speed" column)
+for the first 8 uploads (which were performed concurrently), giving 494 MB/s.
+
+Each Amazon EC2 virtual machine had 8 *Intel(R) Xeon(R) CPU E5-2676*  CPU cores.
 
 
 Upload Methods
