@@ -139,7 +139,7 @@ class UserModel(object):
         myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
-            urllib2.quote(email)
+            urllib2.quote(email.encode('utf-8'))
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
                                                myTardisApiKey)}

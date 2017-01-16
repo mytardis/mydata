@@ -62,7 +62,8 @@ class DatasetModel(object):
         if experiment:  # Could be None in test run
             url = myTardisUrl + "/api/v1/dataset/?format=json" + \
                 "&experiments__id=" + str(experiment.GetId())
-            url = url + "&description=" + urllib.quote(description)
+            url = url + "&description=" + \
+                urllib.quote(description.encode('utf-8'))
 
             headers = {
                 "Authorization": "ApiKey %s:%s" % (myTardisUsername,

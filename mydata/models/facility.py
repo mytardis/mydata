@@ -83,7 +83,7 @@ class FacilityModel(object):
         myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/facility/?format=json&name=" + \
-            urllib.quote(name)
+            urllib.quote(name.encode('utf-8'))
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
                                                myTardisApiKey),

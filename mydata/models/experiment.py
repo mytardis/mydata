@@ -74,7 +74,7 @@ class ExperimentModel(object):
         experimentTitle = folderModel.GetExperimentTitle()
 
         if folderModel.ExperimentTitleSetManually():
-            expTitleEncoded = urllib2.quote(experimentTitle)
+            expTitleEncoded = urllib2.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
                 urllib2.quote(settingsModel.GetFolderStructure())
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
@@ -84,9 +84,11 @@ class ExperimentModel(object):
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid
         if userFolderName:
-            url += "&user_folder_name=" + urllib2.quote(userFolderName)
+            url += "&user_folder_name=" + \
+                urllib2.quote(userFolderName.encode('utf-8'))
         if groupFolderName:
-            url += "&group_folder_name=" + urllib2.quote(groupFolderName)
+            url += "&group_folder_name=" + \
+                urllib2.quote(groupFolderName.encode('utf-8'))
 
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
@@ -129,7 +131,7 @@ class ExperimentModel(object):
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see https://github.com/wettenhj/" \
+                               "(see https://github.com/mytardis/" \
                                "mytardis-app-mydata/blob/master/README.md)" \
                                "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \
@@ -433,7 +435,7 @@ class ExperimentModel(object):
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see https://github.com/wettenhj/" \
+                               "(see https://github.com/mytardis/" \
                                "mytardis-app-mydata/blob/master/README.md)" \
                                "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \

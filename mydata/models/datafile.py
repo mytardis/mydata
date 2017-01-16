@@ -143,8 +143,8 @@ class DataFileModel(object):
         myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
             "&dataset__id=" + str(dataset.GetId()) + \
-            "&filename=" + urllib.quote(filename) + \
-            "&directory=" + urllib.quote(directory)
+            "&filename=" + urllib.quote(filename.encode('utf-8')) + \
+            "&directory=" + urllib.quote(directory.encode('utf-8'))
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
                                                myTardisApiKey),
