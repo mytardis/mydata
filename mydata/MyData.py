@@ -165,10 +165,10 @@ class MyData(wx.App):
         self.scanningFolders = threading.Event()
         self.performingLookupsAndUploads = threading.Event()
         self.testRunRunning = threading.Event()
+        self.shouldAbort = threading.Event()
 
         self.scanningFoldersThreadingLock = threading.Lock()
         self.numUserFoldersScanned = 0
-        self.shouldAbort = False
 
         self.activeNetworkInterface = None
         self.lastConnectivityCheckSuccess = False
@@ -909,7 +909,7 @@ class MyData(wx.App):
             userOrGroup = "user"
 
         self.numUserFoldersScanned = 0
-        self.shouldAbort = False
+        self.shouldAbort.clear()
 
         def WriteProgressUpdateToStatusBar():
             """
@@ -1088,14 +1088,17 @@ class MyData(wx.App):
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        return self.shouldAbort
+        return self.shouldAbort.isSet()
 
     def SetShouldAbort(self, shouldAbort=True):
         """
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        self.shouldAbort = shouldAbort
+        if shouldAbort:
+            self.shouldAbort.set()
+        else:
+            self.shouldAbort.clear()
 
     def OnOpen(self, event):
         """
