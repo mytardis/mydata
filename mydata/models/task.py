@@ -82,7 +82,4 @@ class TaskModel(object):
             self.callLater.Stop()
 
     def GetValueForKey(self, key):
-        if self.__dict__[key]:
-            return self.__dict__[key]
-        else:
-            return None
+        return self.__dict__[key]

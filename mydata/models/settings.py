@@ -40,6 +40,7 @@ from mydata.models.instrument import InstrumentModel
 from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
+from mydata.utils.exceptions import DoesNotExist
 
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
@@ -1174,21 +1175,12 @@ class SettingsModel(object):
             logger.debug(message)
             if setStatusMessage:
                 setStatusMessage(message)
-
-            # For now, we are assuming that if we find an
-            # instrument record with the correct name and
-            # facility, then it must be the correct instrument
-            # record to use with this MyData instance.
-            # However, if the instrument record we find is
-            # associated with a different uploader instance
-            # (suggesting a different MyData instance), then
-            # we really shouldn't reuse the same instrument
-            # record.
-            self.instrument = \
-                InstrumentModel.GetInstrument(self,
-                                              self.GetFacility(),
-                                              self.GetInstrumentName())
-            if self.instrument is None:
+            try:
+                self.instrument = \
+                    InstrumentModel.GetInstrument(self,
+                                                  self.GetFacility(),
+                                                  self.GetInstrumentName())
+            except DoesNotExist:
                 logger.info("No instrument record with name \"%s\" was found "
                             "in facility \"%s\", so we will create one."
                             % (self.GetInstrumentName(),
@@ -1572,19 +1564,21 @@ class SettingsModel(object):
         if facility is None:
             raise Exception("Facility is None in "
                             "SettingsModel's RenameInstrument.")
-        oldInstrument = \
-            InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
-        if oldInstrument is None:
+        try:
+            oldInstrument = \
+                InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
+        except DoesNotExist:
             raise Exception("Instrument record for old instrument "
                             "name not found in SettingsModel's "
                             "RenameInstrument.")
-        newInstrument = \
-            InstrumentModel.GetInstrument(self, facility, newInstrumentName)
-        if newInstrument is not None:
+        try:
+            _ = InstrumentModel.GetInstrument(self, facility,
+                                              newInstrumentName)
             raise DuplicateKey(
                 message="Instrument with name \"%s\" "
                         "already exists" % newInstrumentName)
-        oldInstrument.Rename(newInstrumentName)
+        except DoesNotExist:
+            oldInstrument.Rename(newInstrumentName)
 
     def UpdateAutostartFile(self):
         """

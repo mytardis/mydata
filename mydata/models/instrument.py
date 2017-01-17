@@ -8,6 +8,7 @@ import urllib
 import requests
 
 from mydata.logs import logger
+from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from .facility import FacilityModel
 
@@ -131,8 +132,7 @@ class InstrumentModel(object):
         headers = {
             "Authorization": "ApiKey %s:%s" % (myTardisUsername,
                                                myTardisApiKey)}
-        session = requests.Session()
-        response = session.get(url=url, headers=headers)
+        response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
             message = response.text
             logger.error(message)
@@ -141,20 +141,14 @@ class InstrumentModel(object):
         numInstrumentsFound = \
             instrumentsJson['meta']['total_count']
         if numInstrumentsFound == 0:
-            logger.warning("Instrument \"%s\" was not found in MyTardis"
-                           % name)
-            logger.debug(url)
-            logger.debug(response.text)
-            response.close()
-            session.close()
-            return None
+            message = "Instrument \"%s\" was not found in MyTardis" % name
+            logger.warning(message)
+            raise DoesNotExist(message, response, modelClass=InstrumentModel)
         else:
             logger.debug("Found instrument record for name \"%s\" "
                          "in facility \"%s\"" %
                          (name, facility.GetName()))
             instrumentJson = instrumentsJson['objects'][0]
-            response.close()
-            session.close()
             return InstrumentModel(
                 settingsModel=settingsModel, name=name,
                 instrumentJson=instrumentJson)

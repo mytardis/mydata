@@ -84,7 +84,7 @@ class GroupModel(object):
         if numGroupsFound == 0:
             raise DoesNotExist(
                 message="Group \"%s\" was not found in MyTardis" % name,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found group record for name '" + name + "'.")
             return GroupModel(settingsModel=settingsModel, name=name,

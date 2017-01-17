@@ -16,6 +16,7 @@ from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import MultipleObjectsReturned
 from mydata.utils import UnderscoreToCamelcase
 from .replica import ReplicaModel
+from . import HandleHttpError
 
 
 # pylint: disable=too-many-instance-attributes
@@ -155,19 +156,18 @@ class DataFileModel(object):
             logger.debug("Failed to look up datafile \"%s\" "
                          "in dataset \"%s\"."
                          % (filename, dataset.GetDescription()))
-            logger.debug(response.text)
-            return None
+            HandleHttpError(response)
         dataFilesJson = response.json()
         numDataFilesFound = dataFilesJson['meta']['total_count']
         if numDataFilesFound == 0:
             raise DoesNotExist(
                 message="Datafile \"%s\" was not found in MyTardis" % filename,
-                url=url, response=response)
+                response=response)
         elif numDataFilesFound > 1:
             raise MultipleObjectsReturned(
                 message="Multiple datafiles matching %s were found in MyTardis"
                 % filename,
-                url=url, response=response)
+                response=response)
         else:
             return DataFileModel(
                 settingsModel=settingsModel,
@@ -193,13 +193,10 @@ class DataFileModel(object):
         if response.status_code == 404:
             raise DoesNotExist(
                 message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
-                url=url, response=response)
+                response=response)
         elif response.status_code < 200 or response.status_code >= 300:
             logger.debug("Failed to look up datafile ID \"%s\"." % dataFileId)
-            logger.debug(url)
-            logger.debug("Status: %s" % response.status_code)
-            logger.debug(response.text)
-            return None
+            HandleHttpError(response)
         dataFileJson = response.json()
         return DataFileModel(
             settingsModel=settingsModel,
@@ -222,10 +219,8 @@ class DataFileModel(object):
             "Accept": "application/json"}
         response = requests.get(url=url, headers=headers)
         if response.status_code < 200 or response.status_code >= 300:
-            logger.error("Failed to verify datafile id \"%s\" "
-                         % datafileId)
-            logger.error(response.text)
-            return False
+            logger.warning("Failed to verify datafile id \"%s\" " % datafileId)
+            logger.warning(response.text)
         # Returning True doesn't mean that the file has been verified.
         # It just means that the MyTardis API has accepted our verification
         # request without raising an error.  The verification is asynchronous

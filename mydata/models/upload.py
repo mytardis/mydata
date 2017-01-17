@@ -157,10 +157,7 @@ class UploadModel(object):
         self.bufferedReader = bufferedReader
 
     def GetScpUploadProcessPid(self):
-        if hasattr(self, "scpUploadProcessPid"):
-            return self.scpUploadProcessPid
-        else:
-            return None
+        return getattr(self, "scpUploadProcessPid", None)
 
     def SetScpUploadProcessPid(self, scpUploadProcessPid):
         self.scpUploadProcessPid = scpUploadProcessPid

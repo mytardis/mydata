@@ -7,6 +7,7 @@ import urllib
 import requests
 
 from mydata.logs import logger
+from mydata.utils.exceptions import DoesNotExist
 from .group import GroupModel
 
 
@@ -100,8 +101,9 @@ class FacilityModel(object):
         numFacilitiesFound = facilitiesJson['meta']['total_count']
 
         if numFacilitiesFound == 0:
-            logger.warning("Facility \"%s\" was not found in MyTardis" % name)
-            return None
+            message = "Facility \"%s\" was not found in MyTardis" % name
+            logger.warning(message)
+            raise DoesNotExist(message, response, modelClass=FacilityModel)
         else:
             logger.debug("Found facility record for name '" + name + "'.")
             return FacilityModel(

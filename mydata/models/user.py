@@ -126,7 +126,7 @@ class UserModel(object):
         if numUserRecordsFound == 0:
             raise DoesNotExist(
                 message="User \"%s\" was not found in MyTardis" % username,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,
@@ -162,7 +162,7 @@ class UserModel(object):
             raise DoesNotExist(
                 message="User with email \"%s\" was not found in MyTardis"
                 % email,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found user record for email '" + email + "'.")
             return UserModel(settingsModel=settingsModel,
