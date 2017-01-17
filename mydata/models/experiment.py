@@ -70,7 +70,6 @@ class ExperimentModel(object):
         groupFolderName = folderModel.GetGroupFolderName()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
         experimentTitle = folderModel.GetExperimentTitle()
 
         if folderModel.ExperimentTitleSetManually():
@@ -90,10 +89,8 @@ class ExperimentModel(object):
             url += "&group_folder_name=" + \
                 urllib2.quote(groupFolderName.encode('utf-8'))
 
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey)}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         try:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']
@@ -266,7 +263,6 @@ class ExperimentModel(object):
 
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
         if userFolderName:
             message = "Creating experiment for uploader '%s', " \
@@ -319,15 +315,10 @@ class ExperimentModel(object):
         if groupFolderName:
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/mydata_experiment/"
 
-        response = requests.post(headers=headers, url=url,
-                                 data=json.dumps(experimentJson))
+        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+                                 url=url, data=json.dumps(experimentJson))
         # pylint: disable=bare-except
         try:
             createdExperimentJson = response.json()
@@ -392,7 +383,6 @@ class ExperimentModel(object):
             if groupFolderName:
                 message += " and group folder \"%s\"" % groupFolderName
             logger.error(message)
-            logger.error(headers)
             logger.error(url)
             logger.error(response.text)
             logger.error("response.status_code = " +

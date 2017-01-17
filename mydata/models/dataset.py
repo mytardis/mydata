@@ -54,9 +54,8 @@ class DatasetModel(object):
         description = folderModel.GetFolder()
         settingsModel = folderModel.settingsModel
 
-        myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
+        myTardisUrl = settingsModel.GetMyTardisUrl()
 
         experiment = folderModel.GetExperiment()
         if experiment:  # Could be None in test run
@@ -64,12 +63,8 @@ class DatasetModel(object):
                 "&experiments__id=" + str(experiment.GetId())
             url = url + "&description=" + \
                 urllib.quote(description.encode('utf-8'))
-
-            headers = {
-                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                                   myTardisApiKey)}
-
-            response = requests.get(headers=headers, url=url)
+            response = requests.get(headers=settingsModel.GetDefaultHeaders(),
+                                    url=url)
             existingMatchingDatasets = response.json()
             numExistingMatchingDatasets = \
                 existingMatchingDatasets['meta']['total_count']
@@ -106,11 +101,6 @@ class DatasetModel(object):
                 "experiments": [experimentUri],
                 "immutable": immutable}
             data = json.dumps(datasetJson)
-            headers = {
-                "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                                   myTardisApiKey),
-                "Content-Type": "application/json",
-                "Accept": "application/json"}
             url = myTardisUrl + "/api/v1/dataset/"
             if testRun:
                 message = "CREATING NEW DATASET FOR FOLDER: %s\n" \
@@ -123,7 +113,8 @@ class DatasetModel(object):
                            experiment.GetViewUri())
                 logger.testrun(message)
                 return
-            response = requests.post(headers=headers, url=url, data=data)
+            response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+                                     url=url, data=data)
             if response.status_code == 201:
                 newDatasetJson = response.json()
                 return DatasetModel(settingsModel, newDatasetJson)

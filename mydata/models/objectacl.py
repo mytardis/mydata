@@ -38,7 +38,6 @@ class ObjectAclModel(object):
         settingsModel = experiment.GetSettingsModel()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
         objectAclJson = {
             "pluginId": "django_user",
@@ -55,11 +54,7 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
+        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(objectAclJson))
@@ -102,7 +97,6 @@ class ObjectAclModel(object):
         settingsModel = experiment.GetSettingsModel()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
         objectAclJson = {
             "pluginId": "django_group",
@@ -119,11 +113,7 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
+        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=headers, url=url,
                                  data=json.dumps(objectAclJson))

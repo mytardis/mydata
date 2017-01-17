@@ -1910,3 +1910,14 @@ oFS.DeleteFile sLinkFile
 
         # Interval in seconds between RESTful progress queries:
         self.mydataConfig['progress_poll_interval'] = 1
+
+    def GetDefaultHeaders(self):
+        """
+        Default HTTP headers, providing authorization for MyTardis API.
+        """
+        return {
+            "Authorization": "ApiKey %s:%s" % (self.mydataConfig['username'],
+                                               self.mydataConfig['api_key']),
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }

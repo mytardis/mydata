@@ -344,18 +344,10 @@ class UploaderModel(object):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
-
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&uuid=" + urllib.quote(self.uuid)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-
         try:
+            headers = self.settingsModel.GetDefaultHeaders()
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
         except Exception, err:
@@ -446,6 +438,7 @@ class UploaderModel(object):
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
+        headers = self.settingsModel.GetDefaultHeaders()
         if numExistingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data,
                                     timeout=DEFAULT_TIMEOUT)
@@ -470,19 +463,13 @@ class UploaderModel(object):
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + self.uuid + \
             "&requester_key_fingerprint=" + \
             urllib.quote(keyPair.GetFingerprint())
         logger.debug(url)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
+        headers = self.settingsModel.GetDefaultHeaders()
         response = requests.get(headers=headers, url=url)
         if response.status_code != 200:
             if response.status_code == 404:
@@ -522,14 +509,7 @@ class UploaderModel(object):
             keyPair = OpenSSH.NewKeyPair("MyData")
         self.settingsModel.SetSshKeyPair(keyPair)
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
         uploaderRegistrationRequestJson = \
             {"uploader": self.responseJson['resource_uri'],
              "name": self.name,
@@ -538,6 +518,7 @@ class UploaderModel(object):
              "requester_public_key": keyPair.GetPublicKey(),
              "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
+        headers = self.settingsModel.GetDefaultHeaders()
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code == 201:
             responseJson = response.json()
@@ -599,13 +580,7 @@ class UploaderModel(object):
         UploaderSettings model on the MyTardis server.
         """
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
+        headers = self.settingsModel.GetDefaultHeaders()
 
         if not self.id:
             url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
@@ -656,14 +631,7 @@ class UploaderModel(object):
         UploaderSettings model on the MyTardis server.
         """
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        myTardisUsername = self.settingsModel.GetUsername()
-        myTardisApiKey = self.settingsModel.GetApiKey()
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-
+        headers = self.settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                             "&uuid=" + urllib.quote(self.uuid)
         try:

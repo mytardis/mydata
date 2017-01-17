@@ -140,18 +140,12 @@ class DataFileModel(object):
         Lookup datafile by dataset, filename and directory.
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
             "&dataset__id=" + str(dataset.GetId()) + \
             "&filename=" + urllib.quote(filename.encode('utf-8')) + \
             "&directory=" + urllib.quote(directory.encode('utf-8'))
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         if response.status_code < 200 or response.status_code >= 300:
             logger.debug("Failed to look up datafile \"%s\" "
                          "in dataset \"%s\"."
@@ -180,16 +174,10 @@ class DataFileModel(object):
         Lookup datafile by ID.
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
         url = "%s/api/v1/mydata_dataset_file/%s/?format=json" \
             % (myTardisUrl, dataFileId)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         if response.status_code == 404:
             raise DoesNotExist(
                 message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
@@ -209,15 +197,9 @@ class DataFileModel(object):
         Verify a datafile via the MyTardis API.
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/dataset_file/%s/verify/" % datafileId
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         if response.status_code < 200 or response.status_code >= 300:
             logger.warning("Failed to verify datafile id \"%s\" " % datafileId)
             logger.warning(response.text)
@@ -235,16 +217,10 @@ class DataFileModel(object):
         to (e.g. by SCP).
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
         url = myTardisUrl + "/api/v1/mydata_dataset_file/"
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
         dataFileJson = json.dumps(dataFileDict)
-        response = requests.post(headers=headers, url=url, data=dataFileJson)
+        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+                                 url=url, data=dataFileJson)
         return response
 
     @staticmethod

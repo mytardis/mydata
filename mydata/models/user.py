@@ -102,15 +102,11 @@ class UserModel(object):
     @staticmethod
     def GetUserByUsername(settingsModel, username):
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
         try:
-            response = requests.get(url=url, headers=headers)
+            response = requests.get(url=url,
+                                    headers=settingsModel.GetDefaultHeaders())
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
@@ -135,16 +131,12 @@ class UserModel(object):
     @staticmethod
     def GetUserByEmail(settingsModel, email):
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
             urllib2.quote(email.encode('utf-8'))
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
         try:
-            response = requests.get(url=url, headers=headers)
+            response = requests.get(url=url,
+                                    headers=settingsModel.GetDefaultHeaders())
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:

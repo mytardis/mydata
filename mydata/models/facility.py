@@ -16,8 +16,7 @@ class FacilityModel(object):
     Model class for MyTardis API v1's FacilityResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel=None, name=None,
-                 facilityJson=None):
+    def __init__(self, settingsModel=None, name=None, facilityJson=None):
 
         self.settingsModel = settingsModel
         self.facilityId = None
@@ -80,17 +79,11 @@ class FacilityModel(object):
         Get facility by name.
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/facility/?format=json&name=" + \
             urllib.quote(name.encode('utf-8'))
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-        response = requests.get(url=url, headers=headers, stream=False)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         logger.debug(response.text)
         if response.status_code != 200:
             message = response.text
@@ -117,18 +110,12 @@ class FacilityModel(object):
         facility managers group membership).
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         facilities = []
 
         url = myTardisUrl + "/api/v1/facility/?format=json"
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         if response.status_code != 200:
             message = response.text
             response.close()
