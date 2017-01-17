@@ -183,7 +183,7 @@ class UploadDatafileRunnable(object):
             else:
                 self.UploadFileToStaging(dataFileDict)
         except Exception, err:
-            self.uploadsModel.SetMessage(self.uploadModel, str(err))
+            self.uploadsModel.SetMessage(self.uploadModel, repr(err))
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
             if dataFileDirectory != "":
@@ -277,8 +277,8 @@ class UploadDatafileRunnable(object):
         except ValueError, err:
             self.uploadModel.SetTraceback(
                 traceback.format_exc())
-            if str(err) == "read of closed file" or \
-                    str(err) == "seek of closed file":
+            if repr(err) == "read of closed file" or \
+                    repr(err) == "seek of closed file":
                 logger.debug("Aborting upload for \"%s\" because "
                              "file handle was closed." %
                              self.uploadModel.GetRelativePathToUpload())
@@ -303,7 +303,7 @@ class UploadDatafileRunnable(object):
                 message += "ERROR: \"%s\"" \
                     % json.loads(errorResponse)['error_message']
             except:
-                message += str(err)
+                message += repr(err)
             PostEvent(
                 self.foldersController
                 .ShowMessageDialogEvent(title="MyData",
@@ -381,7 +381,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(str(err))
+                    logger.warning(repr(err))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
@@ -402,7 +402,7 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = str(err)
+                message = repr(err)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -415,7 +415,7 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = str(err)
+                message = repr(err)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -430,7 +430,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(str(err))
+                    logger.warning(repr(err))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
