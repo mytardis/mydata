@@ -26,35 +26,23 @@ class HttpException(Exception):
         return self.response
 
 
-class MultipleObjectsReturned(Exception):
+class MultipleObjectsReturned(HttpException):
     """
     Multiple objects returned exception.
     """
     def __init__(self, message, response=None):
-        super(MultipleObjectsReturned, self).__init__(message)
-        self.response = response
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
+        super(MultipleObjectsReturned, self).__init__(message, response)
 
 
-class DoesNotExist(Exception):
+class DoesNotExist(HttpException):
     """
-    Does not exist exception.
+    Does not exist exception. This could be raised when an HTTP status code
+    of 404 is received, or when a JSON list expected to return one object
+    returns zero objects.
     """
     def __init__(self, message, response=None, modelClass=None):
-        super(DoesNotExist, self).__init__(message)
-        self.response = response
+        super(DoesNotExist, self).__init__(message, response)
         self.modelClass = modelClass
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
 
     def GetModelClass(self):
         """
@@ -65,7 +53,7 @@ class DoesNotExist(Exception):
 
 class Unauthorized(HttpException):
     """
-    Unauthorized exception.
+    Unauthorized exception (HTTP status: 403).
     """
     def __init__(self, message, response=None):
         super(Unauthorized, self).__init__(message, response)
@@ -73,7 +61,7 @@ class Unauthorized(HttpException):
 
 class InternalServerError(HttpException):
     """
-    Internal server exception.
+    Internal server exception (HTTP status: 500).
     """
     def __init__(self, message, response=None):
         super(InternalServerError, self).__init__(message, response)
