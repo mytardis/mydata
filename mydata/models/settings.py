@@ -124,13 +124,9 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
-        # pylint: disable=bare-except
         try:
             self.LoadSettings(checkForUpdates=checkForUpdates)
         except:
-            # We don't want to raise an exception if invalid
-            # settings are encountered when MyData is first
-            # launched, e.g. an invalid MyTardis URL.
             logger.error(traceback.format_exc())
 
     def LoadSettings(self, configPath=None, checkForUpdates=True):
@@ -152,7 +148,6 @@ class SettingsModel(object):
 
         if configPath is not None and os.path.exists(configPath):
             logger.info("Reading settings from: " + configPath)
-            # pylint: disable=bare-except
             try:
                 configParser = ConfigParser()
                 configParser.read(configPath)
@@ -817,7 +812,6 @@ class SettingsModel(object):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-return-statements
     def Validate(self, setStatusMessage=None, testRun=False):
-        # pylint: disable=bare-except
         datasetCount = -1
         try:
             if self.GetInstrumentName().strip() == "":
@@ -964,7 +958,6 @@ class SettingsModel(object):
                 return self.validation
 
             timeout = 5
-            # pylint: disable=bare-except
             try:
                 message = "Settings validation - checking MyTardis URL..."
                 logger.debug(message)
@@ -1406,18 +1399,6 @@ class SettingsModel(object):
                                             filterString))
         dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
 
-        if self.GetFolderStructure() == \
-                'Username / "MyTardis" / Experiment / Dataset':
-            for folderName in dirsDepth2:
-                folderName = os.path.basename(folderName)
-                if folderName.lower() != 'mytardis':
-                    message = "A folder name of \"%s\" was found where " \
-                        "a \"MyTardis\" folder was expected." \
-                        % folderName
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
-
         if self.GetFolderStructure() == 'Username / Dataset' or \
                 self.GetFolderStructure() == 'Email / Dataset' or \
                 self.GetFolderStructure() == 'Experiment / Dataset':
@@ -1581,8 +1562,6 @@ class SettingsModel(object):
         be in settings validation.  I put it here
         to ensure it doesn't run in the main thread.
         """
-        # pylint: disable=bare-except
-
         if sys.platform.startswith("win"):
             # Check for MyData shortcut(s) in startup folder(s).
 
