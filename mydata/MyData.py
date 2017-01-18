@@ -18,8 +18,10 @@ import argparse
 from datetime import datetime
 import logging
 import subprocess
+import webbrowser
 
 import appdirs  # pylint: disable=import-error
+import requests
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -72,7 +74,6 @@ from mydata.controllers.schedule import ScheduleController
 from mydata.views.testrun import TestRunFrame
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
-from mydata.utils import OpenUrl
 from mydata.views.connectivity import ReportNoActiveInterfaces
 
 
@@ -415,22 +416,16 @@ class MyData(wx.App):
         self.menuBar = wx.MenuBar()
         self.editMenu = wx.Menu()
         self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-        self.frame.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
         self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-        self.frame.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
         self.editMenu.AppendSeparator()
         self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
                              "Cut the selected text")
-        self.frame.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
         self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
                              "Copy the selected text")
-        self.frame.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
         self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
                              "Paste text from the clipboard")
-        self.frame.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
         self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
                              "Select All")
-        self.frame.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
         self.menuBar.Append(self.editMenu, "Edit")
 
         self.helpMenu = wx.Menu()
@@ -458,66 +453,6 @@ class MyData(wx.App):
             if sys.platform.startswith("darwin"):
                 self.frame.Show(True)
                 self.frame.Raise()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnUndo(self, event):
-        """
-        Called when Edit menu's Undo menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Undo()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnRedo(self, event):
-        """
-        Called when Edit menu's Redo menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Redo()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnCut(self, event):
-        """
-        Called when Edit menu's Cut menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Cut()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnCopy(self, event):
-        """
-        Called when Edit menu's Copy menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Copy()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnPaste(self, event):
-        """
-        Called when Edit menu's Paste menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Paste()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnSelectAll(self, event):
-        """
-        Called when Edit menu's Select All menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.SelectAll()
         event.Skip()
 
     def OnTaskBarLeftClick(self, event):
@@ -1127,12 +1062,12 @@ class MyData(wx.App):
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.GetDatasetModel() is not None:
-                    OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
-                            folderRecord.GetDatasetModel().GetViewUri())
+                    self.OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
+                                 folderRecord.GetDatasetModel().GetViewUri())
                 else:
-                    OpenUrl(self.settingsModel.GetMyTardisUrl())
+                    self.OpenUrl(self.settingsModel.GetMyTardisUrl())
             else:
-                OpenUrl(self.settingsModel.GetMyTardisUrl())
+                self.OpenUrl(self.settingsModel.GetMyTardisUrl())
         except:
             logger.error(traceback.format_exc())
 
@@ -1143,7 +1078,7 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
-        OpenUrl(url, new=new)
+        self.OpenUrl(url, new=new)
 
     def OnWalkthrough(self, event):
         """
@@ -1153,13 +1088,14 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        OpenUrl(url, new=new)
+        self.OpenUrl(url, new=new)
 
     def OnAbout(self, event):
         """
         Called when the user clicks the Info icon on the
         main toolbar.
         """
+        # pylint: disable=no-self-use
         msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
@@ -1175,6 +1111,17 @@ class MyData(wx.App):
             dlg.ShowModal()
         else:
             sys.stderr.write("\n%s\n" % msg)
+
+    def OpenUrl(self, url, new=0, autoraise=True):
+        """
+        Open URL in web browser or just check URL is accessible if running tests.
+        """
+        # pylint: disable=no-self-use
+        if wx.PyApp.IsMainLoopRunning():
+            webbrowser.open(url, new, autoraise)
+        else:
+            response = requests.get('http://www.example.com')
+            assert response.status_code == 200
 
     def GetMainFrame(self):
         """

@@ -1,10 +1,7 @@
 """
 Miscellaneous utility functions.
 """
-import webbrowser
-
 import psutil
-import requests
 import wx
 
 from mydata.logs import logger
@@ -98,13 +95,3 @@ def EndBusyCursorIfRequired(event=None):
                 not in str(err):
             logger.warning(str(err))
             raise
-
-def OpenUrl(url, new=0, autoraise=True):
-    """
-    Open URL in web browser or just check URL is accessible if running tests.
-    """
-    if wx.PyApp.IsMainLoopRunning():
-        webbrowser.open(url, new, autoraise)
-    else:
-        response = requests.get('http://www.example.com')
-        assert response.status_code == 200
