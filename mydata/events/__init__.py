@@ -675,7 +675,8 @@ def ProvideSettingsValidationResults(event):
         event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                  configPath=configPath,
                                                  saveToDisk=True)
-        event.settingsDialog.EndModal(wx.ID_OK)
+        if wx.PyApp.IsMainLoopRunning():
+            event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
         logger.debug("Closed Settings dialog.")
 
