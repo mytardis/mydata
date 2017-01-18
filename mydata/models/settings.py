@@ -968,31 +968,10 @@ class SettingsModel(object):
                 content = response.text
                 history = response.history
                 url = response.url
-                if response.status_code == 200:
-                    message = "Retrieved %s in %.3f seconds." \
-                        % (self.GetMyTardisApiUrl(),
-                           response.elapsed.total_seconds())
-                    logger.debug(message)
-                    if testRun:
-                        logger.testrun(message)
-                elif response.status_code < 200 or response.status_code >= 300:
-                    logger.debug("Received HTTP %d while trying to access "
-                                 "MyTardis server (%s)."
-                                 % (response.status_code,
-                                    self.GetMyTardisUrl()))
-                    logger.debug(content)
-                    message = "Please enter a valid MyTardis URL.\n\n"
-                    message += "Received HTTP status code %d" \
-                        % response.status_code
-                    suggestion = None
-                    self.validation = SettingsValidation(False, message,
-                                                         "mytardis_url",
-                                                         suggestion)
-                    return self.validation
-                elif history:
+                if history:
                     message = "MyData attempted to access MyTardis at " \
                         "\"%s\", but was redirected to:" \
-                        "\n\n" % self.GetMyTardisUrl()
+                        "\n\n" % self.GetMyTardisApiUrl()
                     message += "\t%s" % url
                     message += "\n\n"
                     message += "A redirection could be caused by any of " \
@@ -1019,6 +998,27 @@ class SettingsModel(object):
                         "and could be redirecting you to a malicious site. " \
                         "If you suspect this, please contact your MyTardis " \
                         "administrator immediately."
+                    suggestion = None
+                    self.validation = SettingsValidation(False, message,
+                                                         "mytardis_url",
+                                                         suggestion)
+                    return self.validation
+                elif response.status_code == 200:
+                    message = "Retrieved %s in %.3f seconds." \
+                        % (self.GetMyTardisApiUrl(),
+                           response.elapsed.total_seconds())
+                    logger.debug(message)
+                    if testRun:
+                        logger.testrun(message)
+                elif response.status_code < 200 or response.status_code >= 300:
+                    logger.debug("Received HTTP %d while trying to access "
+                                 "MyTardis server (%s)."
+                                 % (response.status_code,
+                                    self.GetMyTardisUrl()))
+                    logger.debug(content)
+                    message = "Please enter a valid MyTardis URL.\n\n"
+                    message += "Received HTTP status code %d" \
+                        % response.status_code
                     suggestion = None
                     self.validation = SettingsValidation(False, message,
                                                          "mytardis_url",

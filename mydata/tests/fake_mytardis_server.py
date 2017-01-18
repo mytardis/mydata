@@ -54,8 +54,12 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         Respond to a HEAD request
         """
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        if self.path.startswith("/redirect"):
+            self.send_response(302)
+            self.send_header("Location",
+                             self.path.replace('redirect', 'different_url'))
+        else:
+            self.send_response(200)
         self.end_headers()
 
     def do_GET(self):  # pylint: disable=invalid-name
@@ -66,6 +70,11 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-return-statements
+        if self.path.startswith("/redirect") or \
+                self.path.startswith("/different_url"):
+            self.do_HEAD()
+            return
+
         if self.path.startswith("/request/http/code/"):
             match = re.match(r"^/request/http/code/(\d+)/.*$", self.path)
             if match:

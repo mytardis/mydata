@@ -656,7 +656,7 @@ def ProvideSettingsValidationResults(event):
             if okToContinue != wx.ID_YES:
                 return
         else:
-            sys.stderr.write("%s\n" % message)
+            sys.stderr.write("\n%s\n" % message)
 
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")

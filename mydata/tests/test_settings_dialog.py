@@ -85,6 +85,7 @@ class SettingsDialogTester(unittest.TestCase):
         Test ability to open settings dialog and save fields.
         """
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-locals
 
         self.settingsDialog.Show()
 
@@ -140,9 +141,10 @@ class SettingsDialogTester(unittest.TestCase):
         # which will prompt a suggestion, for missing "http://"
         # in the MyTardis URL.
         # When running unittests, suggestions are automatically applied.
-        self.settingsDialog.SetMyTardisUrl(
-            self.settingsModel.GetMyTardisUrl().replace("http://", ""))
+        myTardisUrl = self.settingsDialog.GetMyTardisUrl()
+        self.settingsDialog.SetMyTardisUrl(myTardisUrl.replace("http://", ""))
         PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetMyTardisUrl(myTardisUrl)
 
         # Test settings dialog validation with invalid settings,
         # which won't prompt a suggestion, but will ensure that
@@ -197,6 +199,13 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsDialog.SetScheduledTime(scheduledTime)
         PostEvent(settingsDialogValidationEvent)
         self.settingsDialog.SetScheduleType("Manually")
+
+        # Test settings dialog validation with MyTardis URL which
+        # responds with a redirect (302):
+        myTardisUrl = self.settingsDialog.GetMyTardisUrl()
+        self.settingsDialog.SetMyTardisUrl("%s/redirect" % myTardisUrl)
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetMyTardisUrl(myTardisUrl)
 
         # Test settings dialog validation with valid settings.
         # Tick the ignore old datasets checkbox and the
