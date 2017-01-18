@@ -11,7 +11,6 @@ in the parent directory of the directory containing MyData.py.
 # pylint: disable=wrong-import-position
 
 import sys
-import webbrowser
 import os
 import traceback
 import threading
@@ -73,6 +72,8 @@ from mydata.controllers.schedule import ScheduleController
 from mydata.views.testrun import TestRunFrame
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
+from mydata.utils import OpenUrl
+from mydata.views.connectivity import ReportNoActiveInterfaces
 
 
 class NotebookTabs(object):
@@ -213,14 +214,8 @@ class MyData(wx.App):
 
         if hasattr(sys, "frozen"):
             if sys.platform.startswith("darwin"):
-                # When frozen with Py2App, the default working directory
-                # will be /Applications/MyData.app/Contents/Resources/
-                # and setup.py will copy requests's cacert.pem into that
-                # directory.
                 certPath = os.path.realpath('.')
             else:
-                # On Windows, setup.py will install requests's cacert.pem
-                # in the same directory as MyData.exe.
                 certPath = os.path.dirname(sys.executable)
             os.environ['REQUESTS_CA_BUNDLE'] = \
                 os.path.join(certPath, 'cacert.pem')
@@ -827,21 +822,7 @@ class MyData(wx.App):
                                 dlg.ShowModal()
                             wx.CallAfter(ShowErrorDialog, message)
                     if len(activeNetworkInterfaces) == 0:
-                        message = "No active network interfaces." \
-                            "\n\n" \
-                            "Please ensure that you have an active " \
-                            "network interface (e.g. Ethernet or WiFi)."
-
-                        def ShowDialog():
-                            """
-                            Needs to run in the main thread.
-                            """
-                            dlg = wx.MessageDialog(None, message, "MyData",
-                                                   wx.OK | wx.ICON_ERROR)
-                            dlg.ShowModal()
-                            wx.CallAfter(EndBusyCursorIfRequired)
-                            self.frame.SetStatusMessage("")
-                        wx.CallAfter(ShowDialog)
+                        ReportNoActiveInterfaces()
                         return
 
                     self.settingsValidation = \
@@ -1149,13 +1130,12 @@ class MyData(wx.App):
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.GetDatasetModel() is not None:
-                    webbrowser\
-                        .open(self.settingsModel.GetMyTardisUrl() + "/" +
-                              folderRecord.GetDatasetModel().GetViewUri())
+                    OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
+                            folderRecord.GetDatasetModel().GetViewUri())
                 else:
-                    webbrowser.open(self.settingsModel.GetMyTardisUrl())
+                    OpenUrl(self.settingsModel.GetMyTardisUrl())
             else:
-                webbrowser.open(self.settingsModel.GetMyTardisUrl())
+                OpenUrl(self.settingsModel.GetMyTardisUrl())
         except:
             logger.error(traceback.format_exc())
 
@@ -1166,7 +1146,7 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
-        webbrowser.open(url, new=new)
+        OpenUrl(url, new=new)
 
     def OnWalkthrough(self, event):
         """
@@ -1176,7 +1156,7 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        webbrowser.open(url, new=new)
+        OpenUrl(url, new=new)
 
     def OnAbout(self, event):
         """
@@ -1194,7 +1174,10 @@ class MyData(wx.App):
               "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)
-        dlg.ShowModal()
+        if wx.PyApp.IsMainLoopRunning():
+            dlg.ShowModal()
+        else:
+            sys.stderr.write("\n%s\n" % msg)
 
     def GetMainFrame(self):
         """

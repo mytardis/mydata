@@ -39,6 +39,7 @@ class ScanExpDatasetTester(unittest.TestCase):
         self.StartFakeMyTardisServer()
 
     def tearDown(self):
+        self.frame.Hide()
         self.frame.Destroy()
         self.httpd.shutdown()
         self.fakeMyTardisServerThread.join()

@@ -9,6 +9,7 @@ responses and hard-coded below.  In some cases, unnecessary
 fields have been removed from the JSON responses.
 """
 # pylint: disable=too-many-lines
+import datetime
 import sys
 import BaseHTTPServer
 import traceback
@@ -137,7 +138,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(facilitiesJson))
-        elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=New%20Instrument":
+        elif self.path == \
+                "/api/v1/instrument/?format=json&facility__id=2&name=New%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -152,7 +154,24 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "objects": []
             }
             self.wfile.write(json.dumps(instrumentsJson))
-        elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument":
+        elif self.path == \
+                "/api/v1/instrument/?format=json&facility__id=2&name=Renamed%20Instrument":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 0
+                },
+                "objects": []
+            }
+            self.wfile.write(json.dumps(instrumentsJson))
+        elif self.path == \
+                "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -183,7 +202,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(instrumentsJson))
-        elif self.path == "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument2":
+        elif self.path == \
+                "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument2":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -433,6 +453,29 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                             }
                         ],
                         "resource_uri": "/api/v1/mydata_uploader/25/",
+                        "settings_updated": datetime.datetime.now().isoformat(),
+                        "settings": [
+                            {
+                                "key": "contact_name",
+                                "value": "Someone Else"
+                            },
+                            {
+                                "key": "validate_folder_structure",
+                                "value": False
+                            },
+                            {
+                                "key": "max_verification_threads",
+                                "value": 2
+                            },
+                            {
+                                "key": "scheduled_date",
+                                "value": "2020-01-01"
+                            },
+                            {
+                                "key": "scheduled_time",
+                                "value": "09:00:00"
+                            }
+                        ]
                     }
                 ]
             }
@@ -747,6 +790,13 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.wfile.write("<html><head><title>About FakeMyTardisServer</title></head>")
             self.wfile.write("<body><h2>About FakeMyTardisServer</h2>")
             self.wfile.write("</body></html>")
+        elif self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write("<html><head><title>FakeMyTardisServer</title></head>")
+            self.wfile.write("<body><h2>FakeMyTardisServer</h2>")
+            self.wfile.write("</body></html>")
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to GET: %s" % self.path)
@@ -774,7 +824,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(201)
             self.send_header("Content-type", "text/html")
             self.datafileIdAutoIncrement += 1
-            self.send_header("location", "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
+            self.send_header("location",
+                             "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
             self.end_headers()
 
             if ctype == 'multipart/form-data':
@@ -998,7 +1049,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "objects": [
                     {
                         "id": 31,
-                        "name": "New Instrument",
+                        "name": "Renamed Instrument",
                         "facility": {
                             "id": 2,
                             "manager_group": {

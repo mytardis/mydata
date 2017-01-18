@@ -1280,7 +1280,11 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.includesFileField.SetValue(dlg.GetPath())
             # Even though we use style=wx.TE_RIGHT,
             # this is necessary on Windows to ensure that
@@ -1306,7 +1310,11 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.excludesFileField.SetValue(dlg.GetPath())
             # Even though we use style=wx.TE_RIGHT,
             # this is necessary on Windows to ensure that

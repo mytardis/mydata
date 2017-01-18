@@ -1,12 +1,14 @@
 """
 Test ability to open settings dialog and save fields.
 """
-import unittest
-import tempfile
+from datetime import datetime
+from datetime import timedelta
 import os
 import sys
+import tempfile
 import threading
 import time
+import unittest
 from BaseHTTPServer import HTTPServer
 
 import requests
@@ -82,12 +84,30 @@ class SettingsDialogTester(unittest.TestCase):
         """
         Test ability to open settings dialog and save fields.
         """
+        # pylint: disable=too-many-statements
+
         self.settingsDialog.Show()
 
         # Select folder structures to test OnSelectFolderStructure:
         for folderStructure in self.settingsDialog.folderStructures:
             self.settingsDialog.SetFolderStructure(folderStructure)
             self.settingsDialog.OnSelectFolderStructure(event=None)
+
+        # Simulate clicking Ignore Old Datasets checkbox:
+        pyCommandEvent = wx.PyCommandEvent()
+        self.settingsDialog.OnIgnoreOldDatasetsCheckBox(pyCommandEvent)
+
+        # Simulate clicking Ignore Old Datasets spin control:
+        self.settingsDialog.OnIgnoreOldDatasetsSpinCtrl(pyCommandEvent)
+
+        # Simulate clicking Ignore New Files checkbox:
+        self.settingsDialog.OnIgnoreNewFilesCheckBox(pyCommandEvent)
+
+        # Simulate browsing for includes file:
+        self.settingsDialog.OnBrowseIncludesFile(pyCommandEvent)
+
+        # Simulate browsing for excludes file:
+        self.settingsDialog.OnBrowseExcludesFile(pyCommandEvent)
 
         # Start fake MyTardis server to test settings dialog validation:
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
@@ -104,11 +124,89 @@ class SettingsDialogTester(unittest.TestCase):
                     raise Exception("Couldn't connect to %s: %s"
                                     % (self.settingsModel.GetMyTardisUrl(),
                                        str(err)))
-        # Test settings dialog validation:
+
+        # Test settings dialog validation with invalid settings,
+        # which will prompt a suggestion, based on which facilities
+        # the user has access to (as a facility manager).
+        # When running unittests, suggestions are automatically applied.
+        self.settingsDialog.SetFacilityName("")
         settingsDialogValidationEvent = \
             MYDATA_EVENTS.SettingsDialogValidationEvent(
                 settingsDialog=self.settingsDialog,
                 settingsModel=self.settingsModel)
+        PostEvent(settingsDialogValidationEvent)
+
+        # Test settings dialog validation with invalid settings,
+        # which will prompt a suggestion, for missing "http://"
+        # in the MyTardis URL.
+        # When running unittests, suggestions are automatically applied.
+        self.settingsDialog.SetMyTardisUrl(
+            self.settingsModel.GetMyTardisUrl().replace("http://", ""))
+        PostEvent(settingsDialogValidationEvent)
+
+        # Test settings dialog validation with invalid settings,
+        # which won't prompt a suggestion, but will ensure that
+        # MyData can run the relevant code which focuses the cursor
+        # on the missing field:
+        instrumentName = self.settingsDialog.GetInstrumentName()
+        self.settingsDialog.SetInstrumentName("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetInstrumentName(instrumentName)
+
+        contactName = self.settingsDialog.GetContactName()
+        self.settingsDialog.SetContactName("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetContactName(contactName)
+
+        contactEmail = self.settingsDialog.GetContactEmail()
+        self.settingsDialog.SetContactEmail("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetContactEmail(contactEmail)
+
+        dataDirectory = self.settingsDialog.GetDataDirectory()
+        self.settingsDialog.SetDataDirectory("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetDataDirectory(dataDirectory)
+
+        username = self.settingsDialog.GetUsername()
+        self.settingsDialog.SetUsername("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetUsername(username)
+
+        apiKey = self.settingsDialog.GetApiKey()
+        self.settingsDialog.SetApiKey("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetApiKey(apiKey)
+
+        self.settingsDialog.SetUseIncludesFile(True)
+        self.settingsDialog.SetIncludesFile("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetUseIncludesFile(False)
+
+        self.settingsDialog.SetUseExcludesFile(True)
+        self.settingsDialog.SetExcludesFile("")
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetUseExcludesFile(False)
+
+        # Test validation with invalid scheduled time
+        # (in the past).
+        self.settingsDialog.SetScheduleType("Once")
+        scheduledTime = \
+            datetime.time(datetime.now().replace(microsecond=0) -
+                          timedelta(minutes=1))
+        self.settingsDialog.SetScheduledTime(scheduledTime)
+        PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetScheduleType("Manually")
+
+        # Test settings dialog validation with valid settings.
+        # Tick the ignore old datasets checkbox and the
+        # validate folder structure checkbox, so that we
+        # get a summary of how many datasets were found
+        # within that time period.
+        self.settingsDialog.SetIgnoreOldDatasets(True)
+        self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(6)
+        self.settingsDialog.SetIgnoreOldDatasetIntervalUnit("months")
+        self.settingsDialog.SetValidateFolderStructure(True)
         PostEvent(settingsDialogValidationEvent)
 
         # Test updating autostart file:
@@ -120,7 +218,7 @@ class SettingsDialogTester(unittest.TestCase):
             settingsModel=self.settingsModel,
             facilityName=self.settingsDialog.GetFacilityName(),
             oldInstrumentName=self.settingsDialog.GetInstrumentName(),
-            newInstrumentName="New Instrument")
+            newInstrumentName="Renamed Instrument")
         RenameInstrument(renameInstrumentEvent)
 
         # Test renaming instrument to an already used instrument name:

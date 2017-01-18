@@ -13,6 +13,7 @@ from mydata.utils.exceptions import DuplicateKey
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.logs import logger
+from mydata.views.connectivity import ReportNoActiveInterfaces
 
 
 def NewEvent(defaultTarget=None, defaultHandler=None):
@@ -309,23 +310,7 @@ def CheckConnectivity(event):
             wx.GetApp().SetLastConnectivityCheckSuccess(False)
             wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
             wx.GetApp().SetActiveNetworkInterface(None)
-            message = "No active network interfaces." \
-                "\n\n" \
-                "Please ensure that you have an active " \
-                "network interface (e.g. Ethernet or WiFi)."
-
-            def ShowDialog():
-                """
-                Show error dialog in main thread.
-                """
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-                wx.GetApp().GetMainFrame().SetStatusMessage("")
-            if wx.PyApp.IsMainLoopRunning():
-                wx.CallAfter(ShowDialog)
-            else:
-                raise Exception(message)
+            ReportNoActiveInterfaces()
 
     if wx.PyApp.IsMainLoopRunning():
         checkConnectivityThread = \
@@ -571,9 +556,7 @@ def ProvideSettingsValidationResults(event):
 
         if settingsValidation.GetSuggestion():
             currentValue = ""
-            if settingsValidation.GetField() == "instrument_name":
-                currentValue = event.settingsDialog.GetInstrumentName()
-            elif settingsValidation.GetField() == "facility_name":
+            if settingsValidation.GetField() == "facility_name":
                 currentValue = event.settingsDialog.GetFacilityName()
             elif settingsValidation.GetField() == "mytardis_url":
                 currentValue = event.settingsDialog.GetMyTardisUrl()
@@ -593,13 +576,9 @@ def ProvideSettingsValidationResults(event):
             else:
                 sys.stderr.write("%s\n" % message)
                 sys.stderr.write("Assuming it's OK to use suggestion.\n")
-                okToUseSuggestion = True
+                okToUseSuggestion = wx.ID_OK
             if okToUseSuggestion == wx.ID_OK:
-                if settingsValidation.GetField() == "instrument_name":
-                    event.settingsDialog\
-                        .SetInstrumentName(settingsValidation
-                                           .GetSuggestion())
-                elif settingsValidation.GetField() == "facility_name":
+                if settingsValidation.GetField() == "facility_name":
                     event.settingsDialog.SetFacilityName(settingsValidation
                                                          .GetSuggestion())
                 elif settingsValidation.GetField() == "mytardis_url":
@@ -678,6 +657,8 @@ def ProvideSettingsValidationResults(event):
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
+        else:
+            sys.stderr.write("%s\n" % message)
 
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")

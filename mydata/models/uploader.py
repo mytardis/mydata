@@ -374,6 +374,7 @@ class UploaderModel(object):
                     existingUploaderRecords['objects'][0]['settings']
                 settingsUpdatedString = \
                     existingUploaderRecords['objects'][0]['settings_updated']
+                logger.info(settingsUpdatedString)
                 if settingsUpdatedString:
                     self.settingsUpdated = \
                         dateutil.parser.parse(settingsUpdatedString)
@@ -662,6 +663,7 @@ class UploaderModel(object):
                     existingUploaderRecords['objects'][0]['settings']
                 settingsUpdatedString = \
                     existingUploaderRecords['objects'][0]['settings_updated']
+                logger.info(settingsUpdatedString)
                 if settingsUpdatedString:
                     self.settingsUpdated = \
                         dateutil.parser.parse(settingsUpdatedString)

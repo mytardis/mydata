@@ -988,15 +988,10 @@ class SettingsModel(object):
                                  % (response.status_code,
                                     self.GetMyTardisUrl()))
                     logger.debug(content)
-                    if not self.GetMyTardisUrl().startswith("http"):
-                        message = "Please enter a valid MyTardis URL, " \
-                            "beginning with \"http://\" or \"https://\"."
-                        suggestion = "http://" + self.GetMyTardisUrl()
-                    else:
-                        message = "Please enter a valid MyTardis URL.\n\n"
-                        message += "Received HTTP status code %d" \
-                            % response.status_code
-                        suggestion = None
+                    message = "Please enter a valid MyTardis URL.\n\n"
+                    message += "Received HTTP status code %d" \
+                        % response.status_code
+                    suggestion = None
                     self.validation = SettingsValidation(False, message,
                                                          "mytardis_url",
                                                          suggestion)
@@ -1048,7 +1043,7 @@ class SettingsModel(object):
             except requests.exceptions.InvalidSchema:
                 message = "Please enter a valid MyTardis URL, " \
                     "beginning with \"http://\" or \"https://\"."
-                if ":" not in self.GetMyTardisUrl():
+                if not self.GetMyTardisUrl().startswith("http"):
                     suggestion = "http://" + self.GetMyTardisUrl()
                 else:
                     suggestion = None
