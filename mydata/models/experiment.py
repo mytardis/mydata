@@ -105,7 +105,6 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
-                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \
@@ -251,7 +250,6 @@ class ExperimentModel(object):
         groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
-        # pylint: disable=bare-except
         try:
             ownerUserId = folderModel.GetOwner().GetJson()['id']
         except:
@@ -319,7 +317,6 @@ class ExperimentModel(object):
 
         response = requests.post(headers=settingsModel.GetDefaultHeaders(),
                                  url=url, data=json.dumps(experimentJson))
-        # pylint: disable=bare-except
         try:
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
@@ -402,7 +399,6 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
-                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \

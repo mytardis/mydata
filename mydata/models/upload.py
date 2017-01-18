@@ -174,7 +174,7 @@ class UploadModel(object):
             if self.verificationTimer:
                 try:
                     self.verificationTimer.cancel()
-                except:  # pylint: disable=bare-except
+                except:
                     logger.error(traceback.format_exc())
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
@@ -186,7 +186,7 @@ class UploadModel(object):
                     os.kill(self.scpUploadProcessPid, signal.SIGABRT)
                 else:
                     os.kill(self.scpUploadProcessPid, signal.SIGKILL)
-        except:  # pylint: disable=bare-except
+        except:
             logger.warning(traceback.format_exc())
 
     def SetFileSize(self, fileSize):

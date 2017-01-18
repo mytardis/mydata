@@ -651,7 +651,6 @@ class FoldersModel(DataViewIndexListModel):
         """
         Scan for dataset folders.
         """
-        # pylint: disable=bare-except
         try:
             logger.debug("Scanning " + pathToScan +
                          " for dataset folders...")
@@ -806,7 +805,6 @@ class FoldersModel(DataViewIndexListModel):
         Scan folders within a user group folder,
         e.g. D:\\Data\\Smith-Lab\\
         """
-        # pylint: disable=bare-except
         try:
             logger.debug("Scanning " + groupFolderPath +
                          " for instrument folders...")

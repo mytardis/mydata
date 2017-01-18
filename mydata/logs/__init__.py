@@ -121,7 +121,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -142,7 +141,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -165,7 +163,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -188,7 +185,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:

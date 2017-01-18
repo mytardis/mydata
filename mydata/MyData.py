@@ -793,11 +793,9 @@ class MyData(wx.App):
                 """
                 logger.debug("Starting run() method for thread %s"
                              % threading.current_thread().name)
-                # pylint: disable=bare-except
                 activeNetworkInterfaces = []
                 try:
                     wx.CallAfter(BeginBusyCursorIfRequired)
-                    # pylint: disable=broad-except
                     try:
                         activeNetworkInterfaces = \
                             UploaderModel.GetActiveNetworkInterfaces()
@@ -1123,7 +1121,6 @@ class MyData(wx.App):
         Called when user clicks the Internet Browser icon on the
         main toolbar.
         """
-        # pylint: disable=bare-except
         try:
             items = self.foldersView.GetDataViewControl().GetSelections()
             rows = [self.foldersModel.GetRow(item) for item in items]

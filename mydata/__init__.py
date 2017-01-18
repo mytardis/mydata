@@ -24,7 +24,7 @@ try:
             commitdef.write('commitdef.py\n')
             commitdef.write('"""\n')
             commitdef.write('LATEST_COMMIT = "%s"\n' % LATEST_COMMIT)
-except:  # pylint: disable=bare-except
+except:
     LATEST_COMMIT = "Couldn't determine LATEST_COMMIT."
 
 if __name__ == "__main__":

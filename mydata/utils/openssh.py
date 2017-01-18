@@ -99,7 +99,7 @@ class OpenSSH(object):
                 try:
                     baseDir = \
                         os.path.dirname(pkgutil.get_loader("mydata").filename)
-                except:  # pylint: disable=bare-except
+                except:
                     baseDir = os.getcwd()
             self.ssh = os.path.join(baseDir, self.opensshBuildDir,
                                     "bin", "ssh.exe")
@@ -202,7 +202,6 @@ class KeyPair(object):
                                "while trying to read public key.")
 
     def Delete(self):
-        # pylint: disable=bare-except
         try:
             os.unlink(self.privateKeyFilePath)
             if self.publicKeyFilePath is not None:
@@ -801,7 +800,7 @@ def CleanUpSshProcesses(settingsModel):
                         # the absolute path of the SSH binary bundled
                         # with MyData.
                         proc.kill()
-                except:  # pylint: disable=bare-except
+                except:
                     pass
         except psutil.AccessDenied:
             pass

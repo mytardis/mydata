@@ -304,7 +304,6 @@ class UploaderModel(object):
         self.userAgentVersion = VERSION
         self.userAgentInstallLocation = ""
 
-        # pylint: disable=bare-except
         if hasattr(sys, 'frozen'):
             self.userAgentInstallLocation = os.path.dirname(sys.executable)
         else:

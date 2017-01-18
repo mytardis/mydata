@@ -128,7 +128,7 @@ class FolderModel(object):
             createdTimeIsoString = datetime.fromtimestamp(
                 os.stat(absoluteFilePath).st_ctime).isoformat()
             return createdTimeIsoString
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
             return None
 
@@ -138,7 +138,7 @@ class FolderModel(object):
             modifiedTimeIsoString = datetime.fromtimestamp(
                 os.stat(absoluteFilePath).st_mtime).isoformat()
             return modifiedTimeIsoString
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
             return None
 

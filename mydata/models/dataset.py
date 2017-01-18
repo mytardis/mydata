@@ -36,7 +36,7 @@ class DatasetModel(object):
     def GetDescription(self):
         try:
             return self.json['description']
-        except:  # pylint: disable=bare-except
+        except:
             logger.error("self.json = " + str(self.json))
             logger.error(traceback.format_exc())
 
@@ -148,7 +148,7 @@ class DatasetModel(object):
                     try:
                         message += "ERROR: \"%s\"" \
                             % response.json()['error_message']
-                    except:  # pylint: disable=bare-except
+                    except:
                         message += response.text
                     raise InternalServerError(message)
                 raise Exception(response.text)

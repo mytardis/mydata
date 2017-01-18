@@ -267,7 +267,6 @@ class TasksModel(DataViewIndexListModel):
         return self.maxDataViewId
 
     def TryRowValueChanged(self, row, col):
-        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowValueChanged(row, col)

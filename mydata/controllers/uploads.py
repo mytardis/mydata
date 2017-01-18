@@ -176,7 +176,6 @@ class UploadDatafileRunnable(object):
         self.uploadsModel.SetMessage(self.uploadModel, message)
         self.uploadModel.SetStartTime(datetime.now())
 
-        # pylint: disable=broad-except
         try:
             if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
                 self.UploadFileWithPost(dataFileDict)
@@ -296,7 +295,6 @@ class UploadDatafileRunnable(object):
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
-            # pylint: disable=bare-except
             try:
                 # If running MyTardis in DEBUG mode, there should
                 # be an error_message returned in JSON format.
@@ -516,7 +514,6 @@ class UploadDatafileRunnable(object):
                 "administrator to check in their logs " \
                 "for more information."
             message += "\n\n"
-            # pylint: disable=bare-except
             try:
                 message += "ERROR: \"%s\"" \
                     % response.json()['error_message']
@@ -577,7 +574,6 @@ class UploadDatafileRunnable(object):
                 uploadModel=self.uploadModel)
             PostEvent(event)
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
-            # pylint: disable=bare-except
             try:
                 self.uploadModel.GetBufferedReader().close()
             except:

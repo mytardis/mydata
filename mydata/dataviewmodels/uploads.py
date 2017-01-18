@@ -224,7 +224,6 @@ class UploadsModel(DataViewIndexListModel):
             logger.warning(traceback.format_exc())
 
     def TryRowDeleted(self, row):
-        # pylint: disable=bare-except
         try:
             if row < self.GetCount():
                 self.RowDeleted(row)

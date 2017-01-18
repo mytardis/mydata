@@ -211,7 +211,6 @@ def ShutdownForRefresh(event):
                      % threading.current_thread().name)
         logger.debug("Shutting down for refresh from %s."
                      % threading.current_thread().name)
-        # pylint: disable=bare-except
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
@@ -266,7 +265,6 @@ def CheckConnectivity(event):
         Checks network connectivity in separate thread.
         """
         wx.CallAfter(BeginBusyCursorIfRequired)
-        # pylint: disable=broad-except
         try:
             activeNetworkInterfaces = \
                 UploaderModel.GetActiveNetworkInterfaces()
@@ -492,7 +490,7 @@ def SettingsDialogValidation(event):
             try:
                 event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                          saveToDisk=False)
-            except:  # pylint: disable=bare-except
+            except:
                 logger.error(traceback.format_exc())
 
             def SetStatusMessage(message):
@@ -662,12 +660,7 @@ def ProvideSettingsValidationResults(event):
 
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")
-    # pylint: disable=bare-except
     try:
-        # Now is a good time to define the MyData instances's uploader
-        # model object, which will generate a UUID if necessary.
-        # The UUID will be saved to disk along with the settings from
-        # the settings dialog.
         uploaderModel = UploaderModel(event.settingsModel)
         event.settingsModel.SetUploaderModel(uploaderModel)
 

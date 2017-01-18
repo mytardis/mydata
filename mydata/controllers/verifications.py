@@ -125,7 +125,7 @@ class VerifyDatafileRunnable(object):
             self.HandleExistingDatafile(existingDatafile)
         except DoesNotExist:
             self.HandleNonExistentDataFile()
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
 
     def HandleNonExistentDataFile(self):

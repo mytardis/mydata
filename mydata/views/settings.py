@@ -1722,7 +1722,6 @@ class SettingsDialog(wx.Dialog):
                 if not runningAsAdmin:
                     logger.info("Attempting to run \"%s --version\" "
                                 "as an administrator." % sys.executable)
-                    # pylint: disable=bare-except
                     try:
                         shell.ShellExecuteEx(
                             nShow=win32con.SW_SHOWNORMAL,

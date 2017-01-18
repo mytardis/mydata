@@ -97,7 +97,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     _ = urllib.unquote(match.groups()[1])  # API key
                 else:
                     raise Exception("Unauthorized")
-            except:  # pylint: disable=bare-except
+            except:
                 print traceback.format_exc()
                 self.send_response(401)
                 self.send_header("Content-type", "text/html")

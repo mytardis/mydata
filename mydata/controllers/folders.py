@@ -212,7 +212,6 @@ class FoldersController(object):
             self.SetShowingErrorDialog(True)
         dlg = wx.MessageDialog(None, event.message, event.title,
                                wx.OK | event.icon)
-        # pylint: disable=bare-except
         try:
             wx.EndBusyCursor()
             needToRestartBusyCursor = True
@@ -312,7 +311,6 @@ class FoldersController(object):
         if sys.platform.startswith("linux"):
             RestartErrandBoy()
 
-        # pylint: disable=broad-except
         try:
             settingsModel.GetUploaderModel().RequestStagingAccess()
             uploadToStagingRequest = settingsModel\
@@ -368,7 +366,6 @@ class FoldersController(object):
                                           target=fc.UploadWorker, args=())
                 fc.uploadWorkerThreads.append(thread)
                 thread.start()
-        # pylint: disable=bare-except
 
         fc.finishedScanningForDatasetFolders = threading.Event()
         fc.numVerificationsToBePerformed = 0
@@ -402,7 +399,6 @@ class FoldersController(object):
             if self.IsShuttingDown():
                 return
             try:
-                # pylint: disable=broad-except
                 try:
                     self.getOrCreateExpThreadingLock.acquire()
                     experimentModel = ExperimentModel\
@@ -419,7 +415,6 @@ class FoldersController(object):
                 finally:
                     self.getOrCreateExpThreadingLock.release()
                 folderModel.SetExperiment(experimentModel)
-                # pylint: disable=broad-except
                 try:
                     datasetModel = DatasetModel\
                         .CreateDatasetIfNecessary(folderModel, fc.testRun)
@@ -459,7 +454,7 @@ class FoldersController(object):
                 # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
 
     def UploadWorker(self):
@@ -477,7 +472,6 @@ class FoldersController(object):
             task = self.uploadsQueue.get()
             if task is None:
                 return
-            # pylint: disable=bare-except
             try:
                 task.Run()
             except ValueError, err:
@@ -512,7 +506,6 @@ class FoldersController(object):
             task = self.verificationsQueue.get()
             if task is None:
                 break
-            # pylint: disable=bare-except
             try:
                 task.Run()
             except ValueError, err:
