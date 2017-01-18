@@ -219,6 +219,9 @@ class SettingsDialogTester(unittest.TestCase):
         PostEvent(settingsDialogValidationEvent)
 
         # Test updating autostart file:
+        self.settingsModel.SetStartAutomaticallyOnLogin(True)
+        self.settingsModel.UpdateAutostartFile()
+        self.settingsModel.SetStartAutomaticallyOnLogin(False)
         self.settingsModel.UpdateAutostartFile()
 
         # Test renaming instrument to an available instrument name:
