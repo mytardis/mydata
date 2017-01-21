@@ -221,23 +221,7 @@ class SettingsDialog(wx.Dialog):
         self.apiKeyField = wx.TextCtrl(self.generalPanel, wx.ID_ANY, "",
                                        style=wx.TE_PASSWORD)
 
-        # For security reasons, Mac OS X tries to disable copy/paste etc.
-        # in password fields.  Copy and Cut are genuine security risks,
-        # but we can re-enable paste and select all.  We make up new IDs,
-        # rather than using self.apiKeyField.GetId(), so that the OS
-        # doesn't try to impose its security rules on our "password" field.
-        pasteId = wx.NewId()
-        selectAllId = wx.NewId()
-        saveId = wx.NewId()
-        acceleratorList = \
-            [(wx.ACCEL_CTRL, ord('V'), pasteId),
-             (wx.ACCEL_CTRL, ord('A'), selectAllId),
-             (wx.ACCEL_CTRL, ord('S'), saveId)]
-        self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
-        self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
-        self.Bind(wx.EVT_MENU, self.OnSave, id=saveId)
-        acceleratorTable = wx.AcceleratorTable(acceleratorList)
-        self.SetAcceleratorTable(acceleratorTable)
+        self.EnablePasteInPasswordField()
 
         self.Bind(wx.EVT_SET_FOCUS, self.OnApiKeyFieldFocused,
                   self.apiKeyField)
@@ -1269,10 +1253,17 @@ class SettingsDialog(wx.Dialog):
         PostEvent(settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
+        """
+        Display a folder-selection dialog to choose the data directory.
+        """
         dlg = wx.DirDialog(self, "Choose a directory:",
                            defaultPath=self.GetDataDirectory()
                            .encode('ascii', 'ignore'))
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
         event.Skip()
 
@@ -1432,7 +1423,29 @@ class SettingsDialog(wx.Dialog):
         # the SettingsModel in the lines of code above.
         self.SetLocked(settingsModel.Locked())
 
+    def EnablePasteInPasswordField(self):
+        """
+        For security reasons, Mac OS X tries to disable copy/paste etc.
+        in password fields.  Copy and Cut are genuine security risks,
+        but we can re-enable paste and select all.  We make up new IDs,
+        rather than using self.apiKeyField.GetId(), so that the OS
+        doesn't try to impose its security rules on our "password" field.
+        """
+        pasteId = wx.NewId()
+        selectAllId = wx.NewId()
+        saveId = wx.NewId()
+        acceleratorList = \
+            [(wx.ACCEL_CTRL, ord('V'), pasteId),
+             (wx.ACCEL_CTRL, ord('A'), selectAllId),
+             (wx.ACCEL_CTRL, ord('S'), saveId)]
+        self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
+        self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
+        self.Bind(wx.EVT_MENU, self.OnSave, id=saveId)
+        acceleratorTable = wx.AcceleratorTable(acceleratorList)
+        self.SetAcceleratorTable(acceleratorTable)
+
     def OnPaste(self, event):
+        """See EnablePasteInPasswordField"""
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             if textCtrl == self.apiKeyField:
@@ -1441,6 +1454,7 @@ class SettingsDialog(wx.Dialog):
                 event.Skip()
 
     def OnSelectAll(self, event):
+        """See EnablePasteInPasswordField"""
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             if textCtrl == self.apiKeyField:
@@ -1467,10 +1481,12 @@ class SettingsDialog(wx.Dialog):
         # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):
+        """Select all when API key field is focused."""
         self.apiKeyField.SelectAll()
         event.Skip()
 
     def OnIgnoreOldDatasetsCheckBox(self, event):
+        """Update related fields when checkbox state is changed."""
         if event.IsChecked():
             self.ignoreDatasetsOlderThanSpinCtrl.SetValue(6)
             self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
@@ -1494,6 +1510,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreOldDatasetsSpinCtrl(self, event):
+        """Update related fields when spin control value is changed."""
         if event.GetInt() == 1:
             if not self.showingSingularUnits:
                 intervalUnitValue = self.intervalUnitsComboBox.GetValue()
@@ -1514,6 +1531,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreNewFilesCheckBox(self, event):
+        """Update related fields when checkbox state is changed."""
         if event.IsChecked():
             self.ignoreFilesNewerThanSpinCtrl.SetValue(1)
             self.ignoreFilesNewerThanSpinCtrl.Enable(True)
@@ -1529,6 +1547,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreNewFilesSpinCtrl(self, event):
+        """Update related fields when spin control value is changed."""
         if event.GetInt() == 1:
             if not self.showingSingularMinutes:
                 self.ignoreFilesIntervalUnitLabel.SetLabel("minute")

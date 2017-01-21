@@ -89,20 +89,49 @@ class SettingsDialogTester(unittest.TestCase):
 
         self.settingsDialog.Show()
 
+        # Simulate browsing for data directory:
+        pyCommandEvent = wx.PyCommandEvent()
+        self.settingsDialog.OnBrowse(pyCommandEvent)
+
+        # Test the explicit enabling of paste in the API Key field
+        # for wxMac (which disables cut/copy/paste in password
+        # fields as a security precaution).
+        apiKey = self.settingsDialog.GetApiKey()
+        self.settingsDialog.apiKeyField.SetFocus()
+        self.settingsDialog.OnSelectAll(pyCommandEvent)
+        self.settingsDialog.OnPaste(pyCommandEvent)
+        self.settingsDialog.SetApiKey(apiKey)
+
         # Select folder structures to test OnSelectFolderStructure:
         for folderStructure in self.settingsDialog.folderStructures:
             self.settingsDialog.SetFolderStructure(folderStructure)
             self.settingsDialog.OnSelectFolderStructure(event=None)
 
         # Simulate clicking Ignore Old Datasets checkbox:
-        pyCommandEvent = wx.PyCommandEvent()
+        self.settingsDialog.SetIgnoreOldDatasets(True)
+        self.settingsDialog.OnIgnoreOldDatasetsCheckBox(pyCommandEvent)
+        self.settingsDialog.SetIgnoreOldDatasets(False)
         self.settingsDialog.OnIgnoreOldDatasetsCheckBox(pyCommandEvent)
 
-        # Simulate clicking Ignore Old Datasets spin control:
+        # Simulate clicking Ignore Old Datasets spin control
+        # Different event handling for singular or plural / zero.
+        self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(1)
+        self.settingsDialog.OnIgnoreOldDatasetsSpinCtrl(pyCommandEvent)
+        self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(0)
         self.settingsDialog.OnIgnoreOldDatasetsSpinCtrl(pyCommandEvent)
 
         # Simulate clicking Ignore New Files checkbox:
+        self.settingsDialog.SetIgnoreNewFiles(True)
         self.settingsDialog.OnIgnoreNewFilesCheckBox(pyCommandEvent)
+        self.settingsDialog.SetIgnoreNewFiles(False)
+        self.settingsDialog.OnIgnoreNewFilesCheckBox(pyCommandEvent)
+
+        # Simulate clicking Ignore New Files spin control
+        # Different event handling for singular or plural / zero.
+        self.settingsDialog.SetIgnoreNewFilesMinutes(1)
+        self.settingsDialog.OnIgnoreNewFilesSpinCtrl(pyCommandEvent)
+        self.settingsDialog.SetIgnoreNewFilesMinutes(0)
+        self.settingsDialog.OnIgnoreNewFilesSpinCtrl(pyCommandEvent)
 
         # Simulate browsing for includes file:
         self.settingsDialog.OnBrowseIncludesFile(pyCommandEvent)
@@ -116,8 +145,8 @@ class SettingsDialogTester(unittest.TestCase):
         while True:
             try:
                 attempts += 1
-                requests.get(self.settingsModel.GetMyTardisUrl() + "/api/v1/?format=json",
-                             timeout=1)
+                requests.get(self.settingsModel.GetMyTardisUrl() +
+                             "/api/v1/?format=json", timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
                 time.sleep(0.25)
@@ -199,6 +228,16 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsDialog.SetScheduledTime(scheduledTime)
         PostEvent(settingsDialogValidationEvent)
         self.settingsDialog.SetScheduleType("Manually")
+
+        # Test incrementing and decrementing dates and times.
+        self.settingsDialog.OnIncrementDate(pyCommandEvent)
+        self.settingsDialog.OnDecrementDate(pyCommandEvent)
+        self.settingsDialog.OnIncrementTime(pyCommandEvent)
+        self.settingsDialog.OnDecrementTime(pyCommandEvent)
+        self.settingsDialog.OnIncrementFromTime(pyCommandEvent)
+        self.settingsDialog.OnDecrementFromTime(pyCommandEvent)
+        self.settingsDialog.OnIncrementToTime(pyCommandEvent)
+        self.settingsDialog.OnDecrementToTime(pyCommandEvent)
 
         # Test settings dialog validation with MyTardis URL which
         # responds with a redirect (302):
