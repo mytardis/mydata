@@ -1,9 +1,6 @@
 """
 mydata/views/connectivity.py
 """
-import sys
-import threading
-
 import wx
 
 from mydata.utils.exceptions import NoActiveNetworkInterface
@@ -22,18 +19,11 @@ def ReportNoActiveInterfaces():
         """
         Show error dialog in main thread.
         """
-        dlg = wx.MessageDialog(None, message, "MyData",
-                               wx.OK | wx.ICON_ERROR)
-        if wx.PyApp.IsMainLoopRunning():
-            dlg.ShowModal()
-        else:
-            sys.stderr.write("%s\n" % message)
+        dlg = wx.MessageDialog(None, message, "MyData", wx.OK | wx.ICON_ERROR)
+        dlg.ShowModal()
         wx.GetApp().GetMainFrame().SetStatusMessage("")
 
     if wx.PyApp.IsMainLoopRunning():
-        if threading.current_thread().name == "MainThread":
-            ShowDialog()
-        else:
-            wx.CallAfter(ShowDialog)
+        wx.CallAfter(ShowDialog)
     else:
         raise NoActiveNetworkInterface(message)
