@@ -108,10 +108,9 @@ class MyDataAppInstanceTester(unittest.TestCase):
 
         popupMenu.Destroy()
 
+        # Test opening webpages using fake MyTardis URL.
         pyEvent = wx.PyEvent()
         self.mydataApp.OnMyTardis(pyEvent)
-        self.mydataApp.OnHelp(pyEvent)
-        self.mydataApp.OnWalkthrough(pyEvent)
         self.mydataApp.OnAbout(pyEvent)
 
         # When running MyData without an event loop, this will block until complete:
