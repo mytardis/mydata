@@ -487,6 +487,8 @@ def MonitorProgress(foldersController, progressPollInterval, uploadModel,
         except MissingMyDataReplicaApiEndpoint:
             timer.cancel()
     monitoringProgress.clear()
+
+
 def UploadFileFromPosixSystem(filePath, fileSize, username,
                               privateKeyFilePath, host, port,
                               remoteFilePath, progressCallback,
@@ -723,6 +725,7 @@ def GetCygwinPath(path):
     else:
         raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
                         "a valid path." % path)
+
 
 def CleanUpSshProcesses(settingsModel):
     """
