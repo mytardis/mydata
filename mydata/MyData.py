@@ -1120,7 +1120,7 @@ class MyData(wx.App):
         if wx.PyApp.IsMainLoopRunning():
             webbrowser.open(url, new, autoraise)
         else:
-            response = requests.get('http://www.example.com')
+            response = requests.get(url)
             assert response.status_code == 200
 
     def GetMainFrame(self):
