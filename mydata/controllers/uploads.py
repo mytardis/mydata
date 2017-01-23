@@ -22,6 +22,7 @@ from mydata.utils.openssh import UploadFile
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
+from mydata.utils import ConvertToUtf8
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
@@ -171,6 +172,8 @@ class UploadDatafileRunnable(object):
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
                 return
+        else:
+            dataFileDict = self.existingUnverifiedDatafile.GetJson()
 
         message = "Uploading..."
         self.uploadsModel.SetMessage(self.uploadModel, message)
@@ -183,7 +186,7 @@ class UploadDatafileRunnable(object):
                 self.UploadFileToStaging(dataFileDict)
         except Exception, err:
             self.uploadsModel.SetMessage(self.uploadModel,
-                                         unicode(err.message).encode('utf-8'))
+                                         ConvertToUtf8(err.message))
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
             if dataFileDirectory != "":
@@ -277,7 +280,7 @@ class UploadDatafileRunnable(object):
         except ValueError, err:
             self.uploadModel.SetTraceback(
                 traceback.format_exc())
-            errString = unicode(err.message).encode('utf-8')
+            errString = ConvertToUtf8(err.message)
             if errString == "read of closed file" or \
                     errString == "seek of closed file":
                 logger.debug("Aborting upload for \"%s\" because "
@@ -303,7 +306,7 @@ class UploadDatafileRunnable(object):
                 message += "ERROR: \"%s\"" \
                     % json.loads(errorResponse)['error_message']
             except:
-                message += unicode(err.message).encode('utf-8')
+                message += ConvertToUtf8(err.message)
             PostEvent(
                 self.foldersController
                 .ShowMessageDialogEvent(title="MyData",
@@ -381,7 +384,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(unicode(err.message).encode('utf-8'))
+                    logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
@@ -402,7 +405,7 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = unicode(err.message).encode('utf-8')
+                message = ConvertToUtf8(err.message)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -415,7 +418,7 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = unicode(err.message).encode('utf-8')
+                message = ConvertToUtf8(err.message)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -430,7 +433,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(unicode(err.message).encode('utf-8'))
+                    logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
