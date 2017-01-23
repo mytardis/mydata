@@ -1,5 +1,5 @@
 """
-Model for reprenting a scheduled task (a.k.a. job), as listed
+Model for representing a scheduled task (a.k.a. job), as listed
 in the Tasks view of MyData's main window.
 """
 
