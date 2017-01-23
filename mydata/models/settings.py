@@ -871,6 +871,10 @@ class SettingsModel(object):
                                                      "data_directory")
                 return self.validation
 
+            if testRun:
+                logger.testrun("Folder structure: %s"
+                               % self.GetFolderStructure())
+
             if not self.UploadInvalidUserOrGroupFolders():
                 if self.GetFolderStructure().startswith("User Group"):
                     message = "Invalid user group folders are being ignored."
