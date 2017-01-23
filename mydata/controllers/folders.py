@@ -6,6 +6,7 @@ and uploads from each of the folders in the Folders view.
 # pylint: disable=missing-docstring
 
 import sys
+import time
 import threading
 import Queue
 import traceback
@@ -378,6 +379,10 @@ class FoldersController(object):
         self.foldersModel with dataset folders.
         """
         self.finishedScanningForDatasetFolders.set()
+        logger.debug("Finished scanning for dataset folders.")
+        while len(self.finishedCountingVerifications.keys()) < \
+                self.foldersModel.GetCount():
+            time.sleep(0.01)
         self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
@@ -656,9 +661,12 @@ class FoldersController(object):
             message = "Data scans and uploads completed successfully."
             elapsedTime = self.uploadsModel.GetElapsedTime()
             if elapsedTime and not self.testRun:
-                averageSpeed = "%3.1f MB/s" % \
-                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0
-                     / elapsedTime.total_seconds())
+                averageSpeedMBs = (float(self.uploadsModel.GetCompletedSize())
+                                   / 1000000.0 / elapsedTime.total_seconds())
+                if averageSpeedMBs >= 1.0:
+                    averageSpeed = "%3.1f MB/s" % averageSpeedMBs
+                else:
+                    averageSpeed = "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
                 message += "  Average speed: %s" % averageSpeed
         else:
             message = "Data scans and uploads appear to have " \
