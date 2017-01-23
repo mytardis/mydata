@@ -489,9 +489,8 @@ def MonitorProgress(foldersController, progressPollInterval, uploadModel,
     monitoringProgress.clear()
 
 
-def UploadFileFromPosixSystem(filePath, fileSize, username,
-                              privateKeyFilePath, host, port,
-                              remoteFilePath, progressCallback,
+def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
+                              host, port, remoteFilePath, progressCallback,
                               foldersController, uploadModel):
     """
     Upload file using SCP.
@@ -500,15 +499,14 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
     # pylint: disable=too-many-statements
     settingsModel = foldersController.settingsModel
     cipher = settingsModel.GetCipher()
-
     progressPollInterval = settingsModel.GetProgressPollInterval()
     monitoringProgress = threading.Event()
-
     uploadModel.SetStartTime(datetime.now())
-
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
-
+    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
+    remoteFilePath = \
+        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -624,8 +622,7 @@ REMOTE_DIRS_CREATED = dict()
 
 def UploadFileFromWindows(filePath, fileSize, username,
                           privateKeyFilePath, host, port, remoteFilePath,
-                          progressCallback,
-                          foldersController, uploadModel):
+                          progressCallback, foldersController, uploadModel):
     """
     Upload file using SCP.
     """
@@ -633,15 +630,14 @@ def UploadFileFromWindows(filePath, fileSize, username,
     uploadModel.SetStartTime(datetime.now())
     settingsModel = foldersController.settingsModel
     maxThreads = settingsModel.GetMaxUploadThreads()
-
     progressPollInterval = settingsModel.GetProgressPollInterval()
     monitoringProgress = threading.Event()
-
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
-
     cipher = settingsModel.GetCipher()
-
+    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
+    remoteFilePath = \
+        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
