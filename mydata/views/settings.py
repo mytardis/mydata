@@ -123,10 +123,7 @@ class SettingsDialog(wx.Dialog):
         self.generalPanel.SetSizer(self.generalPanelSizer)
         self.generalPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 3 columns, so we'll add 3 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
@@ -230,10 +227,7 @@ class SettingsDialog(wx.Dialog):
                                    border=5)
         self.generalPanelSizer.Add(wx.StaticText(self.generalPanel, wx.ID_ANY,
                                                  ""))
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 3 columns, so we'll add 3 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
@@ -477,10 +471,7 @@ class SettingsDialog(wx.Dialog):
         self.filtersPanel.SetSizer(self.filtersPanelSizer)
         # self.filtersPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 4 columns, so we'll add 4 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
@@ -673,10 +664,7 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 4 columns, so we'll add 4 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
@@ -1023,11 +1011,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetScheduledTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1048,11 +1038,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerFromTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1066,11 +1058,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerToTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1268,6 +1262,14 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnBrowseIncludesFile(self, event):
+        """
+        Open a File Open dialog to select an includes file
+        containing patterns to match for files to be included
+        e.g. *.TIFF
+
+        Set the cursor to the right end of the file path text
+        field to ensure that the filename is visible.
+        """
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
@@ -1277,10 +1279,6 @@ class SettingsDialog(wx.Dialog):
             dialogOK = True
         if dialogOK:
             self.includesFileField.SetValue(dlg.GetPath())
-            # Even though we use style=wx.TE_RIGHT,
-            # this is necessary on Windows to ensure that
-            # the right path of the file path (containing
-            # the file name) is visible:
             self.includesFileField.SetInsertionPoint(
                 self.includesFileField.GetLastPosition())
         event.Skip()
@@ -1298,6 +1296,14 @@ class SettingsDialog(wx.Dialog):
             event.Skip()
 
     def OnBrowseExcludesFile(self, event):
+        """
+        Open a File Open dialog to select an excludes file
+        containing patterns to match for files to be excluded
+        e.g. *.BAK
+
+        Set the cursor to the right end of the file path text
+        field to ensure that the filename is visible.
+        """
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
@@ -1307,10 +1313,6 @@ class SettingsDialog(wx.Dialog):
             dialogOK = True
         if dialogOK:
             self.excludesFileField.SetValue(dlg.GetPath())
-            # Even though we use style=wx.TE_RIGHT,
-            # this is necessary on Windows to ensure that
-            # the right path of the file path (containing
-            # the file name) is visible:
             self.excludesFileField.SetInsertionPoint(
                 self.excludesFileField.GetLastPosition())
         event.Skip()
