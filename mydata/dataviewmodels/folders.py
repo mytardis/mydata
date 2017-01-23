@@ -744,9 +744,9 @@ class FoldersModel(DataViewIndexListModel):
         folderStructure = self.settingsModel.GetFolderStructure()
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
-            filesDepth1 = glob(os.path.join(expFolderPath,
-                                            datasetFilterString))
-            dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
+            globDepth1 = glob(os.path.join(expFolderPath, datasetFilterString))
+            filesDepth1 = [item for item in globDepth1 if os.path.isfile(item)]
+            dirsDepth1 = [item for item in globDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 if self.ignoreOldDatasets:
@@ -763,31 +763,21 @@ class FoldersModel(DataViewIndexListModel):
                         logger.warning(message)
                         continue
                 dataViewId = self.GetMaxDataViewId() + 1
+                folderModel = \
+                    FolderModel(dataViewId=dataViewId,
+                                folder=datasetFolderName,
+                                location=expFolderPath,
+                                userFolderName=userFolderName,
+                                groupFolderName=groupFolderName,
+                                owner=owner,
+                                foldersModel=self,
+                                usersModel=self.usersModel,
+                                settingsModel=self.settingsModel)
                 if folderStructure.startswith("Username") or \
                         folderStructure.startswith("Email") or \
                         folderStructure.startswith("Experiment"):
-                    folderModel = \
-                        FolderModel(dataViewId=dataViewId,
-                                    folder=datasetFolderName,
-                                    location=expFolderPath,
-                                    userFolderName=userFolderName,
-                                    groupFolderName=None,
-                                    owner=owner,
-                                    foldersModel=self,
-                                    usersModel=self.usersModel,
-                                    settingsModel=self.settingsModel)
                     folderModel.SetExperimentTitle(expFolderName)
                 elif folderStructure.startswith("User Group"):
-                    folderModel = \
-                        FolderModel(dataViewId=dataViewId,
-                                    folder=datasetFolderName,
-                                    location=expFolderPath,
-                                    userFolderName=None,
-                                    groupFolderName=groupFolderName,
-                                    owner=owner,
-                                    foldersModel=self,
-                                    usersModel=self.usersModel,
-                                    settingsModel=self.settingsModel)
                     folderModel.SetGroup(groupRecord)
                     if groupRecord:
                         groupName = groupRecord.GetShortName()
@@ -797,6 +787,23 @@ class FoldersModel(DataViewIndexListModel):
                         "%s - %s" % (groupName, expFolderName))
                 else:
                     raise InvalidFolderStructure("Unknown folder structure.")
+                folderModel.SetCreatedDate()
+                self.AddRow(folderModel)
+            if len(filesDepth1) > 0:
+                logger.info("Found %s experiment file(s) in %s\n"
+                            % (len(filesDepth1), expFolderPath))
+                dataViewId = self.GetMaxDataViewId() + 1
+                folderModel = \
+                    FolderModel(dataViewId=dataViewId,
+                                folder="__EXPERIMENT_FILES__",
+                                location=expFolderPath,
+                                userFolderName=userFolderName,
+                                groupFolderName=groupFolderName,
+                                owner=owner,
+                                foldersModel=self,
+                                usersModel=self.usersModel,
+                                settingsModel=self.settingsModel,
+                                isExperimentFilesFolder=True)
                 folderModel.SetCreatedDate()
                 self.AddRow(folderModel)
 
