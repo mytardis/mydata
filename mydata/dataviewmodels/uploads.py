@@ -147,25 +147,6 @@ class UploadsModel(DataViewIndexListModel):
         # pylint: disable=no-self-use
         return False
 
-    # This is called to assist with sorting the data in the view.  The
-    # first two args are instances of the DataViewItem class, so we
-    # need to convert them to row numbers with the GetRow method.
-    # Then it's just a matter of fetching the right values from our
-    # data set and comparing them.  The return value is -1, 0, or 1,
-    # just like Python's cmp() function.
-    def Compare(self, item1, item2, col, ascending):
-        # pylint: disable=arguments-differ
-        if not ascending:
-            item2, item1 = item1, item2
-        row1 = self.GetRow(item1)
-        row2 = self.GetRow(item2)
-        if col == 0:
-            return cmp(int(self.GetValueByRow(row1, col)),
-                       int(self.GetValueByRow(row2, col)))
-        else:
-            return cmp(self.GetValueByRow(row1, col),
-                       self.GetValueByRow(row2, col))
-
     def DeleteAllRows(self):
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
