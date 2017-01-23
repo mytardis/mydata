@@ -66,7 +66,7 @@ class OnSettingsSavedScheduleTester(unittest.TestCase):
         """
         self.WaitForFakeMyTardisServerToStart()
         settingsValidation = self.settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
                                 settingsModel=self.settingsModel)
         self.mydataApp.taskBarIcon.CreatePopupMenu()

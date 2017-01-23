@@ -109,7 +109,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                                        str(err)))
 
         settingsValidation = settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
         foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
@@ -135,12 +135,12 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).GetFolder())
-        assert sorted(folders) == ["Birds", "Flowers"]
+        self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        assert numFiles == 5
+        self.assertEqual(numFiles, 5)
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
@@ -191,7 +191,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                     and uploadsProcessed == uploadsToBePerformed:
                 break
             time.sleep(0.1)
-        assert numVerificationsCompleted == numFiles
+        self.assertEqual(numVerificationsCompleted, numFiles)
 
         sys.stderr.write("Waiting for uploads to complete...\n")
         while True:
@@ -223,7 +223,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                     sys.stderr.write(uploadModel.GetTraceback())
         sys.stderr.write("\n")
 
-        assert uploadsCompleted == numFiles
+        self.assertEqual(uploadsCompleted, numFiles)
 
     def StartFakeMyTardisServer(self):
         """
