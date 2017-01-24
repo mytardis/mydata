@@ -741,12 +741,6 @@ class UploaderModel(object):
 
         return activeInterfaces
 
-    def GetSettingsModel(self):
-        return self.settingsModel
-
-    def SetSettingsModel(self, settingsModel):
-        self.settingsModel = settingsModel
-
     def GenerateUuid(self):
         self.uuid = str(uuid.uuid1())
         logger.debug("Generated UUID: %s" % self.uuid)

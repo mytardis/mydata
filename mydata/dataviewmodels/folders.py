@@ -100,21 +100,6 @@ class FoldersModel(DataViewIndexListModel):
         """
         return self.foldersData[row]
 
-    def CleanUp(self):
-        """
-        Perform clean up actions on each each folder model.
-        """
-        logger.debug("Cleaning up each FolderModel record's threads...")
-        for row in range(0, self.GetRowCount()):
-            self.foldersData[row].CleanUp()
-        logger.debug("Cleaned up each FolderModel record's threads...")
-
-    def GetSettingsModel(self):
-        """
-        Returns settings model.
-        """
-        return self.settingsModel
-
     # pylint: disable=too-many-branches
     def Filter(self, searchString):
         """
@@ -201,17 +186,11 @@ class FoldersModel(DataViewIndexListModel):
         if columnKey.startswith("owner."):
             ownerKey = columnKey.split("owner.")[1]
             owner = self.foldersData[row].GetOwner()
-            if owner is not None:
-                return owner.GetValueForKey(ownerKey)
-            else:
-                return ""
+            return owner.GetValueForKey(ownerKey) if owner else ""
         elif columnKey.startswith("group."):
             groupKey = columnKey.split("group.")[1]
             group = self.foldersData[row].GetGroup()
-            if group is not None:
-                return group.GetValueForKey(groupKey)
-            else:
-                return ""
+            return group.GetValueForKey(groupKey) if group else ""
         return str(self.foldersData[row].GetValueForKey(columnKey))
 
     def GetValueForRowColumnKeyName(self, row, columnKeyName):
@@ -330,23 +309,6 @@ class FoldersModel(DataViewIndexListModel):
             return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
                        folderRecord2.GetValueForKey(self.columnKeys[col]))
 
-    def DeleteFolderById(self, dataViewId):
-        """
-        Delete folder by ID.
-        """
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-
-        for row in range(0, self.GetRowCount()):
-            if self.foldersData[row].GetId() == dataViewId:
-                del self.foldersData[row]
-                # notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                return
-
     def GetMaxDataViewIdFromExistingRows(self):
         """
         Get maximum dataview ID from existing rows.
@@ -433,7 +395,6 @@ class FoldersModel(DataViewIndexListModel):
         self.ignoreOldDatasets = self.settingsModel.IgnoreOldDatasets()
         if self.ignoreOldDatasets:
             seconds = dict(day=24 * 60 * 60)
-            seconds['week'] = 7 * seconds['day']
             seconds['year'] = int(365.25 * seconds['day'])
             seconds['month'] = seconds['year'] / 12
             singularIgnoreIntervalUnit = \

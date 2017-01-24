@@ -163,15 +163,3 @@ class InstrumentModel(object):
             logger.info("Status code = " + str(response.status_code))
             logger.info(response.text)
         response.close()
-
-    def GetSettingsModel(self):
-        """
-        Return settings model.
-        """
-        return self.settingsModel
-
-    def SetSettingsModel(self, settingsModel):
-        """
-        Set settings model.
-        """
-        self.settingsModel = settingsModel
