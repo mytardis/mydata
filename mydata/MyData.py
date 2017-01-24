@@ -11,7 +11,6 @@ in the parent directory of the directory containing MyData.py.
 # pylint: disable=wrong-import-position
 
 import sys
-import webbrowser
 import os
 import traceback
 import threading
@@ -19,8 +18,10 @@ import argparse
 from datetime import datetime
 import logging
 import subprocess
+import webbrowser
 
 import appdirs  # pylint: disable=import-error
+import requests
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
@@ -73,6 +74,7 @@ from mydata.controllers.schedule import ScheduleController
 from mydata.views.testrun import TestRunFrame
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
+from mydata.views.connectivity import ReportNoActiveInterfaces
 
 
 class NotebookTabs(object):
@@ -165,10 +167,10 @@ class MyData(wx.App):
         self.scanningFolders = threading.Event()
         self.performingLookupsAndUploads = threading.Event()
         self.testRunRunning = threading.Event()
+        self.shouldAbort = threading.Event()
 
         self.scanningFoldersThreadingLock = threading.Lock()
         self.numUserFoldersScanned = 0
-        self.shouldAbort = False
 
         self.activeNetworkInterface = None
         self.lastConnectivityCheckSuccess = False
@@ -213,14 +215,8 @@ class MyData(wx.App):
 
         if hasattr(sys, "frozen"):
             if sys.platform.startswith("darwin"):
-                # When frozen with Py2App, the default working directory
-                # will be /Applications/MyData.app/Contents/Resources/
-                # and setup.py will copy requests's cacert.pem into that
-                # directory.
                 certPath = os.path.realpath('.')
             else:
-                # On Windows, setup.py will install requests's cacert.pem
-                # in the same directory as MyData.exe.
                 certPath = os.path.dirname(sys.executable)
             os.environ['REQUESTS_CA_BUNDLE'] = \
                 os.path.join(certPath, 'cacert.pem')
@@ -420,22 +416,16 @@ class MyData(wx.App):
         self.menuBar = wx.MenuBar()
         self.editMenu = wx.Menu()
         self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-        self.frame.Bind(wx.EVT_MENU, self.OnUndo, id=wx.ID_UNDO)
         self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-        self.frame.Bind(wx.EVT_MENU, self.OnRedo, id=wx.ID_REDO)
         self.editMenu.AppendSeparator()
         self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
                              "Cut the selected text")
-        self.frame.Bind(wx.EVT_MENU, self.OnCut, id=wx.ID_CUT)
         self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
                              "Copy the selected text")
-        self.frame.Bind(wx.EVT_MENU, self.OnCopy, id=wx.ID_COPY)
         self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
                              "Paste text from the clipboard")
-        self.frame.Bind(wx.EVT_MENU, self.OnPaste, id=wx.ID_PASTE)
         self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
                              "Select All")
-        self.frame.Bind(wx.EVT_MENU, self.OnSelectAll, id=wx.ID_SELECTALL)
         self.menuBar.Append(self.editMenu, "Edit")
 
         self.helpMenu = wx.Menu()
@@ -463,66 +453,6 @@ class MyData(wx.App):
             if sys.platform.startswith("darwin"):
                 self.frame.Show(True)
                 self.frame.Raise()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnUndo(self, event):
-        """
-        Called when Edit menu's Undo menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Undo()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnRedo(self, event):
-        """
-        Called when Edit menu's Redo menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Redo()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnCut(self, event):
-        """
-        Called when Edit menu's Cut menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Cut()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnCopy(self, event):
-        """
-        Called when Edit menu's Copy menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Copy()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnPaste(self, event):
-        """
-        Called when Edit menu's Paste menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.Paste()
-        event.Skip()
-
-    # pylint: disable=no-self-use
-    def OnSelectAll(self, event):
-        """
-        Called when Edit menu's Select All menu item is clicked.
-        """
-        textCtrl = wx.Window.FindFocus()
-        if textCtrl is not None:
-            textCtrl.SelectAll()
         event.Skip()
 
     def OnTaskBarLeftClick(self, event):
@@ -798,11 +728,9 @@ class MyData(wx.App):
                 """
                 logger.debug("Starting run() method for thread %s"
                              % threading.current_thread().name)
-                # pylint: disable=bare-except
                 activeNetworkInterfaces = []
                 try:
                     wx.CallAfter(BeginBusyCursorIfRequired)
-                    # pylint: disable=broad-except
                     try:
                         activeNetworkInterfaces = \
                             UploaderModel.GetActiveNetworkInterfaces()
@@ -827,21 +755,7 @@ class MyData(wx.App):
                                 dlg.ShowModal()
                             wx.CallAfter(ShowErrorDialog, message)
                     if len(activeNetworkInterfaces) == 0:
-                        message = "No active network interfaces." \
-                            "\n\n" \
-                            "Please ensure that you have an active " \
-                            "network interface (e.g. Ethernet or WiFi)."
-
-                        def ShowDialog():
-                            """
-                            Needs to run in the main thread.
-                            """
-                            dlg = wx.MessageDialog(None, message, "MyData",
-                                                   wx.OK | wx.ICON_ERROR)
-                            dlg.ShowModal()
-                            wx.CallAfter(EndBusyCursorIfRequired)
-                            self.frame.SetStatusMessage("")
-                        wx.CallAfter(ShowDialog)
+                        ReportNoActiveInterfaces()
                         return
 
                     self.settingsValidation = \
@@ -909,7 +823,7 @@ class MyData(wx.App):
             userOrGroup = "user"
 
         self.numUserFoldersScanned = 0
-        self.shouldAbort = False
+        self.shouldAbort.clear()
 
         def WriteProgressUpdateToStatusBar():
             """
@@ -1088,14 +1002,17 @@ class MyData(wx.App):
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        return self.shouldAbort
+        return self.shouldAbort.isSet()
 
     def SetShouldAbort(self, shouldAbort=True):
         """
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        self.shouldAbort = shouldAbort
+        if shouldAbort:
+            self.shouldAbort.set()
+        else:
+            self.shouldAbort.clear()
 
     def OnOpen(self, event):
         """
@@ -1139,20 +1056,18 @@ class MyData(wx.App):
         Called when user clicks the Internet Browser icon on the
         main toolbar.
         """
-        # pylint: disable=bare-except
         try:
             items = self.foldersView.GetDataViewControl().GetSelections()
             rows = [self.foldersModel.GetRow(item) for item in items]
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.GetDatasetModel() is not None:
-                    webbrowser\
-                        .open(self.settingsModel.GetMyTardisUrl() + "/" +
-                              folderRecord.GetDatasetModel().GetViewUri())
+                    self.OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
+                                 folderRecord.GetDatasetModel().GetViewUri())
                 else:
-                    webbrowser.open(self.settingsModel.GetMyTardisUrl())
+                    self.OpenUrl(self.settingsModel.GetMyTardisUrl())
             else:
-                webbrowser.open(self.settingsModel.GetMyTardisUrl())
+                self.OpenUrl(self.settingsModel.GetMyTardisUrl())
         except:
             logger.error(traceback.format_exc())
 
@@ -1163,7 +1078,7 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
-        webbrowser.open(url, new=new)
+        self.OpenUrl(url, new=new)
 
     def OnWalkthrough(self, event):
         """
@@ -1173,13 +1088,14 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        webbrowser.open(url, new=new)
+        self.OpenUrl(url, new=new)
 
     def OnAbout(self, event):
         """
         Called when the user clicks the Info icon on the
         main toolbar.
         """
+        # pylint: disable=no-self-use
         msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
@@ -1191,7 +1107,21 @@ class MyData(wx.App):
               "Commit:  " + LATEST_COMMIT + "\n"
         dlg = wx.MessageDialog(None, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)
-        dlg.ShowModal()
+        if wx.PyApp.IsMainLoopRunning():
+            dlg.ShowModal()
+        else:
+            sys.stderr.write("\n%s\n" % msg)
+
+    def OpenUrl(self, url, new=0, autoraise=True):
+        """
+        Open URL in web browser or just check URL is accessible if running tests.
+        """
+        # pylint: disable=no-self-use
+        if wx.PyApp.IsMainLoopRunning():
+            webbrowser.open(url, new, autoraise)
+        else:
+            response = requests.get(url)
+            assert response.status_code == 200
 
     def GetMainFrame(self):
         """

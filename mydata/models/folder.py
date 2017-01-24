@@ -22,16 +22,23 @@ class FolderModel(object):
     """
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def __init__(self, dataViewId, folder, location,
                  userFolderName, groupFolderName, owner,
-                 foldersModel, usersModel, settingsModel):
+                 foldersModel, usersModel, settingsModel,
+                 isExperimentFilesFolder=False):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         self.settingsModel = settingsModel
         self.dataViewId = dataViewId
         self.folder = folder
         self.location = location
-        absoluteFolderPath = os.path.join(location, folder)
+        self.isExperimentFilesFolder = isExperimentFilesFolder
+        if self.isExperimentFilesFolder:
+            absoluteFolderPath = location
+        else:
+            absoluteFolderPath = os.path.join(location, folder)
         self.dataFilePaths = []
         self.dataFileDirectories = []
         self.numFiles = 0
@@ -61,6 +68,8 @@ class FolderModel(object):
                 self.dataFilePaths.append(os.path.join(dirname, filename))
                 self.dataFileDirectories\
                     .append(os.path.relpath(dirname, absoluteFolderPath))
+            if self.isExperimentFilesFolder:
+                break
         for i in range(0, len(self.dataFileDirectories)):
             if self.dataFileDirectories[i] == ".":
                 self.dataFileDirectories[i] = ""
@@ -128,7 +137,7 @@ class FolderModel(object):
             createdTimeIsoString = datetime.fromtimestamp(
                 os.stat(absoluteFilePath).st_ctime).isoformat()
             return createdTimeIsoString
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
             return None
 
@@ -138,7 +147,7 @@ class FolderModel(object):
             modifiedTimeIsoString = datetime.fromtimestamp(
                 os.stat(absoluteFilePath).st_mtime).isoformat()
             return modifiedTimeIsoString
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
             return None
 
@@ -161,10 +170,14 @@ class FolderModel(object):
         return self.location
 
     def GetRelPath(self):
-        return os.path.join(
-            os.path.relpath(self.location,
-                            self.settingsModel.GetDataDirectory()),
-            self.folder)
+        if self.isExperimentFilesFolder:
+            return os.path.relpath(self.location,
+                                   self.settingsModel.GetDataDirectory())
+        else:
+            return os.path.join(
+                os.path.relpath(self.location,
+                                self.settingsModel.GetDataDirectory()),
+                self.folder)
 
     def GetNumFiles(self):
         return self.numFiles
@@ -194,7 +207,10 @@ class FolderModel(object):
         return self.settingsModel
 
     def SetCreatedDate(self):
-        absoluteFolderPath = os.path.join(self.location, self.folder)
+        if self.isExperimentFilesFolder:
+            absoluteFolderPath = self.location
+        else:
+            absoluteFolderPath = os.path.join(self.location, self.folder)
         self.created = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
@@ -214,48 +230,6 @@ class FolderModel(object):
 
     def SetGroup(self, group):
         self.group = group
-
-    def Refresh(self):
-        absoluteFolderPath = os.path.join(self.location, self.folder)
-        self.dataFilePaths = []
-        self.dataFileDirectories = []
-        self.numFiles = 0
-        for dirname, _, files in os.walk(absoluteFolderPath):
-            for filename in sorted(files):
-                if self.settingsModel.UseIncludesFile() and \
-                        not self.settingsModel.UseExcludesFile():
-                    if not self.MatchesIncludes(filename):
-                        logger.debug("Ignoring %s, not matching includes."
-                                     % filename)
-                        continue
-                elif not self.settingsModel.UseIncludesFile() and \
-                        self.settingsModel.UseExcludesFile():
-                    if self.MatchesExcludes(filename):
-                        logger.debug("Ignoring %s, matching excludes."
-                                     % filename)
-                        continue
-                elif self.settingsModel.UseIncludesFile() and \
-                        self.settingsModel.UseExcludesFile():
-                    if self.MatchesExcludes(filename) and \
-                            not self.MatchesIncludes(filename):
-                        logger.debug("Ignoring %s, matching excludes "
-                                     "and not matching includes."
-                                     % filename)
-                        continue
-                self.numFiles += 1
-                self.dataFilePaths.append(os.path.join(dirname, filename))
-                self.dataFileDirectories\
-                    .append(os.path.relpath(dirname, absoluteFolderPath))
-        for i in range(0, len(self.dataFileDirectories)):
-            if self.dataFileDirectories[i] == ".":
-                self.dataFileDirectories[i] = ""
-            self.dataFileDirectories[i] = \
-                self.dataFileDirectories[i].replace("\\", "/")
-
-        self.status = "0 of %d files uploaded" % (self.numFiles,)
-        self.SetCreatedDate()
-        modified = True
-        return modified
 
     def MatchesIncludes(self, filename):
         """

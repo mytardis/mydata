@@ -6,6 +6,7 @@ and uploads from each of the folders in the Folders view.
 # pylint: disable=missing-docstring
 
 import sys
+import time
 import threading
 import Queue
 import traceback
@@ -212,7 +213,6 @@ class FoldersController(object):
             self.SetShowingErrorDialog(True)
         dlg = wx.MessageDialog(None, event.message, event.title,
                                wx.OK | event.icon)
-        # pylint: disable=bare-except
         try:
             wx.EndBusyCursor()
             needToRestartBusyCursor = True
@@ -312,7 +312,6 @@ class FoldersController(object):
         if sys.platform.startswith("linux"):
             RestartErrandBoy()
 
-        # pylint: disable=broad-except
         try:
             settingsModel.GetUploaderModel().RequestStagingAccess()
             uploadToStagingRequest = settingsModel\
@@ -368,7 +367,6 @@ class FoldersController(object):
                                           target=fc.UploadWorker, args=())
                 fc.uploadWorkerThreads.append(thread)
                 thread.start()
-        # pylint: disable=bare-except
 
         fc.finishedScanningForDatasetFolders = threading.Event()
         fc.numVerificationsToBePerformed = 0
@@ -381,6 +379,10 @@ class FoldersController(object):
         self.foldersModel with dataset folders.
         """
         self.finishedScanningForDatasetFolders.set()
+        logger.debug("Finished scanning for dataset folders.")
+        while len(self.finishedCountingVerifications.keys()) < \
+                self.foldersModel.GetCount():
+            time.sleep(0.01)
         self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
@@ -402,7 +404,6 @@ class FoldersController(object):
             if self.IsShuttingDown():
                 return
             try:
-                # pylint: disable=broad-except
                 try:
                     self.getOrCreateExpThreadingLock.acquire()
                     experimentModel = ExperimentModel\
@@ -419,7 +420,6 @@ class FoldersController(object):
                 finally:
                     self.getOrCreateExpThreadingLock.release()
                 folderModel.SetExperiment(experimentModel)
-                # pylint: disable=broad-except
                 try:
                     datasetModel = DatasetModel\
                         .CreateDatasetIfNecessary(folderModel, fc.testRun)
@@ -459,7 +459,7 @@ class FoldersController(object):
                 # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
             # End: for row in range(0, self.foldersModel.GetRowCount())
-        except:  # pylint: disable=bare-except
+        except:
             logger.error(traceback.format_exc())
 
     def UploadWorker(self):
@@ -477,7 +477,6 @@ class FoldersController(object):
             task = self.uploadsQueue.get()
             if task is None:
                 return
-            # pylint: disable=bare-except
             try:
                 task.Run()
             except ValueError, err:
@@ -512,7 +511,6 @@ class FoldersController(object):
             task = self.verificationsQueue.get()
             if task is None:
                 break
-            # pylint: disable=bare-except
             try:
                 task.Run()
             except ValueError, err:
@@ -663,9 +661,12 @@ class FoldersController(object):
             message = "Data scans and uploads completed successfully."
             elapsedTime = self.uploadsModel.GetElapsedTime()
             if elapsedTime and not self.testRun:
-                averageSpeed = "%3.1f MB/s" % \
-                    (float(self.uploadsModel.GetCompletedSize()) / 1000000.0
-                     / elapsedTime.total_seconds())
+                averageSpeedMBs = (float(self.uploadsModel.GetCompletedSize())
+                                   / 1000000.0 / elapsedTime.total_seconds())
+                if averageSpeedMBs >= 1.0:
+                    averageSpeed = "%3.1f MB/s" % averageSpeedMBs
+                else:
+                    averageSpeed = "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
                 message += "  Average speed: %s" % averageSpeed
         else:
             message = "Data scans and uploads appear to have " \

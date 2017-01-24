@@ -81,19 +81,15 @@ class Logger(object):
         self.loggerObject.addHandler(stringHandler)
 
         # Finally, send all log messages to a log file.
-        self.loggerFileHandler = \
-            logging.FileHandler(os.path.join(os.path.expanduser("~"),
-                                             ".MyData_debug_log.txt"))
-        self.loggerFileHandler.setLevel(self.level)
-        self.loggerFileHandler\
-            .setFormatter(logging.Formatter(self.logFormatString))
-        self.loggerObject.addHandler(self.loggerFileHandler)
-
-    def SetLogFileName(self, logFileName):
-        self.loggerObject.removeHandler(self.loggerFileHandler)
-        self.loggerFileHandler = \
-            logging.FileHandler(os.path.join(os.path.expanduser("~"),
-                                             logFileName))
+        if 'MYDATA_DEBUG_LOG_PATH' in os.environ:
+            logFilePath = os.path.abspath(os.environ['MYDATA_DEBUG_LOG_PATH'])
+            if os.path.isdir(logFilePath):
+                logFilePath = os.path.join(logFilePath,
+                                           ".MyData_debug_log.txt")
+        else:
+            logFilePath = os.path.join(os.path.expanduser("~"),
+                                       ".MyData_debug_log.txt")
+        self.loggerFileHandler = logging.FileHandler(logFilePath)
         self.loggerFileHandler.setLevel(self.level)
         self.loggerFileHandler\
             .setFormatter(logging.Formatter(self.logFormatString))
@@ -121,7 +117,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -142,7 +137,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -165,7 +159,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:
@@ -188,7 +181,6 @@ class Logger(object):
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
-            # pylint: disable=bare-except
             try:
                 moduleName = os.path.basename(outerFrames[1])
             except:

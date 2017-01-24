@@ -13,6 +13,7 @@ from mydata.utils.exceptions import DuplicateKey
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.logs import logger
+from mydata.views.connectivity import ReportNoActiveInterfaces
 
 
 def NewEvent(defaultTarget=None, defaultHandler=None):
@@ -210,7 +211,6 @@ def ShutdownForRefresh(event):
                      % threading.current_thread().name)
         logger.debug("Shutting down for refresh from %s."
                      % threading.current_thread().name)
-        # pylint: disable=bare-except
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
@@ -265,7 +265,6 @@ def CheckConnectivity(event):
         Checks network connectivity in separate thread.
         """
         wx.CallAfter(BeginBusyCursorIfRequired)
-        # pylint: disable=broad-except
         try:
             activeNetworkInterfaces = \
                 UploaderModel.GetActiveNetworkInterfaces()
@@ -309,23 +308,7 @@ def CheckConnectivity(event):
             wx.GetApp().SetLastConnectivityCheckSuccess(False)
             wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
             wx.GetApp().SetActiveNetworkInterface(None)
-            message = "No active network interfaces." \
-                "\n\n" \
-                "Please ensure that you have an active " \
-                "network interface (e.g. Ethernet or WiFi)."
-
-            def ShowDialog():
-                """
-                Show error dialog in main thread.
-                """
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-                wx.GetApp().GetMainFrame().SetStatusMessage("")
-            if wx.PyApp.IsMainLoopRunning():
-                wx.CallAfter(ShowDialog)
-            else:
-                raise Exception(message)
+            ReportNoActiveInterfaces()
 
     if wx.PyApp.IsMainLoopRunning():
         checkConnectivityThread = \
@@ -507,7 +490,7 @@ def SettingsDialogValidation(event):
             try:
                 event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                          saveToDisk=False)
-            except:  # pylint: disable=bare-except
+            except:
                 logger.error(traceback.format_exc())
 
             def SetStatusMessage(message):
@@ -571,9 +554,7 @@ def ProvideSettingsValidationResults(event):
 
         if settingsValidation.GetSuggestion():
             currentValue = ""
-            if settingsValidation.GetField() == "instrument_name":
-                currentValue = event.settingsDialog.GetInstrumentName()
-            elif settingsValidation.GetField() == "facility_name":
+            if settingsValidation.GetField() == "facility_name":
                 currentValue = event.settingsDialog.GetFacilityName()
             elif settingsValidation.GetField() == "mytardis_url":
                 currentValue = event.settingsDialog.GetMyTardisUrl()
@@ -593,13 +574,9 @@ def ProvideSettingsValidationResults(event):
             else:
                 sys.stderr.write("%s\n" % message)
                 sys.stderr.write("Assuming it's OK to use suggestion.\n")
-                okToUseSuggestion = True
+                okToUseSuggestion = wx.ID_OK
             if okToUseSuggestion == wx.ID_OK:
-                if settingsValidation.GetField() == "instrument_name":
-                    event.settingsDialog\
-                        .SetInstrumentName(settingsValidation
-                                           .GetSuggestion())
-                elif settingsValidation.GetField() == "facility_name":
+                if settingsValidation.GetField() == "facility_name":
                     event.settingsDialog.SetFacilityName(settingsValidation
                                                          .GetSuggestion())
                 elif settingsValidation.GetField() == "mytardis_url":
@@ -678,15 +655,12 @@ def ProvideSettingsValidationResults(event):
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
+        else:
+            sys.stderr.write("\n%s\n" % message)
 
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")
-    # pylint: disable=bare-except
     try:
-        # Now is a good time to define the MyData instances's uploader
-        # model object, which will generate a UUID if necessary.
-        # The UUID will be saved to disk along with the settings from
-        # the settings dialog.
         uploaderModel = UploaderModel(event.settingsModel)
         event.settingsModel.SetUploaderModel(uploaderModel)
 
@@ -701,7 +675,8 @@ def ProvideSettingsValidationResults(event):
         event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
                                                  configPath=configPath,
                                                  saveToDisk=True)
-        event.settingsDialog.EndModal(wx.ID_OK)
+        if wx.PyApp.IsMainLoopRunning():
+            event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
         logger.debug("Closed Settings dialog.")
 

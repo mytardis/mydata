@@ -99,7 +99,7 @@ class OpenSSH(object):
                 try:
                     baseDir = \
                         os.path.dirname(pkgutil.get_loader("mydata").filename)
-                except:  # pylint: disable=bare-except
+                except:
                     baseDir = os.getcwd()
             self.ssh = os.path.join(baseDir, self.opensshBuildDir,
                                     "bin", "ssh.exe")
@@ -202,7 +202,6 @@ class KeyPair(object):
                                "while trying to read public key.")
 
     def Delete(self):
-        # pylint: disable=bare-except
         try:
             os.unlink(self.privateKeyFilePath)
             if self.publicKeyFilePath is not None:
@@ -224,6 +223,25 @@ class KeyPair(object):
         and key type.  This only works if the public key file exists.
         If the public key file doesn't exist, we will generate it from
         the private key file using "ssh-keygen -y -f privateKeyFile".
+
+        On Windows, we're using OpenSSH 7.1p1, and since OpenSSH
+        version 6.8, ssh-keygen requires -E md5 to get the fingerprint
+        in the old MD5 Hexadecimal format.
+        http://www.openssh.com/txt/release-6.8
+        Eventually we could switch to the new format, but then MyTardis
+        administrators would need to re-approve Uploader Registration
+        Requests because of the fingerprint mismatches.
+        See the UploaderModel class's ExistingUploadToStagingRequest
+        method in mydata.models.uploader
+
+        On Mac OS X, passing the entire command string (with arguments)
+        to subprocess, rather than a list requires using "shell=True",
+        otherwise Python will check whether the "file", e.g.
+        "/usr/bin/ssh-keygen -yl -f ~/.ssh/MyData" exists
+        which of course it doesn't.  Passing a command list on the
+        other hand is problematic on Windows where Python's automatic
+        quoting to convert the command list to a command doesn't always
+        work as desired.
         """
         if not os.path.exists(self.privateKeyFilePath):
             raise PrivateKeyDoesNotExist("Couldn't find valid private key in "
@@ -238,15 +256,6 @@ class KeyPair(object):
         if sys.platform.startswith('win'):
             quotedPrivateKeyFilePath = \
                 OPENSSH.DoubleQuote(GetCygwinPath(self.privateKeyFilePath))
-            # On Windows, we're using OpenSSH 7.1p1, and since OpenSSH
-            # version 6.8, ssh-keygen requires -E md5 to get the fingerprint
-            # in the old MD5 Hexadecimal format.
-            # http://www.openssh.com/txt/release-6.8
-            # Eventually we could switch to the new format, but then MyTardis
-            # administrators would need to re-approve Uploader Registration
-            # Requests because of the fingerprint mismatches.
-            # See the UploaderModel class's ExistingUploadToStagingRequest
-            # method in mydata.models.uploader
             cmdList = [OPENSSH.DoubleQuote(OPENSSH.sshKeyGen), "-E", "md5",
                        "-yl", "-f", quotedPrivateKeyFilePath]
         else:
@@ -256,14 +265,6 @@ class KeyPair(object):
                        "-yl", "-f", quotedPrivateKeyFilePath]
         cmd = " ".join(cmdList)
         logger.debug(cmd)
-        # On Mac OS X, passing the entire command string (with arguments)
-        # to subprocess, rather than a list requires using "shell=True",
-        # otherwise Python will check whether the "file", e.g.
-        # "/usr/bin/ssh-keygen -yl -f ~/.ssh/MyData" exists
-        # which of course it doesn't.  Passing a command list on the
-        # other hand is problematic on Windows where Python's automatic
-        # quoting to convert the command list to a command doesn't always
-        # work as desired.
         proc = subprocess.Popen(cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
@@ -298,28 +299,6 @@ class KeyPair(object):
         if self.keyType is None:
             self.fingerprint, self.keyType = self.ReadFingerprintAndKeyType()
         return self.keyType
-
-
-def ListKeyPairs(keyPath=None):
-    if keyPath is None:
-        keyPath = os.path.join(os.path.expanduser('~'), ".ssh")
-    filesInKeyPath = [f for f in os.listdir(keyPath)
-                      if os.path.isfile(os.path.join(keyPath, f))]
-    keyPairs = []
-    for potentialKeyFile in filesInKeyPath:
-        with open(os.path.join(keyPath, potentialKeyFile)) as keyFile:
-            for line in keyFile:
-                if re.search(r"BEGIN .* PRIVATE KEY", line):
-                    privateKeyFilePath = os.path.join(keyPath,
-                                                      potentialKeyFile)
-                    publicKeyFilePath = os.path.join(keyPath,
-                                                     potentialKeyFile + ".pub")
-                    if not os.path.exists(publicKeyFilePath):
-                        publicKeyFilePath = None
-                    keyPairs.append(KeyPair(privateKeyFilePath,
-                                            publicKeyFilePath))
-                    break
-    return keyPairs
 
 
 def FindKeyPair(keyName="MyData", keyPath=None):
@@ -455,9 +434,63 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                                          foldersController, uploadModel)
 
 
-def UploadFileFromPosixSystem(filePath, fileSize, username,
-                              privateKeyFilePath, host, port,
-                              remoteFilePath, progressCallback,
+def MonitorProgress(foldersController, progressPollInterval, uploadModel,
+                    fileSize, monitoringProgress, progressCallback):
+    """
+    Monitor progress via RESTful queries.
+    """
+    settingsModel = foldersController.settingsModel
+    if foldersController.IsShuttingDown() or \
+            (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
+             uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
+        return
+    timer = threading.Timer(progressPollInterval, MonitorProgress,
+                            args=[foldersController, progressPollInterval,
+                                  uploadModel, fileSize, monitoringProgress,
+                                  progressCallback])
+    timer.start()
+    if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
+        return
+    if monitoringProgress.isSet():
+        return
+    monitoringProgress.set()
+    dfoId = uploadModel.GetDfoId()
+    if dfoId is None:
+        dataFileId = uploadModel.GetDataFileId()
+        if dataFileId is not None:
+            try:
+                dataFile = \
+                    DataFileModel.GetDataFileFromId(settingsModel,
+                                                    dataFileId)
+                dfoId = dataFile.GetReplicas()[0].GetId()
+                uploadModel.SetDfoId(dfoId)
+            except DoesNotExist:
+                # If the DataFile ID reported in the location header
+                # after POSTing to the API doesn't exist yet, don't
+                # worry, just check again later.
+                pass
+            except IndexError:
+                # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
+                # don't worry, just check again later.
+                pass
+    if dfoId:
+        try:
+            bytesUploaded = \
+                ReplicaModel.CountBytesUploadedToStaging(settingsModel,
+                                                         dfoId)
+            latestUpdateTime = datetime.now()
+            # If this file already has a partial upload in staging,
+            # progress and speed estimates can be misleading.
+            uploadModel.SetLatestTime(latestUpdateTime)
+            uploadModel.SetBytesUploaded(bytesUploaded)
+            progressCallback(bytesUploaded, fileSize)
+        except MissingMyDataReplicaApiEndpoint:
+            timer.cancel()
+    monitoringProgress.clear()
+
+
+def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
+                              host, port, remoteFilePath, progressCallback,
                               foldersController, uploadModel):
     """
     Upload file using SCP.
@@ -466,59 +499,14 @@ def UploadFileFromPosixSystem(filePath, fileSize, username,
     # pylint: disable=too-many-statements
     settingsModel = foldersController.settingsModel
     cipher = settingsModel.GetCipher()
-
     progressPollInterval = settingsModel.GetProgressPollInterval()
     monitoringProgress = threading.Event()
-
     uploadModel.SetStartTime(datetime.now())
-
-    def MonitorProgress():
-        if foldersController.IsShuttingDown() or \
-                (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
-                 uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
-            return
-        timer = threading.Timer(progressPollInterval, MonitorProgress)
-        timer.start()
-        if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
-            return
-        if monitoringProgress.isSet():
-            return
-        monitoringProgress.set()
-        dfoId = uploadModel.GetDfoId()
-        if dfoId is None:
-            dataFileId = uploadModel.GetDataFileId()
-            if dataFileId is not None:
-                try:
-                    dataFile = \
-                        DataFileModel.GetDataFileFromId(settingsModel,
-                                                        dataFileId)
-                    dfoId = dataFile.GetReplicas()[0].GetId()
-                    uploadModel.SetDfoId(dfoId)
-                except DoesNotExist:
-                    # If the DataFile ID reported in the location header
-                    # after POSTing to the API doesn't exist yet, don't
-                    # worry, just check again later.
-                    pass
-                except IndexError:
-                    # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
-                    # don't worry, just check again later.
-                    pass
-        if dfoId:
-            try:
-                bytesUploaded = \
-                    ReplicaModel.CountBytesUploadedToStaging(settingsModel,
-                                                             dfoId)
-                latestUpdateTime = datetime.now()
-                # If this file already has a partial upload in staging,
-                # progress and speed estimates can be misleading.
-                uploadModel.SetLatestTime(latestUpdateTime)
-                uploadModel.SetBytesUploaded(bytesUploaded)
-                progressCallback(bytesUploaded, fileSize)
-            except MissingMyDataReplicaApiEndpoint:
-                timer.cancel()
-        monitoringProgress.clear()
-    MonitorProgress()
-
+    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+                    fileSize, monitoringProgress, progressCallback)
+    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
+    remoteFilePath = \
+        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -634,8 +622,7 @@ REMOTE_DIRS_CREATED = dict()
 
 def UploadFileFromWindows(filePath, fileSize, username,
                           privateKeyFilePath, host, port, remoteFilePath,
-                          progressCallback,
-                          foldersController, uploadModel):
+                          progressCallback, foldersController, uploadModel):
     """
     Upload file using SCP.
     """
@@ -643,59 +630,14 @@ def UploadFileFromWindows(filePath, fileSize, username,
     uploadModel.SetStartTime(datetime.now())
     settingsModel = foldersController.settingsModel
     maxThreads = settingsModel.GetMaxUploadThreads()
-
     progressPollInterval = settingsModel.GetProgressPollInterval()
     monitoringProgress = threading.Event()
-
-    def MonitorProgress():
-        if foldersController.IsShuttingDown() or \
-                (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
-                 uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
-            return
-        timer = threading.Timer(progressPollInterval, MonitorProgress)
-        timer.start()
-        if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
-            return
-        if monitoringProgress.isSet():
-            return
-        monitoringProgress.set()
-        dfoId = uploadModel.GetDfoId()
-        if dfoId is None:
-            dataFileId = uploadModel.GetDataFileId()
-            if dataFileId is not None:
-                try:
-                    dataFile = \
-                        DataFileModel.GetDataFileFromId(settingsModel,
-                                                        dataFileId)
-                    dfoId = dataFile.GetReplicas()[0].GetId()
-                    uploadModel.SetDfoId(dfoId)
-                except DoesNotExist:
-                    # If the DataFile ID reported in the location header
-                    # after POSTing to the API doesn't exist yet, don't
-                    # worry, just check again later.
-                    pass
-                except IndexError:
-                    # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
-                    # don't worry, just check again later.
-                    pass
-        if dfoId:
-            try:
-                bytesUploaded = \
-                    ReplicaModel.CountBytesUploadedToStaging(settingsModel,
-                                                             dfoId)
-                latestUpdateTime = datetime.now()
-                # If this file already has a partial upload in staging,
-                # progress and speed estimates can be misleading.
-                uploadModel.SetLatestTime(latestUpdateTime)
-                uploadModel.SetBytesUploaded(bytesUploaded)
-                progressCallback(bytesUploaded, fileSize)
-            except MissingMyDataReplicaApiEndpoint:
-                timer.cancel()
-        monitoringProgress.clear()
-    MonitorProgress()
-
+    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+                    fileSize, monitoringProgress, progressCallback)
     cipher = settingsModel.GetCipher()
-
+    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
+    remoteFilePath = \
+        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -780,6 +722,7 @@ def GetCygwinPath(path):
         raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
                         "a valid path." % path)
 
+
 def CleanUpSshProcesses(settingsModel):
     """
     SCP can leave orphaned SSH processes which need to be cleaned up.
@@ -801,7 +744,7 @@ def CleanUpSshProcesses(settingsModel):
                         # the absolute path of the SSH binary bundled
                         # with MyData.
                         proc.kill()
-                except:  # pylint: disable=bare-except
+                except:
                     pass
         except psutil.AccessDenied:
             pass

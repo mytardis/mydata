@@ -3,9 +3,9 @@ Represents the Tasks tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 
-# pylint: disable=missing-docstring
 # pylint: disable=wrong-import-position
 
+import sys
 import threading
 import traceback
 from datetime import datetime
@@ -34,10 +34,6 @@ class TasksModel(DataViewIndexListModel):
         self.settingsModel = settingsModel
         self.tasksData = list()
         DataViewIndexListModel.__init__(self, len(self.tasksData))
-        self.unfilteredTasksData = self.tasksData
-        self.filteredTasksData = list()
-        self.filtered = False
-        self.searchString = ""
         self.columnNames = ("Id", "Job", "Start Time", "Finish Time",
                             "Schedule Type", "Interval (minutes)")
         self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
@@ -48,57 +44,6 @@ class TasksModel(DataViewIndexListModel):
         # It may no longer exist, i.e. if we delete the row with the
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
-
-    def Filter(self, searchString):
-        # pylint: disable=too-many-branches
-        self.searchString = searchString
-        query = self.searchString.lower()
-        if not self.filtered:
-            # This only does a shallow copy:
-            self.unfilteredTasksData = list(self.tasksData)
-
-        for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.tasksData[row].GetJobDesc().lower():
-                self.filteredTasksData.append(self.tasksData[row])
-                del self.tasksData[row]
-                # notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                self.filtered = True
-
-        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            ftd = self.filteredTasksData[filteredRow]
-            if query in ftd.GetJobDesc().lower():
-                # Model doesn't care about currently sorted column.
-                # Always use ID.
-                row = 0
-                col = 0
-                # Need to get current sort direction
-                ascending = True
-                while row < self.GetRowCount() and \
-                        self.CompareTaskRecords(self.tasksData[row],
-                                                ftd, col, ascending) < 0:
-                    row += 1
-
-                if row == self.GetRowCount():
-                    self.tasksData.append(ftd)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowAppended()
-                    else:
-                        wx.CallAfter(self.RowAppended)
-                else:
-                    self.tasksData.insert(row, ftd)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowInserted(row)
-                    else:
-                        wx.CallAfter(self.RowInserted, row)
-                del self.filteredTasksData[filteredRow]
-                if self.GetFilteredRowCount() == 0:
-                    self.filtered = False
 
     def GetColumnType(self, col):
         """
@@ -137,27 +82,23 @@ class TasksModel(DataViewIndexListModel):
             value += ")"
         return str(value)
 
-    def GetValuesForColname(self, colname):
-        values = []
-        col = -1
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                break
-        if col == self.GetColumnCount():
-            return None
-
-        for row in range(0, self.GetRowCount()):
-            values.append(self.GetValueByRow(row, col))
-        return values
-
     def GetColumnName(self, col):
+        """
+        Get column name.
+        """
         # pylint: disable=arguments-differ
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
+        """
+        Get column key name.
+        """
         return self.columnKeys[col]
 
     def GetDefaultColumnWidth(self, col):
+        """
+        Get default column width.
+        """
         return self.defaultColumnWidths[col]
 
     def GetRowCount(self):
@@ -166,12 +107,6 @@ class TasksModel(DataViewIndexListModel):
         """
         # pylint: disable=arguments-differ
         return len(self.tasksData)
-
-    def GetUnfilteredRowCount(self):
-        return len(self.unfilteredTasksData)
-
-    def GetFilteredRowCount(self):
-        return len(self.filteredTasksData)
 
     def GetColumnCount(self):
         """
@@ -197,39 +132,10 @@ class TasksModel(DataViewIndexListModel):
         # pylint: disable=no-self-use
         return False
 
-    # This is called to assist with sorting the data in the view.  The
-    # first two args are instances of the DataViewItem class, so we
-    # need to convert them to row numbers with the GetRow method.
-    # Then it's just a matter of fetching the right values from our
-    # data set and comparing them.  The return value is -1, 0, or 1,
-    # just like Python's cmp() function.
-    def Compare(self, item1, item2, col, ascending):
-        # pylint: disable=arguments-differ
-        # Swap sort order?
-        if not ascending:
-            item2, item1 = item1, item2
-        row1 = self.GetRow(item1)
-        row2 = self.GetRow(item2)
-        if col == 0:
-            return cmp(int(self.GetValueByRow(row1, col)),
-                       int(self.GetValueByRow(row2, col)))
-        else:
-            return cmp(self.GetValueByRow(row1, col),
-                       self.GetValueByRow(row2, col))
-
-    # Unlike the previous Compare method, in this case, the task records
-    # don't need to be visible in the current (possibly filtered) data view.
-    def CompareTaskRecords(self, taskRecord1, taskRecord2, col, ascending):
-        if not ascending:
-            taskRecord2, taskRecord1 = taskRecord1, taskRecord2
-        if col == 0 or col == 3:
-            return cmp(int(taskRecord1.GetDataViewId()),
-                       int(taskRecord2.GetDataViewId()))
-        else:
-            return cmp(taskRecord1.GetValueForKey(self.columnKeys[col]),
-                       taskRecord2.GetValueForKey(self.columnKeys[col]))
-
     def DeleteAllRows(self):
+        """
+        Delete all rows.
+        """
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             self.tasksData[row].Cancel()
@@ -242,19 +148,10 @@ class TasksModel(DataViewIndexListModel):
         else:
             wx.CallAfter(self.RowsDeleted, rowsDeleted)
 
-        self.unfilteredTasksData = list()
-        self.filteredTasksData = list()
-        self.filtered = False
-        self.searchString = ""
-        # self.maxDataViewId = 0
-
-    def GetTaskById(self, dataViewId):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredTasksData[row].GetId() == dataViewId:
-                return self.unfilteredTasksData[row]
-        return None
-
     def GetMaxDataViewIdFromExistingRows(self):
+        """
+        Get maximum dataview ID from existing rows.
+        """
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
             if self.tasksData[row].GetDataViewId() > maxDataViewId:
@@ -262,12 +159,21 @@ class TasksModel(DataViewIndexListModel):
         return maxDataViewId
 
     def GetMaxDataViewId(self):
+        """
+        Get maximum dataview ID.
+        """
         if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
     def TryRowValueChanged(self, row, col):
-        # pylint: disable=bare-except
+        """
+        Use try/except when calling RowValueChanged, because
+        sometimes there are timing issues which raise wx
+        assertions suggesting that the row index we are trying
+        to report a change on is greater than or equal to the
+        total number of rows in the model.
+        """
         try:
             if row < self.GetCount():
                 self.RowValueChanged(row, col)
@@ -281,7 +187,6 @@ class TasksModel(DataViewIndexListModel):
 
     def AddRow(self, taskModel):
         """ Add a task to the Tasks view and activate it. """
-        self.Filter("")
         self.tasksData.append(taskModel)
         # Ensure that we save the largest ID used so far:
         self.GetMaxDataViewId()
@@ -292,9 +197,16 @@ class TasksModel(DataViewIndexListModel):
             wx.CallAfter(self.RowAppended)
 
         def JobFunc(taskModel, tasksModel, row, col):
+            """
+            Runs TaskJobFunc in a thread.
+            """
             # pylint: disable=too-many-statements
 
             def TaskJobFunc():
+                """
+                Runs taskModel.GetJobFunc() and schedules the task to repeat
+                according to the schedule type.
+                """
                 assert callable(taskModel.GetJobFunc())
                 title = "Starting"
                 message = taskModel.GetJobDesc()
@@ -304,7 +216,10 @@ class TasksModel(DataViewIndexListModel):
                 title = "Finished"
                 message = taskModel.GetJobDesc()
                 Notification.Notify(message, title=title)
-                wx.CallAfter(tasksModel.TryRowValueChanged, row, col)
+                if wx.PyApp.IsMainLoopRunning():
+                    wx.CallAfter(tasksModel.TryRowValueChanged, row, col)
+                else:
+                    tasksModel.TryRowValueChanged(row, col)
                 scheduleType = taskModel.GetScheduleType()
                 if scheduleType == "Timer":
                     intervalMinutes = taskModel.GetIntervalMinutes()
@@ -321,13 +236,16 @@ class TasksModel(DataViewIndexListModel):
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
                         .format(d=newStartTime)
-                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                                 "The \"%s\" task is scheduled "
-                                 "to run at %s on %s "
-                                 "(recurring every %d minutes)"
-                                 % (taskModel.GetJobDesc(),
-                                    timeString, dateString, intervalMinutes))
-                    tasksModel.AddRow(newTaskModel)
+                    msg = ("The \"%s\" task is scheduled "
+                           "to run at %s on %s "
+                           "(recurring every %d minutes)"
+                           % (taskModel.GetJobDesc(),
+                              timeString, dateString, intervalMinutes))
+                    if wx.PyApp.IsMainLoopRunning():
+                        wx.CallAfter(wx.GetApp().frame.SetStatusMessage, msg)
+                        tasksModel.AddRow(newTaskModel)
+                    else:
+                        sys.stderr.write("%s\n" % msg)
                 elif scheduleType == "Daily":
                     newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
                     newStartTime = taskModel.GetStartTime() + \
@@ -341,13 +259,16 @@ class TasksModel(DataViewIndexListModel):
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
                         .format(d=newStartTime)
-                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                                 "The \"%s\" task is scheduled "
-                                 "to run at %s on %s "
-                                 "(recurring daily)"
-                                 % (taskModel.GetJobDesc(),
-                                    timeString, dateString))
-                    tasksModel.AddRow(newTaskModel)
+                    msg = ("The \"%s\" task is scheduled "
+                           "to run at %s on %s "
+                           "(recurring daily)"
+                           % (taskModel.GetJobDesc(),
+                              timeString, dateString))
+                    if wx.PyApp.IsMainLoopRunning():
+                        wx.CallAfter(wx.GetApp().frame.SetStatusMessage, msg)
+                        tasksModel.AddRow(newTaskModel)
+                    else:
+                        sys.stderr.write("%s\n" % msg)
                 elif scheduleType == "Weekly":
                     newTaskDataViewId = tasksModel.GetMaxDataViewId() + 1
                     newStartTime = taskModel.GetStartTime() + \
@@ -365,13 +286,16 @@ class TasksModel(DataViewIndexListModel):
                     timeString = newStartTime.strftime("%I:%M:%S %p")
                     dateString = "{d:%A} {d.day}/{d.month}/{d.year}"\
                         .format(d=newStartTime)
-                    wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                                 "The \"%s\" task is scheduled "
-                                 "to run at %s on %s "
-                                 "(recurring on specified days)"
-                                 % (taskModel.GetJobDesc(),
-                                    timeString, dateString))
-                    tasksModel.AddRow(newTaskModel)
+                    msg = ("The \"%s\" task is scheduled "
+                           "to run at %s on %s "
+                           "(recurring on specified days)"
+                           % (taskModel.GetJobDesc(),
+                              timeString, dateString))
+                    if wx.PyApp.IsMainLoopRunning():
+                        wx.CallAfter(wx.GetApp().frame.SetStatusMessage, msg)
+                        tasksModel.AddRow(newTaskModel)
+                    else:
+                        sys.stderr.write("%s\n" % msg)
 
             app = wx.GetApp()
             if not app.ShouldAbort():
@@ -404,6 +328,9 @@ class TasksModel(DataViewIndexListModel):
         args = [taskModel, self, row, col]
 
         def ScheduleTask():
+            """
+            Schedule task, using wx.CallLater.
+            """
             callLater = wx.CallLater(millis, JobFunc, *args)
             taskModel.SetCallLater(callLater)
 
@@ -412,10 +339,9 @@ class TasksModel(DataViewIndexListModel):
         else:
             JobFunc(*args)
 
-        self.unfilteredTasksData = self.tasksData
-        self.filteredTasksData = list()
-        self.Filter(self.searchString)
-
     def ShutDown(self):
+        """
+        Shut down all tasks.
+        """
         for task in self.tasksData:
             task.GetCallLater().Stop()

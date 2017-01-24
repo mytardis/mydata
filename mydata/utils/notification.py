@@ -35,7 +35,7 @@ class Notification(object):
                 stdout, _ = proc.communicate()
                 if proc.returncode != 0:
                     logger.error(stdout)
-            except:  # pylint: disable=bare-except
+            except:
                 sys.stderr.write(message + "\n")
             return
         executable = "MyData Notifications"

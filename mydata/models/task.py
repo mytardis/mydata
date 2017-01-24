@@ -1,5 +1,5 @@
 """
-Model for reprenting a scheduled task (a.k.a. job), as listed
+Model for representing a scheduled task (a.k.a. job), as listed
 in the Tasks view of MyData's main window.
 """
 
@@ -82,7 +82,4 @@ class TaskModel(object):
             self.callLater.Stop()
 
     def GetValueForKey(self, key):
-        if self.__dict__[key]:
-            return self.__dict__[key]
-        else:
-            return None
+        return self.__dict__[key]

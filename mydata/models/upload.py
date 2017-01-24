@@ -87,9 +87,12 @@ class UploadModel(object):
         if self.bytesUploaded and self.latestTime:
             elapsedTime = self.latestTime - self.startTime
             if elapsedTime.total_seconds():
-                self.speed = "%3.1f MB/s" % \
-                    (float(self.bytesUploaded) / 1000000.0
-                     / elapsedTime.total_seconds())
+                speedMBs = (float(self.bytesUploaded) / 1000000.0
+                            / elapsedTime.total_seconds())
+                if speedMBs >= 1.0:
+                    self.speed = "%3.1f MB/s" % speedMBs
+                else:
+                    self.speed = "%3.1f KB/s" % (speedMBs * 1000.0)
 
     def GetBytesUploadedPreviously(self):
         return self.bytesUploadedPreviously
@@ -128,9 +131,12 @@ class UploadModel(object):
         if self.bytesUploaded and self.latestTime:
             elapsedTime = self.latestTime - self.startTime
             if elapsedTime.total_seconds():
-                self.speed = "%3.1f MB/s" % \
-                    (float(self.bytesUploaded) / 1000000.0
-                     / elapsedTime.total_seconds())
+                speedMBs = (float(self.bytesUploaded) / 1000000.0
+                            / elapsedTime.total_seconds())
+                if speedMBs >= 1.0:
+                    self.speed = "%3.1f MB/s" % speedMBs
+                else:
+                    self.speed = "%3.1f KB/s" % (speedMBs * 1000.0)
 
     def GetTraceback(self):
         return self.traceback
@@ -157,10 +163,7 @@ class UploadModel(object):
         self.bufferedReader = bufferedReader
 
     def GetScpUploadProcessPid(self):
-        if hasattr(self, "scpUploadProcessPid"):
-            return self.scpUploadProcessPid
-        else:
-            return None
+        return getattr(self, "scpUploadProcessPid", None)
 
     def SetScpUploadProcessPid(self, scpUploadProcessPid):
         self.scpUploadProcessPid = scpUploadProcessPid
@@ -177,7 +180,7 @@ class UploadModel(object):
             if self.verificationTimer:
                 try:
                     self.verificationTimer.cancel()
-                except:  # pylint: disable=bare-except
+                except:
                     logger.error(traceback.format_exc())
             if self.bufferedReader is not None:
                 self.bufferedReader.close()
@@ -189,7 +192,7 @@ class UploadModel(object):
                     os.kill(self.scpUploadProcessPid, signal.SIGABRT)
                 else:
                     os.kill(self.scpUploadProcessPid, signal.SIGKILL)
-        except:  # pylint: disable=bare-except
+        except:
             logger.warning(traceback.format_exc())
 
     def SetFileSize(self, fileSize):

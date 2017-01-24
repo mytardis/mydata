@@ -11,6 +11,7 @@ from BaseHTTPServer import HTTPServer
 import requests
 import wx
 
+from mydata.events import MYDATA_EVENTS
 from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
@@ -36,6 +37,7 @@ class ScanGroupExpDatasetTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanGroupExpDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
 
     def tearDown(self):
@@ -78,7 +80,7 @@ class ScanGroupExpDatasetTester(unittest.TestCase):
                                        str(err)))
 
         settingsValidation = settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
         foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
@@ -96,18 +98,18 @@ class ScanGroupExpDatasetTester(unittest.TestCase):
             return False
 
         foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
-        assert sorted(groupsModel.GetValuesForColname("Full Name")) == \
-            ["TestFacility-Group1", "TestFacility-Group2"]
+        self.assertEqual(sorted(groupsModel.GetValuesForColname("Full Name")),
+                         ["TestFacility-Group1", "TestFacility-Group2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).GetFolder())
-        assert sorted(folders) == ["Birds", "Flowers"]
+        self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        assert numFiles == 5
+        self.assertEqual(numFiles, 5)
 
     def StartFakeMyTardisServer(self):
         """

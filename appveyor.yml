@@ -71,9 +71,10 @@ build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
   - "%CMD_IN_ENV% pip install pylint"
-  - "%CMD_IN_ENV% pylint --rcfile=.pylintrc mydata"
+  - "pylint --rcfile=.pylintrc mydata"
 
-  - "%CMD_IN_ENV% python setup.py nosetests"
+  - "SET MYDATA_DEBUG_LOG_PATH=."
+  - "python setup.py nosetests"
 
   - "SET CI_NAME=AppVeyor"
   - "SET CI_BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%"
@@ -83,13 +84,10 @@ test_script:
 
 after_test:
   # If tests are successful, create binary packages for the project.
-  # - "%CMD_IN_ENV% python setup.py build unsigned"
-  - "%CMD_IN_ENV% python setup.py bdist unsigned"
-  # - "%CMD_IN_ENV% python setup.py bdist_wheel"
-  # - "%CMD_IN_ENV% python setup.py bdist_wininst"
-  # - "%CMD_IN_ENV% python setup.py bdist_msi"
+  - "python setup.py bdist unsigned"
   - ps: "ls dist"
 
 artifacts:
-  # Archive the generated packages in the ci.appveyor.com build report.
+  # These can be downloaded after the build is complete:
+  - path: .MyData_debug_log.txt
   - path: dist\*.exe

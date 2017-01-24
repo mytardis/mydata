@@ -49,15 +49,9 @@ class ReplicaModel(object):
         Count bytes uploaded to staging.
         """
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
         url = "%s/api/v1/mydata_replica/%s/?format=json" \
             % (myTardisUrl, dfoId)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
+        headers = settingsModel.GetDefaultHeaders()
         response = requests.get(url=url, headers=headers)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:

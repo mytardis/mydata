@@ -11,6 +11,7 @@ from BaseHTTPServer import HTTPServer
 import requests
 import wx
 
+from mydata.events import MYDATA_EVENTS
 from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
@@ -36,6 +37,7 @@ class ScanUserGroupInstrumentTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanUserGroupInstrumentTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
 
     def tearDown(self):
@@ -63,8 +65,8 @@ class ScanUserGroupInstrumentTester(unittest.TestCase):
         settingsModel.SetMyTardisUrl(
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
         validation = settingsModel.CheckStructureAndCountDatasets()
-        assert validation.IsValid()
-        assert validation.GetDatasetCount() == 8
+        self.assertTrue(validation.IsValid())
+        self.assertEqual(validation.GetDatasetCount(), 8)
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
@@ -81,7 +83,7 @@ class ScanUserGroupInstrumentTester(unittest.TestCase):
                                        str(err)))
 
         settingsValidation = settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
         foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
@@ -99,20 +101,20 @@ class ScanUserGroupInstrumentTester(unittest.TestCase):
             return False
 
         foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
-        assert sorted(groupsModel.GetValuesForColname("Full Name")) == \
-            ["TestFacility-Group1", "TestFacility-Group2"]
+        self.assertEqual(sorted(groupsModel.GetValuesForColname("Full Name")),
+                         ["TestFacility-Group1", "TestFacility-Group2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).GetFolder())
-        assert sorted(folders) == [
+        self.assertEqual(sorted(folders), [
             'Dataset 001', 'Dataset 002', 'Dataset 003', 'Dataset 004',
-            'Dataset 005', 'Dataset 006', 'Dataset 007', 'Dataset 008']
+            'Dataset 005', 'Dataset 006', 'Dataset 007', 'Dataset 008'])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        assert numFiles == 8
+        self.assertEqual(numFiles, 8)
 
     def StartFakeMyTardisServer(self):
         """

@@ -1,6 +1,7 @@
 """
 Miscellaneous utility functions.
 """
+import sys
 
 import psutil
 import wx
@@ -96,3 +97,10 @@ def EndBusyCursorIfRequired(event=None):
                 not in str(err):
             logger.warning(str(err))
             raise
+
+def ConvertToUtf8(string):
+    """
+    Convert string to UTF-8
+    """
+    sysEncoding = sys.getfilesystemencoding()
+    return unicode(string.decode(sysEncoding)).encode('utf-8')

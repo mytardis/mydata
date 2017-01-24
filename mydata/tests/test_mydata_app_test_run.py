@@ -14,6 +14,7 @@ import wx
 import requests
 
 from mydata.MyData import MyData
+from mydata.events import MYDATA_EVENTS
 from mydata.models.settings import SettingsModel
 from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
 from mydata.tests.utils import GetEphemeralPort
@@ -75,11 +76,43 @@ class MyDataAppInstanceTester(unittest.TestCase):
                                        str(err)))
 
         settingsValidation = self.settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
                                 settingsModel=self.settingsModel)
-        menu = self.mydataApp.taskBarIcon.CreatePopupMenu()
-        menu.Destroy()
+
+        popupMenu = self.mydataApp.taskBarIcon.CreatePopupMenu()
+
+        # Just for test coverage:
+        self.mydataApp.LogOnRefreshCaller(event=None, jobId=1)
+        self.mydataApp.LogOnRefreshCaller(event=None, jobId=None)
+        pyEvent = wx.PyEvent()
+        jobId = None
+        pyEvent.SetId(self.mydataApp.settingsTool.GetId())
+        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        pyEvent.SetId(self.mydataApp.uploadTool.GetId())
+        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        # Requires popupMenu (defined above):
+        pyEvent.SetId(self.mydataApp.taskBarIcon.GetSyncNowMenuItem().GetId())
+        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        mydataEvent = MYDATA_EVENTS.ValidateSettingsForRefreshEvent()
+        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        mydataEvent = MYDATA_EVENTS.SettingsValidationCompleteEvent()
+        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        mydataEvent = MYDATA_EVENTS.ShutdownForRefreshCompleteEvent()
+        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        mydataEvent = MYDATA_EVENTS.SettingsValidationCompleteEvent()
+        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        pyEvent = wx.PyEvent()
+        pyEvent.SetEventType(12345)
+        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+
+        popupMenu.Destroy()
+
+        # Test opening webpages using fake MyTardis URL.
+        pyEvent = wx.PyEvent()
+        self.mydataApp.OnMyTardis(pyEvent)
+        self.mydataApp.OnAbout(pyEvent)
+
         # When running MyData without an event loop, this will block until complete:
         self.mydataApp.OnTestRunFromToolbar(event=wx.PyEvent())
 

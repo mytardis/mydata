@@ -102,15 +102,11 @@ class UserModel(object):
     @staticmethod
     def GetUserByUsername(settingsModel, username):
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
         try:
-            response = requests.get(url=url, headers=headers)
+            response = requests.get(url=url,
+                                    headers=settingsModel.GetDefaultHeaders())
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
@@ -126,7 +122,7 @@ class UserModel(object):
         if numUserRecordsFound == 0:
             raise DoesNotExist(
                 message="User \"%s\" was not found in MyTardis" % username,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found user record for username '" + username + "'.")
             return UserModel(settingsModel=settingsModel, username=username,
@@ -135,16 +131,12 @@ class UserModel(object):
     @staticmethod
     def GetUserByEmail(settingsModel, email):
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
 
         url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
-            urllib2.quote(email)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
+            urllib2.quote(email.encode('utf-8'))
         try:
-            response = requests.get(url=url, headers=headers)
+            response = requests.get(url=url,
+                                    headers=settingsModel.GetDefaultHeaders())
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
@@ -162,7 +154,7 @@ class UserModel(object):
             raise DoesNotExist(
                 message="User with email \"%s\" was not found in MyTardis"
                 % email,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found user record for email '" + email + "'.")
             return UserModel(settingsModel=settingsModel,

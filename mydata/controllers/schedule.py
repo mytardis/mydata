@@ -6,6 +6,7 @@ Functionality for scheduling tasks.
 
 from datetime import timedelta
 from datetime import datetime
+import sys
 import time
 
 import wx
@@ -14,6 +15,31 @@ from mydata.models.task import TaskModel
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.logs import logger
 
+def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
+    """
+    Task to be run according to the schedule.
+    """
+    app = wx.GetApp()
+    if wx.PyApp.IsMainLoopRunning():
+        wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+        while not app.Processing():
+            time.sleep(0.01)
+        wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+                     jobId, testRun)
+        while app.Processing():
+            time.sleep(0.01)
+    else:
+        app.OnRefresh(event, needToValidateSettings, jobId, testRun)
+
+
+def HandleValueError(err):
+    """
+    Handle ValueError when adding task to Tasks Model
+    """
+    if wx.PyApp.IsMainLoopRunning():
+        wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
+    else:
+        logger.error(str(err))
 
 class ScheduleController(object):
     """
@@ -29,8 +55,9 @@ class ScheduleController(object):
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
         """
-        logger.debug("Getting schedule type from settings dialog.")
+        logger.debug("runManually: %s" % str(runManually))
         scheduleType = self.settingsModel.GetScheduleType()
+        logger.debug("Schedule Type: %s" % scheduleType)
         if scheduleType == "On Startup" and \
                 self.settingsModel.GetLastSettingsUpdateTrigger() == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
@@ -58,28 +85,10 @@ class ScheduleController(object):
 
     def CreateOnStartupTask(self, event, needToValidateSettings):
         """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
+        Create a task to be run automatically when MyData is launched.
         """
         scheduleType = "On Startup"
         logger.debug("Schedule type is %s." % scheduleType)
-
-        def OnStartup(event, jobId):
-            """
-            Task to be run automatically when MyData is launched.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         # Wait a few seconds to give the user a chance to
         # read the initial MyData notification before
@@ -88,137 +97,85 @@ class ScheduleController(object):
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s" % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s" % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, OnStartup, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateOnSettingsSavedTask(self, event):
         """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
+        Create a task to run after the Settings dialog's OK button has been
+        pressed and settings have been validated.
         """
         scheduleType = "On Settings Saved"
         logger.debug("Schedule type is %s." % scheduleType)
-
-        def OnSettingsSaved(event, jobId):
-            """
-            Task to run after the Settings dialog's OK button has been
-            pressed and settings have been validated.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            needToValidateSettings = False
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         startTime = datetime.now() + timedelta(seconds=1)
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s" % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s" % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, OnSettingsSaved, jobArgs, jobDesc,
+        needToValidateSettings = False
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateManualTask(self, event, needToValidateSettings=True,
                          testRun=False):
         """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
+        Create a task to run when the user manually asks MyData to being
+        the data folder scans and uploads, usually by clicking the
+        Upload toolbar icon, or by selecting the task bar icon menu's
+        "Sync Now" menu item.
         """
         scheduleType = "Manual"
-
-        def RunTaskManually(event, jobId, needToValidateSettings=True):
-            """
-            Task to run when the user manually asks MyData to being the
-            data folder scans and uploads, usually by clicking the Refresh
-            toolbar icon, or by selecting the task bar icon menu's
-            "Sync Now" menu item.
-            """
-            app = wx.GetApp()
-            if wx.PyApp.IsMainLoopRunning():
-                wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-                while not app.Processing():
-                    time.sleep(0.01)
-                wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                             jobId, testRun)
-            else:
-                app.OnRefresh(event, needToValidateSettings, jobId, testRun)
-            if wx.PyApp.IsMainLoopRunning():
-                # Sleep this thread until the job is really
-                # finished, so we can determine the job's
-                # finish time.
-                while app.Processing():
-                    time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         startTime = datetime.now() + timedelta(seconds=1)
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s" % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s" % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId, needToValidateSettings]
-        task = TaskModel(taskDataViewId, RunTaskManually, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId, testRun]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateOnceTask(self, event, needToValidateSettings):
         """
-        Create and schedule task(s) according to the settings configured in
+        Create a task to be run once, on the date and time configured in
         the Schedule tab of the Settings dialog.
         """
         scheduleType = "Once"
         logger.debug("Schedule type is Once.")
-
-        def RunTaskOnce(event, jobId):
-            """
-            Run a task once, on the date and time configured in the
-            Schedule tab of the Settings dialog.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(self.settingsModel.GetScheduledDate(),
@@ -226,55 +183,40 @@ class ScheduleController(object):
         if startTime < datetime.now():
             delta = datetime.now() - startTime
             if delta.total_seconds() < 10:
-                startTime = datetime.now()
+                startTime = datetime.now() + timedelta(seconds=10)
             else:
                 message = "Scheduled time is in the past."
                 logger.error(message)
                 if self.settingsModel.GetLastSettingsUpdateTrigger() != \
                         LastSettingsUpdateTrigger.READ_FROM_DISK:
-                    wx.MessageBox(message, "MyData", wx.ICON_ERROR)
+                    if wx.PyApp.IsMainLoopRunning():
+                        wx.MessageBox(message, "MyData", wx.ICON_ERROR)
                 return
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s" % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s" % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, RunTaskOnce, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateDailyTask(self, event, needToValidateSettings):
         """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
+        Create a task to be run every day at the time specified
+        in the Schedule tab of the Settings dialog.
         """
         scheduleType = "Daily"
         logger.debug("Schedule type is Daily.")
-
-        def RunTaskDaily(event, jobId):
-            """
-            Run a task every day at the time specified
-            in the Schedule tab of the Settings dialog.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
@@ -284,19 +226,21 @@ class ScheduleController(object):
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s (recurring daily)"
-            % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s (recurring daily)"
+               % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, RunTaskDaily, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateWeeklyTask(self, event, needToValidateSettings):
         """
@@ -305,24 +249,6 @@ class ScheduleController(object):
         """
         scheduleType = "Weekly"
         logger.debug("Schedule type is Weekly.")
-
-        def RunTaskWeekly(event, jobId):
-            """
-            Run a task on the days (of the week) and time specified
-            in the Schedule tab of the Settings dialog.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         days = [self.settingsModel.IsMondayChecked(),
                 self.settingsModel.IsTuesdayChecked(),
@@ -342,46 +268,30 @@ class ScheduleController(object):
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s (recurring on specified days)"
-            % (jobDesc, timeString, dateString))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s (recurring on specified days)"
+               % (jobDesc, timeString, dateString))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, RunTaskWeekly, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType,
                          days=days)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)
 
     def CreateTimerTask(self, event, needToValidateSettings):
         """
-        Create and schedule task(s) according to the settings configured in
-        the Schedule tab of the Settings dialog.
+        Create a task to be run every n minutes, where n is the interval
+        specified in the Schedule tab of the Settings dialog.
         """
         scheduleType = "Timer"
         logger.debug("Schedule type is Timer.")
-
-        def RunTaskOnTimer(event, jobId):
-            """
-            Run a task every n minutes, where n is the interval
-            specified in the Schedule tab of the Settings dialog.
-            """
-            app = wx.GetApp()
-            wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
-            while not app.Processing():
-                time.sleep(0.01)
-            wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
-                         jobId)
-            # Sleep this thread until the job is really
-            # finished, so we can determine the job's
-            # finish time.
-            while app.Processing():
-                time.sleep(0.01)
-
         jobDesc = "Scan folders and upload datafiles"
         intervalMinutes = self.settingsModel.GetTimerMinutes()
         if self.settingsModel.GetLastSettingsUpdateTrigger() == \
@@ -393,17 +303,19 @@ class ScheduleController(object):
         timeString = startTime.strftime("%I:%M:%S %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
-        wx.GetApp().GetMainFrame().SetStatusMessage(
-            "The \"%s\" task is scheduled "
-            "to run at %s on %s (recurring every %d minutes)" %
-            (jobDesc, timeString, dateString, intervalMinutes))
+        msg = ("The \"%s\" task is scheduled "
+               "to run at %s on %s (recurring every %d minutes)" %
+               (jobDesc, timeString, dateString, intervalMinutes))
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, taskDataViewId]
-        task = TaskModel(taskDataViewId, RunTaskOnTimer, jobArgs, jobDesc,
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType,
                          intervalMinutes=intervalMinutes)
         try:
             self.tasksModel.AddRow(task)
         except ValueError, err:
-            wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
-            return
+            HandleValueError(err)

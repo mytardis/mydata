@@ -32,7 +32,7 @@ class FailedDataFileCreationTester(unittest.TestCase):
         except Unauthorized:
             raisedUnauthorized = True
         finally:
-            assert raisedUnauthorized
+            self.assertTrue(raisedUnauthorized)
         response.status_code = 404
         try:
             raisedDoesNotExist = False
@@ -41,7 +41,7 @@ class FailedDataFileCreationTester(unittest.TestCase):
         except DoesNotExist:
             raisedDoesNotExist = True
         finally:
-            assert raisedDoesNotExist
+            self.assertTrue(raisedDoesNotExist)
         response.status_code = 500
         try:
             raisedInternalServerError = False
@@ -50,7 +50,7 @@ class FailedDataFileCreationTester(unittest.TestCase):
         except InternalServerError:
             raisedInternalServerError = True
         finally:
-            assert raisedInternalServerError
+            self.assertTrue(raisedInternalServerError)
         # pylint: disable=protected-access
         response._content = '{"error_message": "Failed to create DataFile."}'
         try:
@@ -60,4 +60,4 @@ class FailedDataFileCreationTester(unittest.TestCase):
         except InternalServerError:
             raisedInternalServerError = True
         finally:
-            assert raisedInternalServerError
+            self.assertTrue(raisedInternalServerError)

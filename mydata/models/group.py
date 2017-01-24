@@ -64,14 +64,9 @@ class GroupModel(object):
     @staticmethod
     def GetGroupByName(settingsModel, name):
         myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
-
         url = myTardisUrl + "/api/v1/group/?format=json&name=" + \
-            urllib.quote(name)
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisUsername,
-                                               myTardisApiKey)}
+            urllib.quote(name.encode('utf-8'))
+        headers = settingsModel.GetDefaultHeaders()
         response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
             logger.debug("Failed to look up group record for name \"" +
@@ -84,7 +79,7 @@ class GroupModel(object):
         if numGroupsFound == 0:
             raise DoesNotExist(
                 message="Group \"%s\" was not found in MyTardis" % name,
-                url=url, response=response)
+                response=response)
         else:
             logger.debug("Found group record for name '" + name + "'.")
             return GroupModel(settingsModel=settingsModel, name=name,

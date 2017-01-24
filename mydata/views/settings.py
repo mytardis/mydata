@@ -123,10 +123,7 @@ class SettingsDialog(wx.Dialog):
         self.generalPanel.SetSizer(self.generalPanelSizer)
         self.generalPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 3 columns, so we'll add 3 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
@@ -221,23 +218,7 @@ class SettingsDialog(wx.Dialog):
         self.apiKeyField = wx.TextCtrl(self.generalPanel, wx.ID_ANY, "",
                                        style=wx.TE_PASSWORD)
 
-        # For security reasons, Mac OS X tries to disable copy/paste etc.
-        # in password fields.  Copy and Cut are genuine security risks,
-        # but we can re-enable paste and select all.  We make up new IDs,
-        # rather than using self.apiKeyField.GetId(), so that the OS
-        # doesn't try to impose its security rules on our "password" field.
-        pasteId = wx.NewId()
-        selectAllId = wx.NewId()
-        saveId = wx.NewId()
-        acceleratorList = \
-            [(wx.ACCEL_CTRL, ord('V'), pasteId),
-             (wx.ACCEL_CTRL, ord('A'), selectAllId),
-             (wx.ACCEL_CTRL, ord('S'), saveId)]
-        self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
-        self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
-        self.Bind(wx.EVT_MENU, self.OnSave, id=saveId)
-        acceleratorTable = wx.AcceleratorTable(acceleratorList)
-        self.SetAcceleratorTable(acceleratorTable)
+        self.EnablePasteInPasswordField()
 
         self.Bind(wx.EVT_SET_FOCUS, self.OnApiKeyFieldFocused,
                   self.apiKeyField)
@@ -246,10 +227,7 @@ class SettingsDialog(wx.Dialog):
                                    border=5)
         self.generalPanelSizer.Add(wx.StaticText(self.generalPanel, wx.ID_ANY,
                                                  ""))
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 3 columns, so we'll add 3 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
         self.generalPanelSizer.Add(wx.Size(-1, 5))
@@ -493,10 +471,7 @@ class SettingsDialog(wx.Dialog):
         self.filtersPanel.SetSizer(self.filtersPanelSizer)
         # self.filtersPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 4 columns, so we'll add 4 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
         self.filtersPanelSizer.Add(wx.Size(-1, 5))
@@ -689,10 +664,7 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanel.SetSizer(self.advancedPanelSizer)
         # self.advancedPanelSizer.AddGrowableCol(1)
 
-        # Add blank space above the settings fields. Our FlexGridSizer
-        # has 4 columns, so we'll add 4 units of blank space.  We don't
-        # care about the width (so we use -1), but we choose a height of
-        # 5px (plus the FlexGridSizer's default vgap).
+        # Add blank space above the settings fields:
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
@@ -1039,11 +1011,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetScheduledTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.timeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1064,11 +1038,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerFromTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.fromTimeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1082,11 +1058,13 @@ class SettingsDialog(wx.Dialog):
             return datetime.time(datetime.strptime(timeString, "%H:%M"))
 
     def SetTimerToTime(self, time):
-        # http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
-        # NOTE: due to a problem with wx.DateTime, if the locale does not use
-        # 'AM/PM' for its values, the default format will automatically change
-        # to 24 hour format, and an AttributeError will be thrown if a non-24
-        # format is specified.
+        """
+        http://www.wxpython.org/docs/api/wx.lib.masked.timectrl-module.html
+        NOTE: due to a problem with wx.DateTime, if the locale does not use
+        'AM/PM' for its values, the default format will automatically change
+        to 24 hour format, and an AttributeError will be thrown if a non-24
+        format is specified.
+        """
         try:
             self.toTimeCtrl.SetValue(time.strftime("%I:%M %p"))
         except AttributeError:
@@ -1269,23 +1247,38 @@ class SettingsDialog(wx.Dialog):
         PostEvent(settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
+        """
+        Display a folder-selection dialog to choose the data directory.
+        """
         dlg = wx.DirDialog(self, "Choose a directory:",
                            defaultPath=self.GetDataDirectory()
                            .encode('ascii', 'ignore'))
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.dataDirectoryField.SetValue(dlg.GetPath())
         event.Skip()
 
     def OnBrowseIncludesFile(self, event):
+        """
+        Open a File Open dialog to select an includes file
+        containing patterns to match for files to be included
+        e.g. *.TIFF
+
+        Set the cursor to the right end of the file path text
+        field to ensure that the filename is visible.
+        """
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.includesFileField.SetValue(dlg.GetPath())
-            # Even though we use style=wx.TE_RIGHT,
-            # this is necessary on Windows to ensure that
-            # the right path of the file path (containing
-            # the file name) is visible:
             self.includesFileField.SetInsertionPoint(
                 self.includesFileField.GetLastPosition())
         event.Skip()
@@ -1303,15 +1296,23 @@ class SettingsDialog(wx.Dialog):
             event.Skip()
 
     def OnBrowseExcludesFile(self, event):
+        """
+        Open a File Open dialog to select an excludes file
+        containing patterns to match for files to be excluded
+        e.g. *.BAK
+
+        Set the cursor to the right end of the file path text
+        field to ensure that the filename is visible.
+        """
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if dlg.ShowModal() == wx.ID_OK:
+        if wx.PyApp.IsMainLoopRunning():
+            dialogOK = (dlg.ShowModal() == wx.ID_OK)
+        else:
+            dialogOK = True
+        if dialogOK:
             self.excludesFileField.SetValue(dlg.GetPath())
-            # Even though we use style=wx.TE_RIGHT,
-            # this is necessary on Windows to ensure that
-            # the right path of the file path (containing
-            # the file name) is visible:
             self.excludesFileField.SetInsertionPoint(
                 self.excludesFileField.GetLastPosition())
         event.Skip()
@@ -1424,7 +1425,29 @@ class SettingsDialog(wx.Dialog):
         # the SettingsModel in the lines of code above.
         self.SetLocked(settingsModel.Locked())
 
+    def EnablePasteInPasswordField(self):
+        """
+        For security reasons, Mac OS X tries to disable copy/paste etc.
+        in password fields.  Copy and Cut are genuine security risks,
+        but we can re-enable paste and select all.  We make up new IDs,
+        rather than using self.apiKeyField.GetId(), so that the OS
+        doesn't try to impose its security rules on our "password" field.
+        """
+        pasteId = wx.NewId()
+        selectAllId = wx.NewId()
+        saveId = wx.NewId()
+        acceleratorList = \
+            [(wx.ACCEL_CTRL, ord('V'), pasteId),
+             (wx.ACCEL_CTRL, ord('A'), selectAllId),
+             (wx.ACCEL_CTRL, ord('S'), saveId)]
+        self.Bind(wx.EVT_MENU, self.OnPaste, id=pasteId)
+        self.Bind(wx.EVT_MENU, self.OnSelectAll, id=selectAllId)
+        self.Bind(wx.EVT_MENU, self.OnSave, id=saveId)
+        acceleratorTable = wx.AcceleratorTable(acceleratorList)
+        self.SetAcceleratorTable(acceleratorTable)
+
     def OnPaste(self, event):
+        """See EnablePasteInPasswordField"""
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             if textCtrl == self.apiKeyField:
@@ -1433,6 +1456,7 @@ class SettingsDialog(wx.Dialog):
                 event.Skip()
 
     def OnSelectAll(self, event):
+        """See EnablePasteInPasswordField"""
         textCtrl = wx.Window.FindFocus()
         if textCtrl is not None:
             if textCtrl == self.apiKeyField:
@@ -1459,10 +1483,12 @@ class SettingsDialog(wx.Dialog):
         # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):
+        """Select all when API key field is focused."""
         self.apiKeyField.SelectAll()
         event.Skip()
 
     def OnIgnoreOldDatasetsCheckBox(self, event):
+        """Update related fields when checkbox state is changed."""
         if event.IsChecked():
             self.ignoreDatasetsOlderThanSpinCtrl.SetValue(6)
             self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
@@ -1486,6 +1512,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreOldDatasetsSpinCtrl(self, event):
+        """Update related fields when spin control value is changed."""
         if event.GetInt() == 1:
             if not self.showingSingularUnits:
                 intervalUnitValue = self.intervalUnitsComboBox.GetValue()
@@ -1506,6 +1533,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreNewFilesCheckBox(self, event):
+        """Update related fields when checkbox state is changed."""
         if event.IsChecked():
             self.ignoreFilesNewerThanSpinCtrl.SetValue(1)
             self.ignoreFilesNewerThanSpinCtrl.Enable(True)
@@ -1521,6 +1549,7 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnIgnoreNewFilesSpinCtrl(self, event):
+        """Update related fields when spin control value is changed."""
         if event.GetInt() == 1:
             if not self.showingSingularMinutes:
                 self.ignoreFilesIntervalUnitLabel.SetLabel("minute")
@@ -1714,7 +1743,6 @@ class SettingsDialog(wx.Dialog):
                 if not runningAsAdmin:
                     logger.info("Attempting to run \"%s --version\" "
                                 "as an administrator." % sys.executable)
-                    # pylint: disable=bare-except
                     try:
                         shell.ShellExecuteEx(
                             nShow=win32con.SW_SHOWNORMAL,

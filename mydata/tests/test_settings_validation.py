@@ -212,7 +212,7 @@ class SettingsValidationTester(unittest.TestCase):
         self.assertFalse(settingsValidation.IsValid())
         self.assertEqual(settingsValidation.GetField(), "includes_file")
 
-        # Test globs validation where checkbox is ticket for using
+        # Test globs validation where checkbox is ticked for using
         # an includes file, but no includes file is specified:
         self.settingsModel.SetUseIncludesFile(True)
         self.settingsModel.SetIncludesFile("")

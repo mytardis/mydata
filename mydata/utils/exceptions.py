@@ -11,51 +11,38 @@ class DuplicateKey(Exception):
         super(DuplicateKey, self).__init__(message)
 
 
-class MultipleObjectsReturned(Exception):
+class HttpException(Exception):
+    """
+    Base class for deriving HTTP related exception classes from.
+    """
+    def __init__(self, message, response=None):
+        super(HttpException, self).__init__(message)
+        self.response = response
+
+    def GetResponse(self):
+        """
+        Returns response
+        """
+        return self.response
+
+
+class MultipleObjectsReturned(HttpException):
     """
     Multiple objects returned exception.
     """
-    def __init__(self, message, url=None, response=None):
-        super(MultipleObjectsReturned, self).__init__(message)
-
-        self.url = url
-        self.response = response
-
-    def GetUrl(self):
-        """
-        Returns URL
-        """
-        return self.url
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
+    def __init__(self, message, response=None):
+        super(MultipleObjectsReturned, self).__init__(message, response)
 
 
-class DoesNotExist(Exception):
+class DoesNotExist(HttpException):
     """
-    Does not exist exception.
+    Does not exist exception. This could be raised when an HTTP status code
+    of 404 is received, or when a JSON list expected to return one object
+    returns zero objects.
     """
-    def __init__(self, message, url=None, response=None, modelClass=None):
-        super(DoesNotExist, self).__init__(message)
-
-        self.url = url
-        self.response = response
+    def __init__(self, message, response=None, modelClass=None):
+        super(DoesNotExist, self).__init__(message, response)
         self.modelClass = modelClass
-
-    def GetUrl(self):
-        """
-        Returns URL
-        """
-        return self.url
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
 
     def GetModelClass(self):
         """
@@ -64,50 +51,44 @@ class DoesNotExist(Exception):
         return self.modelClass
 
 
-class Unauthorized(Exception):
+class Unauthorized(HttpException):
     """
-    Unauthorized exception.
+    Unauthorized exception (HTTP status: 403).
     """
-    def __init__(self, message, url=None, response=None):
-        super(Unauthorized, self).__init__(message)
-
-        self.url = url
-        self.response = response
-
-    def GetUrl(self):
-        """
-        Returns URL
-        """
-        return self.url
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
+    def __init__(self, message, response=None):
+        super(Unauthorized, self).__init__(message, response)
 
 
-class InternalServerError(Exception):
+class InternalServerError(HttpException):
     """
-    Internal server exception.
+    Internal server exception (HTTP status: 500).
     """
-    def __init__(self, message, url=None, response=None):
-        super(InternalServerError, self).__init__(message)
+    def __init__(self, message, response=None):
+        super(InternalServerError, self).__init__(message, response)
 
-        self.url = url
-        self.response = response
 
-    def GetUrl(self):
-        """
-        Returns URL
-        """
-        return self.url
+class BadGateway(HttpException):
+    """
+    BadGateway exception (HTTP status: 502).
+    """
+    def __init__(self, message, response=None):
+        super(BadGateway, self).__init__(message, response)
 
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
+
+class ServiceUnavailable(HttpException):
+    """
+    Service unavailable exception (HTTP status: 503).
+    """
+    def __init__(self, message, response=None):
+        super(ServiceUnavailable, self).__init__(message, response)
+
+
+class GatewayTimeout(HttpException):
+    """
+    Gateway timeout exception (HTTP status: 504).
+    """
+    def __init__(self, message, response=None):
+        super(GatewayTimeout, self).__init__(message, response)
 
 
 class SshException(Exception):

@@ -36,7 +36,6 @@ class WxLogHandler(logging.Handler):
         Emit a record.
 
         """
-        # pylint: disable=bare-except
         try:
             msg = self.format(record)
             evt = wxLogEvent(message=msg, levelname=record.levelname)

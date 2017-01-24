@@ -40,6 +40,7 @@ from mydata.models.instrument import InstrumentModel
 from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
+from mydata.utils.exceptions import DoesNotExist
 
 DEFAULT_STARTUP_INFO = None
 DEFAULT_CREATION_FLAGS = 0
@@ -123,13 +124,9 @@ class SettingsModel(object):
 
         self.createUploaderThreadingLock = threading.Lock()
 
-        # pylint: disable=bare-except
         try:
             self.LoadSettings(checkForUpdates=checkForUpdates)
         except:
-            # We don't want to raise an exception if invalid
-            # settings are encountered when MyData is first
-            # launched, e.g. an invalid MyTardis URL.
             logger.error(traceback.format_exc())
 
     def LoadSettings(self, configPath=None, checkForUpdates=True):
@@ -151,7 +148,6 @@ class SettingsModel(object):
 
         if configPath is not None and os.path.exists(configPath):
             logger.info("Reading settings from: " + configPath)
-            # pylint: disable=bare-except
             try:
                 configParser = ConfigParser()
                 configParser.read(configPath)
@@ -816,7 +812,6 @@ class SettingsModel(object):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-return-statements
     def Validate(self, setStatusMessage=None, testRun=False):
-        # pylint: disable=bare-except
         datasetCount = -1
         try:
             if self.GetInstrumentName().strip() == "":
@@ -875,6 +870,10 @@ class SettingsModel(object):
                 self.validation = SettingsValidation(False, message,
                                                      "data_directory")
                 return self.validation
+
+            if testRun:
+                logger.testrun("Folder structure: %s"
+                               % self.GetFolderStructure())
 
             if not self.UploadInvalidUserOrGroupFolders():
                 if self.GetFolderStructure().startswith("User Group"):
@@ -963,7 +962,6 @@ class SettingsModel(object):
                 return self.validation
 
             timeout = 5
-            # pylint: disable=bare-except
             try:
                 message = "Settings validation - checking MyTardis URL..."
                 logger.debug(message)
@@ -974,36 +972,10 @@ class SettingsModel(object):
                 content = response.text
                 history = response.history
                 url = response.url
-                if response.status_code == 200:
-                    message = "Retrieved %s in %.3f seconds." \
-                        % (self.GetMyTardisApiUrl(),
-                           response.elapsed.total_seconds())
-                    logger.debug(message)
-                    if testRun:
-                        logger.testrun(message)
-                elif response.status_code < 200 or response.status_code >= 300:
-                    logger.debug("Received HTTP %d while trying to access "
-                                 "MyTardis server (%s)."
-                                 % (response.status_code,
-                                    self.GetMyTardisUrl()))
-                    logger.debug(content)
-                    if not self.GetMyTardisUrl().startswith("http"):
-                        message = "Please enter a valid MyTardis URL, " \
-                            "beginning with \"http://\" or \"https://\"."
-                        suggestion = "http://" + self.GetMyTardisUrl()
-                    else:
-                        message = "Please enter a valid MyTardis URL.\n\n"
-                        message += "Received HTTP status code %d" \
-                            % response.status_code
-                        suggestion = None
-                    self.validation = SettingsValidation(False, message,
-                                                         "mytardis_url",
-                                                         suggestion)
-                    return self.validation
-                elif history:
+                if history:
                     message = "MyData attempted to access MyTardis at " \
                         "\"%s\", but was redirected to:" \
-                        "\n\n" % self.GetMyTardisUrl()
+                        "\n\n" % self.GetMyTardisApiUrl()
                     message += "\t%s" % url
                     message += "\n\n"
                     message += "A redirection could be caused by any of " \
@@ -1035,6 +1007,27 @@ class SettingsModel(object):
                                                          "mytardis_url",
                                                          suggestion)
                     return self.validation
+                elif response.status_code == 200:
+                    message = "Retrieved %s in %.3f seconds." \
+                        % (self.GetMyTardisApiUrl(),
+                           response.elapsed.total_seconds())
+                    logger.debug(message)
+                    if testRun:
+                        logger.testrun(message)
+                elif response.status_code < 200 or response.status_code >= 300:
+                    logger.debug("Received HTTP %d while trying to access "
+                                 "MyTardis server (%s)."
+                                 % (response.status_code,
+                                    self.GetMyTardisUrl()))
+                    logger.debug(content)
+                    message = "Please enter a valid MyTardis URL.\n\n"
+                    message += "Received HTTP status code %d" \
+                        % response.status_code
+                    suggestion = None
+                    self.validation = SettingsValidation(False, message,
+                                                         "mytardis_url",
+                                                         suggestion)
+                    return self.validation
             except requests.exceptions.Timeout:
                 message = "Attempt to connect to %s timed out after " \
                     "%s seconds." % (self.GetMyTardisApiUrl(), timeout)
@@ -1047,7 +1040,7 @@ class SettingsModel(object):
             except requests.exceptions.InvalidSchema:
                 message = "Please enter a valid MyTardis URL, " \
                     "beginning with \"http://\" or \"https://\"."
-                if ":" not in self.GetMyTardisUrl():
+                if not self.GetMyTardisUrl().startswith("http"):
                     suggestion = "http://" + self.GetMyTardisUrl()
                 else:
                     suggestion = None
@@ -1174,21 +1167,12 @@ class SettingsModel(object):
             logger.debug(message)
             if setStatusMessage:
                 setStatusMessage(message)
-
-            # For now, we are assuming that if we find an
-            # instrument record with the correct name and
-            # facility, then it must be the correct instrument
-            # record to use with this MyData instance.
-            # However, if the instrument record we find is
-            # associated with a different uploader instance
-            # (suggesting a different MyData instance), then
-            # we really shouldn't reuse the same instrument
-            # record.
-            self.instrument = \
-                InstrumentModel.GetInstrument(self,
-                                              self.GetFacility(),
-                                              self.GetInstrumentName())
-            if self.instrument is None:
+            try:
+                self.instrument = \
+                    InstrumentModel.GetInstrument(self,
+                                                  self.GetFacility(),
+                                                  self.GetInstrumentName())
+            except DoesNotExist:
                 logger.info("No instrument record with name \"%s\" was found "
                             "in facility \"%s\", so we will create one."
                             % (self.GetInstrumentName(),
@@ -1365,7 +1349,6 @@ class SettingsModel(object):
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
 
         seconds = dict(day=24 * 60 * 60)
-        seconds['week'] = 7 * seconds['day']
         seconds['year'] = int(365.25 * seconds['day'])
         seconds['month'] = seconds['year'] / 12
         singularIgnoreIntervalUnit = \
@@ -1418,18 +1401,6 @@ class SettingsModel(object):
                                             userOrGroupFilterString,
                                             filterString))
         dirsDepth2 = [item for item in filesDepth2 if os.path.isdir(item)]
-
-        if self.GetFolderStructure() == \
-                'Username / "MyTardis" / Experiment / Dataset':
-            for folderName in dirsDepth2:
-                folderName = os.path.basename(folderName)
-                if folderName.lower() != 'mytardis':
-                    message = "A folder name of \"%s\" was found where " \
-                        "a \"MyTardis\" folder was expected." \
-                        % folderName
-                    self.validation = \
-                        SettingsValidation(False, message, "data_directory")
-                    return self.validation
 
         if self.GetFolderStructure() == 'Username / Dataset' or \
                 self.GetFolderStructure() == 'Email / Dataset' or \
@@ -1572,19 +1543,21 @@ class SettingsModel(object):
         if facility is None:
             raise Exception("Facility is None in "
                             "SettingsModel's RenameInstrument.")
-        oldInstrument = \
-            InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
-        if oldInstrument is None:
+        try:
+            oldInstrument = \
+                InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
+        except DoesNotExist:
             raise Exception("Instrument record for old instrument "
                             "name not found in SettingsModel's "
                             "RenameInstrument.")
-        newInstrument = \
-            InstrumentModel.GetInstrument(self, facility, newInstrumentName)
-        if newInstrument is not None:
+        try:
+            _ = InstrumentModel.GetInstrument(self, facility,
+                                              newInstrumentName)
             raise DuplicateKey(
                 message="Instrument with name \"%s\" "
                         "already exists" % newInstrumentName)
-        oldInstrument.Rename(newInstrumentName)
+        except DoesNotExist:
+            oldInstrument.Rename(newInstrumentName)
 
     def UpdateAutostartFile(self):
         """
@@ -1592,8 +1565,6 @@ class SettingsModel(object):
         be in settings validation.  I put it here
         to ensure it doesn't run in the main thread.
         """
-        # pylint: disable=bare-except
-
         if sys.platform.startswith("win"):
             # Check for MyData shortcut(s) in startup folder(s).
 
@@ -1916,3 +1887,14 @@ oFS.DeleteFile sLinkFile
 
         # Interval in seconds between RESTful progress queries:
         self.mydataConfig['progress_poll_interval'] = 1
+
+    def GetDefaultHeaders(self):
+        """
+        Default HTTP headers, providing authorization for MyTardis API.
+        """
+        return {
+            "Authorization": "ApiKey %s:%s" % (self.mydataConfig['username'],
+                                               self.mydataConfig['api_key']),
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }

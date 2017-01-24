@@ -22,6 +22,7 @@ from mydata.utils.openssh import UploadFile
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
+from mydata.utils import ConvertToUtf8
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
@@ -171,19 +172,21 @@ class UploadDatafileRunnable(object):
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
                 return
+        else:
+            dataFileDict = self.existingUnverifiedDatafile.GetJson()
 
         message = "Uploading..."
         self.uploadsModel.SetMessage(self.uploadModel, message)
         self.uploadModel.SetStartTime(datetime.now())
 
-        # pylint: disable=broad-except
         try:
             if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
                 self.UploadFileWithPost(dataFileDict)
             else:
                 self.UploadFileToStaging(dataFileDict)
         except Exception, err:
-            self.uploadsModel.SetMessage(self.uploadModel, str(err))
+            self.uploadsModel.SetMessage(self.uploadModel,
+                                         ConvertToUtf8(err.message))
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
             if dataFileDirectory != "":
@@ -277,8 +280,9 @@ class UploadDatafileRunnable(object):
         except ValueError, err:
             self.uploadModel.SetTraceback(
                 traceback.format_exc())
-            if str(err) == "read of closed file" or \
-                    str(err) == "seek of closed file":
+            errString = ConvertToUtf8(err.message)
+            if errString == "read of closed file" or \
+                    errString == "seek of closed file":
                 logger.debug("Aborting upload for \"%s\" because "
                              "file handle was closed." %
                              self.uploadModel.GetRelativePathToUpload())
@@ -296,14 +300,13 @@ class UploadDatafileRunnable(object):
                     failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
-            # pylint: disable=bare-except
             try:
                 # If running MyTardis in DEBUG mode, there should
                 # be an error_message returned in JSON format.
                 message += "ERROR: \"%s\"" \
                     % json.loads(errorResponse)['error_message']
             except:
-                message += str(err)
+                message += ConvertToUtf8(err.message)
             PostEvent(
                 self.foldersController
                 .ShowMessageDialogEvent(title="MyData",
@@ -381,7 +384,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(str(err))
+                    logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
@@ -396,13 +399,13 @@ class UploadDatafileRunnable(object):
                 # a staging storage box, possibly because the MyTardis
                 # administrator hasn't created a storage box record with
                 # the correct storage box attribute, i.e.
-                # (key="type", value="receiving"). The staging storage box should
-                # also have a storage box option with
+                # (key="type", value="receiving"). The staging storage box
+                # should also have a storage box option with
                 # (key="location", value="/mnt/.../MYTARDIS_STAGING")
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = str(err)
+                message = ConvertToUtf8(err.message)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -415,7 +418,7 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = str(err)
+                message = ConvertToUtf8(err.message)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
@@ -430,7 +433,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.GetMaxUploadRetries():
-                    logger.warning(str(err))
+                    logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
@@ -516,7 +519,6 @@ class UploadDatafileRunnable(object):
                 "administrator to check in their logs " \
                 "for more information."
             message += "\n\n"
-            # pylint: disable=bare-except
             try:
                 message += "ERROR: \"%s\"" \
                     % response.json()['error_message']
@@ -577,7 +579,6 @@ class UploadDatafileRunnable(object):
                 uploadModel=self.uploadModel)
             PostEvent(event)
         if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
-            # pylint: disable=bare-except
             try:
                 self.uploadModel.GetBufferedReader().close()
             except:

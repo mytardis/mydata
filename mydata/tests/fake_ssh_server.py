@@ -200,7 +200,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 logger.error('*** No channel.')
                 try:
                     self.transport.close()
-                except:  # pylint: disable=bare-except
+                except:
                     logger.error(traceback.format_exc())
                 return
             logger.info('Authenticated!')
@@ -220,7 +220,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     self.chan.close()
                     try:
                         self.transport.close()
-                    except:  # pylint: disable=bare-except
+                    except:
                         logger.error(traceback.format_exc())
                     return
 
@@ -336,12 +336,12 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         else:
                             raise Exception(
                                 "Unknown message format: %s" % buf)
-                    except:  # pylint: disable=bare-except
+                    except:
                         logger.error("read_protocol_messages error.")
                         logger.error(traceback.format_exc())
                         try:
                             self.transport.close()
-                        except:  # pylint: disable=bare-except
+                        except:
                             logger.error(traceback.format_exc())
                         return
 
@@ -397,12 +397,12 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                                     proc.stdin.flush()
                                 break
                             previous_chunk = chunk
-                    except:  # pylint: disable=bare-except
+                    except:
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
                         try:
                             self.transport.close()
-                        except:  # pylint: disable=bare-except
+                        except:
                             logger.error(traceback.format_exc())
                         return
 
@@ -440,14 +440,14 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 logger.info("")
                 try:
                     self.transport.close()
-                except:  # pylint: disable=bare-except
+                except:
                     logger.error(traceback.format_exc())
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             logger.error('*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
             logger.error(traceback.format_exc())
             try:
                 self.transport.close()
-            except:  # pylint: disable=bare-except
+            except:
                 logger.error(traceback.format_exc())
             return
 

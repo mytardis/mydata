@@ -70,11 +70,10 @@ class ExperimentModel(object):
         groupFolderName = folderModel.GetGroupFolderName()
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
         experimentTitle = folderModel.GetExperimentTitle()
 
         if folderModel.ExperimentTitleSetManually():
-            expTitleEncoded = urllib2.quote(experimentTitle)
+            expTitleEncoded = urllib2.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
                 urllib2.quote(settingsModel.GetFolderStructure())
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
@@ -84,14 +83,14 @@ class ExperimentModel(object):
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&uploader=" + uploaderUuid
         if userFolderName:
-            url += "&user_folder_name=" + urllib2.quote(userFolderName)
+            url += "&user_folder_name=" + \
+                urllib2.quote(userFolderName.encode('utf-8'))
         if groupFolderName:
-            url += "&group_folder_name=" + urllib2.quote(groupFolderName)
+            url += "&group_folder_name=" + \
+                urllib2.quote(groupFolderName.encode('utf-8'))
 
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey)}
-        response = requests.get(url=url, headers=headers)
+        response = requests.get(url=url,
+                                headers=settingsModel.GetDefaultHeaders())
         try:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']
@@ -106,7 +105,6 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
-                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \
@@ -129,7 +127,7 @@ class ExperimentModel(object):
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see https://github.com/wettenhj/" \
+                               "(see https://github.com/mytardis/" \
                                "mytardis-app-mydata/blob/master/README.md)" \
                                "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \
@@ -252,7 +250,6 @@ class ExperimentModel(object):
         groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
         ownerUsername = folderModel.GetOwner().GetUsername()
-        # pylint: disable=bare-except
         try:
             ownerUserId = folderModel.GetOwner().GetJson()['id']
         except:
@@ -264,7 +261,6 @@ class ExperimentModel(object):
 
         myTardisUrl = settingsModel.GetMyTardisUrl()
         myTardisDefaultUsername = settingsModel.GetUsername()
-        myTardisDefaultUserApiKey = settingsModel.GetApiKey()
 
         if userFolderName:
             message = "Creating experiment for uploader '%s', " \
@@ -317,16 +313,10 @@ class ExperimentModel(object):
         if groupFolderName:
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
-        headers = {
-            "Authorization": "ApiKey %s:%s" % (myTardisDefaultUsername,
-                                               myTardisDefaultUserApiKey),
-            "Content-Type": "application/json",
-            "Accept": "application/json"}
         url = myTardisUrl + "/api/v1/mydata_experiment/"
 
-        response = requests.post(headers=headers, url=url,
-                                 data=json.dumps(experimentJson))
-        # pylint: disable=bare-except
+        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+                                 url=url, data=json.dumps(experimentJson))
         try:
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
@@ -390,7 +380,6 @@ class ExperimentModel(object):
             if groupFolderName:
                 message += " and group folder \"%s\"" % groupFolderName
             logger.error(message)
-            logger.error(headers)
             logger.error(url)
             logger.error(response.text)
             logger.error("response.status_code = " +
@@ -410,7 +399,6 @@ class ExperimentModel(object):
                           % (experimentTitle, folderModel.GetFolder())
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
-                # pylint: disable=bare-except
                 try:
                     errorResponse = response.json()
                     if errorResponse['error_message'] == \
@@ -433,7 +421,7 @@ class ExperimentModel(object):
                                "record.  This could be caused by a missing " \
                                "UserProfile record for user \"%s\" or it " \
                                "could be caused by a missing Schema record " \
-                               "(see https://github.com/wettenhj/" \
+                               "(see https://github.com/mytardis/" \
                                "mytardis-app-mydata/blob/master/README.md)" \
                                "\n\n" \
                                "Turning on DEBUG mode on the MyTardis " \

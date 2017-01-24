@@ -12,6 +12,7 @@ from BaseHTTPServer import HTTPServer
 import requests
 import wx
 
+from mydata.events import MYDATA_EVENTS
 from mydata.models.settings import SettingsModel
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
@@ -38,6 +39,7 @@ class ScanUserMyTardisExpDatasetTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanUserMyTardisExpDatasetTester')
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.StartFakeMyTardisServer()
 
     def tearDown(self):
@@ -81,7 +83,7 @@ class ScanUserMyTardisExpDatasetTester(unittest.TestCase):
                                        str(err)))
 
         settingsValidation = settingsModel.Validate()
-        assert settingsValidation.IsValid()
+        self.assertTrue(settingsValidation.IsValid())
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
         foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
@@ -99,18 +101,18 @@ class ScanUserMyTardisExpDatasetTester(unittest.TestCase):
             return False
 
         foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
-        assert sorted(usersModel.GetValuesForColname("Username")) == \
-            ["testuser1", "testuser2"]
+        self.assertEqual(sorted(usersModel.GetValuesForColname("Username")),
+                         ["testuser1", "testuser2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).GetFolder())
-        assert sorted(folders) == ["Birds", "Flowers"]
+        self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        assert numFiles == 5
+        self.assertEqual(numFiles, 5)
 
     def StartFakeMyTardisServer(self):
         """
