@@ -84,6 +84,15 @@ class MyDataAppInstanceTester(unittest.TestCase):
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
         self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 6)
+        uploadsModel = self.mydataApp.uploadsModel
+        statusColumn = 5
+        self.assertEqual(uploadsModel.GetValueByRow(0, statusColumn),
+                         uploadsModel.completedIcon)
+        progressColumn = 6
+        self.assertEqual(uploadsModel.GetValueByRow(0, progressColumn), 100)
+        messageColumn = 7
+        self.assertEqual(uploadsModel.GetValueByRow(0, messageColumn),
+                         "Upload complete!")
 
     def tearDown(self):
         self.mydataApp.GetMainFrame().Hide()
