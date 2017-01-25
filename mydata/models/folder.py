@@ -201,6 +201,12 @@ class FolderModel(object):
         return self.owner
 
     def GetValueForKey(self, key):
+        if key.startswith("owner."):
+            ownerKey = key.split("owner.")[1]
+            return self.owner.GetValueForKey(ownerKey) if self.owner else None
+        elif key.startswith("group."):
+            groupKey = key.split("group.")[1]
+            return self.group.GetValueForKey(groupKey) if self.group else None
         return self.__dict__[key]
 
     def GetSettingsModel(self):
