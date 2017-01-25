@@ -98,9 +98,12 @@ def EndBusyCursorIfRequired(event=None):
             logger.warning(str(err))
             raise
 
+
 def ConvertToUtf8(string):
     """
     Convert string to UTF-8
     """
-    sysEncoding = sys.getfilesystemencoding()
+    if string is None:
+        return 'None'
+    sysEncoding = sys.getfilesystemencoding() or 'utf-8'
     return unicode(string.decode(sysEncoding)).encode('utf-8')
