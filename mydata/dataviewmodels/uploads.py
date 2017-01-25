@@ -204,24 +204,6 @@ class UploadsModel(DataViewIndexListModel):
         except wx.PyAssertionError:
             logger.warning(traceback.format_exc())
 
-    def TryRowDeleted(self, row):
-        try:
-            if row < self.GetCount():
-                self.RowDeleted(row)
-            else:
-                logger.warning("TryRowDeleted called with "
-                               "row=%d, self.GetRowCount()=%d" %
-                               (row, self.GetRowCount()))
-        except:
-            logger.debug(traceback.format_exc())
-
-    def UploadFileSizeUpdated(self, uploadModel):
-        for row in reversed(range(0, self.GetCount())):
-            if self.uploadsData[row] == uploadModel:
-                col = self.columnNames.index("File Size")
-                wx.CallAfter(self.TryRowValueChanged, row, col)
-                break
-
     def UploadProgressUpdated(self, uploadModel):
         for row in reversed(range(0, self.GetCount())):
             if self.uploadsData[row] == uploadModel:
