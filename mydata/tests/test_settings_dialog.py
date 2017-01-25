@@ -90,8 +90,10 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsDialog.Show()
 
         # Simulate browsing for data directory:
+        dataDirectory = self.settingsDialog.GetDataDirectory()
         pyCommandEvent = wx.PyCommandEvent()
         self.settingsDialog.OnBrowse(pyCommandEvent)
+        self.settingsDialog.SetDataDirectory(dataDirectory)
 
         # Test the explicit enabling of paste in the API Key field
         # for wxMac (which disables cut/copy/paste in password
