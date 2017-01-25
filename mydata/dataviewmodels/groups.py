@@ -8,6 +8,7 @@ and the tabular data displayed on that tab view.
 import threading
 
 import wx
+from wx.dataview import DataViewItem
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
@@ -75,8 +76,8 @@ class GroupsModel(DataViewIndexListModel):
                 # Need to get current sort direction
                 ascending = True
                 while row < self.GetRowCount() and \
-                        self.CompareGroupRecords(self.groupsData[row],
-                                                 fgd, col, ascending) < 0:
+                        self.Compare(self.groupsData[row],
+                                     fgd, col, ascending) < 0:
                     row += 1
 
                 if row == self.GetRowCount():
@@ -178,30 +179,19 @@ class GroupsModel(DataViewIndexListModel):
         # pylint: disable=no-self-use
         return False
 
-    # This is called to assist with sorting the data in the view.  The
-    # first two args are instances of the DataViewItem class, so we
-    # need to convert them to row numbers with the GetRow method.
-    # Then it's just a matter of fetching the right values from our
-    # data set and comparing them.  The return value is -1, 0, or 1,
-    # just like Python's cmp() function.
-    def Compare(self, item1, item2, col, ascending):
+    def Compare(self, groupRecord1, groupRecord2, col, ascending):
+        """
+        This is called to assist with sorting the data in the view.  The
+        first two args are instances of the DataViewItem class, so we
+        need to convert them to row numbers with the GetRow method.
+        Then it's just a matter of fetching the right values from our
+        data set and comparing them.  The return value is -1, 0, or 1,
+        just like Python's cmp() function.
+        """
         # pylint: disable=arguments-differ
-        # Swap sort order?
-        if not ascending:
-            item2, item1 = item1, item2
-        row1 = self.GetRow(item1)
-        row2 = self.GetRow(item2)
-        if col == 0:
-            return cmp(int(self.GetValueByRow(row1, col)),
-                       int(self.GetValueByRow(row2, col)))
-        else:
-            return cmp(self.GetValueByRow(row1, col),
-                       self.GetValueByRow(row2, col))
-
-    # Unlike the previous Compare method, in this case, the group records
-    # don't need to be visible in the current (possibly filtered) data view.
-    def CompareGroupRecords(self, groupRecord1, groupRecord2, col, ascending):
-        # Swap sort order?
+        if isinstance(groupRecord1, DataViewItem):
+            groupRecord1 = self.groupsData[self.GetRow(groupRecord1)]
+            groupRecord2 = self.groupsData[self.GetRow(groupRecord2)]
         if not ascending:
             groupRecord2, groupRecord1 = groupRecord1, groupRecord2
         if col == 0 or col == 3:
@@ -228,18 +218,6 @@ class GroupsModel(DataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
         self.maxDataViewId = 0
-
-    def GetGroupById(self, dataViewId):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredGroupsData[row].GetId() == dataViewId:
-                return self.unfilteredGroupsData[row]
-        return None
-
-    def GetGroupByName(self, name):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredGroupsData[row].GetName() == name:
-                return self.unfilteredGroupsData[row]
-        return None
 
     def GetMaxDataViewIdFromExistingRows(self):
         maxDataViewId = 0

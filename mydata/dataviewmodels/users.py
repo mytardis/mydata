@@ -9,6 +9,7 @@ import os
 import threading
 
 import wx
+from wx.dataview import DataViewItem
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
@@ -81,8 +82,8 @@ class UsersModel(DataViewIndexListModel):
                 # Need to get current sort direction
                 ascending = True
                 while row < self.GetRowCount() and \
-                        self.CompareUserRecords(self.usersData[row],
-                                                fud, col, ascending) < 0:
+                        self.Compare(self.usersData[row],
+                                     fud, col, ascending) < 0:
                     row += 1
 
                 if row == self.GetRowCount():
@@ -180,30 +181,19 @@ class UsersModel(DataViewIndexListModel):
         # pylint: disable=no-self-use
         return False
 
-    # This is called to assist with sorting the data in the view.  The
-    # first two args are instances of the DataViewItem class, so we
-    # need to convert them to row numbers with the GetRow method.
-    # Then it's just a matter of fetching the right values from our
-    # data set and comparing them.  The return value is -1, 0, or 1,
-    # just like Python's cmp() function.
-    def Compare(self, item1, item2, col, ascending):
+    def Compare(self, userRecord1, userRecord2, col, ascending):
+        """
+        This is called to assist with sorting the data in the view.  The
+        first two args are instances of the DataViewItem class, so we
+        need to convert them to row numbers with the GetRow method.
+        Then it's just a matter of fetching the right values from our
+        data set and comparing them.  The return value is -1, 0, or 1,
+        just like Python's cmp() function.
+        """
         # pylint: disable=arguments-differ
-        # Swap sort order?
-        if not ascending:
-            item2, item1 = item1, item2
-        row1 = self.GetRow(item1)
-        row2 = self.GetRow(item2)
-        if col == 0:
-            return cmp(int(self.GetValueByRow(row1, col)),
-                       int(self.GetValueByRow(row2, col)))
-        else:
-            return cmp(self.GetValueByRow(row1, col),
-                       self.GetValueByRow(row2, col))
-
-    # Unlike the previous Compare method, in this case, the user records
-    # don't need to be visible in the current (possibly filtered) data view.
-    def CompareUserRecords(self, userRecord1, userRecord2, col, ascending):
-        # Swap sort order?
+        if isinstance(userRecord1, DataViewItem):
+            userRecord1 = self.usersData[self.GetRow(userRecord1)]
+            userRecord2 = self.usersData[self.GetRow(userRecord2)]
         if not ascending:
             userRecord2, userRecord1 = userRecord1, userRecord2
         if col == 0 or col == 3:
@@ -214,6 +204,9 @@ class UsersModel(DataViewIndexListModel):
                        userRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteAllRows(self):
+        """
+        Delete all rows.
+        """
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.usersData[row]
@@ -230,18 +223,6 @@ class UsersModel(DataViewIndexListModel):
         self.filtered = False
         self.searchString = ""
         self.maxDataViewId = 0
-
-    def GetUserById(self, dataViewId):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredUsersData[row].GetId() == dataViewId:
-                return self.unfilteredUsersData[row]
-        return None
-
-    def GetUserByName(self, name):
-        for row in range(0, self.GetRowCount()):
-            if self.unfilteredUsersData[row].GetName() == name:
-                return self.unfilteredUsersData[row]
-        return None
 
     def GetMaxDataViewIdFromExistingRows(self):
         maxDataViewId = 0
