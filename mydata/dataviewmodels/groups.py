@@ -8,7 +8,6 @@ and the tabular data displayed on that tab view.
 import threading
 
 import wx
-from wx.dataview import DataViewItem
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
@@ -189,9 +188,13 @@ class GroupsModel(DataViewIndexListModel):
         just like Python's cmp() function.
         """
         # pylint: disable=arguments-differ
-        if isinstance(groupRecord1, DataViewItem):
+        try:
             groupRecord1 = self.groupsData[self.GetRow(groupRecord1)]
             groupRecord2 = self.groupsData[self.GetRow(groupRecord2)]
+        except TypeError:
+            # Compare is also called by Filter in which case we
+            # don't need to convert from DataViewItem to GroupModel.
+            pass
         if not ascending:
             groupRecord2, groupRecord1 = groupRecord1, groupRecord2
         if col == 0 or col == 3:

@@ -12,7 +12,6 @@ from datetime import datetime
 from glob import glob
 
 import wx
-from wx.dataview import DataViewItem
 if wx.version().startswith("3.0.3.dev"):
     from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
 else:
@@ -283,9 +282,13 @@ class FoldersModel(DataViewIndexListModel):
         data set and comparing them.  The return value is -1, 0, or 1,
         just like Python's cmp() function.
         """
-        if isinstance(folderRecord1, DataViewItem):
+        try:
             folderRecord1 = self.foldersData[self.GetRow(folderRecord1)]
             folderRecord2 = self.foldersData[self.GetRow(folderRecord2)]
+        except TypeError:
+            # Compare is also called by Filter in which case we
+            # don't need to convert from DataViewItem to FolderModel.
+            pass
         if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
