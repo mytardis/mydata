@@ -504,9 +504,6 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     uploadModel.SetStartTime(datetime.now())
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
-    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
-    remoteFilePath = \
-        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -635,9 +632,6 @@ def UploadFileFromWindows(filePath, fileSize, username,
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     cipher = settingsModel.GetCipher()
-    filePath = unicode(filePath).encode(sys.getfilesystemencoding())
-    remoteFilePath = \
-        unicode(remoteFilePath).encode(sys.getfilesystemencoding())
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -739,10 +733,6 @@ def CleanUpSshProcesses(settingsModel):
                     if privateKeyPath in proc.cmdline():
                         proc.kill()
                     elif sys.platform.startswith("win"):
-                        # On Windows, proc.cmdline() is unreliable, but
-                        # with proc.exe() == OPENSSH.ssh we are matching
-                        # the absolute path of the SSH binary bundled
-                        # with MyData.
                         proc.kill()
                 except:
                     pass
