@@ -34,7 +34,6 @@ from mydata.logs import logger
 
 class UploadMethod(object):
     # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     HTTP_POST = 0
     VIA_STAGING = 1
 

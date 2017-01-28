@@ -19,7 +19,6 @@ class MockResponse(object):
     Trivial class to mock the status_code attribute of the
     responses returned by the requests library.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, statusCode, text=""):
         """
         Initialize a mock response instance with a status code.

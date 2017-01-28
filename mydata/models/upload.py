@@ -19,7 +19,6 @@ class UploadStatus(object):
     Enumerated data type.
     """
     # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     NOT_STARTED = 0
     IN_PROGRESS = 1
     COMPLETED = 2

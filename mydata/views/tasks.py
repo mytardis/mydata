@@ -12,7 +12,6 @@ class TasksView(wx.Panel):
     Represents the Tasks tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, parent, tasksModel):
         wx.Panel.__init__(self, parent, -1)
 

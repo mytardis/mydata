@@ -21,7 +21,6 @@ from mydata.logs import logger
 from mydata.media import MYDATA_ICONS
 
 
-# pylint: disable=too-few-public-methods
 class ColumnType(object):
     """
     Enumerated data type.

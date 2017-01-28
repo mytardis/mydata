@@ -161,7 +161,6 @@ class UserModel(object):
                              userRecordJson=userRecordsJson['objects'][0])
 
 
-# pylint: disable=too-few-public-methods
 class UserProfileModel(object):
     """
     Used with the DoesNotExist exception when a 404 from MyTardis's API
