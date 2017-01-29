@@ -621,8 +621,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=None,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel)
                 folderModel.SetCreatedDate()
                 if not owner.UserNotFoundInMyTardis():
@@ -706,8 +704,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=groupFolderName,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel)
                 if folderStructure.startswith("Username") or \
                         folderStructure.startswith("Email") or \
@@ -736,8 +732,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=groupFolderName,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel,
                                 isExperimentFilesFolder=True)
                 folderModel.SetExperimentTitle(expFolderName)
@@ -832,8 +826,6 @@ class FoldersModel(DataViewIndexListModel):
                                     userFolderName=userFolderName,
                                     groupFolderName=groupFolderName,
                                     owner=owner,
-                                    foldersModel=self,
-                                    usersModel=self.usersModel,
                                     settingsModel=self.settingsModel)
                     folderModel.SetGroup(groupModel)
                     folderModel.SetCreatedDate()

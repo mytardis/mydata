@@ -26,8 +26,7 @@ class FolderModel(object):
     # pylint: disable=too-many-statements
     def __init__(self, dataViewId, folder, location,
                  userFolderName, groupFolderName, owner,
-                 foldersModel, usersModel, settingsModel,
-                 isExperimentFilesFolder=False):
+                 settingsModel, isExperimentFilesFolder=False):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         self.settingsModel = settingsModel
@@ -83,8 +82,6 @@ class FolderModel(object):
         self.userFolderName = userFolderName
         self.groupFolderName = groupFolderName
         self.owner = owner
-        self.foldersModel = foldersModel
-        self.usersModel = usersModel
 
         self.datasetModel = None
         self.experimentModel = None

@@ -92,7 +92,7 @@ class FoldersViewTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, folder, location,
                         userFolderName, groupFolderName, testuser1,
-                        self.foldersModel, self.usersModel, self.settingsModel)
+                        self.settingsModel)
         self.foldersModel.AddRow(folderModel)
         self.assertEqual(self.foldersModel.GetValueByRow(0, 1), "Flowers")
         self.assertEqual(self.foldersModel.GetRowCount(), 1)
@@ -102,7 +102,7 @@ class FoldersViewTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, folder, location,
                         userFolderName, groupFolderName, testuser1,
-                        self.foldersModel, self.usersModel, self.settingsModel)
+                        self.settingsModel)
         self.foldersModel.AddRow(folderModel)
         self.assertEqual(self.foldersModel.GetUnfilteredRowCount(), 2)
         self.assertEqual(self.foldersModel.GetFilteredRowCount(), 0)
