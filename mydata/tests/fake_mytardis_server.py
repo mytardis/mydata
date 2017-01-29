@@ -12,7 +12,6 @@ fields have been removed from the JSON responses.
 import datetime
 import sys
 import BaseHTTPServer
-import traceback
 import re
 import json
 import tempfile
@@ -98,16 +97,15 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 fakeJson = "{}"
                 self.wfile.write(json.dumps(fakeJson))
                 return
-            try:
-                authorization = self.headers.getheader("Authorization", "")
-                match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
-                if match:
-                    _ = urllib.unquote(match.groups()[0])  # username
-                    _ = urllib.unquote(match.groups()[1])  # API key
-                else:
-                    raise Exception("Unauthorized")
-            except:
-                print traceback.format_exc()
+            authorized = False
+            authorization = self.headers.getheader("Authorization", "")
+            match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
+            if match:
+                _ = urllib.unquote(match.groups()[0])  # username
+                apiKey = urllib.unquote(match.groups()[1])  # API key
+                if apiKey != "invalid":
+                    authorized = True
+            if not authorized:
                 self.send_response(401)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
@@ -115,8 +113,6 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                  "FakeMyTardisServer API - Unauthorized"
                                  "</title></head>")
                 self.wfile.write("<body><h2>Unauthorized</h2>")
-                # If someone went to "http://something.somewhere.net/foo/bar/",
-                # then self.path equals "/foo/bar/".
                 self.wfile.write("</body></html>")
                 return
 
@@ -585,34 +581,205 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             match = re.match(r"^.*&title=(\S+)&folder_structure=(\S+)"
                              r"&user_folder_name=(\S+)$", self.path)
             if match:
-                _ = urllib.unquote(match.groups()[0])  # title
+                title = urllib.unquote(match.groups()[0])  # title
                 _ = urllib.unquote(match.groups()[1])  # folder_structure
                 _ = urllib.unquote(match.groups()[2])  # user_folder_name
             else:
+                match = re.match(r"^.*&title=(\S+)&folder_structure=(\S+)"
+                                 r"&group_folder_name=(\S+)$", self.path)
+                if match:
+                    title = urllib.unquote(match.groups()[0])  # title
+                    _ = urllib.unquote(match.groups()[1])  # folder_structure
+                    _ = urllib.unquote(match.groups()[2])  # group_folder_name
+                else:
+                    match = re.match(r"^.*&title=(\S+)&folder_structure=(\S+)$",
+                                     self.path)
+                    title = urllib.unquote(match.groups()[0])  # title
+                    _ = urllib.unquote(match.groups()[1])  # folder_structure
+            if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
                 errorJson = {
                     "error_message":
                     "Missing title, folder_structure or "
-                    "user_folder_name in experiment GET query"
+                    "user_folder_name / group_folder_name in experiment GET query"
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            if title == "Missing UserProfile":
+                self.send_response(404)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message": "UserProfile matching query does not exist."
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            elif title == "Missing Schema":
+                self.send_response(404)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message": "Schema matching query does not exist."
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
+            elif title == "Unknown 404":
+                self.send_response(404)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {}
+                self.wfile.write(json.dumps(errorJson))
+                return
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            if title == "Existing Experiment":
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "description": "",
+                            "id": 2552,
+                            "institution_name": "Monash University",
+                            "resource_uri": "/api/v1/mydata_experiment/2552/",
+                            "title": "Existing Experiment",
+                        }
+                    ]
+                }
+            elif title == "Multiple Existing Experiments":
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 2
+                    },
+                    "objects": [
+                        {
+                            "description": "",
+                            "id": 2552,
+                            "institution_name": "Monash University",
+                            "resource_uri": "/api/v1/mydata_experiment/2552/",
+                            "title": "Existing Experiment1",
+                        },
+                        {
+                            "description": "",
+                            "id": 2553,
+                            "institution_name": "Monash University",
+                            "resource_uri": "/api/v1/mydata_experiment/2553/",
+                            "title": "Existing Experiment2",
+                        }
+                    ]
+                }
+            else:
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 0
+                    },
+                    "objects": [
+                    ]
+                }
+            self.wfile.write(json.dumps(experimentsJson))
+        elif self.path.startswith("/api/v1/mydata_experiment/?format=json&uploader="):
+            # e.g. /api/v1/mydata_experiment/?format=json
+            #      &uploader=dacd08a6-e5d3-11e6-8623-a45e60d72633
+            #      &user_folder_name=testfacility
+            match = re.match(r"^.*&uploader=(\S+)"
+                             r"&user_folder_name=(\S+)$", self.path)
+            if match:
+                uploaderUuid = urllib.unquote(match.groups()[0])  # uploader uuid
+                _ = urllib.unquote(match.groups()[1])  # user_folder_name
+            else:
+                match = re.match(r"^.*&uploader=(\S+)"
+                                 r"&group_folder_name=(\S+)$", self.path)
+                if match:
+                    uploaderUuid = urllib.unquote(match.groups()[0])  # uploader uuid
+                    _ = urllib.unquote(match.groups()[1])  # group_folder_name
+                else:
+                    match = re.match(r"^.*&uploader=(\S+)$", self.path)
+                    if match:
+                        uploaderUuid = urllib.unquote(match.groups()[0])  # uploader uuid
+            if not match:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                errorJson = {
+                    "error_message":
+                    "Missing title, folder_structure or "
+                    "user_folder_name / group_folder_name in experiment GET query"
                 }
                 self.wfile.write(json.dumps(errorJson))
                 return
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            experimentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 0
-                },
-                "objects": [
-                ]
-            }
+            if uploaderUuid == "Existing Experiment":
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "description": "",
+                            "id": 2552,
+                            "resource_uri": "/api/v1/mydata_experiment/2552/",
+                            "title": "Existing Experiment",
+                        }
+                    ]
+                }
+            elif uploaderUuid == "Multiple Existing Experiments":
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 2
+                    },
+                    "objects": [
+                        {
+                            "description": "",
+                            "id": 2552,
+                            "resource_uri": "/api/v1/mydata_experiment/2552/",
+                            "title": "Existing Experiment1",
+                        },
+                        {
+                            "description": "",
+                            "id": 2553,
+                            "resource_uri": "/api/v1/mydata_experiment/2553/",
+                            "title": "Existing Experiment2",
+                        }
+                    ]
+                }
+            else:
+                experimentsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 0
+                    },
+                    "objects": [
+                    ]
+                }
             self.wfile.write(json.dumps(experimentsJson))
         elif self.path.startswith("/api/v1/dataset/?format=json&experiments__id="):
             # e.g. /api/v1/dataset/?format=json&experiments__id=2551&description=Flowers
@@ -816,6 +983,27 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
+        if self.path.startswith("/api/v1/"):
+            authorized = False
+            authorization = self.headers.getheader("Authorization", "")
+            match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
+            if match:
+                _ = urllib.unquote(match.groups()[0])  # username
+                apiKey = urllib.unquote(match.groups()[1])  # API key
+                if apiKey != "invalid":
+                    authorized = True
+            if not authorized:
+                self.send_response(401)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write("<html><head><title>"
+                                 "FakeMyTardisServer API - Unauthorized"
+                                 "</title></head>")
+                self.wfile.write("<body><h2>Unauthorized</h2>")
+                self.wfile.write("</body></html>")
+                return
+
         length = int(self.headers['Content-Length'])
         ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
         if ctype == 'multipart/form-data':
@@ -834,7 +1022,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.datafileIdAutoIncrement += 1
             self.send_header("location",
-                             "/api/v1/dataset_file/%d/" % self.datafileIdAutoIncrement)
+                             "/api/v1/dataset_file/%d/"
+                             % self.datafileIdAutoIncrement)
             self.end_headers()
 
             if ctype == 'multipart/form-data':
@@ -857,6 +1046,13 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         % (STAGING_PATH, datasetId, filename)
                 self.wfile.write(tempUrl)
         elif self.path == "/api/v1/mydata_experiment/":
+            if "Request 404 from Fake MyTardis Server" in postData['title']:
+                self.send_response(404)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                errorJson = {}
+                self.wfile.write(json.dumps(errorJson))
+                return
             self.send_response(201)
             self.send_header("Content-type", "text/html")
             self.end_headers()
@@ -865,10 +1061,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "authors": [],
                 "created_by": "/api/v1/user/7/",
                 "created_time": "2015-10-06T10:12:43.069846",
-                "description": "Uploader: Test Instrument\n"
-                               "User folder name: testuser2\n"
-                               "Uploaded from: MU00087002X:"
-                               "/Users/Shared/DemoData/testuser2",
+                "description": postData['description'],
                 "end_time": None,
                 "handle": "",
                 "id": 2551,
@@ -918,11 +1111,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         }
                     }
                 ],
-                "public_access": 1,
                 "resource_uri": "/api/v1/mydata_experiment/2551/",
-                "start_time": None,
-                "title": "Test Instrument - Test User2",
-                "update_time": "2015-10-06T10:12:43.069896", "url": None
+                "title": postData['title'],
             }
             self.wfile.write(json.dumps(experimentJson))
         elif self.path == "/api/v1/objectacl/":
