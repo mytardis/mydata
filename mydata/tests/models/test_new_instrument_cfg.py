@@ -62,6 +62,8 @@ class NewInstrumentTester(unittest.TestCase):
         settingsModel.SetMyTardisUrl(self.fakeMyTardisUrl)
         settingsValidation = settingsModel.Validate()
         self.assertTrue(settingsValidation.IsValid())
+        self.assertEqual(settingsModel.GetInstrument().GetName(),
+                         "New Instrument")
 
     def StartFakeMyTardisServer(self):
         """
