@@ -748,6 +748,9 @@ class UploaderModel(object):
     def GetUuid(self):
         return self.uuid
 
+    def SetUuid(self, uploaderUuid):
+        self.uuid = uploaderUuid
+
     def GetName(self):
         return self.name
 
