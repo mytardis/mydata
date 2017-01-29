@@ -1,0 +1,3 @@
+"""
+Tests related to settings.
+"""
