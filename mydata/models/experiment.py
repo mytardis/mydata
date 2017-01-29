@@ -319,42 +319,13 @@ class ExperimentModel(object):
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
         url = myTardisUrl + "/api/v1/mydata_experiment/"
-
+        logger.debug(url)
         response = requests.post(headers=settingsModel.GetDefaultHeaders(),
                                  url=url, data=json.dumps(experimentJson))
-        try:
+        if response.status_code == 201:
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
                                                 createdExperimentJson)
-            logger.debug(url)
-        except:
-            logger.error(url)
-            logger.error(response.text)
-            logger.error("response.status_code = " +
-                         str(response.status_code))
-            if response.status_code == 401:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
-                message += "\n\n"
-                message += "Please ask your MyTardis administrator to " \
-                           "check the permissions of the \"%s\" user " \
-                           "account." % myTardisDefaultUsername
-                raise Unauthorized(message)
-            elif response.status_code == 404:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
-                message += "\n\n"
-                message += "A 404 (Not Found) error occurred while " \
-                           "attempting to create the experiment.\n\n" \
-                           "Please ask your MyTardis administrator to " \
-                           "check that a User Profile record exists " \
-                           "for the \"%s\" user account." \
-                           % myTardisDefaultUsername
-                raise DoesNotExist(message)
-            raise
-        if response.status_code == 201:
             message = "Succeeded in creating experiment '%s' for uploader " \
                 "\"%s\" and user folder \"%s\"" \
                 % (experimentTitle, uploaderName, userFolderName)
