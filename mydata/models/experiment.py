@@ -99,7 +99,16 @@ class ExperimentModel(object):
             logger.error(url)
             logger.error(response.text)
             logger.error("response.status_code = " + str(response.status_code))
-            if response.status_code == 404:
+            if response.status_code == 401:
+                message = "Failed to confirm existence of experiment \"%s\" " \
+                          "for folder \"%s\"." \
+                          % (experimentTitle, folderModel.GetFolder())
+                message += "\n\n"
+                message += "Please ask your MyTardis administrator to " \
+                           "check the permissions of the \"%s\" user " \
+                           "account." % myTardisDefaultUsername
+                raise Unauthorized(message)
+            elif response.status_code == 404:
                 message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
                           % (experimentTitle, folderModel.GetFolder())
@@ -113,10 +122,6 @@ class ExperimentModel(object):
                     elif errorResponse['error_message'] == \
                             "Schema matching query does not exist.":
                         modelClassOfObjectNotFound = SchemaModel
-                    elif errorResponse['error_message'] == \
-                            "Sorry, this request could not be processed. " \
-                            "Please try again later.":
-                        raise Exception("TASTYPIE_CANNED_ERROR")
                     message += "A 404 (Not Found) error occurred while " \
                                "attempting to retrieve the experiment " \
                                "record:\n\n" \
@@ -407,10 +412,6 @@ class ExperimentModel(object):
                     elif errorResponse['error_message'] == \
                             "Schema matching query does not exist.":
                         modelClassOfObjectNotFound = SchemaModel
-                    elif errorResponse['error_message'] == \
-                            "Sorry, this request could not be processed. " \
-                            "Please try again later.":
-                        raise Exception("TASTYPIE_CANNED_ERROR")
                     message += "A 404 (Not Found) error occurred while " \
                                "attempting to create an experiment " \
                                "record:\n\n" \
