@@ -784,7 +784,10 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif self.path.startswith("/api/v1/dataset/?format=json&experiments__id="):
             # e.g. /api/v1/dataset/?format=json&experiments__id=2551&description=Flowers
             match = re.match(r"^.*&experiments__id=(\S+)&description=(\S+)$", self.path)
-            if not match:
+            if match:
+                _ = match.groups()[0]
+                description = urllib.unquote(match.groups()[1])
+            else:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
@@ -797,17 +800,36 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            datasetsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 0
-                },
-                "objects": [
-                ]
-            }
+            if description == "Existing Dataset":
+                datasetsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": "1001",
+                            "description": description,
+                            "instrument": "/api/v1/instrument/17/",
+                            "experiments": ["/api/v1/experiment/2552/"]
+                        }
+                    ]
+                }
+            else:
+                datasetsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 0
+                    },
+                    "objects": [
+                    ]
+                }
             self.wfile.write(json.dumps(datasetsJson))
         elif self.path.startswith("/api/v1/mydata_dataset_file/?format=json&dataset__id="):
             # e.g. /api/v1/mydata_dataset_file/?format=json
@@ -1123,12 +1145,32 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(objectaclJson))
         elif self.path == "/api/v1/dataset/":
+            description = postData['description']
+            if description == "New Dataset Folder Without Permission":
+                self.send_response(401)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write("<html><head><title>"
+                                 "FakeMyTardisServer API - Unauthorized"
+                                 "</title></head>")
+                self.wfile.write("<body><h2>Unauthorized</h2>")
+                self.wfile.write("</body></html>")
+                return
+            elif description == "New Dataset Folder With Internal Server Error":
+                self.send_response(500)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                errorJson = {
+                    "error_message": ("Sorry, this request could not be "
+                                      "processed. Please try again later.")
+                }
+                self.wfile.write(json.dumps(errorJson))
+                return
             self.send_response(201)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             experimentResourceUri = postData['experiments'][0]
             experimentId = experimentResourceUri.split("/")[-2]
-            description = postData['description']
             datasetJson = {
                 "description": description,
                 "directory": "",
