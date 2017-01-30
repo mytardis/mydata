@@ -339,6 +339,31 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 ]
             }
             self.wfile.write(json.dumps(usersJson))
+        elif self.path == "/api/v1/user/?format=json&username=userwithoutprofile":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            usersJson = {
+                "meta": {
+                    "limit": 20,
+                    "next": None,
+                    "offset": 0,
+                    "previous": None,
+                    "total_count": 1
+                },
+                "objects": [
+                    {
+                        "username": "userwithoutprofile",
+                        "first_name": "User",
+                        "last_name": "Without Profile",
+                        "email": "userwithoutprofile@example.com",
+                        "groups": [],
+                        "id": 1148,
+                        "resource_uri": "/api/v1/user/1148/"
+                    }
+                ]
+            }
+            self.wfile.write(json.dumps(usersJson))
         elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group1":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -1011,7 +1036,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             authorization = self.headers.getheader("Authorization", "")
             match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
             if match:
-                _ = urllib.unquote(match.groups()[0])  # username
+                apiUsername = urllib.unquote(match.groups()[0])  # username
                 apiKey = urllib.unquote(match.groups()[1])  # API key
                 if apiKey != "invalid":
                     authorized = True
@@ -1138,9 +1163,12 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(experimentJson))
         elif self.path == "/api/v1/objectacl/":
+            if apiUsername == "userwithoutprofile":
+                self.send_response(404)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                return
             self.send_response(201)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
             objectaclJson = {
             }
             self.wfile.write(json.dumps(objectaclJson))
