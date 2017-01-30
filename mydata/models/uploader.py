@@ -769,9 +769,6 @@ class UploaderRegistrationRequest(object):
         self.settingsModel = settingsModel
         self.uploaderRegRequestJson = uploaderRegRequestJson
 
-    def GetJson(self):
-        return self.uploaderRegRequestJson
-
     def IsApproved(self):
         return self.uploaderRegRequestJson['approved']
 

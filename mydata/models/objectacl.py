@@ -21,12 +21,6 @@ class ObjectAclModel(object):
         self.settingsModel = settingsModel
         self.objectAclJson = objectAclJson
 
-    def GetJson(self):
-        """
-        Return JSON representation.
-        """
-        return self.objectAclJson
-
     @staticmethod
     def ShareExperimentWithUser(experiment, user):
         """

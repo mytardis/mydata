@@ -38,10 +38,6 @@ class InstrumentModel(object):
         return "InstrumentModel " + self.name + \
             " - " + self.GetFacility().GetName()
 
-    def __repr__(self):
-        return "InstrumentModel " + self.name + \
-            " - " + self.GetFacility().GetName()
-
     def GetId(self):
         """
         Return the instrument ID.
@@ -65,18 +61,6 @@ class InstrumentModel(object):
         Return the API resource URI..
         """
         return self.json['resource_uri']
-
-    def GetValueForKey(self, key):
-        """
-        Get value for key.
-        """
-        return self.__dict__[key]
-
-    def GetJson(self):
-        """
-        Return JSON representation.
-        """
-        return self.json
 
     @staticmethod
     def CreateInstrument(settingsModel, facility, name):

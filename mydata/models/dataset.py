@@ -27,9 +27,6 @@ class DatasetModel(object):
         self.datafiles = None
         self.getDatasetFilesThreadingLock = threading.Lock()
 
-    def GetJson(self):
-        return self.json
-
     def GetId(self):
         return self.json['id']
 

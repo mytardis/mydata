@@ -349,6 +349,7 @@ class ExperimentModel(object):
                     facilityManagersGroup.GetId():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.GetGroup())
+            return createdExperiment
         else:
             message = "Failed to create experiment for uploader " \
                 "\"%s\" and user folder \"%s\"" \
@@ -413,10 +414,6 @@ class ExperimentModel(object):
                                "mytardis-prerequisites.html"
                 raise DoesNotExist(message,
                                    modelClass=modelClassOfObjectNotFound)
-        return createdExperiment
-
-    def GetJson(self):
-        return self.json
 
     def GetId(self):
         return self.json['id']

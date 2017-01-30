@@ -93,12 +93,6 @@ class UserModel(object):
     def UserNotFoundInMyTardis(self):
         return self.userNotFoundInMyTardis
 
-    def __str__(self):
-        return "UserModel: " + self.GetUsername()
-
-    def __repr__(self):
-        return "UserModel: " + self.GetUsername()
-
     @staticmethod
     def GetUserByUsername(settingsModel, username):
         myTardisUrl = settingsModel.GetMyTardisUrl()
