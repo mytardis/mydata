@@ -17,10 +17,6 @@ class ObjectAclModel(object):
     Model class for MyTardis API v1's ObjectACLResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel=None, objectAclJson=None):
-        self.settingsModel = settingsModel
-        self.objectAclJson = objectAclJson
-
     @staticmethod
     def ShareExperimentWithUser(experiment, user):
         """
@@ -67,7 +63,7 @@ class ObjectAclModel(object):
                 message += "Please ask your MyTardis administrator " \
                            "to check the permissions of the \"%s\" " \
                            "user account." % myTardisDefaultUsername
-                raise Unauthorized(message)  # pylint: disable=misplaced-bare-raise
+                raise Unauthorized(message)
             elif response.status_code == 404:
                 message = "Couldn't create ObjectACL for " \
                           "experiment \"%s\"." % experiment.GetTitle()
@@ -78,7 +74,7 @@ class ObjectAclModel(object):
                            "to check that a User Profile record " \
                            "exists for the \"%s\" user account." \
                            % myTardisDefaultUsername
-                raise DoesNotExist(message, modelClass=UserProfileModel)  # pylint: disable=misplaced-bare-raise
+                raise DoesNotExist(message, modelClass=UserProfileModel)
 
     @staticmethod
     def ShareExperimentWithGroup(experiment, group):
