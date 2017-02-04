@@ -34,12 +34,6 @@ class GroupModel(object):
             length = len(settingsModel.GetGroupPrefix())
             self.shortName = self.name[length:]
 
-    def __str__(self):
-        return "GroupModel " + self.name
-
-    def __repr__(self):
-        return "GroupModel " + self.name
-
     def GetId(self):
         return self.groupId
 
@@ -54,9 +48,6 @@ class GroupModel(object):
 
     def GetShortName(self):
         return self.shortName
-
-    def GetJson(self):
-        return self.groupJson
 
     def GetValueForKey(self, key):
         return self.__dict__[key]

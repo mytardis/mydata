@@ -7,13 +7,13 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 import urllib
 import json
-import traceback
 import threading
 import requests
 
 from mydata.logs import logger
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
+from . import HandleHttpError
 
 
 class DatasetModel(object):
@@ -27,18 +27,11 @@ class DatasetModel(object):
         self.datafiles = None
         self.getDatasetFilesThreadingLock = threading.Lock()
 
-    def GetJson(self):
-        return self.json
-
     def GetId(self):
         return self.json['id']
 
     def GetDescription(self):
-        try:
-            return self.json['description']
-        except:
-            logger.error("self.json = " + str(self.json))
-            logger.error(traceback.format_exc())
+        return self.json['description']
 
     def GetResourceUri(self):
         return self.json['resource_uri']
@@ -65,6 +58,8 @@ class DatasetModel(object):
                 urllib.quote(description.encode('utf-8'))
             response = requests.get(headers=settingsModel.GetDefaultHeaders(),
                                     url=url)
+            if response.status_code != 200:
+                HandleHttpError(response)
             existingMatchingDatasets = response.json()
             numExistingMatchingDatasets = \
                 existingMatchingDatasets['meta']['total_count']

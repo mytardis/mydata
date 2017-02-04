@@ -2,16 +2,10 @@
 Represents the Uploads tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=fixme
-# pylint: disable=missing-docstring
-
 import wx
 import wx.dataview as dv
 
 from mydata.dataviewmodels.uploads import ColumnType
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.events import PostEvent
 
 
 class UploadsView(wx.Panel):
@@ -19,7 +13,6 @@ class UploadsView(wx.Panel):
     Represents the Uploads tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, parent, uploadsModel, foldersController):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
@@ -73,9 +66,3 @@ class UploadsView(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(sizer)
         sizer.Add(self.uploadsDataViewControl, 1, wx.EXPAND)
-
-    def OnCancelRemainingUploads(self, event):
-        wx.CallAfter(BeginBusyCursorIfRequired)
-        PostEvent(self.foldersController.ShutdownUploadsEvent(canceled=True))
-        if event:
-            event.Skip()

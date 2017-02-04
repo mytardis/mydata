@@ -75,6 +75,8 @@ from mydata.views.testrun import TestRunFrame
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.views.connectivity import ReportNoActiveInterfaces
+if sys.platform.startswith("linux"):
+    from mydata.linuxsubprocesses import StopErrandBoy
 
 
 class NotebookTabs(object):
@@ -82,7 +84,6 @@ class NotebookTabs(object):
     Enumerated data type for referencing the different tab views in
     MyData's main window.
     """
-    # pylint: disable=too-few-public-methods
     FOLDERS = 0
     USERS = 1
     GROUPS = 2
@@ -95,7 +96,6 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, title, style, settingsModel):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
         self.settingsModel = settingsModel
@@ -493,6 +493,8 @@ class MyData(wx.App):
             self.foldersController.ShutDownUploadThreads()
             EndBusyCursorIfRequired()
             self.tasksModel.ShutDown()
+            if sys.platform.startswith("linux"):
+                StopErrandBoy()
             # sys.exit can raise exceptions if the wx.App
             # is shutting down:
             os._exit(0)  # pylint: disable=protected-access
@@ -995,7 +997,10 @@ class MyData(wx.App):
         The user pressed the stop button on the main toolbar.
         """
         self.SetShouldAbort(True)
-        self.uploadsView.OnCancelRemainingUploads(event)
+        BeginBusyCursorIfRequired()
+        PostEvent(self.foldersController.ShutdownUploadsEvent(canceled=True))
+        if event:
+            event.Skip()
 
     def ShouldAbort(self):
         """

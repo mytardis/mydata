@@ -140,7 +140,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
     Handles a client address and creates a paramiko
     Transport object.
     """
-    # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
     def __init__(self, request, client_address, server):
         SocketServer.BaseRequestHandler.__init__(self, request, client_address,

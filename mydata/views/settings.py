@@ -38,7 +38,6 @@ class SettingsDropTarget(wx.FileDropTarget):
     Handles drag and drop of a MyData.cfg file
     onto the settings dialog.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, parent):
         wx.FileDropTarget.__init__(self)
         self.parent = parent

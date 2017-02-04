@@ -52,7 +52,6 @@ if sys.platform.startswith("win"):
     DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
 
 
-# pylint: disable=too-few-public-methods
 class LastSettingsUpdateTrigger(object):
     # pylint: disable=invalid-name
     READ_FROM_DISK = 0

@@ -12,7 +12,6 @@ class UsersView(wx.Panel):
     Represents the Users tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-few-public-methods
     def __init__(self, parent, usersModel):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 

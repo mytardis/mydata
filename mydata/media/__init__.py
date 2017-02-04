@@ -7,7 +7,6 @@ import os
 import wx
 
 
-# pylint: disable=too-few-public-methods
 class IconStyle(object):
     """
     Types of icons.

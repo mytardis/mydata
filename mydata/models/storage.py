@@ -37,54 +37,6 @@ class StorageBox(object):
             for attrJson in storageBoxJson['attributes']:
                 self.attributes.append(StorageBoxAttribute(attrJson=attrJson))
 
-    def __str__(self):
-        return "StorageBox " + self.name
-
-    def __repr__(self):
-        return "StorageBox " + self.name
-
-    def GetId(self):
-        """
-        Returns storage box ID.
-        """
-        return self.storageBoxId
-
-    def GetDjangoStorageClass(self):
-        """
-        Returns Django storage class.
-        """
-        return self.djangoStorageClass
-
-    def GetMaxSize(self):
-        """
-        Returns maximum size of storage box.
-        """
-        return self.maxSize
-
-    def GetStatus(self):
-        """
-        Returns storage box status.
-        """
-        return self.status
-
-    def GetName(self):
-        """
-        Returns storage box name.
-        """
-        return self.name
-
-    def GetDescription(self):
-        """
-        Returns storage box description.
-        """
-        return self.description
-
-    def GetMasterBox(self):
-        """
-        Returns master storage box.
-        """
-        return self.masterBox
-
     def GetOptions(self):
         """
         Returns storage box options.
@@ -96,24 +48,6 @@ class StorageBox(object):
         Returns storage box attributes.
         """
         return self.attributes
-
-    def GetResourceUri(self):
-        """
-        Returns API resource URI.
-        """
-        return self.json['resource_uri']
-
-    def GetValueForKey(self, key):
-        """
-        Get value for key.
-        """
-        return self.__dict__[key]
-
-    def GetJson(self):
-        """
-        Get JSON representation.
-        """
-        return self.json
 
 
 class StorageBoxOption(object):
@@ -133,12 +67,6 @@ class StorageBoxOption(object):
                     attr = "storageBoxOptionId"
                 if hasattr(self, attr):
                     self.__dict__[attr] = optionJson[key]
-
-    def __str__(self):
-        return "StorageBoxOption %s: %s" % (self.key, self.value)
-
-    def __repr__(self):
-        return "StorageBoxOption %s: %s" % (self.key, self.value)
 
     def GetKey(self):
         """
@@ -170,12 +98,6 @@ class StorageBoxAttribute(object):
                     attr = "storageBoxAttributeId"
                 if hasattr(self, attr):
                     self.__dict__[attr] = attrJson[key]
-
-    def __str__(self):
-        return "StorageBoxAttribute %s: %s" % (self.key, self.value)
-
-    def __repr__(self):
-        return "StorageBoxAttribute %s: %s" % (self.key, self.value)
 
     def GetKey(self):
         """

@@ -4,7 +4,6 @@ Model for datafile verification / lookup.
 
 
 # pylint: disable=invalid-name
-# pylint: disable=too-few-public-methods
 class VerificationStatus(object):
     """
     Enumerated data type for verification states.

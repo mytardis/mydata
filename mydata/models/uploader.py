@@ -748,6 +748,9 @@ class UploaderModel(object):
     def GetUuid(self):
         return self.uuid
 
+    def SetUuid(self, uploaderUuid):
+        self.uuid = uploaderUuid
+
     def GetName(self):
         return self.name
 
@@ -765,9 +768,6 @@ class UploaderRegistrationRequest(object):
     def __init__(self, settingsModel=None, uploaderRegRequestJson=None):
         self.settingsModel = settingsModel
         self.uploaderRegRequestJson = uploaderRegRequestJson
-
-    def GetJson(self):
-        return self.uploaderRegRequestJson
 
     def IsApproved(self):
         return self.uploaderRegRequestJson['approved']

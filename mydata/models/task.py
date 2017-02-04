@@ -3,7 +3,6 @@ Model for representing a scheduled task (a.k.a. job), as listed
 in the Tasks view of MyData's main window.
 """
 
-# pylint: disable=too-few-public-methods
 class DayOfWeek(object):
     """
     Enumerated data type.

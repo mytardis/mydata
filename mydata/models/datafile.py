@@ -56,77 +56,11 @@ class DataFileModel(object):
         # so we get the full dataset model, not just the API resource string:
         self.dataset = dataset
 
-    def __str__(self):
-        return "DataFileModel " + self.filename + \
-            " - " + self.GetDataset().GetDescription()
-
-    def __repr__(self):
-        return "DataFileModel " + self.filename + \
-            " - " + self.GetDataset().GetDescription()
-
-    def GetId(self):
-        """
-        Returns datafile ID.
-        """
-        return self.datafileId
-
-    def GetDataset(self):
-        """
-        Returns dataset.
-        """
-        return self.dataset
-
     def GetReplicas(self):
         """
         Get replicas.
         """
         return self.replicas
-
-    def IsVerified(self):
-        """
-        Return True if verified.
-        """
-        verified = False
-        for replica in self.replicas:
-            if replica.IsVerified():
-                return True
-        return verified
-
-    def GetFilename(self):
-        """
-        Returns filename.
-        """
-        return self.filename
-
-    def GetDirectory(self):
-        """
-        Returns directory.
-        """
-        return self.directory
-
-    def GetResourceUri(self):
-        """
-        Returns API resource URI.
-        """
-        return self.json['resource_uri']
-
-    def GetSize(self):
-        """
-        Returns size.
-        """
-        return self.size
-
-    def GetMd5Sum(self):
-        """
-        Returns MD5 sum.
-        """
-        return self.md5sum
-
-    def GetValueForKey(self, key):
-        """
-        Get value for key.
-        """
-        return self.__dict__[key]
 
     def GetJson(self):
         """

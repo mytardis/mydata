@@ -26,7 +26,6 @@ class ReplicaModel(object):
         self.lastVerifiedTime = None
         self.createdTime = None
         self.json = replicaJson
-        self.datafileResourceUri = None
 
         if replicaJson is not None:
             for key in replicaJson:
@@ -36,12 +35,6 @@ class ReplicaModel(object):
                 if hasattr(self, attr):
                     self.__dict__[attr] = replicaJson[key]
             self.datafileResourceUri = replicaJson['datafile']
-
-    def __str__(self):
-        return "ReplicaModel " + self.uri
-
-    def __repr__(self):
-        return "ReplicaModel " + self.uri
 
     @staticmethod
     def CountBytesUploadedToStaging(settingsModel, dfoId):
@@ -71,41 +64,3 @@ class ReplicaModel(object):
         Returns primary key
         """
         return self.replicaId
-
-    def GetUri(self):
-        """
-        Returns the URI field of the DataFileObject represented by
-        the ReplicaResource.
-        """
-        return self.uri
-
-    def GetDataFileResourceUri(self):
-        """
-        Returns API resource uri for the corresponding DataFile.
-        """
-        return self.datafileResourceUri
-
-    def IsVerified(self):
-        """
-        Returns True if the DataFileObject represented by the
-        ReplicaResource is verified.
-        """
-        return self.verified
-
-    def GetResourceUri(self):
-        """
-        Returns API resource uri for the ReplicaResource.
-        """
-        return self.json['resource_uri']
-
-    def GetValueForKey(self, key):
-        """
-        Gets value for key.
-        """
-        return self.__dict__[key]
-
-    def GetJson(self):
-        """
-        Returns JSON representation.
-        """
-        return self.json

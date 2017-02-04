@@ -19,7 +19,7 @@ def HandleHttpError(response, message=None):
     """
     if not message:
         message = response.text
-    if response.status_code == 403:
+    if response.status_code in (401, 403):
         raise Unauthorized(message, response)
     elif response.status_code == 404:
         raise DoesNotExist(message, response)

@@ -2,7 +2,6 @@
 Represents the Folders tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
 # pylint: disable=wrong-import-position
 
 import threading
@@ -139,9 +138,9 @@ class FoldersModel(DataViewIndexListModel):
                 col = 0
                 ascending = True  # Need to get current sort direction
                 while row < self.GetRowCount() and \
-                        self.CompareFolderRecords(self.foldersData[row],
-                                                  self.ffd[filteredRow],
-                                                  col, ascending) < 0:
+                        self.Compare(self.foldersData[row],
+                                     self.ffd[filteredRow],
+                                     col, ascending) < 0:
                     row += 1
 
                 if row == self.GetRowCount():
@@ -274,7 +273,7 @@ class FoldersModel(DataViewIndexListModel):
             return True
         return False
 
-    def Compare(self, item1, item2, col, ascending):
+    def Compare(self, folderRecord1, folderRecord2, col, ascending):
         """
         This is called to assist with sorting the data in the view.  The
         first two args are instances of the DataViewItem class, so we
@@ -283,24 +282,14 @@ class FoldersModel(DataViewIndexListModel):
         data set and comparing them.  The return value is -1, 0, or 1,
         just like Python's cmp() function.
         """
-        if not ascending:  # swap sort order?
-            item2, item1 = item1, item2
-        row1 = self.GetRow(item1)
-        row2 = self.GetRow(item2)
-        if col == 0:
-            return cmp(int(self.GetValueByRow(row1, col)),
-                       int(self.GetValueByRow(row2, col)))
-        else:
-            return cmp(self.GetValueByRow(row1, col),
-                       self.GetValueByRow(row2, col))
-
-    def CompareFolderRecords(self, folderRecord1, folderRecord2,
-                             col, ascending):
-        """
-        Unlike the previous Compare method, in this case, the folder records
-        don't need to be visible in the current (possibly filtered) data view.
-        """
-        if not ascending:  # swap sort order?
+        try:
+            folderRecord1 = self.foldersData[self.GetRow(folderRecord1)]
+            folderRecord2 = self.foldersData[self.GetRow(folderRecord2)]
+        except TypeError:
+            # Compare is also called by Filter in which case we
+            # don't need to convert from DataViewItem to FolderModel.
+            pass
+        if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
             return cmp(int(folderRecord1.GetDataViewId()),
@@ -632,8 +621,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=None,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel)
                 folderModel.SetCreatedDate()
                 if not owner.UserNotFoundInMyTardis():
@@ -717,8 +704,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=groupFolderName,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel)
                 if folderStructure.startswith("Username") or \
                         folderStructure.startswith("Email") or \
@@ -747,8 +732,6 @@ class FoldersModel(DataViewIndexListModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=groupFolderName,
                                 owner=owner,
-                                foldersModel=self,
-                                usersModel=self.usersModel,
                                 settingsModel=self.settingsModel,
                                 isExperimentFilesFolder=True)
                 folderModel.SetExperimentTitle(expFolderName)
@@ -843,8 +826,6 @@ class FoldersModel(DataViewIndexListModel):
                                     userFolderName=userFolderName,
                                     groupFolderName=groupFolderName,
                                     owner=owner,
-                                    foldersModel=self,
-                                    usersModel=self.usersModel,
                                     settingsModel=self.settingsModel)
                     folderModel.SetGroup(groupModel)
                     folderModel.SetCreatedDate()

@@ -99,7 +99,16 @@ class ExperimentModel(object):
             logger.error(url)
             logger.error(response.text)
             logger.error("response.status_code = " + str(response.status_code))
-            if response.status_code == 404:
+            if response.status_code == 401:
+                message = "Failed to confirm existence of experiment \"%s\" " \
+                          "for folder \"%s\"." \
+                          % (experimentTitle, folderModel.GetFolder())
+                message += "\n\n"
+                message += "Please ask your MyTardis administrator to " \
+                           "check the permissions of the \"%s\" user " \
+                           "account." % myTardisDefaultUsername
+                raise Unauthorized(message)
+            elif response.status_code == 404:
                 message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
                           % (experimentTitle, folderModel.GetFolder())
@@ -113,10 +122,6 @@ class ExperimentModel(object):
                     elif errorResponse['error_message'] == \
                             "Schema matching query does not exist.":
                         modelClassOfObjectNotFound = SchemaModel
-                    elif errorResponse['error_message'] == \
-                            "Sorry, this request could not be processed. " \
-                            "Please try again later.":
-                        raise Exception("TASTYPIE_CANNED_ERROR")
                     message += "A 404 (Not Found) error occurred while " \
                                "attempting to retrieve the experiment " \
                                "record:\n\n" \
@@ -314,42 +319,13 @@ class ExperimentModel(object):
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
         url = myTardisUrl + "/api/v1/mydata_experiment/"
-
+        logger.debug(url)
         response = requests.post(headers=settingsModel.GetDefaultHeaders(),
                                  url=url, data=json.dumps(experimentJson))
-        try:
+        if response.status_code == 201:
             createdExperimentJson = response.json()
             createdExperiment = ExperimentModel(settingsModel,
                                                 createdExperimentJson)
-            logger.debug(url)
-        except:
-            logger.error(url)
-            logger.error(response.text)
-            logger.error("response.status_code = " +
-                         str(response.status_code))
-            if response.status_code == 401:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
-                message += "\n\n"
-                message += "Please ask your MyTardis administrator to " \
-                           "check the permissions of the \"%s\" user " \
-                           "account." % myTardisDefaultUsername
-                raise Unauthorized(message)
-            elif response.status_code == 404:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
-                message += "\n\n"
-                message += "A 404 (Not Found) error occurred while " \
-                           "attempting to create the experiment.\n\n" \
-                           "Please ask your MyTardis administrator to " \
-                           "check that a User Profile record exists " \
-                           "for the \"%s\" user account." \
-                           % myTardisDefaultUsername
-                raise DoesNotExist(message)
-            raise
-        if response.status_code == 201:
             message = "Succeeded in creating experiment '%s' for uploader " \
                 "\"%s\" and user folder \"%s\"" \
                 % (experimentTitle, uploaderName, userFolderName)
@@ -373,6 +349,7 @@ class ExperimentModel(object):
                     facilityManagersGroup.GetId():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.GetGroup())
+            return createdExperiment
         else:
             message = "Failed to create experiment for uploader " \
                 "\"%s\" and user folder \"%s\"" \
@@ -407,10 +384,6 @@ class ExperimentModel(object):
                     elif errorResponse['error_message'] == \
                             "Schema matching query does not exist.":
                         modelClassOfObjectNotFound = SchemaModel
-                    elif errorResponse['error_message'] == \
-                            "Sorry, this request could not be processed. " \
-                            "Please try again later.":
-                        raise Exception("TASTYPIE_CANNED_ERROR")
                     message += "A 404 (Not Found) error occurred while " \
                                "attempting to create an experiment " \
                                "record:\n\n" \
@@ -441,10 +414,6 @@ class ExperimentModel(object):
                                "mytardis-prerequisites.html"
                 raise DoesNotExist(message,
                                    modelClass=modelClassOfObjectNotFound)
-        return createdExperiment
-
-    def GetJson(self):
-        return self.json
 
     def GetId(self):
         return self.json['id']
