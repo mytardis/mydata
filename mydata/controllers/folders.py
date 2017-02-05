@@ -260,7 +260,8 @@ class FoldersController(object):
         if folderModel not in self.uploadDatafileRunnable:
             self.uploadDatafileRunnable[folderModel] = {}
 
-        bytesUploadedPreviously = getattr(event, "bytesUploadedPreviously", None)
+        bytesUploadedPreviously = \
+            getattr(event, "bytesUploadedPreviously", None)
         verificationModel = getattr(event, "verificationModel", None)
         self.uploadDatafileRunnable[folderModel][dfi] = \
             UploadDatafileRunnable(self, self.foldersModel, folderModel,
@@ -270,7 +271,8 @@ class FoldersController(object):
                                    verificationModel,
                                    bytesUploadedPreviously)
         if wx.PyApp.IsMainLoopRunning():
-            self.uploadsQueue.put(self.uploadDatafileRunnable[folderModel][dfi])
+            self.uploadsQueue.put(
+                self.uploadDatafileRunnable[folderModel][dfi])
         else:
             self.uploadDatafileRunnable[folderModel][dfi].Run()
         self.CountCompletedUploadsAndVerifications(event=None)
@@ -299,8 +301,9 @@ class FoldersController(object):
 
         if wx.PyApp.IsMainLoopRunning():
             for i in range(fc.numVerificationWorkerThreads):
-                thread = threading.Thread(name="VerificationWorkerThread-%d" % (i + 1),
-                                          target=fc.VerificationWorker)
+                thread = threading.Thread(
+                    name="VerificationWorkerThread-%d" % (i + 1),
+                    target=fc.VerificationWorker)
                 fc.verificationWorkerThreads.append(thread)
                 thread.start()
         fc.uploadDatafileRunnable = {}
@@ -363,8 +366,9 @@ class FoldersController(object):
         fc.uploadWorkerThreads = []
         if wx.PyApp.IsMainLoopRunning():
             for i in range(fc.numUploadWorkerThreads):
-                thread = threading.Thread(name="UploadWorkerThread-%d" % (i + 1),
-                                          target=fc.UploadWorker, args=())
+                thread = threading.Thread(
+                    name="UploadWorkerThread-%d" % (i + 1),
+                    target=fc.UploadWorker, args=())
                 fc.uploadWorkerThreads.append(thread)
                 thread.start()
 
@@ -567,13 +571,11 @@ class FoldersController(object):
                 finishedVerificationCounting = False
                 break
 
-        if numVerificationsCompleted == \
-                    self.numVerificationsToBePerformed \
+        if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
                 and (uploadsProcessed == uploadsToBePerformed or
                      self.testRun and
-                     self.uploadsAcknowledged ==
-                     uploadsToBePerformed):
+                     self.uploadsAcknowledged == uploadsToBePerformed):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
@@ -659,15 +661,18 @@ class FoldersController(object):
                 "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.Completed():
             message = "Data scans and uploads completed successfully."
-            elapsedTime = self.uploadsModel.GetElapsedTime()
-            if elapsedTime and not self.testRun:
-                averageSpeedMBs = (float(self.uploadsModel.GetCompletedSize())
-                                   / 1000000.0 / elapsedTime.total_seconds())
-                if averageSpeedMBs >= 1.0:
-                    averageSpeed = "%3.1f MB/s" % averageSpeedMBs
-                else:
-                    averageSpeed = "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
-                message += "  Average speed: %s" % averageSpeed
+            if self.uploadsModel.GetCompletedCount() > 0:
+                elapsedTime = self.uploadsModel.GetElapsedTime()
+                if elapsedTime and not self.testRun:
+                    averageSpeedMBs = \
+                        (float(self.uploadsModel.GetCompletedSize()) /
+                         1000000.0 / elapsedTime.total_seconds())
+                    if averageSpeedMBs >= 1.0:
+                        averageSpeed = "%3.1f MB/s" % averageSpeedMBs
+                    else:
+                        averageSpeed = \
+                            "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
+                    message += "  Average speed: %s" % averageSpeed
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
