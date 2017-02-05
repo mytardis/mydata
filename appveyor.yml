@@ -63,7 +63,7 @@ install:
 
   - "%CMD_IN_ENV% pip install coveralls"
 
-  - "%CMD_IN_ENV% pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix==3.0.3.dev2755+968784d"
+  - "%CMD_IN_ENV% pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix"
 
   - "git submodule update --init --recursive"
 
