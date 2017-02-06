@@ -880,8 +880,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            testResumingUploads = False
-            if testResumingUploads:
+            if filename == "existing_unverified_incomplete_file.txt":
                 datafilesJson = {
                     "meta": {
                         "limit": 20,
@@ -900,7 +899,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                             "deleted_time": None,
                             "directory": directory,
                             "filename": filename,
-                            "md5sum": "53c6ac03b64f61d5e0b596f70ed75a51",
+                            "md5sum": "c033080e8b2ec59e37fb1a9dc341c813",
                             "mimetype": "image/jpeg",
                             "modification_time": None,
                             "parameter_sets": [],
@@ -917,7 +916,130 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                             ],
                             "resource_uri": "/api/v1/mydata_dataset_file/290385/",
                             "sha512sum": "",
-                            "size": "116537",
+                            "size": "36",
+                            "version": 1
+                        }
+                    ]
+                }
+            elif filename == "existing_unverified_full_size_file.txt":
+                datafilesJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": 290385,
+                            "created_time": "2015-06-25T00:26:21",
+                            "datafile": None,
+                            "dataset": "/api/v1/dataset/%s/" % datasetId,
+                            "deleted": False,
+                            "deleted_time": None,
+                            "directory": directory,
+                            "filename": filename,
+                            "md5sum": "e71c538337dce5b7fd36ae8db8160756",
+                            "mimetype": "image/jpeg",
+                            "modification_time": None,
+                            "parameter_sets": [],
+                            "replicas": [
+                                {
+                                    "created_time": "2015-10-06T10:21:48.910470",
+                                    "datafile": "/api/v1/dataset_file/290385/",
+                                    "id": 444892,
+                                    "last_verified_time": "2015-10-06T10:21:53.952521",
+                                    "resource_uri": "/api/v1/replica/444892/",
+                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                    "verified": False
+                                }
+                            ],
+                            "resource_uri": "/api/v1/mydata_dataset_file/290385/",
+                            "sha512sum": "",
+                            "size": "35",
+                            "version": 1
+                        }
+                    ]
+                }
+            elif filename == "existing_verified_file.txt":
+                datafilesJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": 290386,
+                            "created_time": "2015-06-25T00:26:21",
+                            "datafile": None,
+                            "dataset": "/api/v1/dataset/%s/" % datasetId,
+                            "deleted": False,
+                            "deleted_time": None,
+                            "directory": directory,
+                            "filename": filename,
+                            "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
+                            "mimetype": "image/jpeg",
+                            "modification_time": None,
+                            "parameter_sets": [],
+                            "replicas": [
+                                {
+                                    "created_time": "2015-10-06T10:21:48.910470",
+                                    "datafile": "/api/v1/dataset_file/290386/",
+                                    "id": 444893,
+                                    "last_verified_time": "2015-10-06T10:21:53.952521",
+                                    "resource_uri": "/api/v1/replica/444893/",
+                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                    "verified": True
+                                }
+                            ],
+                            "resource_uri": "/api/v1/mydata_dataset_file/290386/",
+                            "sha512sum": "",
+                            "size": "23",
+                            "version": 1
+                        }
+                    ]
+                }
+            elif filename == "missing_mydata_replica_api_endpoint.txt":
+                datafilesJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": 290387,
+                            "created_time": "2015-06-25T00:26:21",
+                            "datafile": None,
+                            "dataset": "/api/v1/dataset/%s/" % datasetId,
+                            "deleted": False,
+                            "deleted_time": None,
+                            "directory": directory,
+                            "filename": filename,
+                            "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
+                            "mimetype": "image/jpeg",
+                            "modification_time": None,
+                            "parameter_sets": [],
+                            "replicas": [
+                                {
+                                    "created_time": "2015-10-06T10:21:48.910470",
+                                    "datafile": "/api/v1/dataset_file/290387/",
+                                    "id": 444894,
+                                    "last_verified_time": "2015-10-06T10:21:53.952521",
+                                    "resource_uri": "/api/v1/replica/444894/",
+                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                    "verified": True
+                                }
+                            ],
+                            "resource_uri": "/api/v1/mydata_dataset_file/290387/",
+                            "sha512sum": "",
+                            "size": "23",
                             "version": 1
                         }
                     ]
@@ -982,13 +1104,27 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 }
                 self.wfile.write(json.dumps(errorJson))
                 return
+            if replicaId == "444894":  # missing_mydata_replica_api_endpoint.txt
+                self.send_response(404)
+                return
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            replicaJson = {
-                "id": replicaId,
-                "size": 1024
-            }
+            if replicaId == "444891":  # existing_incomplete_file.txt
+                replicaJson = {
+                    "id": replicaId,
+                    "size": 30  # 30 out of 36 bytes uploaded.
+                }
+            elif replicaId == "444892":  # existing_full_size_file.txt
+                replicaJson = {
+                    "id": replicaId,
+                    "size": 35  # 35 out of 35 bytes uploaded.
+                }
+            else:
+                replicaJson = {
+                    "id": replicaId,
+                    "size": 1024
+                }
             self.wfile.write(json.dumps(replicaJson))
         elif self.path.startswith("/api/v1/dataset_file") and "verify" in self.path:
             # e.g. /api/v1/dataset_file/1/verify/
