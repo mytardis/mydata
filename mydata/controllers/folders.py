@@ -94,9 +94,6 @@ class FoldersController(object):
         self.UnverifiedDatafileOnServerEvent, \
             self.EVT_UNVERIFIED_DATAFILE_ON_SERVER, _ = \
             mde.NewEvent(self.notifyWindow, self.UploadDatafile)
-        self.UnverifiedNotFoundOnStagingEvent, \
-            self.EVT_UNVERIFIED_NOT_FOUND_ON_STAGING, _ = \
-            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
         self.ShowMessageDialogEvent, \
             self.EVT_SHOW_MESSAGE_DIALOG, _ = \
             mde.NewEvent(self.notifyWindow, self.ShowMessageDialog)

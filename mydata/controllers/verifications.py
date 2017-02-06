@@ -10,8 +10,6 @@ class VerifyDatafileRunnable(object):
         Post FoundVerifiedDatafileEvent  # Verified DFO exists!
       HandleExistingUnverifiedDatafile:
         HandleResumableUpload:
-          HandleUnverifiedNotFoundOnStaging:
-            Post UnverifiedNotFoundOnStagingEvent
           HandleFullSizeResumableUpload:
             Post FoundUnverifiedDatafileEvent
           HandleIncompleteResumableUpload:
@@ -32,7 +30,6 @@ from mydata.models.verification import VerificationStatus
 from mydata.models.datafile import DataFileModel
 from mydata.controllers.uploads import UploadMethod
 from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import FileNotFoundOnStaging
 from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 from mydata.events import PostEvent
 from mydata.logs import logger
@@ -204,13 +201,10 @@ class VerifyDatafileRunnable(object):
             logger.debug("%s bytes uploaded to staging for %s"
                          % (bytesUploadedPreviously,
                             replicas[0].GetUri()))
-        except FileNotFoundOnStaging:
-            self.HandleUnverifiedNotFoundOnStaging(existingDatafile)
-            return
         except MissingMyDataReplicaApiEndpoint:
             message = (
                 "Please ask your MyTardis administrator to "
-                "upgrad the mytardis-app-mydata app to include "
+                "upgrade the mytardis-app-mydata app to include "
                 "the /api/v1/mydata_replica/ API endpoint.")
             PostEvent(
                 self.foldersController
@@ -286,32 +280,6 @@ class VerifyDatafileRunnable(object):
                 dataFileIndex=self.dataFileIndex,
                 existingUnverifiedDatafile=existingDatafile,
                 bytesUploadedPreviously=bytesUploadedPreviously,
-                verificationModel=self.verificationModel))
-
-    def HandleUnverifiedNotFoundOnStaging(self, existingDatafile):
-        """
-        File has a DataFile record, and a DataFileObject record,
-        marked as unverified.  The file is not accessible on staging.
-        So we need to upload the entire file and create any subdirectories
-        required for it on staging.
-        """
-        dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        self.verificationModel\
-            .SetMessage("Unverified and not found on staging server.")
-        self.verificationModel.SetStatus(
-            VerificationStatus.NOT_FOUND_ON_STAGING)
-        self.verificationsModel.MessageUpdated(self.verificationModel)
-        logger.debug("Uploading \"%s\" to staging, because "
-                     "it was not there. It does have a DataFileObject."
-                     % dataFilePath)
-        self.verificationsModel.SetComplete(self.verificationModel)
-        PostEvent(
-            self.foldersController.UnverifiedNotFoundOnStagingEvent(
-                foldersController=self.foldersController,
-                folderModel=self.folderModel,
-                dataFileIndex=self.dataFileIndex,
-                existingUnverifiedDatafile=existingDatafile,
-                bytesUploadedPreviously=None,
                 verificationModel=self.verificationModel))
 
     def HandleUnresumableUpload(self, existingDatafile):
