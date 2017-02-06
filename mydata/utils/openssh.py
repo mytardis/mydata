@@ -32,6 +32,7 @@ import time
 import pkgutil
 
 import psutil
+import requests
 
 if sys.platform.startswith("win"):
     # pylint: disable=import-error
@@ -484,6 +485,8 @@ def MonitorProgress(foldersController, progressPollInterval, uploadModel,
             uploadModel.SetLatestTime(latestUpdateTime)
             uploadModel.SetBytesUploaded(bytesUploaded)
             progressCallback(bytesUploaded, fileSize)
+        except requests.exceptions.RequestException:
+            timer.cancel()
         except MissingMyDataReplicaApiEndpoint:
             timer.cancel()
     monitoringProgress.clear()
