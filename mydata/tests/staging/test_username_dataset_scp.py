@@ -142,7 +142,11 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        self.assertEqual(numFiles, 5)
+        self.assertEqual(numFiles, 9)
+
+        numExistingVerifiedFiles = 1
+        numUnverifiedFullSizeFiles = 1
+        numTriggeringMissingApiEndpoint = 1
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
@@ -225,7 +229,10 @@ class ScanUsernameDatasetTester(unittest.TestCase):
                     sys.stderr.write(uploadModel.GetTraceback())
         sys.stderr.write("\n")
 
-        self.assertEqual(uploadsCompleted, numFiles)
+        self.assertEqual(uploadsCompleted,
+                         numFiles - numExistingVerifiedFiles -
+                         numUnverifiedFullSizeFiles -
+                         numTriggeringMissingApiEndpoint)
 
     def StartFakeMyTardisServer(self):
         """
