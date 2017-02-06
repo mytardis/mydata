@@ -87,7 +87,8 @@ def PostEvent(event):
             event.GetDefaultHandler()(event)
             logger.debug("Called default handler for %s" % eventTypeString)
         else:
-            logger.debug("Didn't find default handler for %s" % eventTypeString)
+            logger.debug("Didn't find default handler for %s"
+                         % eventTypeString)
 
 
 class MyDataEvents(object):
@@ -319,6 +320,7 @@ def CheckConnectivity(event):
     else:
         CheckConnectivityWorker()
 
+
 def InstrumentNameMismatch(event):
     """
     Responds to instrument name mismatch in Settings dialog.
@@ -384,6 +386,7 @@ def InstrumentNameMismatch(event):
             else:
                 PostEvent(settingsDialogValidationEvent)
 
+
 def RenameInstrument(event):
     """
     Responds to instrument rename request from Settings dialog.
@@ -441,6 +444,7 @@ def RenameInstrument(event):
         logger.debug("Started thread %s" % renameInstrumentThread.name)
     else:
         RenameInstrumentWorker()
+
 
 def SettingsDialogValidation(event):
     """
@@ -524,6 +528,7 @@ def SettingsDialogValidation(event):
         logger.debug("Started thread %s" % thread.name)
     else:
         Validate(event.settingsModel)
+
 
 def ProvideSettingsValidationResults(event):
     # pylint: disable=too-many-branches
@@ -696,12 +701,14 @@ def ProvideSettingsValidationResults(event):
     except:
         logger.error(traceback.format_exc())
 
+
 def ValidateSettingsForRefresh(event):
     """
     Call MyDataApp's OnRefresh (again) to trigger
     settings validation.
     """
     wx.GetApp().OnRefresh(event)
+
 
 def SettingsValidationForRefreshComplete(event):
     """
@@ -711,10 +718,15 @@ def SettingsValidationForRefreshComplete(event):
     """
     wx.GetApp().OnRefresh(event)
 
+
 def StartDataUploadsForFolder(event):
     """
     Start the data uploads.
     """
+    app = wx.GetApp()
+    if hasattr(app, "ShouldAbort") and app.ShouldAbort():
+        return
+
     def StartDataUploadsForFolderWorker():
         """
         Start the data uploads in a dedicated thread.
