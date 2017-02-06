@@ -56,6 +56,12 @@ class DataFileModel(object):
         # so we get the full dataset model, not just the API resource string:
         self.dataset = dataset
 
+    def GetId(self):
+        """
+        Returns datafile ID.
+        """
+        return self.datafileId
+
     def GetReplicas(self):
         """
         Get replicas.
@@ -67,6 +73,18 @@ class DataFileModel(object):
         Return JSON representation.
         """
         return self.json
+
+    def GetSize(self):
+        """
+        Returns size.
+        """
+        return self.size
+
+    def GetMd5Sum(self):
+        """
+        Returns MD5 sum.
+        """
+        return self.md5sum
 
     @staticmethod
     def GetDataFile(settingsModel, dataset, filename, directory):

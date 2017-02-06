@@ -64,3 +64,17 @@ class ReplicaModel(object):
         Returns primary key
         """
         return self.replicaId
+
+    def GetUri(self):
+        """
+        Returns the URI field of the DataFileObject represented by
+        the ReplicaResource.
+        """
+        return self.uri
+
+    def IsVerified(self):
+        """
+        Returns True if the DataFileObject represented by the
+        ReplicaResource is verified.
+        """
+        return self.verified
