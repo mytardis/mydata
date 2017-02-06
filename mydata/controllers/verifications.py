@@ -182,8 +182,15 @@ class VerifyDatafileRunnable(object):
 
     def HandleResumableUpload(self, existingDatafile):
         """
-        Determine whether part of the file is already available
-        on staging.
+        Determine whether part of the file is already available on staging.
+
+        The name of this method comes from MyData v0.6.x and earlier which
+        uploaded files in chunks, so it could resume partial uploads by
+        counting chunks in partial uploads.  Chunking has been removed in
+        v0.7.0.  This method is now used when we are using the STAGING
+        upload method and we found an existing DataFileObject, so resuming
+        means checking if the previous upload can be found on the staging
+        server and whether it is the correct size.
 
         MyData uses the /api/v1/mydata_replica/ API endpoint
         on the MyTardis server, which is provided by the
