@@ -535,6 +535,7 @@ class UploadDatafileRunnable(object):
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         if uploadSuccess:
+            logger.debug("Upload succeeded for %s" % dataFileName)
             self.uploadsModel.SetStatus(self.uploadModel,
                                         UploadStatus.COMPLETED)
             message = "Upload complete!"
