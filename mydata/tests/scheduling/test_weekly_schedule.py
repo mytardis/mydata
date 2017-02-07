@@ -83,7 +83,7 @@ class WeeklyScheduleTester(unittest.TestCase):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 6)
+        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
         self.assertEqual(self.mydataApp.tasksModel.GetRowCount(), 1)
