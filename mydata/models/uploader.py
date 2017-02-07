@@ -88,10 +88,6 @@ import dateutil.parser
 import psutil
 import requests
 
-if sys.platform.startswith("win"):
-    # pylint: disable=import-error
-    import win32process
-
 if sys.platform.startswith("linux"):
     # pylint: disable=import-error
     import netifaces
@@ -108,14 +104,8 @@ from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils import BytesToHuman
 
-DEFAULT_STARTUP_INFO = None
-DEFAULT_CREATION_FLAGS = 0
-if sys.platform.startswith("win"):
-    DEFAULT_STARTUP_INFO = subprocess.STARTUPINFO()
-    # pylint: disable=protected-access
-    DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
+from mydata.subprocesses import DEFAULT_STARTUP_INFO
+from mydata.subprocesses import DEFAULT_CREATION_FLAGS
 
 DEFAULT_TIMEOUT = 3
 
@@ -455,6 +445,9 @@ class UploaderModel(object):
             raise Exception(response.text)
 
     def ExistingUploadToStagingRequest(self):
+        """
+        Look for existing upload to staging request.
+        """
         try:
             keyPair = self.settingsModel.GetSshKeyPair()
             if not keyPair:

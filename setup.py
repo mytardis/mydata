@@ -120,6 +120,7 @@ class CustomBuildCommand(build):
     On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
     On Mac OS X, create dist/MyData.app/*
     """
+    # pylint: disable=too-many-branches
     def run(self):
         # build.run(self)
         if sys.platform.startswith("win"):
@@ -167,10 +168,20 @@ class CustomBuildCommand(build):
 
             distutils.dir_util\
                 .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
-                           "dist/MyData/openssh-7.3p1-cygwin-2.6.0")
-            cygwinHomeDir = "dist/MyData/openssh-7.3p1-cygwin-2.6.0/home"
-            for subdir in os.listdir(cygwinHomeDir):
-                subdirpath = os.path.join(cygwinHomeDir, subdir)
+                           "dist/MyData/win64/openssh-7.3p1-cygwin-2.6.0")
+            cygwin64HomeDir = \
+                "dist/MyData/win64/openssh-7.3p1-cygwin-2.6.0/home"
+            for subdir in os.listdir(cygwin64HomeDir):
+                subdirpath = os.path.join(cygwin64HomeDir, subdir)
+                if os.path.isdir(subdirpath):
+                    shutil.rmtree(subdirpath)
+            distutils.dir_util\
+                .copy_tree("resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
+                           "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
+            cygwin32HomeDir = \
+                "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1/home"
+            for subdir in os.listdir(cygwin32HomeDir):
+                subdirpath = os.path.join(cygwin32HomeDir, subdir)
                 if os.path.isdir(subdirpath):
                     shutil.rmtree(subdirpath)
 
@@ -233,7 +244,8 @@ PrivilegesRequired=lowest
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Dirs]
-Name: "{app}\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
+Name: "{app}\win64\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
+Name: "{app}\win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1\home"; Permissions: "users-modify"
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"

@@ -29,10 +29,6 @@ import requests
 from validate_email import validate_email
 import wx
 
-if sys.platform.startswith("win"):
-    # pylint: disable=import-error
-    import win32process
-
 from mydata.logs import logger
 from mydata.models.user import UserModel
 from mydata.models.facility import FacilityModel
@@ -42,14 +38,8 @@ from mydata.utils.exceptions import DuplicateKey
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import DoesNotExist
 
-DEFAULT_STARTUP_INFO = None
-DEFAULT_CREATION_FLAGS = 0
-if sys.platform.startswith("win"):
-    DEFAULT_STARTUP_INFO = subprocess.STARTUPINFO()
-    # pylint: disable=protected-access
-    DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
+from mydata.subprocesses import DEFAULT_STARTUP_INFO
+from mydata.subprocesses import DEFAULT_CREATION_FLAGS
 
 
 class LastSettingsUpdateTrigger(object):
