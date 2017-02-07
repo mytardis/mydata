@@ -142,7 +142,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        self.assertEqual(numFiles, 9)
+        self.assertEqual(numFiles, 10)
 
         numExistingVerifiedFiles = 1
         numUnverifiedFullSizeFiles = 1
