@@ -58,13 +58,3 @@ class FoldersView(wx.Panel):
 
     def GetDataViewControl(self):
         return self.foldersDataViewControl
-
-    def ShowGroupColumn(self, showOrHide):
-        for col in range(0, self.foldersModel.GetColumnCount()):
-            column = self.foldersDataViewControl.Columns[col]
-            if column.GetTitle() == "Group":
-                if showOrHide:
-                    width = self.foldersModel.GetDefaultColumnWidth(col)
-                else:
-                    width = 0
-                column.SetWidth(width)
