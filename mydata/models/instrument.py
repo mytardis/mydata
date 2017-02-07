@@ -11,6 +11,7 @@ from mydata.logs import logger
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from .facility import FacilityModel
+from . import HandleHttpError
 
 
 class InstrumentModel(object):
@@ -18,21 +19,14 @@ class InstrumentModel(object):
     Model class for MyTardis API v1's InstrumentResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel=None, name=None,
-                 instrumentJson=None):
+    def __init__(self, settingsModel, name, instrumentJson):
 
         self.settingsModel = settingsModel
-        self.instrumentId = None
         self.name = name
         self.json = instrumentJson
-        self.facility = None
-
-        if instrumentJson is not None:
-            self.instrumentId = instrumentJson['id']
-            if name is None:
-                self.name = instrumentJson['name']
-            self.facility = FacilityModel(
-                facilityJson=instrumentJson['facility'])
+        self.instrumentId = instrumentJson['id']
+        self.facility = FacilityModel(
+            facilityJson=instrumentJson['facility'])
 
     def __str__(self):
         return "InstrumentModel " + self.name + \
@@ -76,7 +70,6 @@ class InstrumentModel(object):
         data = json.dumps(instrumentJson)
         headers = settingsModel.GetDefaultHeaders()
         response = requests.post(headers=headers, url=url, data=data)
-        content = response.text
         if response.status_code == 201:
             instrumentJson = response.json()
             return InstrumentModel(settingsModel=settingsModel, name=name,
@@ -91,11 +84,7 @@ class InstrumentModel(object):
                            "check the permissions of the \"%s\" " \
                            "user account." % myTardisUsername
                 raise Unauthorized(message)
-            if response.status_code == 404:
-                raise Exception("HTTP 404 (Not Found) received for: " + url)
-            logger.error("Status code = " + str(response.status_code))
-            logger.error("URL = " + url)
-            raise Exception(content)
+            HandleHttpError(response)
 
     @staticmethod
     def GetInstrument(settingsModel, facility, name):
@@ -109,9 +98,7 @@ class InstrumentModel(object):
         headers = settingsModel.GetDefaultHeaders()
         response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
-            message = response.text
-            logger.error(message)
-            raise Exception(message)
+            HandleHttpError(response)
         instrumentsJson = response.json()
         numInstrumentsFound = \
             instrumentsJson['meta']['total_count']
@@ -143,7 +130,4 @@ class InstrumentModel(object):
         if response.status_code == 200:
             logger.info("Renaming instrument succeeded.")
         else:
-            logger.info("Renaming instrument failed.")
-            logger.info("Status code = " + str(response.status_code))
-            logger.info(response.text)
-        response.close()
+            HandleHttpError(response)
