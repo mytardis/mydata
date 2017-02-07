@@ -68,9 +68,7 @@ class TestRunFrame(wx.Frame):
                             "%s.txt" % self.GetTitle(), "*.txt",
                             wx.SAVE | wx.OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
-            print dlg.GetPath()
             with open(dlg.GetPath(), 'w') as saveFile:
                 for line in range(self.textCtrl.GetNumberOfLines()):
                     saveFile.write(self.textCtrl.GetLineText(line) + '\n')
-
         event.Skip()
