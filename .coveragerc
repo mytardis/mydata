@@ -3,3 +3,4 @@ show_missing = True
 omit = 
     mydata/tests/*
     mydata/logs/mydata_log_drop.py
+    mydata/commitdef.py
