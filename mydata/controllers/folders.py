@@ -393,7 +393,9 @@ class FoldersController(object):
         try:
             fc.finishedCountingVerifications[folderModel] = \
                 threading.Event()
-            if self.IsShuttingDown():
+            app = wx.GetApp()
+            if self.IsShuttingDown() or \
+                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
                 return
             fc.numVerificationsToBePerformedLock.acquire()
             fc.numVerificationsToBePerformed += folderModel.GetNumFiles()
@@ -402,7 +404,8 @@ class FoldersController(object):
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " +
                 folderModel.GetFolder())
-            if self.IsShuttingDown():
+            if self.IsShuttingDown() or \
+                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
                 return
             try:
                 try:
@@ -449,7 +452,8 @@ class FoldersController(object):
                              "folder " +
                              folderModel.GetFolder())
                 return
-            if self.IsShuttingDown():
+            if self.IsShuttingDown() or \
+                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
                 return
             fc.finishedCountingVerifications[folderModel].set()
             if self.foldersModel.GetRowCount() == 0 or \
