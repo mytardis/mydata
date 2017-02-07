@@ -1167,6 +1167,20 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-return-statements
+        if self.path.startswith("/request/http/code/"):
+            match = re.match(r"^/request/http/code/(\d+)/.*$", self.path)
+            if match:
+                httpCode = int(match.groups()[0])
+            else:
+                httpCode = 500
+            self.send_response(httpCode)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            fakeJson = "{}"
+            self.wfile.write(json.dumps(fakeJson))
+            return
+
         if self.path.startswith("/api/v1/"):
             authorized = False
             authorization = self.headers.getheader("Authorization", "")
@@ -1391,6 +1405,19 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
         Respond to a PUT request
         """
+        if self.path.startswith("/request/http/code/"):
+            match = re.match(r"^/request/http/code/(\d+)/.*$", self.path)
+            if match:
+                httpCode = int(match.groups()[0])
+            else:
+                httpCode = 500
+            self.send_response(httpCode)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            fakeJson = "{}"
+            self.wfile.write(json.dumps(fakeJson))
+            return
+
         if self.path.startswith("/api/v1/mydata_uploader/"):
             match = re.match(r"^/api/v1/mydata_uploader/(\S+)/$", self.path)
             if match:

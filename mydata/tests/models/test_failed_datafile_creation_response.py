@@ -19,7 +19,6 @@ class FailedDataFileCreationTester(unittest.TestCase):
         """
         Test ability to respond to failed DataFile creation.
         """
-        # pylint: disable=no-self-use
         response = requests.Response()
         response.status_code = 401
         dataFileName = "filename.dat"

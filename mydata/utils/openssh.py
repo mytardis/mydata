@@ -30,13 +30,13 @@ import getpass
 import threading
 import time
 import pkgutil
+import struct
 
 import psutil
 import requests
 
 if sys.platform.startswith("win"):
-    # pylint: disable=import-error
-    import win32process
+    import win32process  # pylint: disable=import-error
 
 from mydata.logs import logger
 from mydata.models.datafile import DataFileModel
@@ -52,14 +52,8 @@ from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
 if sys.platform.startswith("linux"):
     from mydata.linuxsubprocesses import GetErrandBoyTransport
 
-DEFAULT_STARTUP_INFO = None
-DEFAULT_CREATION_FLAGS = 0
-if sys.platform.startswith("win"):
-    DEFAULT_STARTUP_INFO = subprocess.STARTUPINFO()
-    # pylint: disable=protected-access
-    DEFAULT_STARTUP_INFO.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    DEFAULT_STARTUP_INFO.wShowWindow = subprocess.SW_HIDE
-    DEFAULT_CREATION_FLAGS = win32process.CREATE_NO_WINDOW  # pylint: disable=no-member
+from mydata.subprocesses import DEFAULT_STARTUP_INFO
+from mydata.subprocesses import DEFAULT_CREATION_FLAGS
 
 # Running subprocess's communicate from multiple threads can cause high CPU
 # usage, so we poll each subprocess before running communicate, using a sleep
@@ -69,11 +63,6 @@ SLEEP_FACTOR = 0.01
 
 class OpenSSH(object):
     # pylint: disable=too-many-instance-attributes
-    if hasattr(sys, "frozen"):
-        opensshBuildDir = "openssh-7.3p1-cygwin-2.6.0"
-    else:
-        opensshBuildDir = r"resources\win64\openssh-7.3p1-cygwin-2.6.0"
-
     # pylint: disable=no-self-use
     def DoubleQuote(self, string):
         return '"' + string.replace('"', r'\"') + '"'
@@ -89,84 +78,53 @@ class OpenSSH(object):
         Locate the SSH binaries on various systems. On Windows we bundle a
         Cygwin build of OpenSSH.
         """
+        sixtyFourBitPython = (struct.calcsize('P') * 8 == 64)
+        sixtyFourBitOperatingSystem = sixtyFourBitPython or \
+            (sys.platform.startswith("win") and win32process.IsWow64Process())
+        if "HOME" not in os.environ:
+            os.environ["HOME"] = os.path.expanduser('~')
+        if sixtyFourBitOperatingSystem:
+            winOpensshDir = r"win64\openssh-7.3p1-cygwin-2.6.0"
+        else:
+            winOpensshDir = r"win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1"
+        if hasattr(sys, "frozen"):
+            baseDir = os.path.dirname(sys.executable)
+        else:
+            baseDir = os.path.dirname(pkgutil.get_loader("mydata").filename)
+            winOpensshDir = os.path.join("resources", winOpensshDir)
         if sys.platform.startswith("win"):
-            if "HOME" not in os.environ:
-                os.environ["HOME"] = os.path.expanduser('~')
-
-        if sys.platform.startswith("win"):
-            if hasattr(sys, "frozen"):
-                baseDir = os.path.dirname(sys.executable)
-            else:
-                try:
-                    baseDir = \
-                        os.path.dirname(pkgutil.get_loader("mydata").filename)
-                except:
-                    baseDir = os.getcwd()
-            self.ssh = os.path.join(baseDir, self.opensshBuildDir,
-                                    "bin", "ssh.exe")
-            self.scp = os.path.join(baseDir, self.opensshBuildDir,
-                                    "bin", "scp.exe")
-            self.sshKeyGen = os.path.join(baseDir, self.opensshBuildDir,
-                                          "bin", "ssh-keygen.exe")
-            # The following binaries are only used for testing:
-            self.mkdir = os.path.join(baseDir, self.opensshBuildDir,
-                                      "bin", "mkdir.exe")
-            self.cat = os.path.join(baseDir, self.opensshBuildDir,
-                                    "bin", "cat.exe")
-            # pylint: disable=invalid-name
-            self.rm = os.path.join(baseDir, self.opensshBuildDir,
-                                   "bin", "rm.exe")
-
+            baseDir = os.path.join(baseDir, winOpensshDir)
             self.preferToUseShellInSubprocess = False
-
-            # This is not where we store the MyData private key.
-            # This is where the Cygwin SSH build looks for our
-            # known_hosts file.
-            dotSshDir = os.path.join(self.opensshBuildDir,
-                                     "home",
-                                     getpass.getuser(),
-                                     ".ssh")
+            binarySuffix = ".exe"
+            dotSshDir = os.path.join(
+                baseDir, "home", getpass.getuser(), ".ssh")
             if not os.path.exists(dotSshDir):
                 os.makedirs(dotSshDir)
-
-        elif sys.platform.startswith("darwin"):
-            self.ssh = "/usr/bin/ssh"
-            self.scp = "/usr/bin/scp"
-            self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.ddCmd = "/bin/dd"
-            # False would be better below, but then (on POSIX
-            # systems), I'd have to use command lists, instead
-            # of command strings, and in some cases, I don't trust
-            # subprocess to quote the command lists correctly.
-            self.preferToUseShellInSubprocess = True
         else:
-            self.ssh = "/usr/bin/ssh"
-            self.scp = "/usr/bin/scp"
-            self.sshKeyGen = "/usr/bin/ssh-keygen"
-            self.ddCmd = "/bin/dd"
-            # False would be better below, but then (on POSIX
-            # systems), I'd have to use command lists, instead
-            # of command strings, and in some cases, I don't trust
-            # subprocess to quote the command lists correctly.
+            # Using subprocess's shell=True below should be reviewed.
+            # Don't change it without testing quoting of special characters.
+            baseDir = "/usr/"
             self.preferToUseShellInSubprocess = True
+            binarySuffix = ""
+
+        binBaseDir = os.path.join(baseDir, "bin")
+        self.ssh = os.path.join(binBaseDir, "ssh" + binarySuffix)
+        self.scp = os.path.join(binBaseDir, "scp" + binarySuffix)
+        self.sshKeyGen = os.path.join(binBaseDir, "ssh-keygen" + binarySuffix)
+        self.mkdir = os.path.join(binBaseDir, "mkdir" + binarySuffix)
+        self.cat = os.path.join(binBaseDir, "cat" + binarySuffix)
 
 
 class KeyPair(object):
-
+    """
+    Represents an SSH key-pair, e.g. (~/.ssh/MyData, ~/.ssh/MyData.pub)
+    """
     def __init__(self, privateKeyFilePath, publicKeyFilePath):
         self.privateKeyFilePath = privateKeyFilePath
         self.publicKeyFilePath = publicKeyFilePath
         self.publicKey = None
         self.fingerprint = None
         self.keyType = None
-
-    def __str__(self):
-        return "KeyPair: " + \
-            str({"privateKeyFilePath": self.privateKeyFilePath,
-                 "publicKeyFilePath": self.publicKeyFilePath})
-
-    def __repr__(self):
-        return self.__str__()
 
     def GetPrivateKeyFilePath(self):
         return self.privateKeyFilePath
@@ -179,28 +137,8 @@ class KeyPair(object):
                 os.path.exists(self.publicKeyFilePath):
             with open(self.publicKeyFilePath, "r") as pubKeyFile:
                 return pubKeyFile.read()
-        elif os.path.exists(self.privateKeyFilePath):
-            cmdList = [OPENSSH.DoubleQuote(OPENSSH.sshKeyGen),
-                       "-y",
-                       "-f", OPENSSH.DoubleQuote(
-                           GetCygwinPath(self.privateKeyFilePath))]
-            cmd = " ".join(cmdList)
-            logger.debug(cmd)
-            proc = subprocess.Popen(cmd,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    universal_newlines=True,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-
-            if proc.returncode != 0:
-                raise SshException(stdout)
-
-            return stdout
         else:
-            raise SshException("Couldn't find MyData key files in ~/.ssh "
-                               "while trying to read public key.")
+            raise SshException("Couldn't access MyData.pub in ~/.ssh/")
 
     def Delete(self):
         try:

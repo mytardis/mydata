@@ -12,7 +12,6 @@ class MyDataOnlineDocsTester(unittest.TestCase):
     """
     Test ability to access MyData's online documentation.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(MyDataOnlineDocsTester, self).__init__(*args, **kwargs)
         self.mydataApp = None

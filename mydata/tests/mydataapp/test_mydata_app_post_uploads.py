@@ -85,7 +85,7 @@ class MyDataAppInstanceTester(unittest.TestCase):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 6)
+        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
         uploadsModel = self.mydataApp.uploadsModel
         statusColumn = 5
         self.assertEqual(uploadsModel.GetValueByRow(0, statusColumn),
