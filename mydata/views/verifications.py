@@ -5,8 +5,6 @@ and the tabular data displayed on that tab view.
 import wx
 import wx.dataview as dv
 
-from mydata.dataviewmodels.verifications import ColumnType
-
 
 class VerificationsView(wx.Panel):
     """
@@ -34,33 +32,13 @@ class VerificationsView(wx.Panel):
             self.verificationsModel)
 
         for col in range(0, self.verificationsModel.GetColumnCount()):
-            if self.verificationsModel.columnTypes[col] == ColumnType.TEXT:
-                self.verificationsDataViewControl\
-                    .AppendTextColumn(self.verificationsModel
-                                      .GetColumnName(col),
-                                      col,
-                                      width=self.verificationsModel
-                                      .GetDefaultColumnWidth(col),
-                                      mode=dv.DATAVIEW_CELL_INERT)
-            if self.verificationsModel.columnTypes[col] == ColumnType.BITMAP:
-                column = self.verificationsDataViewControl\
-                    .AppendBitmapColumn(self.verificationsModel
-                                        .GetColumnName(col),
-                                        col,
-                                        width=self.verificationsModel
-                                        .GetDefaultColumnWidth(col),
-                                        mode=dv.DATAVIEW_CELL_INERT)
-                column.Alignment = wx.ALIGN_CENTER
-                column.Renderer.Alignment = wx.ALIGN_CENTER
-            if self.verificationsModel.columnTypes[col] == ColumnType.PROGRESS:
-                self.verificationsDataViewControl\
-                    .AppendProgressColumn(self.verificationsModel
-                                          .GetColumnName(col),
-                                          col,
-                                          width=self.verificationsModel
-                                          .GetDefaultColumnWidth(col),
-                                          mode=dv.DATAVIEW_CELL_INERT,
-                                          flags=dv.DATAVIEW_COL_RESIZABLE)
+            self.verificationsDataViewControl\
+                .AppendTextColumn(self.verificationsModel
+                                  .GetColumnName(col),
+                                  col,
+                                  width=self.verificationsModel
+                                  .GetDefaultColumnWidth(col),
+                                  mode=dv.DATAVIEW_CELL_INERT)
 
         firstColumn = self.verificationsDataViewControl.Columns[0]
         firstColumn.Alignment = wx.ALIGN_RIGHT
