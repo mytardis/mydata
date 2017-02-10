@@ -1,5 +1,5 @@
 """
-Test ability to scan the Username / Dataset structure and upload using SCP.
+Test scanning the Username / Dataset structure and uploading with SCP.
 """
 import os
 import sys
@@ -34,7 +34,7 @@ if sys.platform.startswith("linux"):
 
 class ScanUsernameDatasetTester(unittest.TestCase):
     """
-    Test ability to scan the Username / Dataset structure and upload using SCP.
+    Test scanning the Username / Dataset structure and uploading with SCP.
     """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
@@ -75,7 +75,7 @@ class ScanUsernameDatasetTester(unittest.TestCase):
 
     def test_scan_folders(self):
         """
-        Test ability to scan the Username / Dataset structure and upload using SCP.
+        Test scanning the Username / Dataset structure and uploading with SCP.
         """
         # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
@@ -100,8 +100,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         while True:
             try:
                 attempts += 1
-                requests.get(settingsModel.GetMyTardisUrl() + "/api/v1/?format=json",
-                             timeout=1)
+                requests.get("%s/api/v1/?format=json"
+                             % settingsModel.GetMyTardisUrl(), timeout=1)
                 break
             except requests.exceptions.ConnectionError, err:
                 time.sleep(0.25)
@@ -214,9 +214,11 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         foldersController.ShutDownUploadThreads()
 
         sys.stderr.write("\n")
-        sys.stderr.write("%d/%d uploads completed.\n" % (uploadsCompleted, uploadsProcessed))
+        sys.stderr.write("%d/%d uploads completed.\n" % (uploadsCompleted,
+                                                         uploadsProcessed))
         if uploadsFailed > 0:
-            sys.stderr.write("%d/%d uploads failed.\n" % (uploadsFailed, uploadsProcessed))
+            sys.stderr.write("%d/%d uploads failed.\n" % (uploadsFailed,
+                                                          uploadsProcessed))
 
         for i in range(uploadsProcessed):
             uploadModel = uploadsModel.uploadsData[i]
