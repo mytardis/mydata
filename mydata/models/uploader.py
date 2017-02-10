@@ -59,8 +59,8 @@ drwxrws--- 8 mytardis mytardis 4096 May 15 13:30 receiving
 -rw-rw-r-- 1 mydata mytardis 0 May 15 13:40 /var/lib/mytardis/receiving/test123.txt
 
 Note the permissions above - being part of the "mytardis" group on this staging
-host allows the "mydata" user to write to the staging (receiving) directory, but
-not to MyTardis's permanent storage location.
+host allows the "mydata" user to write to the staging (receiving) directory,
+but not to MyTardis's permanent storage location.
 
 The 's' in the "receiving" directory's permissions (set with 'chmod g+s') is
 important.  It means that files created within that directory by the "mydata"
@@ -68,15 +68,11 @@ user will have a default group of "mytardis" (inherited from the "receiving"
 directory), instead of having a default group of "mydata".
 """
 
-# pylint: disable=missing-docstring
-# pylint: disable=wrong-import-position
-
 import json
 import os
 import sys
 import platform
 import getpass
-import subprocess
 import re
 import pkgutil
 import urllib
@@ -85,12 +81,9 @@ import uuid
 import threading
 
 import dateutil.parser
+import netifaces
 import psutil
 import requests
-
-if sys.platform.startswith("linux"):
-    # pylint: disable=import-error
-    import netifaces
 
 from mydata import __version__ as VERSION
 from mydata.models.storage import StorageBox
@@ -98,14 +91,11 @@ from mydata.logs import logger
 import mydata.utils.openssh as OpenSSH
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import PrivateKeyDoesNotExist
-from mydata.utils.exceptions import NoActiveNetworkInterface
 from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
 from mydata.utils.exceptions import StorageBoxOptionNotFound
 from mydata.utils.exceptions import StorageBoxAttributeNotFound
 from mydata.utils import BytesToHuman
-
-from mydata.subprocesses import DEFAULT_STARTUP_INFO
-from mydata.subprocesses import DEFAULT_CREATION_FLAGS
+from . import HandleHttpError
 
 DEFAULT_TIMEOUT = 3
 
@@ -118,13 +108,13 @@ class UploaderModel(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, settingsModel):
         # pylint: disable=too-many-locals
-        # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         self.settingsModel = settingsModel
         self.interface = None
         self.responseJson = None
 
-        self.id = None  # pylint: disable=invalid-name
+        self.uploaderId = None
         self.uploaderSettings = None
         self.settingsUpdated = None
         self.uuid = self.settingsModel.GetUuid()
@@ -146,145 +136,27 @@ class UploaderModel(object):
         self.processor = ""
         self.architecture = ""
 
-        # Here we check connectivity even if we've already done so, because
-        # we need to ensure that we get the correct network interface for
-        # self.interface, otherwise if the active interface changes,
-        # we can get errors like this: KeyError: 'RTC'
-        # when accessing things like ipv4Address[self.interface]
-
-        activeInterfaces = UploaderModel.GetActiveNetworkInterfaces()
-        if len(activeInterfaces) == 0:
-            message = "No active network interfaces." \
-                "\n\n" \
-                "Please ensure that you have an active network interface " \
-                "(e.g. Ethernet or WiFi)."
-            raise NoActiveNetworkInterface(message)
-        # Sometimes on Windows XP, you can end up with multiple results
-        # from "netsh interface show interface"
-        # If there is one called "Local Area Connection",
-        # then that's the one we'll go with.
-        if "Local Area Connection" in activeInterfaces:
-            activeInterfaces = ["Local Area Connection"]
-        elif "Local Area Connection 2" in activeInterfaces:
-            activeInterfaces = ["Local Area Connection 2"]
-        elif "Ethernet" in activeInterfaces:
-            activeInterfaces = ["Ethernet"]
-        elif "Internet" in activeInterfaces:
-            activeInterfaces = ["Internet"]
-        elif "Wi-Fi" in activeInterfaces:
-            activeInterfaces = ["Wi-Fi"]
-
-        # For now, we're only dealing with one active network interface.
-        # It is possible to have more than one active network interface,
-        # but we hope that the code above has picked the best one.
-        # If there are no active interfaces, then we shouldn't have
-        # reached this point - we should have already raised an
-        # exception.
-        self.interface = activeInterfaces[0]
-
-        if sys.platform.startswith("win"):
-            proc = subprocess.Popen(["ipconfig", "/all"],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(stdout)
-
-            macAddress = {}
-            ipv4Address = {}
-            ipv6Address = {}
-            subnetMask = {}
-            interface = ""
-
-            for row in stdout.split("\n"):
-                match = re.match(r"^\S.*adapter (.*):\s*$", row)
-                if match:
-                    interface = match.groups()[0]
-                if interface == self.interface:
-                    if ': ' in row:
-                        key, value = row.split(': ')
-                        if key.strip(' .') == "Physical Address":
-                            macAddress[interface] = value.strip()
-                        if "IPv4 Address" in key.strip(' .'):
-                            ipv4Address[interface] = \
-                                value.strip().replace("(Preferred)", "")
-                            ipv4Address[interface] = \
-                                ipv4Address[interface] \
-                                    .replace("(Tentative)", "")
-                        if "IPv6 Address" in key.strip(' .'):
-                            ipv6Address[interface] = \
-                                value.strip().replace("(Preferred)", "")
-                            ipv6Address[interface] = \
-                                ipv6Address[interface] \
-                                    .replace("(Tentative)", "")
-                        if "Subnet Mask" in key.strip(' .'):
-                            subnetMask[interface] = value.strip()
-        elif sys.platform.startswith("darwin"):
-            proc = subprocess.Popen(["ifconfig", self.interface],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(stdout)
-
-            macAddress = {}
-            ipv4Address = {}
-            ipv6Address = {}
-            subnetMask = {}
-
-            for row in stdout.split("\n"):
-                if sys.platform.startswith("darwin"):
-                    match = re.match(r"\s+ether (\S*)\s*$", row)
-                else:
-                    match = re.match(r".*\s+HWaddr (\S*)\s*$", row)
-                if match:
-                    macAddress[self.interface] = match.groups()[0]
-                match = re.match(r"\s+inet (\S*)\s+netmask\s+(\S*)\s+.*$", row)
-                if match:
-                    ipv4Address[self.interface] = match.groups()[0]
-                    subnetMask[self.interface] = match.groups()[1]
-                match = re.match(r"\s+inet6 (\S*)\s+.*$", row)
-                if match:
-                    ipv6Address[self.interface] = match.groups()[0]
+        if netifaces.AF_INET in netifaces.gateways()['default'].keys():
+            self.interface = \
+                netifaces.gateways()['default'][netifaces.AF_INET][1]
+            ifaddresses = netifaces.ifaddresses(self.interface)
+            self.macAddress = ifaddresses[netifaces.AF_LINK][0]['addr']
+            ipv4Addrs = ifaddresses[netifaces.AF_INET]
+            self.ipv4Address = ipv4Addrs[0]['addr']
+            self.subnetMask = ipv4Addrs[0]['netmask']
+            ipv6Addrs = \
+                netifaces.ifaddresses(self.interface)[netifaces.AF_INET6]
+            if sys.platform.startswith("win"):
+                self.ipv6Address = ipv6Addrs[0]['addr']
+            else:
+                for addr in ipv6Addrs:
+                    match = re.match(r'(.+)%(.+)', addr['addr'])
+                    if match and match.group(2) == self.interface:
+                        self.ipv6Address = match.group(1)
+            logger.debug("The active network interface is: %s"
+                         % str(self.interface))
         else:
-            macAddress = {}
-            ipv4Address = {}
-            ipv6Address = {}
-            subnetMask = {}
-            interface = self.interface
-
-            macAddress[interface] = \
-                netifaces.ifaddresses(interface)[netifaces.AF_LINK][0]['addr']
-
-            ipv4Addrs = netifaces.ifaddresses(interface)[netifaces.AF_INET]
-            ipv4Address[interface] = ipv4Addrs[0]['addr']
-            subnetMask[interface] = ipv4Addrs[0]['netmask']
-
-            ipv6Addrs = netifaces.ifaddresses(interface)[netifaces.AF_INET6]
-            for addr in ipv6Addrs:
-                match = re.match(r'(.+)%(.+)', addr['addr'])
-                if match and match.group(2) == interface:
-                    ipv6Address[interface] = match.group(1)
-
-        self.macAddress = macAddress[self.interface]
-        if self.interface in ipv4Address:
-            self.ipv4Address = ipv4Address[self.interface]
-        else:
-            self.ipv4Address = ""
-        if self.interface in ipv6Address:
-            self.ipv6Address = ipv6Address[self.interface]
-        else:
-            self.ipv6Address = ""
-        if self.interface in subnetMask:
-            self.subnetMask = subnetMask[self.interface]
-        else:
-            self.subnetMask = ""
-
-        logger.debug("The active network interface is: " + str(self.interface))
+            logger.warning("There is no active network interface.")
 
         self.name = self.settingsModel.GetInstrumentName()
         self.contactName = self.settingsModel.GetContactName()
@@ -350,14 +222,11 @@ class UploaderModel(object):
         if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
-            logger.error("An error occurred while retrieving uploader info.")
-            logger.error("Status code = " + str(response.status_code))
-            logger.error(response.text)
-            raise Exception(response.text)
+            HandleHttpError(response)
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
-            self.id = existingUploaderRecords['objects'][0]['id']
+            self.uploaderId = existingUploaderRecords['objects'][0]['id']
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
@@ -371,7 +240,7 @@ class UploaderModel(object):
         logger.debug("Uploading uploader info to MyTardis...")
 
         if numExistingUploaderRecords > 0:
-            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.id
+            url = myTardisUrl + "/api/v1/mydata_uploader/%d/" % self.uploaderId
         else:
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
@@ -439,10 +308,7 @@ class UploaderModel(object):
             logger.debug("Upload succeeded for uploader info.")
             self.responseJson = response.json()
         else:
-            logger.error("Upload failed for uploader info.")
-            logger.error("Status code = " + str(response.status_code))
-            logger.error(response.text)
-            raise Exception(response.text)
+            HandleHttpError(response)
 
     def ExistingUploadToStagingRequest(self):
         """
@@ -465,12 +331,7 @@ class UploaderModel(object):
         headers = self.settingsModel.GetDefaultHeaders()
         response = requests.get(headers=headers, url=url)
         if response.status_code != 200:
-            if response.status_code == 404:
-                response.close()
-                raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
-            message = response.text
-            response.close()
-            raise Exception(message)
+            HandleHttpError(response)
         logger.debug(response.text)
         existingUploaderRecords = response.json()
         numExistingUploaderRecords = \
@@ -478,7 +339,6 @@ class UploaderModel(object):
         if numExistingUploaderRecords > 0:
             approvalJson = existingUploaderRecords['objects'][0]
             logger.debug("A request already exists for this uploader.")
-            response.close()
             return UploaderRegistrationRequest(
                 settingsModel=self.settingsModel,
                 uploaderRegRequestJson=approvalJson)
@@ -486,7 +346,6 @@ class UploaderModel(object):
             message = "This uploader hasn't requested uploading " \
                       "via staging yet."
             logger.debug(message)
-            response.close()
             raise DoesNotExist(message)
 
     def RequestUploadToStagingApproval(self):
@@ -515,19 +374,11 @@ class UploaderModel(object):
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code == 201:
             responseJson = response.json()
-            response.close()
             return UploaderRegistrationRequest(
                 settingsModel=self.settingsModel,
                 uploaderRegRequestJson=responseJson)
         else:
-            if response.status_code == 404:
-                response.close()
-                raise DoesNotExist("HTTP 404 (Not Found) received for: " + url)
-            logger.error("Status code = " + str(response.status_code))
-            logger.error("URL = " + url)
-            message = response.text
-            response.close()
-            raise Exception(message)
+            HandleHttpError(response)
 
     def RequestStagingAccess(self):
         """
@@ -549,16 +400,18 @@ class UploaderModel(object):
                         self.RequestUploadToStagingApproval()
                     logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
-                    logger.debug("Generating new uploader registration request, "
-                                 "because private key was moved or deleted.")
+                    logger.debug(
+                        "Generating new uploader registration request, "
+                        "because private key was moved or deleted.")
                     uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
-                    logger.debug("Generated new uploader registration request, "
-                                 "because private key was moved or deleted.")
+                    logger.debug("Generated new uploader registration request,"
+                                 " because private key was moved or deleted.")
                 if uploadToStagingRequest.IsApproved():
                     logger.debug("Uploads to staging have been approved!")
                 else:
-                    logger.debug("Uploads to staging haven't been approved yet.")
+                    logger.debug(
+                        "Uploads to staging haven't been approved yet.")
                 self.settingsModel\
                     .SetUploadToStagingRequest(uploadToStagingRequest)
             except:
@@ -575,7 +428,7 @@ class UploaderModel(object):
         myTardisUrl = self.settingsModel.GetMyTardisUrl()
         headers = self.settingsModel.GetDefaultHeaders()
 
-        if not self.id:
+        if not self.uploaderId:
             url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                                 "&uuid=" + urllib.quote(self.uuid)
             try:
@@ -591,20 +444,17 @@ class UploaderModel(object):
             if response.status_code == 200:
                 existingUploaderRecords = response.json()
             else:
-                logger.error("An error occurred while retrieving uploader id.")
-                logger.error("Status code = " + str(response.status_code))
-                logger.error(response.text)
-                raise Exception(response.text)
+                HandleHttpError(response)
             numExistingUploaderRecords = \
                 existingUploaderRecords['meta']['total_count']
             if numExistingUploaderRecords > 0:
-                self.id = existingUploaderRecords['objects'][0]['id']
+                self.uploaderId = existingUploaderRecords['objects'][0]['id']
             else:
                 logger.debug("Uploader record doesn't exist yet, so "
                              "we can't save settings to the server.")
                 return
 
-        url = "%s/api/v1/mydata_uploader/%s/" % (myTardisUrl, self.id)
+        url = "%s/api/v1/mydata_uploader/%s/" % (myTardisUrl, self.uploaderId)
 
         patchData = {
             'settings': settingsList,
@@ -613,10 +463,7 @@ class UploaderModel(object):
         response = requests.patch(headers=headers, url=url,
                                   data=json.dumps(patchData))
         if response.status_code != 202:
-            logger.error(url)
-            message = response.text
-            logger.error(message)
-            raise Exception(message)
+            HandleHttpError(response)
 
     def GetSettings(self):
         """
@@ -641,15 +488,12 @@ class UploaderModel(object):
         if response.status_code == 200:
             existingUploaderRecords = response.json()
         else:
-            logger.error("An error occurred while retrieving uploader.")
-            logger.error("Status code = " + str(response.status_code))
-            logger.error(response.text)
-            raise Exception(response.text)
+            HandleHttpError(response)
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
             if 'id' in existingUploaderRecords['objects'][0]:
-                self.id = existingUploaderRecords['objects'][0]['id']
+                self.uploaderId = existingUploaderRecords['objects'][0]['id']
             if 'settings' in existingUploaderRecords['objects'][0]:
                 self.uploaderSettings = \
                     existingUploaderRecords['objects'][0]['settings']
@@ -666,92 +510,53 @@ class UploaderModel(object):
 
     @staticmethod
     def GetActiveNetworkInterfaces():
-        # pylint: disable=too-many-branches
+        """
+        Get active network interfaces
+        """
         logger.debug("Determining the active network interface...")
         activeInterfaces = []
-        if sys.platform.startswith("win"):
-            proc = subprocess.Popen(["netsh", "interface",
-                                     "show", "interface"],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(stdout)
-
-            for row in stdout.split("\n"):
-                match = re.match(r"^(Enabled|Disabled)\s*(Connected|Disconnected)"
-                                 r"\s*(Dedicated|Internal|Loopback)\s*(.*)\s*$",
-                                 row)
-                if match:
-                    adminState = match.groups()[0]
-                    state = match.groups()[1]
-                    interfaceType = match.groups()[2]
-                    interface = match.groups()[3].strip()
-                    if adminState == "Enabled" and state == "Connected" \
-                            and interfaceType == "Dedicated":
-                        activeInterfaces.append(interface)
-                # On Windows XP, the state may be blank:
-                match = re.match(r"^(Enabled|Disabled)\s*"
-                                 r"(Dedicated|Internal|Loopback)\s*(.*)\s*$", row)
-                if match:
-                    adminState = match.groups()[0]
-                    interfaceType = match.groups()[1]
-                    interface = match.groups()[2].strip()
-                    if adminState == "Enabled" and \
-                            interfaceType == "Dedicated":
-                        activeInterfaces.append(interface)
-        elif sys.platform.startswith("darwin"):
-            # Was using "route get default" here, but for VPN, that can
-            # return "utun0" which doesn't have a corresponding MAC address,
-            # and there may be other missing network-related fields in the
-            # ifconfig entry for "utun0".  For now, we will instead find
-            # the physical network device which is active, but in future
-            # we can relax the requirement of needing the MAC address etc.
-            # because we are now using a UUID as our Uploader record's
-            # unique identifier instead of a MAC address.
-            proc = subprocess.Popen(["ifconfig"],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    startupinfo=DEFAULT_STARTUP_INFO,
-                                    creationflags=DEFAULT_CREATION_FLAGS)
-            stdout, _ = proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(stdout)
-
-            currentInterface = None
-            for line in stdout.split("\n"):
-                match = re.match(r"^(\S+): flags=.*", line)
-                if match:
-                    currentInterface = match.groups()[0].strip()
-                match = re.match(r"^\s+status: active", line)
-                if match and currentInterface:
-                    activeInterfaces.append(currentInterface)
-        elif sys.platform.startswith("linux"):
-            interface = netifaces.gateways()['default'][netifaces.AF_INET][1]
-            activeInterfaces.append(interface)
-
+        if netifaces.AF_INET in netifaces.gateways()['default'].keys():
+            activeInterfaces.append(
+                netifaces.gateways()['default'][netifaces.AF_INET][1])
         return activeInterfaces
 
     def GenerateUuid(self):
+        """
+        Generate UUID
+        """
         self.uuid = str(uuid.uuid1())
         logger.debug("Generated UUID: %s" % self.uuid)
 
     def GetUuid(self):
+        """
+        Get UUID
+        """
         return self.uuid
 
     def SetUuid(self, uploaderUuid):
+        """
+        Set UUID
+        """
         self.uuid = uploaderUuid
 
     def GetName(self):
+        """
+        Get uploader name
+        """
         return self.name
 
     def GetHostname(self):
+        """
+        Get hostname
+        """
         return self.hostname
 
     def GetSettingsUpdated(self):
+        """
+        Get the date at which settings were last updated on the server
+        """
         return self.settingsUpdated
+
 
 class UploaderRegistrationRequest(object):
     """
@@ -763,13 +568,22 @@ class UploaderRegistrationRequest(object):
         self.uploaderRegRequestJson = uploaderRegRequestJson
 
     def IsApproved(self):
+        """
+        Return True if uploader registration request has been approved
+        """
         return self.uploaderRegRequestJson['approved']
 
     def GetApprovedStorageBox(self):
+        """
+        Return approved storage box
+        """
         storageBoxJson = self.uploaderRegRequestJson['approved_storage_box']
         return StorageBox(storageBoxJson=storageBoxJson)
 
     def GetScpUsername(self):
+        """
+        Return 'scp_username' storage box attribute
+        """
         storageBox = self.GetApprovedStorageBox()
         attributes = storageBox.GetAttributes()
         for attribute in attributes:
@@ -778,6 +592,9 @@ class UploaderRegistrationRequest(object):
         raise StorageBoxAttributeNotFound(storageBox, "scp_username")
 
     def GetScpHostname(self):
+        """
+        Return 'scp_hostname' storage box attribute
+        """
         storageBox = self.GetApprovedStorageBox()
         attributes = storageBox.GetAttributes()
         for attribute in attributes:
@@ -786,6 +603,9 @@ class UploaderRegistrationRequest(object):
         raise StorageBoxAttributeNotFound(storageBox, "scp_hostname")
 
     def GetScpPort(self):
+        """
+        Return 'scp_port' storage box attribute
+        """
         storageBox = self.GetApprovedStorageBox()
         attributes = storageBox.GetAttributes()
         for attribute in attributes:
@@ -794,6 +614,9 @@ class UploaderRegistrationRequest(object):
         return "22"
 
     def GetLocation(self):
+        """
+        Return 'location' storage box option
+        """
         storageBox = self.GetApprovedStorageBox()
         options = storageBox.GetOptions()
         for option in options:

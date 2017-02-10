@@ -516,7 +516,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                              r"&requester_key_fingerprint=(\S+)$", self.path)
             if match:
                 uuid = urllib.unquote(match.groups()[0])
-                approved = (uuid == "1234567890")
+                existingApprovedRequest = (uuid == "1234567890")
                 fingerprint = urllib.unquote(match.groups()[1])
             else:
                 self.send_response(400)
@@ -529,75 +529,87 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            uploadersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": 25,
-                        "approved": approved,
-                        "approved_storage_box": {
-                            "id": 10,
-                            "name": "test-staging",
-                            "description": "Test Staging",
-                            "django_storage_class":
-                                "tardis.tardis_portal.storage"
-                                ".MyTardisLocalFileSystemStorage",
-                            "max_size": "10566819840",
-                            "status": "dirty",
-                            "attributes": [
-                                {
-                                    "id": 10,
-                                    "key": "scp_username",
-                                    "resource_uri": "/api/v1/storageboxattribute/10/",
-                                    "storage_box": "/api/v1/storagebox/10/",
-                                    "value": "mydata"
-                                },
-                                {
-                                    "id": 11,
-                                    "key": "scp_hostname",
-                                    "resource_uri": "/api/v1/storageboxattribute/11/",
-                                    "storage_box": "/api/v1/storagebox/10/",
-                                    "value": "localhost",
-                                },
-                                {
-                                    "id": 12,
-                                    "key": "type",
-                                    "resource_uri": "/api/v1/storageboxattribute/12/",
-                                    "storage_box": "/api/v1/storagebox/10/",
-                                    "value": "receiving"
-                                },
-                                {
-                                    "id": 13,
-                                    "key": "scp_port",
-                                    "resource_uri": "/api/v1/storageboxattribute/13/",
-                                    "storage_box": "/api/v1/storagebox/10/",
-                                    "value": "2200",
-                                },
-                            ],
-                            "options": [
-                                {
-                                    "id": 8,
-                                    "key": "location",
-                                    "resource_uri": "/api/v1/storageboxoption/8/",
-                                    "storage_box": "/api/v1/storagebox/10/",
-                                    "value": STAGING_PATH
-                                }
-                            ],
-                            "resource_uri": "/api/v1/storagebox/10/",
-                        },
-                        "requester_key_fingerprint": fingerprint,
-                        "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
-                        "uploader": "/api/v1/mydata_uploader/25/"
-                    }
-                ]
-            }
-            self.wfile.write(json.dumps(uploadersJson))
+            if existingApprovedRequest:
+                uploaderRegRequestsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 1
+                    },
+                    "objects": [
+                        {
+                            "id": 25,
+                            "approved": True,
+                            "approved_storage_box": {
+                                "id": 10,
+                                "name": "test-staging",
+                                "description": "Test Staging",
+                                "django_storage_class":
+                                    "tardis.tardis_portal.storage"
+                                    ".MyTardisLocalFileSystemStorage",
+                                "max_size": "10566819840",
+                                "status": "dirty",
+                                "attributes": [
+                                    {
+                                        "id": 10,
+                                        "key": "scp_username",
+                                        "resource_uri": "/api/v1/storageboxattribute/10/",
+                                        "storage_box": "/api/v1/storagebox/10/",
+                                        "value": "mydata"
+                                    },
+                                    {
+                                        "id": 11,
+                                        "key": "scp_hostname",
+                                        "resource_uri": "/api/v1/storageboxattribute/11/",
+                                        "storage_box": "/api/v1/storagebox/10/",
+                                        "value": "localhost",
+                                    },
+                                    {
+                                        "id": 12,
+                                        "key": "type",
+                                        "resource_uri": "/api/v1/storageboxattribute/12/",
+                                        "storage_box": "/api/v1/storagebox/10/",
+                                        "value": "receiving"
+                                    },
+                                    {
+                                        "id": 13,
+                                        "key": "scp_port",
+                                        "resource_uri": "/api/v1/storageboxattribute/13/",
+                                        "storage_box": "/api/v1/storagebox/10/",
+                                        "value": "2200",
+                                    },
+                                ],
+                                "options": [
+                                    {
+                                        "id": 8,
+                                        "key": "location",
+                                        "resource_uri": "/api/v1/storageboxoption/8/",
+                                        "storage_box": "/api/v1/storagebox/10/",
+                                        "value": STAGING_PATH
+                                    }
+                                ],
+                                "resource_uri": "/api/v1/storagebox/10/",
+                            },
+                            "requester_key_fingerprint": fingerprint,
+                            "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
+                            "uploader": "/api/v1/mydata_uploader/25/"
+                        }
+                    ]
+                }
+            else:
+                uploaderRegRequestsJson = {
+                    "meta": {
+                        "limit": 20,
+                        "next": None,
+                        "offset": 0,
+                        "previous": None,
+                        "total_count": 0
+                    },
+                    "objects": []
+                }
+            self.wfile.write(json.dumps(uploaderRegRequestsJson))
         elif self.path.startswith("/api/v1/mydata_experiment/?format=json&title="):
             # e.g. /api/v1/mydata_experiment/?format=json
             #      &title=Test%20Instrument%20-%20Test%20User1
@@ -737,6 +749,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     match = re.match(r"^.*&uploader=(\S+)$", self.path)
                     if match:
                         uploaderUuid = urllib.unquote(match.groups()[0])  # uploader uuid
+                    else:
+                        uploaderUuid = None
             if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
@@ -1397,6 +1411,21 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "resource_uri": "/api/v1/instrument/32/"
             }
             self.wfile.write(json.dumps(instrumentJson))
+        elif self.path == "/api/v1/mydata_uploaderregistrationrequest/":
+            self.send_response(201)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            uploaderResourceUri = postData['uploader']
+            fingerprint = postData['requester_key_fingerprint']
+            uploaderRegistrationRequestJson = {
+                "id": 25,
+                "approved": False,
+                "approved_storage_box": None,
+                "requester_key_fingerprint": fingerprint,
+                "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
+                "uploader": uploaderResourceUri
+            }
+            self.wfile.write(json.dumps(uploaderRegistrationRequestJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to POST: %s" % self.path)
@@ -1432,40 +1461,29 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            uploadersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
+            uploaderJson = {
+                "id": uploaderId,
+                "name": "Test Instrument",
+                "instruments": [
                     {
-                        "id": uploaderId,
+                        "id": 31,
                         "name": "Test Instrument",
-                        "instruments": [
-                            {
-                                "id": 31,
-                                "name": "Test Instrument",
-                                "facility": {
-                                    "id": 2,
-                                    "manager_group": {
-                                        "id": 2,
-                                        "name": "test_facility_managers",
-                                        "resource_uri": "/api/v1/group/2/"
-                                    },
-                                    "name": "Test Facility",
-                                    "resource_uri": "/api/v1/facility/2/"
-                                },
-                                "resource_uri": "/api/v1/instrument/31/"
-                            }
-                        ],
-                        "resource_uri": "/api/v1/mydata_uploader/25/",
+                        "facility": {
+                            "id": 2,
+                            "manager_group": {
+                                "id": 2,
+                                "name": "test_facility_managers",
+                                "resource_uri": "/api/v1/group/2/"
+                            },
+                            "name": "Test Facility",
+                            "resource_uri": "/api/v1/facility/2/"
+                        },
+                        "resource_uri": "/api/v1/instrument/31/"
                     }
-                ]
+                ],
+                "resource_uri": "/api/v1/mydata_uploader/25/",
             }
-            self.wfile.write(json.dumps(uploadersJson))
+            self.wfile.write(json.dumps(uploaderJson))
         elif self.path.startswith("/api/v1/instrument/17/"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")

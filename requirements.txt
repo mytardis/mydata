@@ -1,5 +1,5 @@
 appdirs==1.4.0
-netifaces==0.10.4
+netifaces==0.10.5
 poster==0.8.1
 psutil==2.2.1
 # py2app==0.9
