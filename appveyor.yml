@@ -14,16 +14,13 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-    COVERALLS_SERVICE_NAME: AppVeyor
-    COVERALLS_REPO_TOKEN:
-      secure: 3Zzoh/CPhOHYNZXKBEgi5nNOYrJ9wigKmomkk/VBB4A/KfEJlKUbGoMftMcJfARM
+    CODECOV_TOKEN:
+      secure: Rg0Q0ecqAFle4YG3gjSDhBpV4JUTwwelG+ZGLClMkWBRZQINh5a20pvj3FkaIoGm
 
   matrix:
 
-    # Python 2.7.10 is the latest version and is not pre-installed.
-
-    - PYTHON: "C:\\Python27.10"
-      PYTHON_VERSION: "2.7.10"
+    - PYTHON: "C:\\Python27.13"
+      PYTHON_VERSION: "2.7.13"
       PYTHON_ARCH: "32"
 
 install:
@@ -61,7 +58,7 @@ install:
 
   - "%CMD_IN_ENV% pip install pypiwin32"
 
-  - "%CMD_IN_ENV% pip install coveralls"
+  - "%CMD_IN_ENV% pip install codecov"
 
   - "%CMD_IN_ENV% pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix"
 
@@ -75,12 +72,7 @@ test_script:
 
   - "SET MYDATA_DEBUG_LOG_PATH=."
   - "python setup.py nosetests"
-
-  - "SET CI_NAME=AppVeyor"
-  - "SET CI_BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%"
-  - "SET CI_BUILD_URL=https://ci.appveyor.com/project/wettenhj/mydata/%APPVEYOR_BUILD_VERSION%"
-  - "SET CI_BRANCH=%APPVEYOR_REPO_BRANCH%"
-  - "coveralls"
+  - "codecov --branch %APPVEYOR_REPO_BRANCH%"
 
 after_test:
   # If tests are successful, create binary packages for the project.
