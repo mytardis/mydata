@@ -58,7 +58,7 @@ install:
 
   - "%CMD_IN_ENV% pip install pypiwin32"
 
-  - "%CMD_IN_ENV% pip install codecov"
+  - "%CMD_IN_ENV% pip install git+https://github.com/wettenhj/codecov-python.git@fix-appveyor-url"
 
   - "%CMD_IN_ENV% pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix"
 
