@@ -136,11 +136,18 @@ class UploaderModel(object):
         self.processor = ""
         self.architecture = ""
 
-        if netifaces.AF_INET in netifaces.gateways()['default'].keys():
+        self.macAddress = ""
+        self.ipv4Address = ""
+        self.ipv6Address = ""
+        self.subnetMask = ""
+
+        defaultInterfaceType = UploaderModel.GetDefaultInterfaceType()
+        if defaultInterfaceType:
             self.interface = \
-                netifaces.gateways()['default'][netifaces.AF_INET][1]
+                netifaces.gateways()['default'][defaultInterfaceType][1]
             ifaddresses = netifaces.ifaddresses(self.interface)
-            self.macAddress = ifaddresses[netifaces.AF_LINK][0]['addr']
+            if netifaces.AF_LINK in ifaddresses.keys():
+                self.macAddress = ifaddresses[netifaces.AF_LINK][0]['addr']
             ipv4Addrs = ifaddresses[netifaces.AF_INET]
             self.ipv4Address = ipv4Addrs[0]['addr']
             self.subnetMask = ipv4Addrs[0]['netmask']
@@ -509,15 +516,30 @@ class UploaderModel(object):
         return self.uploaderSettings
 
     @staticmethod
+    def GetDefaultInterfaceType():
+        """
+        Get default interface type
+        """
+        defaultInterfaceType = netifaces.AF_INET
+        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+            defaultInterfaceType = netifaces.AF_INET6
+        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+            defaultInterfaceType = netifaces.AF_LINK
+        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+            defaultInterfaceType = None
+        return defaultInterfaceType
+
+    @staticmethod
     def GetActiveNetworkInterfaces():
         """
         Get active network interfaces
         """
         logger.debug("Determining the active network interface...")
         activeInterfaces = []
-        if netifaces.AF_INET in netifaces.gateways()['default'].keys():
+        defaultInterfaceType = UploaderModel.GetDefaultInterfaceType()
+        if defaultInterfaceType:
             activeInterfaces.append(
-                netifaces.gateways()['default'][netifaces.AF_INET][1])
+                netifaces.gateways()['default'][defaultInterfaceType][1])
         return activeInterfaces
 
     def GenerateUuid(self):
