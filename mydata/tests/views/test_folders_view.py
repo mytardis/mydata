@@ -47,7 +47,8 @@ class FoldersViewTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
+        self.settingsModel = SettingsModel(configPath=configPath,
+                                           checkForUpdates=False)
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
@@ -58,16 +59,16 @@ class FoldersViewTester(unittest.TestCase):
         self.settingsModel.SetDataDirectory(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "testdata", "testdataUsernameDataset"))
+                "../testdata", "testdataUsernameDataset"))
         self.settingsModel.SaveToDisk()
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel, self.settingsModel)
+        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
+                                         self.settingsModel)
         self.foldersView = FoldersView(self.frame, foldersModel=self.foldersModel)
 
     def test_folders_view(self):
         """
         Test ability to open folders view.
         """
-        # pylint: disable=no-self-use
         sys.stderr.write("Waiting for fake MyTardis server to start...\n")
         attempts = 0
         while True:
