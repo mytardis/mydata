@@ -67,8 +67,8 @@ class LogView(wx.Panel):
         """
         Turn debug-level logging on or off.
         """
-        # pylint: disable=no-self-use
-        if event.IsChecked():
+        if self.debugCheckBox.IsChecked():
             logger.SetLevel(logging.DEBUG)
         else:
             logger.SetLevel(logging.INFO)
+        event.Skip()
