@@ -26,8 +26,6 @@ class UsersViewTester(unittest.TestCase):
         """
         Test ability to open users view.
         """
-        # pylint: disable=no-self-use
-
         dataViewId = self.usersModel.GetMaxDataViewId() + 1
         testuser1 = UserModel(
             username="testuser1",
