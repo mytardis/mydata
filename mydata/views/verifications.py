@@ -48,9 +48,3 @@ class VerificationsView(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(sizer)
         sizer.Add(self.verificationsDataViewControl, 1, wx.EXPAND)
-
-    def GetVerificationsModel(self):
-        """
-        Return verifications model.
-        """
-        return self.verificationsModel
