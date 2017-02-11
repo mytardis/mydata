@@ -258,8 +258,8 @@ class FolderModel(object):
         file.
         """
         match = False
-        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
-            for glob in includesFile.readlines():
+        with open(self.settingsModel.GetExcludesFile(), 'r') as excludesFile:
+            for glob in excludesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
                     continue
