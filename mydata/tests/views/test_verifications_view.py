@@ -16,16 +16,14 @@ class VerificationsViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='VerificationsViewTester')
-        self.verificationsModel = VerificationsModel()
-        VerificationsView(self.frame, verificationsModel=self.verificationsModel)
         self.frame.Show()
 
     def test_verifications_view(self):
         """
         Test ability to open verifications view.
         """
-        # pylint: disable=no-self-use
-        pass
+        verificationsModel = VerificationsModel()
+        VerificationsView(self.frame, verificationsModel=verificationsModel)
 
     def tearDown(self):
         self.frame.Hide()
