@@ -346,8 +346,6 @@ def SshServerIsReady(username, privateKeyFilePath,
     return returncode == 0
 
 
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-function-args
 def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                host, port, remoteFilePath, progressCallback,
                foldersController, uploadModel):
@@ -439,8 +437,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
     settingsModel = foldersController.settingsModel
-    cipher = settingsModel.GetCipher()
-    progressPollInterval = settingsModel.GetProgressPollInterval()
+    cipher = settingsModel.miscellaneous.cipher
+    progressPollInterval = settingsModel.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     uploadModel.SetStartTime(datetime.now())
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
@@ -485,9 +483,9 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                      "for %s" % filePath)
         return
 
-    maxThreads = settingsModel.GetMaxUploadThreads()
+    maxThreads = settingsModel.advanced.maxUploadThreads
     remoteDir = os.path.dirname(remoteFilePath)
-    if settingsModel.UseNoneCipher():
+    if settingsModel.miscellaneous.useNoneCipher:
         cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
     else:
         cipherString = "-c %s" % cipher
@@ -567,12 +565,12 @@ def UploadFileFromWindows(filePath, fileSize, username,
     # pylint: disable=too-many-statements
     uploadModel.SetStartTime(datetime.now())
     settingsModel = foldersController.settingsModel
-    maxThreads = settingsModel.GetMaxUploadThreads()
-    progressPollInterval = settingsModel.GetProgressPollInterval()
+    maxThreads = settingsModel.advanced.maxUploadThreads
+    progressPollInterval = settingsModel.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
-    cipher = settingsModel.GetCipher()
+    cipher = settingsModel.miscellaneous.cipher
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -666,7 +664,7 @@ def CleanUpSshProcesses(settingsModel):
     matches MyData's SSH path.  On other platforms, we can use proc.cmdline()
     to ensure that the SSH process we're killing uses MyData's private key.
     """
-    privateKeyPath = settingsModel.GetSshKeyPair().GetPrivateKeyFilePath()
+    privateKeyPath = settingsModel.sshKeyPair.GetPrivateKeyFilePath()
     for proc in psutil.process_iter():
         try:
             if proc.exe() == OPENSSH.ssh:

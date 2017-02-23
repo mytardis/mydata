@@ -4,16 +4,12 @@ Test ability to update settings from server.
 import unittest
 import tempfile
 import os
-import sys
-import threading
-import time
-from BaseHTTPServer import HTTPServer
-
-import requests
 
 from mydata.models.settings import SettingsModel
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.models.settings.serialize import LoadSettings
+from mydata.models.settings.serialize import SaveSettingsToDisk
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 
 
 class UpdatedSettingsTester(unittest.TestCase):
@@ -45,18 +41,19 @@ class UpdatedSettingsTester(unittest.TestCase):
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
-        self.settingsModel.SetConfigPath(self.tempFilePath)
-        self.StartFakeMyTardisServer()
+        self.settingsModel.configPath = self.tempFilePath
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        self.WaitForFakeMyTardisServerToStart()
-        self.settingsModel.SetMyTardisUrl(self.fakeMyTardisUrl)
+        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
+        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.SetDataDirectory(dataDirectory)
-        self.settingsModel.SaveToDisk()
+        self.settingsModel.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk(self.settingsModel)
 
     def tearDown(self):
         """
@@ -70,46 +67,15 @@ class UpdatedSettingsTester(unittest.TestCase):
     def test_update_settings_from_server(self):
         """
         Test ability to update settings from server.
+
+        For the purpose of testing, the updated values are hard-coded in
+        mydata/tests/fake_mytardis_server.py
         """
-        self.settingsModel.LoadSettings(checkForUpdates=True)
-        self.assertEqual(self.settingsModel.GetContactName(), "Someone Else")
-        self.assertFalse(self.settingsModel.ValidateFolderStructure())
-        self.assertEqual(self.settingsModel.GetMaxVerificationThreads(), 2)
-        self.assertEqual(str(self.settingsModel.GetScheduledDate()),
+        LoadSettings(self.settingsModel, checkForUpdates=True)
+        self.assertEqual(self.settingsModel.general.contactName, "Someone Else")
+        self.assertFalse(self.settingsModel.advanced.validateFolderStructure)
+        self.assertEqual(self.settingsModel.miscellaneous.maxVerificationThreads, 2)
+        self.assertEqual(str(self.settingsModel.schedule.scheduledDate),
                          "2020-01-01")
-        self.assertEqual(str(self.settingsModel.GetScheduledTime()),
+        self.assertEqual(str(self.settingsModel.schedule.scheduledTime),
                          "09:00:00")
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()
-
-    def WaitForFakeMyTardisServerToStart(self):
-        """
-        Wait for fake MyTardis server to start.
-        """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.fakeMyTardisUrl +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.fakeMyTardisUrl, str(err)))

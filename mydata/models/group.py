@@ -31,7 +31,7 @@ class GroupModel(object):
 
         self.shortName = name
         if settingsModel is not None:
-            length = len(settingsModel.GetGroupPrefix())
+            length = len(settingsModel.advanced.groupPrefix)
             self.shortName = self.name[length:]
 
     def GetId(self):
@@ -53,12 +53,11 @@ class GroupModel(object):
         return self.__dict__[key]
 
     @staticmethod
-    def GetGroupByName(settingsModel, name):
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        url = myTardisUrl + "/api/v1/group/?format=json&name=" + \
-            urllib.quote(name.encode('utf-8'))
-        headers = settingsModel.GetDefaultHeaders()
-        response = requests.get(url=url, headers=headers)
+    def GetGroupByName(settings, name):
+        url = "%s/api/v1/group/?format=json&name=%s" \
+            % (settings.general.myTardisUrl,
+               urllib.quote(name.encode('utf-8')))
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
             logger.debug("Failed to look up group record for name \"" +
                          name + "\".")
@@ -73,5 +72,5 @@ class GroupModel(object):
                 response=response)
         else:
             logger.debug("Found group record for name '" + name + "'.")
-            return GroupModel(settingsModel=settingsModel, name=name,
+            return GroupModel(settingsModel=settings, name=name,
                               groupJson=groupsJson['objects'][0])

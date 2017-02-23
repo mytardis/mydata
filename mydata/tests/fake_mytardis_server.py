@@ -22,6 +22,7 @@ import logging
 
 from mydata.utils.openssh import GetCygwinPath
 
+# Set this to True to log URL requests:
 DEBUG = False
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,10 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if self.path.startswith("/redirect") or \
                 self.path.startswith("/different_url"):
             self.do_HEAD()
+            return
+
+        if self.path.startswith("/request/connectionerror/"):
+            self.server.server_close()
             return
 
         if self.path.startswith("/request/http/code/"):

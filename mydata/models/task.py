@@ -28,7 +28,6 @@ class TaskModel(object):
     # pylint: disable=missing-docstring
     def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime,
                  scheduleType="Once", intervalMinutes=None, days=None):
-        # pylint: disable=too-many-arguments
         self.dataViewId = dataViewId
         self.jobFunc = jobFunc
         self.jobArgs = jobArgs

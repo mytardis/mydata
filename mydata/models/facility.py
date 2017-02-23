@@ -8,6 +8,7 @@ import requests
 from .group import GroupModel
 from . import HandleHttpError
 
+
 class FacilityModel(object):
     """
     Model class for MyTardis API v1's FacilityResource.
@@ -53,21 +54,19 @@ class FacilityModel(object):
         return self.json['resource_uri']
 
     @staticmethod
-    def GetMyFacilities(settingsModel):
+    def GetMyFacilities(settings):
         """
         Get facilities I have access to (by
         facility managers group membership).
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
         facilities = []
-        url = myTardisUrl + "/api/v1/facility/?format=json"
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        url = "%s/api/v1/facility/?format=json" % settings.general.myTardisUrl
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
             HandleHttpError(response)
         facilitiesJson = response.json()
         for facilityJson in facilitiesJson['objects']:
             facilities.append(FacilityModel(
-                settingsModel=settingsModel,
+                settingsModel=settings,
                 facilityJson=facilityJson))
         return facilities

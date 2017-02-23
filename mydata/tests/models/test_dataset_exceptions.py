@@ -2,21 +2,17 @@
 Test ability to handle dataset-related exceptions.
 """
 import os
-import sys
-import time
 import unittest
-import threading
-from BaseHTTPServer import HTTPServer
 
-import requests
 import wx
 
 from mydata.models.dataset import DatasetModel
 from mydata.models.experiment import ExperimentModel
 from mydata.models.folder import FolderModel
 from mydata.models.settings import SettingsModel
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.models.settings.validation import ValidateSettings
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
 
@@ -39,10 +35,11 @@ class DatasetExceptionsTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='DatasetExceptionsTester')
-        self.StartFakeMyTardisServer()
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        self.WaitForFakeMyTardisServerToStart()
+        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
 
     def tearDown(self):
         self.frame.Hide()
@@ -64,12 +61,11 @@ class DatasetExceptionsTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataExpDataset.cfg")
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.SetDataDirectory(dataDirectory)
-        settingsModel.SetMyTardisUrl(self.fakeMyTardisUrl)
-        settingsValidation = settingsModel.Validate()
-        self.assertTrue(settingsValidation.IsValid())
+        settingsModel.general.dataDirectory = dataDirectory
+        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings(settingsModel)
 
-        owner = settingsModel.GetDefaultOwner()
+        owner = settingsModel.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
@@ -107,11 +103,11 @@ class DatasetExceptionsTester(unittest.TestCase):
 
         # Try to look up dataset record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.GetApiKey()
-        folderModel.settingsModel.SetApiKey("invalid")
+        apiKey = folderModel.settingsModel.general.apiKey
+        folderModel.settingsModel.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
-        folderModel.settingsModel.SetApiKey(apiKey)
+        folderModel.settingsModel.general.apiKey = apiKey
 
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where the user doesn't have
@@ -126,37 +122,3 @@ class DatasetExceptionsTester(unittest.TestCase):
         folderModel.folder = "New Dataset Folder With Internal Server Error"
         with self.assertRaises(InternalServerError):
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()
-
-    def WaitForFakeMyTardisServerToStart(self):
-        """
-        Wait for fake MyTardis server to start.
-        """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.fakeMyTardisUrl +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.fakeMyTardisUrl, str(err)))

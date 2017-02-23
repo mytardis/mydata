@@ -2,22 +2,18 @@
 Test ability to scan the Email / Experiment / Dataset folder structure.
 """
 import os
-import sys
-import time
 import unittest
-import threading
-from BaseHTTPServer import HTTPServer
 
-import requests
 import wx
 
 from mydata.events import MYDATA_EVENTS
 from mydata.models.settings import SettingsModel
+from mydata.models.settings.validation import ValidateSettings
 from mydata.dataviewmodels.folders import FoldersModel
 from mydata.dataviewmodels.users import UsersModel
 from mydata.dataviewmodels.groups import GroupsModel
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 
 
 class ScanEmailExpDatasetTester(unittest.TestCase):
@@ -38,7 +34,8 @@ class ScanEmailExpDatasetTester(unittest.TestCase):
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ScanEmailExpDatasetTester')
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
-        self.StartFakeMyTardisServer()
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
 
     def tearDown(self):
         self.frame.Destroy()
@@ -49,7 +46,6 @@ class ScanEmailExpDatasetTester(unittest.TestCase):
         """
         Test ability to scan the Email / Experiment / Dataset folder structure.
         """
-        # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -63,26 +59,11 @@ class ScanEmailExpDatasetTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataEmailExpDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.SetDataDirectory(dataDirectory)
-        settingsModel.SetMyTardisUrl(
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(settingsModel.GetMyTardisUrl() +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (settingsModel.GetMyTardisUrl(),
-                                       str(err)))
-
-        settingsValidation = settingsModel.Validate()
-        self.assertTrue(settingsValidation.IsValid())
+        settingsModel.general.dataDirectory = dataDirectory
+        settingsModel.general.myTardisUrl = \
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        WaitForFakeMyTardisServerToStart(settingsModel.general.myTardisUrl)
+        ValidateSettings(settingsModel)
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
         foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
@@ -112,23 +93,3 @@ class ScanEmailExpDatasetTester(unittest.TestCase):
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 5)
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -25,9 +25,9 @@ class ObjectAclModel(object):
         logger.debug("\nSharing via ObjectACL with username \"" +
                      user.GetUsername() + "\"...\n")
 
-        settingsModel = experiment.GetSettingsModel()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        settings = experiment.GetSettingsModel()
+        myTardisUrl = settings.general.myTardisUrl
+        myTardisDefaultUsername = settings.general.username
 
         objectAclJson = {
             "pluginId": "django_user",
@@ -44,9 +44,8 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
-        response = requests.post(headers=headers, url=url,
+        response = requests.post(headers=settings.defaultHeaders, url=url,
                                  data=json.dumps(objectAclJson))
         if response.status_code == 201:
             logger.debug("Shared experiment with user " +
@@ -84,9 +83,9 @@ class ObjectAclModel(object):
         logger.debug("\nSharing via ObjectACL with group \"" +
                      group.GetName() + "\"...\n")
 
-        settingsModel = experiment.GetSettingsModel()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        settings = experiment.GetSettingsModel()
+        myTardisUrl = settings.general.myTardisUrl
+        myTardisDefaultUsername = settings.general.username
 
         objectAclJson = {
             "pluginId": "django_group",
@@ -103,9 +102,8 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
-        response = requests.post(headers=headers, url=url,
+        response = requests.post(headers=settings.defaultHeaders, url=url,
                                  data=json.dumps(objectAclJson))
         if response.status_code == 201:
             logger.debug("Shared experiment with group " +

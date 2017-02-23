@@ -3,7 +3,6 @@ Model for datafile verification / lookup.
 """
 
 
-# pylint: disable=invalid-name
 class VerificationStatus(object):
     """
     Enumerated data type for verification states.
@@ -37,11 +36,11 @@ class VerificationStatus(object):
     FAILED = 8
 
 
-# pylint: disable=too-many-instance-attributes
 class VerificationModel(object):
     """
     Model for datafile verification / lookup.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModelId = folderModel.GetDataViewId()

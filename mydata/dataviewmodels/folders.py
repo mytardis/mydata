@@ -378,23 +378,23 @@ class FoldersModel(DataViewIndexListModel):
             self.usersModel.DeleteAllRows()
         if self.groupsModel.GetCount() > 0:
             self.groupsModel.DeleteAllRows()
-        dataDir = self.settingsModel.GetDataDirectory()
-        defaultOwner = self.settingsModel.GetDefaultOwner()
-        folderStructure = self.settingsModel.GetFolderStructure()
-        self.ignoreOldDatasets = self.settingsModel.IgnoreOldDatasets()
+        dataDir = self.settingsModel.general.dataDirectory
+        defaultOwner = self.settingsModel.defaultOwner
+        folderStructure = self.settingsModel.advanced.folderStructure
+        self.ignoreOldDatasets = self.settingsModel.filters.ignoreOldDatasets
         if self.ignoreOldDatasets:
             seconds = dict(day=24 * 60 * 60)
             seconds['year'] = int(365.25 * seconds['day'])
             seconds['month'] = seconds['year'] / 12
             singularIgnoreIntervalUnit = \
-                self.settingsModel.GetIgnoreOldDatasetIntervalUnit().rstrip(
-                    's')
+                self.settingsModel.filters.ignoreOldDatasetIntervalUnit\
+                .rstrip('s')
             ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
 
             self.ignoreIntervalNumber = \
-                self.settingsModel.GetIgnoreOldDatasetIntervalNumber()
+                self.settingsModel.filters.ignoreOldDatasetIntervalNumber
             self.ignoreIntervalUnit = \
-                self.settingsModel.GetIgnoreOldDatasetIntervalUnit()
+                self.settingsModel.filters.ignoreOldDatasetIntervalUnit
             self.ignoreIntervalSeconds = \
                 self.ignoreIntervalNumber * ignoreIntervalUnitSeconds
         logger.debug("FoldersModel.ScanFolders(): Scanning " + dataDir + "...")
@@ -419,9 +419,10 @@ class FoldersModel(DataViewIndexListModel):
         """
         Scan for user folders.
         """
-        dataDir = self.settingsModel.GetDataDirectory()
-        userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
-        folderStructure = self.settingsModel.GetFolderStructure()
+        dataDir = self.settingsModel.general.dataDirectory
+        userOrGroupFilterString = \
+            '*%s*' % self.settingsModel.filters.userFilter
+        folderStructure = self.settingsModel.advanced.folderStructure
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
@@ -460,7 +461,7 @@ class FoldersModel(DataViewIndexListModel):
                 message = "Didn't find a MyTardis user record for folder " \
                     "\"%s\" in %s" % (userFolderName, dataDir)
                 logger.warning(message)
-                if not self.settingsModel.UploadInvalidUserOrGroupFolders():
+                if not self.settingsModel.advanced.uploadInvalidUserOrGroupFolders:
                     logger.warning("Skipping %s, because "
                                    "'Upload invalid user folders' "
                                    "setting is not checked." % userFolderName)
@@ -521,12 +522,13 @@ class FoldersModel(DataViewIndexListModel):
         """
         Scan for group folders.
         """
-        dataDir = self.settingsModel.GetDataDirectory()
-        userOrGroupFilterString = '*%s*' % self.settingsModel.GetUserFilter()
+        dataDir = self.settingsModel.general.dataDirectory
+        userOrGroupFilterString = \
+            '*%s*' % self.settingsModel.filters.userFilter
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         groupFolderNames = [os.path.basename(d) for d in dirsDepth1]
-        folderStructure = self.settingsModel.GetFolderStructure()
+        folderStructure = self.settingsModel.advanced.folderStructure
         for groupFolderName in groupFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
@@ -537,18 +539,17 @@ class FoldersModel(DataViewIndexListModel):
                          groupFolderName)
             groupsDataViewId = self.groupsModel.GetMaxDataViewId() + 1
             try:
-                groupName = self.settingsModel.GetGroupPrefix() + \
+                groupName = self.settingsModel.advanced.groupPrefix + \
                     groupFolderName
                 groupRecord = \
-                    GroupModel.GetGroupByName(self.settingsModel,
-                                              groupName)
+                    GroupModel.GetGroupByName(self.settingsModel, groupName)
             except DoesNotExist:
                 groupRecord = None
                 message = "Didn't find a MyTardis user group record for " \
                     "folder \"%s\" in %s" % (groupFolderName,
                                              dataDir)
                 logger.warning(message)
-                if not self.settingsModel.UploadInvalidUserOrGroupFolders():
+                if not self.settingsModel.advanced.uploadInvalidUserOrGroupFolders:
                     logger.warning("Skipping %s, because "
                                    "'Upload invalid user group folders' "
                                    "setting is not checked." % groupFolderName)
@@ -566,7 +567,7 @@ class FoldersModel(DataViewIndexListModel):
                     'User Group / Instrument / Full Name / Dataset':
                 self.ImportGroupFolders(groupFolderPath, groupRecord)
             elif folderStructure == 'User Group / Experiment / Dataset':
-                defaultOwner = self.settingsModel.GetDefaultOwner()
+                defaultOwner = self.settingsModel.defaultOwner
                 self.ScanForExperimentFolders(groupFolderPath,
                                               owner=defaultOwner,
                                               groupRecord=groupRecord,
@@ -591,7 +592,7 @@ class FoldersModel(DataViewIndexListModel):
             logger.debug("Scanning " + pathToScan +
                          " for dataset folders...")
             datasetFilterString = \
-                '*%s*' % self.settingsModel.GetDatasetFilter()
+                '*%s*' % self.settingsModel.filters.datasetFilter
             filesDepth1 = glob(os.path.join(pathToScan, datasetFilterString))
             dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
@@ -626,40 +627,38 @@ class FoldersModel(DataViewIndexListModel):
                 if not owner.UserNotFoundInMyTardis():
                     if owner.GetName().strip() != "":
                         experimentTitle = "%s - %s" \
-                            % (self.settingsModel.GetInstrumentName(),
+                            % (self.settingsModel.general.instrumentName,
                                owner.GetName())
                     else:
                         experimentTitle = "%s - %s" \
-                            % (self.settingsModel.GetInstrumentName(),
+                            % (self.settingsModel.general.instrumentName,
                                owner.GetUsername())
                 elif owner.GetName() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
-                        % (self.settingsModel.GetInstrumentName(),
+                        % (self.settingsModel.general.instrumentName,
                            owner.GetName(),
                            UserModel.userNotFoundString)
                 elif owner.GetUsername() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
-                        % (self.settingsModel.GetInstrumentName(),
+                        % (self.settingsModel.general.instrumentName,
                            owner.GetUsername(),
                            UserModel.userNotFoundString)
                 elif owner.GetEmail() != UserModel.userNotFoundString:
                     experimentTitle = "%s - %s (%s)" \
-                        % (self.settingsModel.GetInstrumentName(),
+                        % (self.settingsModel.general.instrumentName,
                            owner.GetEmail(),
                            UserModel.userNotFoundString)
                 else:
                     experimentTitle = "%s - %s" \
-                        % (self.settingsModel.GetInstrumentName(),
+                        % (self.settingsModel.general.instrumentName,
                            UserModel.userNotFoundString)
                 folderModel.SetExperimentTitle(experimentTitle)
                 self.AddRow(folderModel)
         except:
             logger.error(traceback.format_exc())
 
-    def ScanForExperimentFolders(self, pathToScan, owner,
-                                 userFolderName=None,
+    def ScanForExperimentFolders(self, pathToScan, owner, userFolderName=None,
                                  groupRecord=None, groupFolderName=None):
-        # pylint: disable=too-many-arguments
         """
         Scans for experiment folders.
 
@@ -670,12 +669,12 @@ class FoldersModel(DataViewIndexListModel):
         found within a user group folder, then the user group will be
         given access.
         """
-        datasetFilterString = '*%s*' % self.settingsModel.GetDatasetFilter()
-        expFilterString = '*%s*' % self.settingsModel.GetExperimentFilter()
+        datasetFilterString = '*%s*' % self.settingsModel.filters.datasetFilter
+        expFilterString = '*%s*' % self.settingsModel.filters.experimentFilter
         globDepth1 = glob(os.path.join(pathToScan, expFilterString))
         dirsDepth1 = [item for item in globDepth1 if os.path.isdir(item)]
         expFolders = [os.path.basename(d) for d in dirsDepth1]
-        folderStructure = self.settingsModel.GetFolderStructure()
+        folderStructure = self.settingsModel.advanced.folderStructure
         for expFolderName in expFolders:
             expFolderPath = os.path.join(pathToScan, expFolderName)
             globDepth1 = glob(os.path.join(expFolderPath, datasetFilterString))
@@ -763,8 +762,8 @@ class FoldersModel(DataViewIndexListModel):
             logger.debug("Scanning " + groupFolderPath +
                          " for instrument folders...")
             datasetFilterString = \
-                '*%s*' % self.settingsModel.GetDatasetFilter()
-            instrumentName = self.settingsModel.GetInstrumentName()
+                '*%s*' % self.settingsModel.filters.datasetFilter
+            instrumentName = self.settingsModel.general.instrumentName
             filesDepth1 = glob(os.path.join(groupFolderPath, instrumentName))
             dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
             instrumentFolders = [os.path.basename(d) for d in dirsDepth1]
@@ -781,13 +780,13 @@ class FoldersModel(DataViewIndexListModel):
 
             instrumentFolderPath = \
                 os.path.join(groupFolderPath,
-                             self.settingsModel.GetInstrumentName())
+                             self.settingsModel.general.instrumentName)
 
             if not os.path.exists(instrumentFolderPath):
                 logger.warning("Path %s doesn't exist." % instrumentFolderPath)
                 return
 
-            owner = self.settingsModel.GetDefaultOwner()
+            owner = self.settingsModel.defaultOwner
 
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")
@@ -830,7 +829,7 @@ class FoldersModel(DataViewIndexListModel):
                     folderModel.SetGroup(groupModel)
                     folderModel.SetCreatedDate()
                     folderModel.SetExperimentTitle(
-                        "%s - %s" % (self.settingsModel.GetInstrumentName(),
+                        "%s - %s" % (self.settingsModel.general.instrumentName,
                                      userFolderName))
                     self.AddRow(folderModel)
         except InvalidFolderStructure:

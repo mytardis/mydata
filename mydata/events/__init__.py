@@ -8,8 +8,12 @@ import sys
 import logging
 import wx
 
+from mydata.models.settings.serialize import SaveFieldsFromDialog
+from mydata.models.settings.validation import ValidateSettings
 from mydata.models.uploader import UploaderModel
 from mydata.utils.exceptions import DuplicateKey
+from mydata.utils.exceptions import UserAbortedSettingsValidation
+from mydata.utils.exceptions import InvalidSettings
 from mydata.utils import BeginBusyCursorIfRequired
 from mydata.utils import EndBusyCursorIfRequired
 from mydata.logs import logger
@@ -361,7 +365,7 @@ def InstrumentNameMismatch(event):
         elif dlg.GetStringSelection() == discardChoice:
             logger.info("OK, we will discard the new instrument name.")
             event.settingsDialog.SetInstrumentName(
-                event.settingsModel.GetInstrumentName())
+                event.settingsModel.general.instrumentName)
             event.settingsDialog.instrumentNameField.SetFocus()
             event.settingsDialog.instrumentNameField.SelectAll()
         elif dlg.GetStringSelection() == createChoice:
@@ -373,8 +377,7 @@ def InstrumentNameMismatch(event):
             intervalSinceLastCheck = \
                 datetime.now() - \
                 wx.GetApp().GetLastConnectivityCheckTime()
-            checkInterval = \
-                event.settingsModel.GetConnectivityCheckInterval()
+            checkInterval = event.settingsModel.connectivityCheckInterval
             if intervalSinceLastCheck.total_seconds() >= checkInterval \
                     or not wx.GetApp()\
                     .GetLastConnectivityCheckSuccess():
@@ -451,23 +454,14 @@ def SettingsDialogValidation(event):
     Handles settings validation request from Settings dialog.
     """
 
-    def Validate(settingsModel):
+    def ValidateWorker(settingsModel):
         """
         Performs settings validation in separate thread.
         """
         logger.debug("Starting run() method for thread %s"
                      % threading.current_thread().name)
         try:
-            wx.CallAfter(BeginBusyCursorIfRequired)
-            if sys.platform.startswith("win"):
-                # BeginBusyCursor should update the cursor everywhere,
-                # but it doesn't always work on Windows.
-                if wx.version().startswith("3.0.3.dev"):
-                    busyCursor = wx.Cursor(wx.CURSOR_WAIT)
-                else:
-                    busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
-                wx.CallAfter(event.settingsDialog.dialogPanel.SetCursor,
-                             busyCursor)
+            wx.CallAfter(BeginBusyCursorIfRequired, event)
             wx.CallAfter(event.settingsDialog.okButton.Disable)
             wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Disable)
 
@@ -475,8 +469,7 @@ def SettingsDialogValidation(event):
             if hasattr(app, "GetLastConnectivityCheckTime"):
                 intervalSinceLastCheck = datetime.now() - \
                     app.GetLastConnectivityCheckTime()
-                checkInterval = \
-                    event.settingsModel.GetConnectivityCheckInterval()
+                checkInterval = event.settingsModel.connectivityCheckInterval
                 if intervalSinceLastCheck.total_seconds() >= checkInterval \
                         or not app.GetLastConnectivityCheckSuccess():
                     settingsDialogValidationEvent = \
@@ -492,8 +485,8 @@ def SettingsDialogValidation(event):
                     PostEvent(checkConnectivityEvent)
                     return
             try:
-                event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
-                                                         saveToDisk=False)
+                SaveFieldsFromDialog(event.settingsModel, event.settingsDialog,
+                                     saveToDisk=False)
             except:
                 logger.error(traceback.format_exc())
 
@@ -504,13 +497,27 @@ def SettingsDialogValidation(event):
                 if hasattr(app, "GetMainFrame"):
                     wx.CallAfter(
                         wx.GetApp().GetMainFrame().SetStatusMessage, message)
-            settingsModel.Validate(SetStatusMessage)
-            wx.CallAfter(EndBusyCursorIfRequired, event)
-            provideValidationResultsEvent = \
-                MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
+            try:
+                datasetCount = ValidateSettings(settingsModel, SetStatusMessage)
+                PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
                     settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel)
-            PostEvent(provideValidationResultsEvent)
+                    settingsModel=event.settingsModel,
+                    datasetCount=datasetCount))
+            except UserAbortedSettingsValidation:
+                event.settingsModel.RollBack()
+                return
+            except InvalidSettings as invalidSettings:
+                PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
+                    settingsDialog=event.settingsDialog,
+                    settingsModel=event.settingsModel,
+                    invalidSettings=invalidSettings))
+            finally:
+                wx.CallAfter(EndBusyCursorIfRequired, event)
+                if wx.version().startswith("3.0.3.dev"):
+                    arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
+                else:
+                    arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
+                event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
         finally:
             wx.CallAfter(event.settingsDialog.okButton.Enable)
             wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
@@ -520,14 +527,14 @@ def SettingsDialogValidation(event):
                      % threading.current_thread().name)
 
     if wx.PyApp.IsMainLoopRunning():
-        thread = threading.Thread(target=Validate,
+        thread = threading.Thread(target=ValidateWorker,
                                   args=(event.settingsModel,),
                                   name="SettingsModelValidationThread")
         logger.debug("Starting thread %s" % thread.name)
         thread.start()
         logger.debug("Started thread %s" % thread.name)
     else:
-        Validate(event.settingsModel)
+        ValidateWorker(event.settingsModel)
 
 
 def ProvideSettingsValidationResults(event):
@@ -539,39 +546,29 @@ def ProvideSettingsValidationResults(event):
     Not called if settings validation was triggered by
     a background task.
     """
-    settingsValidation = event.settingsModel.GetValidation()
-    if settingsValidation.Aborted():
-        wx.CallAfter(EndBusyCursorIfRequired, event)
-        if wx.version().startswith("3.0.3.dev"):
-            arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
-        else:
-            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-        event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-        event.settingsModel.RollBack()
-        return
-    if settingsValidation is not None and \
-            not settingsValidation.IsValid():
-        message = settingsValidation.GetMessage()
+    invalidSettings = getattr(event, "invalidSettings", None)
+    if invalidSettings:
+        message = invalidSettings.message
         logger.error(message)
         app = wx.GetApp()
         if hasattr(app, "GetMainFrame"):
             app.GetMainFrame().SetStatusMessage("")
 
-        if settingsValidation.GetSuggestion():
+        if invalidSettings.suggestion:
             currentValue = ""
-            if settingsValidation.GetField() == "facility_name":
+            if invalidSettings.field == "facility_name":
                 currentValue = event.settingsDialog.GetFacilityName()
-            elif settingsValidation.GetField() == "mytardis_url":
+            elif invalidSettings.field == "mytardis_url":
                 currentValue = event.settingsDialog.GetMyTardisUrl()
             message = message.strip()
             if currentValue != "":
                 message += "\n\nMyData suggests that you replace \"%s\" " \
                     % currentValue
                 message += "with \"%s\"." \
-                    % settingsValidation.GetSuggestion()
+                    % invalidSettings.suggestion
             else:
                 message += "\n\nMyData suggests that you use \"%s\"." \
-                    % settingsValidation.GetSuggestion()
+                    % invalidSettings.suggestion
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.CANCEL | wx.ICON_ERROR)
             if wx.PyApp.IsMainLoopRunning():
@@ -581,12 +578,12 @@ def ProvideSettingsValidationResults(event):
                 sys.stderr.write("Assuming it's OK to use suggestion.\n")
                 okToUseSuggestion = wx.ID_OK
             if okToUseSuggestion == wx.ID_OK:
-                if settingsValidation.GetField() == "facility_name":
-                    event.settingsDialog.SetFacilityName(settingsValidation
-                                                         .GetSuggestion())
-                elif settingsValidation.GetField() == "mytardis_url":
-                    event.settingsDialog.SetMyTardisUrl(settingsValidation
-                                                        .GetSuggestion())
+                if invalidSettings.field == "facility_name":
+                    event.settingsDialog.SetFacilityName(
+                        invalidSettings.suggestion)
+                elif invalidSettings.field == "mytardis_url":
+                    event.settingsDialog.SetMyTardisUrl(
+                        invalidSettings.suggestion)
         else:
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
@@ -594,36 +591,36 @@ def ProvideSettingsValidationResults(event):
                 dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
-        if settingsValidation.GetField() == "instrument_name":
+        if invalidSettings.field == "instrument_name":
             event.settingsDialog.instrumentNameField.SetFocus()
             event.settingsDialog.instrumentNameField.SelectAll()
-        elif settingsValidation.GetField() == "facility_name":
+        elif invalidSettings.field == "facility_name":
             event.settingsDialog.facilityNameField.SetFocus()
             event.settingsDialog.facilityNameField.SelectAll()
-        elif settingsValidation.GetField() == "data_directory":
+        elif invalidSettings.field == "data_directory":
             event.settingsDialog.dataDirectoryField.SetFocus()
             event.settingsDialog.dataDirectoryField.SelectAll()
-        elif settingsValidation.GetField() == "mytardis_url":
+        elif invalidSettings.field == "mytardis_url":
             event.settingsDialog.myTardisUrlField.SetFocus()
             event.settingsDialog.myTardisUrlField.SelectAll()
-        elif settingsValidation.GetField() == "contact_name":
+        elif invalidSettings.field == "contact_name":
             event.settingsDialog.contactNameField.SetFocus()
             event.settingsDialog.contactNameField.SelectAll()
-        elif settingsValidation.GetField() == "contact_email":
+        elif invalidSettings.field == "contact_email":
             event.settingsDialog.contactEmailField.SetFocus()
             event.settingsDialog.contactEmailField.SelectAll()
-        elif settingsValidation.GetField() == "username":
+        elif invalidSettings.field == "username":
             event.settingsDialog.usernameField.SetFocus()
             event.settingsDialog.usernameField.SelectAll()
-        elif settingsValidation.GetField() == "api_key":
+        elif invalidSettings.field == "api_key":
             event.settingsDialog.apiKeyField.SetFocus()
             event.settingsDialog.apiKeyField.SelectAll()
-        elif settingsValidation.GetField() == "scheduled_time":
+        elif invalidSettings.field == "scheduled_time":
             event.settingsDialog.timeCtrl.SetFocus()
-        elif settingsValidation.GetField() == "includes_file":
+        elif invalidSettings.field == "includes_file":
             event.settingsDialog.includesFileField.SetFocus()
             event.settingsDialog.includesFileField.SelectAll()
-        elif settingsValidation.GetField() == "excludes_file":
+        elif invalidSettings.field == "excludes_file":
             event.settingsDialog.excludesFileField.SetFocus()
             event.settingsDialog.excludesFileField.SelectAll()
         logger.debug("Settings were not valid, so Settings dialog "
@@ -636,20 +633,19 @@ def ProvideSettingsValidationResults(event):
         event.settingsModel.RollBack()
         return
 
-    if event.settingsModel.IgnoreOldDatasets():
+    if event.settingsModel.filters.ignoreOldDatasets:
         intervalIfUsed = " (created within the past %d %s)" \
-            % (event.settingsModel.GetIgnoreOldDatasetIntervalNumber(),
-               event.settingsModel.GetIgnoreOldDatasetIntervalUnit())
+            % (event.settingsModel.filters.ignoreOldDatasetIntervalNumber,
+               event.settingsModel.filters.ignoreOldDatasetIntervalUnit)
     else:
         intervalIfUsed = ""
-    numDatasets = settingsValidation.GetDatasetCount()
-    if numDatasets != -1:
+    numDatasets = getattr(event, "datasetCount", None)
+    if numDatasets and numDatasets != -1:
         message = "Assuming a folder structure of '%s', " \
             "there %s %d %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
-            % (event.settingsModel.GetFolderStructure(),
-               "are" if numDatasets != 1 else "is",
-               settingsValidation.GetDatasetCount(),
+            % (event.settingsModel.advanced.folderStructure,
+               "are" if numDatasets != 1 else "is", numDatasets,
                "datasets" if numDatasets != 1 else "dataset",
                event.settingsDialog.GetDataDirectory(),
                intervalIfUsed)
@@ -667,7 +663,7 @@ def ProvideSettingsValidationResults(event):
                  "to disk and close the Settings dialog.")
     try:
         uploaderModel = UploaderModel(event.settingsModel)
-        event.settingsModel.SetUploaderModel(uploaderModel)
+        event.settingsModel.uploaderModel = uploaderModel
 
         # Use the config path determined by appdirs, not the one
         # determined by a user dragging and dropping a config
@@ -677,15 +673,14 @@ def ProvideSettingsValidationResults(event):
             configPath = app.GetConfigPath()
         else:
             configPath = None
-        event.settingsModel.SaveFieldsFromDialog(event.settingsDialog,
-                                                 configPath=configPath,
-                                                 saveToDisk=True)
+        SaveFieldsFromDialog(event.settingsModel, event.settingsDialog,
+                             configPath=configPath, saveToDisk=True)
         if wx.PyApp.IsMainLoopRunning():
             event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
         logger.debug("Closed Settings dialog.")
 
-        if event.settingsModel.GetScheduleType() == "Manually":
+        if event.settingsModel.schedule.scheduleType == "Manually":
             message = \
                  "MyData's schedule type is currently " \
                  "set to 'manual', so you will need to click " \
@@ -704,18 +699,17 @@ def ProvideSettingsValidationResults(event):
 
 def ValidateSettingsForRefresh(event):
     """
-    Call MyDataApp's OnRefresh (again) to trigger
-    settings validation.
+    Call MyDataApp's OnRefresh (again) to trigger settings validation.
     """
     wx.GetApp().OnRefresh(event)
 
 
 def SettingsValidationForRefreshComplete(event):
     """
-    Call MyDataApp's OnRefresh (again) to proceed
-    with starting up the data folder scans once
-    the settings validation has been completed.
+    Call MyDataApp's OnRefresh (again) to proceed with starting up the
+    data folder scans once the settings validation has been completed.
     """
+    event.needToValidateSettings = False
     wx.GetApp().OnRefresh(event)
 
 

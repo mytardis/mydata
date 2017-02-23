@@ -46,7 +46,6 @@ class FoldersController(object):
     """
     def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
                  verificationsModel, uploadsModel, settingsModel):
-        # pylint: disable=too-many-arguments
         self.notifyWindow = notifyWindow
         self.foldersModel = foldersModel
         self.foldersView = foldersView
@@ -293,7 +292,7 @@ class FoldersController(object):
         fc.verifyDatafileRunnable = {}
         fc.verificationsQueue = Queue.Queue()
         fc.numVerificationWorkerThreads = \
-            settingsModel.GetMaxVerificationThreads()
+            settingsModel.miscellaneous.maxVerificationThreads
         fc.verificationWorkerThreads = []
 
         if wx.PyApp.IsMainLoopRunning():
@@ -305,7 +304,7 @@ class FoldersController(object):
                 thread.start()
         fc.uploadDatafileRunnable = {}
         fc.uploadsQueue = Queue.Queue()
-        fc.numUploadWorkerThreads = settingsModel.GetMaxUploadThreads()
+        fc.numUploadWorkerThreads = settingsModel.advanced.maxUploadThreads
         fc.uploadMethod = UploadMethod.HTTP_POST
         fc.getOrCreateExpThreadingLock = threading.Lock()
 
@@ -313,9 +312,8 @@ class FoldersController(object):
             RestartErrandBoy()
 
         try:
-            settingsModel.GetUploaderModel().RequestStagingAccess()
-            uploadToStagingRequest = settingsModel\
-                .GetUploadToStagingRequest()
+            settingsModel.uploaderModel.RequestStagingAccess()
+            uploadToStagingRequest = settingsModel.uploadToStagingRequest
         except Exception, err:
             # MyData app could be missing from MyTardis server.
             sys.stderr.write(traceback.format_exc())

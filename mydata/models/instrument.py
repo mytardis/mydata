@@ -57,22 +57,20 @@ class InstrumentModel(object):
         return self.json['resource_uri']
 
     @staticmethod
-    def CreateInstrument(settingsModel, facility, name):
+    def CreateInstrument(settings, facility, name):
         """
         Create instrument.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisUsername = settingsModel.GetUsername()
-        url = myTardisUrl + "/api/v1/instrument/"
+        url = "%s/api/v1/instrument/" % settings.general.myTardisUrl
         instrumentJson = {
             "facility": facility.GetResourceUri(),
             "name": name}
         data = json.dumps(instrumentJson)
-        headers = settingsModel.GetDefaultHeaders()
+        headers = settings.defaultHeaders
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code == 201:
             instrumentJson = response.json()
-            return InstrumentModel(settingsModel=settingsModel, name=name,
+            return InstrumentModel(settingsModel=settings, name=name,
                                    instrumentJson=instrumentJson)
         else:
             if response.status_code == 401:
@@ -82,21 +80,19 @@ class InstrumentModel(object):
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" " \
-                           "user account." % myTardisUsername
+                           "user account." % settings.general.username
                 raise Unauthorized(message)
             HandleHttpError(response)
 
     @staticmethod
-    def GetInstrument(settingsModel, facility, name):
+    def GetInstrument(settings, facility, name):
         """
         Get instrument.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        url = myTardisUrl + "/api/v1/instrument/?format=json" + \
-            "&facility__id=" + str(facility.GetId()) + \
-            "&name=" + urllib.quote(name.encode('utf-8'))
-        headers = settingsModel.GetDefaultHeaders()
-        response = requests.get(url=url, headers=headers)
+        url = "%s/api/v1/instrument/?format=json&facility__id=%s&name=%s" \
+            % (settings.general.myTardisUrl, facility.GetId(),
+               urllib.quote(name.encode('utf-8')))
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
             HandleHttpError(response)
         instrumentsJson = response.json()
@@ -112,20 +108,20 @@ class InstrumentModel(object):
                          (name, facility.GetName()))
             instrumentJson = instrumentsJson['objects'][0]
             return InstrumentModel(
-                settingsModel=settingsModel, name=name,
+                settingsModel=settings, name=name,
                 instrumentJson=instrumentJson)
 
     def Rename(self, name):
         """
         Rename instrument.
         """
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
         logger.info("Renaming instrument \"%s\" to \"%s\"."
                     % (str(self), name))
-        url = myTardisUrl + "/api/v1/instrument/%d/" % self.GetId()
+        url = "%s/api/v1/instrument/%d/" \
+            % (self.settingsModel.general.myTardisUrl, self.GetId())
         uploaderJson = {"name": name}
         data = json.dumps(uploaderJson)
-        headers = self.settingsModel.GetDefaultHeaders()
+        headers = self.settingsModel.defaultHeaders
         response = requests.put(headers=headers, url=url, data=data)
         if response.status_code == 200:
             logger.info("Renaming instrument succeeded.")

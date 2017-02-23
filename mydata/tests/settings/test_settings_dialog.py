@@ -4,24 +4,22 @@ Test ability to open settings dialog and save fields.
 from datetime import datetime
 from datetime import timedelta
 import os
-import sys
 import tempfile
-import threading
-import time
 import unittest
-from BaseHTTPServer import HTTPServer
 
-import requests
 import wx
 
 from mydata.models.settings import SettingsModel
+from mydata.models.settings.serialize import SaveSettingsToDisk
+from mydata.models.settings.serialize import SaveFieldsFromDialog
+from mydata.utils.autostart import UpdateAutostartFile
 from mydata.views.settings import SettingsDialog
 from mydata.events import MYDATA_EVENTS
 from mydata.events import PostEvent
 from mydata.events import RenameInstrument
 from mydata.utils.exceptions import DuplicateKey
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 
 
 class SettingsDialogTester(unittest.TestCase):
@@ -57,20 +55,22 @@ class SettingsDialogTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
+        self.settingsModel = \
+            SettingsModel(configPath=configPath, checkForUpdates=False)
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
-        self.settingsModel.SetConfigPath(self.tempFilePath)
-        self.StartFakeMyTardisServer()
-        self.settingsModel.SetMyTardisUrl(
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
-        dataDirectory = os.path.join(
+        self.settingsModel.configPath = self.tempFilePath
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
+        self.settingsModel.general.myTardisUrl = \
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset")
+            "../testdata", "testdataUsernameDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.SetDataDirectory(dataDirectory)
-        self.settingsModel.SaveToDisk()
+        self.settingsModel.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk(self.settingsModel)
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
 
     def tearDown(self):
@@ -144,31 +144,20 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsDialog.OnBrowseExcludesFile(pyCommandEvent)
 
         # Start fake MyTardis server to test settings dialog validation:
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.settingsModel.GetMyTardisUrl() +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.settingsModel.GetMyTardisUrl(),
-                                       str(err)))
+        WaitForFakeMyTardisServerToStart(self.settingsModel.general.myTardisUrl)
 
         # Test settings dialog validation with invalid settings,
         # which will prompt a suggestion, based on which facilities
         # the user has access to (as a facility manager).
         # When running unittests, suggestions are automatically applied.
+        facilityName = self.settingsDialog.GetFacilityName()
         self.settingsDialog.SetFacilityName("")
         settingsDialogValidationEvent = \
             MYDATA_EVENTS.SettingsDialogValidationEvent(
                 settingsDialog=self.settingsDialog,
                 settingsModel=self.settingsModel)
         PostEvent(settingsDialogValidationEvent)
+        self.settingsDialog.SetFacilityName(facilityName)
 
         # Test settings dialog validation with invalid settings,
         # which will prompt a suggestion, for missing "http://"
@@ -262,10 +251,10 @@ class SettingsDialogTester(unittest.TestCase):
         PostEvent(settingsDialogValidationEvent)
 
         # Test updating autostart file:
-        self.settingsModel.SetStartAutomaticallyOnLogin(True)
-        self.settingsModel.UpdateAutostartFile()
-        self.settingsModel.SetStartAutomaticallyOnLogin(False)
-        self.settingsModel.UpdateAutostartFile()
+        self.settingsModel.advanced.startAutomaticallyOnLogin = True
+        UpdateAutostartFile(self.settingsModel)
+        self.settingsModel.advanced.startAutomaticallyOnLogin = False
+        UpdateAutostartFile(self.settingsModel)
 
         # Test renaming instrument to an available instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
@@ -287,28 +276,11 @@ class SettingsDialogTester(unittest.TestCase):
             RenameInstrument(renameInstrumentEvent)
 
         # Test saving config to disk:
-        self.settingsModel.SaveFieldsFromDialog(self.settingsDialog,
-                                                configPath=self.tempFilePath,
-                                                saveToDisk=True)
+        SaveFieldsFromDialog(self.settingsModel, self.settingsDialog,
+                             configPath=self.tempFilePath, saveToDisk=True)
         # Test dragging and dropping a MyData.cfg onto settings dialog:
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "testdata/testdataUsernameDataset.cfg")
         self.settingsDialog.SetLocked(False)
         self.settingsDialog.OnDropFiles([configPath])
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()

@@ -19,6 +19,7 @@ import wx
 
 from mydata.utils.openssh import UploadFile
 
+from mydata.models.settings.miscellaneous import MiscellaneousSettingsModel
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
@@ -44,7 +45,6 @@ class UploadDatafileRunnable(object):
                  dataFileIndex, uploadsModel, settingsModel,
                  existingUnverifiedDatafile, verificationModel,
                  bytesUploadedPreviously=None):
-        # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
@@ -114,8 +114,8 @@ class UploadDatafileRunnable(object):
             message = "Calculating MD5 checksum..."
             self.uploadsModel.SetMessage(self.uploadModel, message)
 
-            if self.settingsModel.FakeMd5Sum():
-                dataFileMd5Sum = self.settingsModel.GetFakeMd5Sum()
+            if self.settingsModel.miscellaneous.fakeMd5Sum:
+                dataFileMd5Sum = MiscellaneousSettingsModel.GetFakeMd5Sum()
                 logger.warning("Faking MD5 sum for %s" % dataFilePath)
             else:
                 dataFileMd5Sum = \
@@ -319,9 +319,9 @@ class UploadDatafileRunnable(object):
         # pylint:disable=too-many-locals
         # pylint:disable=too-many-branches
         # pylint:disable=too-many-return-statements
-        dataFileDict['uploader_uuid'] = self.settingsModel.GetUuid()
+        dataFileDict['uploader_uuid'] = self.settingsModel.miscellaneous.uuid
         dataFileDict['requester_key_fingerprint'] = \
-            self.settingsModel.GetSshKeyPair().GetFingerprint()
+            self.settingsModel.sshKeyPair.GetFingerprint()
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         postSuccess = False
@@ -334,18 +334,17 @@ class UploadDatafileRunnable(object):
             if not postSuccess:
                 dataFileName = os.path.basename(dataFilePath)
                 folderName = self.folderModel.GetFolder()
-                myTardisUsername = self.settingsModel.GetMyTardisUsername()
+                myTardisUsername = self.settingsModel.general.username
                 UploadDatafileRunnable.HandleFailedCreateDataFile(
                     response, dataFileName, folderName, myTardisUsername)
                 return
-        uploadToStagingRequest = self.settingsModel\
-            .GetUploadToStagingRequest()
+        uploadToStagingRequest = self.settingsModel.uploadToStagingRequest
         host = uploadToStagingRequest.GetScpHostname()
         port = uploadToStagingRequest.GetScpPort()
         location = uploadToStagingRequest.GetLocation()
         username = uploadToStagingRequest.GetScpUsername()
-        privateKeyFilePath = self.settingsModel\
-            .GetSshKeyPair().GetPrivateKeyFilePath()
+        privateKeyFilePath = \
+            self.settingsModel.sshKeyPair.GetPrivateKeyFilePath()
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile\
                 .GetReplicas()[0].GetUri()
@@ -382,7 +381,7 @@ class UploadDatafileRunnable(object):
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
-                        self.settingsModel.GetMaxUploadRetries():
+                        self.settingsModel.advanced.maxUploadRetries:
                     logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
@@ -431,7 +430,7 @@ class UploadDatafileRunnable(object):
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
-                        self.settingsModel.GetMaxUploadRetries():
+                        self.settingsModel.advanced.maxUploadRetries:
                     logger.warning(ConvertToUtf8(err.message))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
@@ -456,7 +455,7 @@ class UploadDatafileRunnable(object):
                 location = response.headers['location']
                 datafileId = location.split("/")[-2]
             verificationDelay = \
-                self.settingsModel.GetVerificationDelay()
+                self.settingsModel.miscellaneous.verificationDelay
 
             def RequestVerification():
                 DataFileModel.Verify(self.settingsModel,

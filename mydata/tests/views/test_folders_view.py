@@ -4,12 +4,7 @@ Test ability to open folders view.
 import unittest
 import tempfile
 import os
-import sys
-import time
-import threading
-from BaseHTTPServer import HTTPServer
 
-import requests
 import wx
 
 from mydata.models.folder import FolderModel
@@ -18,9 +13,10 @@ from mydata.dataviewmodels.folders import FoldersModel
 from mydata.views.folders import FoldersView
 
 from mydata.models.settings import SettingsModel
+from mydata.models.settings.serialize import SaveSettingsToDisk
 from mydata.events import MYDATA_EVENTS
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 
 
 class FoldersViewTester(unittest.TestCase):
@@ -52,15 +48,16 @@ class FoldersViewTester(unittest.TestCase):
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
-        self.settingsModel.SetConfigPath(self.tempFilePath)
-        self.StartFakeMyTardisServer()
-        self.settingsModel.SetMyTardisUrl(
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
-        self.settingsModel.SetDataDirectory(
+        self.settingsModel.configPath = self.tempFilePath
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
+        self.settingsModel.general.myTardisUrl = \
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        self.settingsModel.general.dataDirectory = \
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "../testdata", "testdataUsernameDataset"))
-        self.settingsModel.SaveToDisk()
+                "../testdata", "testdataUsernameDataset")
+        SaveSettingsToDisk(self.settingsModel)
         self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
                                          self.settingsModel)
         self.foldersView = FoldersView(self.frame, foldersModel=self.foldersModel)
@@ -69,21 +66,7 @@ class FoldersViewTester(unittest.TestCase):
         """
         Test ability to open folders view.
         """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.settingsModel.GetMyTardisUrl() + "/api/v1/?format=json",
-                             timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.settingsModel.GetMyTardisUrl(),
-                                       str(err)))
-
+        WaitForFakeMyTardisServerToStart(self.settingsModel.general.myTardisUrl)
         testuser1 = UserModel.GetUserByUsername(self.settingsModel, "testuser1")
         dataViewId = 1
         folder = "Flowers"
@@ -124,19 +107,3 @@ class FoldersViewTester(unittest.TestCase):
         self.fakeMyTardisServerThread.join()
         if os.path.exists(self.tempFilePath):
             os.remove(self.tempFilePath)
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()

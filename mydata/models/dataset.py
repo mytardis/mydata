@@ -47,8 +47,8 @@ class DatasetModel(object):
         description = folderModel.GetFolder()
         settingsModel = folderModel.settingsModel
 
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.general.username
+        myTardisUrl = settingsModel.general.myTardisUrl
 
         experiment = folderModel.GetExperiment()
         if experiment:  # Could be None in test run
@@ -56,7 +56,7 @@ class DatasetModel(object):
                 "&experiments__id=" + str(experiment.GetId())
             url = url + "&description=" + \
                 urllib.quote(description.encode('utf-8'))
-            response = requests.get(headers=settingsModel.GetDefaultHeaders(),
+            response = requests.get(headers=settingsModel.defaultHeaders,
                                     url=url)
             if response.status_code != 200:
                 HandleHttpError(response)
@@ -91,7 +91,7 @@ class DatasetModel(object):
                 experimentUri = None
             immutable = False
             datasetJson = {
-                "instrument": settingsModel.GetInstrument().GetResourceUri(),
+                "instrument": settingsModel.instrument.GetResourceUri(),
                 "description": description,
                 "experiments": [experimentUri],
                 "immutable": immutable}
@@ -104,11 +104,11 @@ class DatasetModel(object):
                        description)
                 if experiment:  # Could be None in test run.
                     message += "\n    In Experiment: %s/%s" \
-                        % (folderModel.settingsModel.GetMyTardisUrl(),
+                        % (folderModel.settingsModel.general.myTardisUrl,
                            experiment.GetViewUri())
                 logger.testrun(message)
                 return
-            response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+            response = requests.post(headers=settingsModel.defaultHeaders,
                                      url=url, data=data)
             if response.status_code == 201:
                 newDatasetJson = response.json()
@@ -159,10 +159,10 @@ class DatasetModel(object):
                     "    Description: %s\n" \
                     "    In Experiment: %s/%s" \
                     % (folderModel.GetRelPath(),
-                       folderModel.settingsModel.GetMyTardisUrl(),
+                       folderModel.settingsModel.general.myTardisUrl,
                        viewUri,
                        description,
-                       folderModel.settingsModel.GetMyTardisUrl(),
+                       folderModel.settingsModel.general.myTardisUrl,
                        folderModel.GetExperiment().GetViewUri())
                 logger.testrun(message)
             return DatasetModel(settingsModel,

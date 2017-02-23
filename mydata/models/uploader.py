@@ -117,10 +117,10 @@ class UploaderModel(object):
         self.uploaderId = None
         self.uploaderSettings = None
         self.settingsUpdated = None
-        self.uuid = self.settingsModel.GetUuid()
+        self.uuid = self.settingsModel.miscellaneous.uuid
         if self.uuid is None:
             self.GenerateUuid()
-            self.settingsModel.SetUuid(self.uuid)
+            self.settingsModel.miscellaneous.uuid = self.uuid
 
         self.osUsername = ""
         self.cpus = 0
@@ -165,9 +165,9 @@ class UploaderModel(object):
         else:
             logger.warning("There is no active network interface.")
 
-        self.name = self.settingsModel.GetInstrumentName()
-        self.contactName = self.settingsModel.GetContactName()
-        self.contactEmail = self.settingsModel.GetContactEmail()
+        self.name = self.settingsModel.general.instrumentName
+        self.contactName = self.settingsModel.general.contactName
+        self.contactEmail = self.settingsModel.general.contactEmail
 
         self.userAgentName = "MyData"
         self.userAgentVersion = VERSION
@@ -204,18 +204,18 @@ class UploaderModel(object):
                 part.mountpoint)
 
         self.diskUsage = diskUsage.strip()
-        self.dataPath = self.settingsModel.GetDataDirectory()
-        self.defaultUser = self.settingsModel.GetUsername()
+        self.dataPath = self.settingsModel.general.dataDirectory
+        self.defaultUser = self.settingsModel.general.username
 
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        myTardisUrl = self.settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&uuid=" + urllib.quote(self.uuid)
         try:
-            headers = self.settingsModel.GetDefaultHeaders()
+            headers = self.settingsModel.defaultHeaders
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
         except Exception, err:
@@ -299,12 +299,12 @@ class UploaderModel(object):
 
                         "hostname": self.hostname,
 
-                        "instruments": [self.settingsModel.GetInstrument()
+                        "instruments": [self.settingsModel.instrument
                                         .GetResourceUri()]}
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
-        headers = self.settingsModel.GetDefaultHeaders()
+        headers = self.settingsModel.defaultHeaders
         if numExistingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data,
                                     timeout=DEFAULT_TIMEOUT)
@@ -322,20 +322,20 @@ class UploaderModel(object):
         Look for existing upload to staging request.
         """
         try:
-            keyPair = self.settingsModel.GetSshKeyPair()
+            keyPair = self.settingsModel.sshKeyPair
             if not keyPair:
                 keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
-        self.settingsModel.SetSshKeyPair(keyPair)
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        self.settingsModel.sshKeyPair = keyPair
+        myTardisUrl = self.settingsModel.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + self.uuid + \
             "&requester_key_fingerprint=" + \
             urllib.quote(keyPair.GetFingerprint())
         logger.debug(url)
-        headers = self.settingsModel.GetDefaultHeaders()
+        headers = self.settingsModel.defaultHeaders
         response = requests.get(headers=headers, url=url)
         if response.status_code != 200:
             HandleHttpError(response)
@@ -361,13 +361,13 @@ class UploaderModel(object):
         to a staging area, and then register in MyTardis.
         """
         try:
-            keyPair = self.settingsModel.GetSshKeyPair()
+            keyPair = self.settingsModel.sshKeyPair
             if not keyPair:
                 keyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             keyPair = OpenSSH.NewKeyPair("MyData")
-        self.settingsModel.SetSshKeyPair(keyPair)
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
+        self.settingsModel.sshKeyPair = keyPair
+        myTardisUrl = self.settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \
             {"uploader": self.responseJson['resource_uri'],
@@ -377,7 +377,7 @@ class UploaderModel(object):
              "requester_public_key": keyPair.GetPublicKey(),
              "requester_key_fingerprint": keyPair.GetFingerprint()}
         data = json.dumps(uploaderRegistrationRequestJson)
-        headers = self.settingsModel.GetDefaultHeaders()
+        headers = self.settingsModel.defaultHeaders
         response = requests.post(headers=headers, url=url, data=data)
         if response.status_code == 201:
             responseJson = response.json()
@@ -419,8 +419,8 @@ class UploaderModel(object):
                 else:
                     logger.debug(
                         "Uploads to staging haven't been approved yet.")
-                self.settingsModel\
-                    .SetUploadToStagingRequest(uploadToStagingRequest)
+                self.settingsModel.uploadToStagingRequest = \
+                    uploadToStagingRequest
             except:
                 logger.error(traceback.format_exc())
                 raise
@@ -432,8 +432,8 @@ class UploaderModel(object):
         Used to save uploader settings to the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        headers = self.settingsModel.GetDefaultHeaders()
+        myTardisUrl = self.settingsModel.general.myTardisUrl
+        headers = self.settingsModel.defaultHeaders
 
         if not self.uploaderId:
             url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
@@ -477,8 +477,8 @@ class UploaderModel(object):
         Used to retrieve uploader settings from the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = self.settingsModel.GetMyTardisUrl()
-        headers = self.settingsModel.GetDefaultHeaders()
+        myTardisUrl = self.settingsModel.general.myTardisUrl
+        headers = self.settingsModel.defaultHeaders
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
                             "&uuid=" + urllib.quote(self.uuid)
         try:
@@ -584,6 +584,11 @@ class UploaderRegistrationRequest(object):
     """
     Model class for MyTardis API v1's UploaderRegistrationRequestAppResource.
     See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
+
+    The upload-to-staging request contains information indicating whether the
+    request has been approved i.e. the MyData.pub public key has been installed
+    on the SCP server, and the approved storage box (giving the remote file
+    path to upload to, and the SCP username, hostname and port).
     """
     def __init__(self, settingsModel=None, uploaderRegRequestJson=None):
         self.settingsModel = settingsModel

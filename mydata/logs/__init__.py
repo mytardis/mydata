@@ -208,16 +208,16 @@ class Logger(object):
         else:
             sys.stderr.write("%s\n" % message)
 
-    def GenerateDebugLogContent(self, settingsModel):
+    def GenerateDebugLogContent(self, settings):
         logger.debug("Logger.GenerateDebugLogContent: Flushing "
                      "self.loggerObject.handlers[0], which is of class: " +
                      self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
 
         debugLog = "\n"
-        if settingsModel is not None:
+        if settings is not None:
             debugLog += "Username: " + \
-                settingsModel.GetUsername() + "\n"
+                settings.general.username + "\n"
         debugLog += "Name: %s\n" % self.contactName
         debugLog += "Email: %s\n" % self.contactEmail
         debugLog += "Contact me? "
@@ -253,16 +253,16 @@ class Logger(object):
             debugLog += "".join(logLines[-4000:])
         return debugLog
 
-    def SubmitLog(self, myDataMainFrame, settingsModel,
+    def SubmitLog(self, myDataMainFrame, settings,
                   url="https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"):
         # pylint: disable=too-many-branches
-        self.contactName = settingsModel.GetContactName()
-        self.contactEmail = settingsModel.GetContactEmail()
+        self.contactName = settings.general.contactName
+        self.contactEmail = settings.general.contactEmail
 
         dlg = SubmitDebugReportDialog(myDataMainFrame,
                                       "MyData - Submit Debug Log",
                                       self.loggerOutput.getvalue(),
-                                      settingsModel)
+                                      settings)
         try:
             if wx.PyApp.IsMainLoopRunning():
                 if wx.IsBusy():
@@ -289,7 +289,7 @@ class Logger(object):
 
         if submitDebugLogOK:
             self.debug("About to send debug log")
-            fileInfo = {"logfile": self.GenerateDebugLogContent(settingsModel)}
+            fileInfo = {"logfile": self.GenerateDebugLogContent(settings)}
             # If we are running in an installation then we have to use
             # our packaged cacert.pem file:
             if os.path.exists('cacert.pem'):

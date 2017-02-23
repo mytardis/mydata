@@ -2,25 +2,22 @@
 Test ability to handle experiment-related exceptions.
 """
 import os
-import sys
-import time
 import unittest
-import threading
-from BaseHTTPServer import HTTPServer
 
-import requests
 import wx
 
 from mydata.models.experiment import ExperimentModel
 from mydata.models.folder import FolderModel
 from mydata.models.schema import SchemaModel
 from mydata.models.settings import SettingsModel
+from mydata.models.settings.validation import ValidateSettings
 from mydata.models.user import UserProfileModel
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import MultipleObjectsReturned
 from mydata.utils.exceptions import Unauthorized
+
 
 class ExperimentExceptionsTester(unittest.TestCase):
     """
@@ -40,10 +37,11 @@ class ExperimentExceptionsTester(unittest.TestCase):
         self.app = wx.App()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title='ExperimentExceptionsTester')
-        self.StartFakeMyTardisServer()
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        self.WaitForFakeMyTardisServerToStart()
+        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
 
     def tearDown(self):
         self.frame.Hide()
@@ -66,12 +64,11 @@ class ExperimentExceptionsTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataExpDataset.cfg")
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.SetDataDirectory(dataDirectory)
-        settingsModel.SetMyTardisUrl(self.fakeMyTardisUrl)
-        settingsValidation = settingsModel.Validate()
-        self.assertTrue(settingsValidation.IsValid())
+        settingsModel.general.dataDirectory = dataDirectory
+        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings(settingsModel)
 
-        owner = settingsModel.GetDefaultOwner()
+        owner = settingsModel.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
@@ -89,7 +86,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle(expFolderName)
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -108,7 +105,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
@@ -121,7 +118,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle("Multiple Existing Experiments")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment1")
@@ -134,7 +131,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle(expFolderName)
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -153,7 +150,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
@@ -166,7 +163,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle(expFolderName)
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -186,7 +183,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
@@ -199,7 +196,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         folderModel.SetExperimentTitle(expFolderName)
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -224,11 +221,11 @@ class ExperimentExceptionsTester(unittest.TestCase):
 
         # Try to look up experiment record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.GetApiKey()
-        folderModel.settingsModel.SetApiKey("invalid")
+        apiKey = folderModel.settingsModel.general.apiKey
+        folderModel.settingsModel.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        folderModel.settingsModel.SetApiKey(apiKey)
+        folderModel.settingsModel.general.apiKey = apiKey
 
         # Try to look up experiment record with a missing UserProfile
         # for the authorizing user, which can result in a 404 from the
@@ -268,7 +265,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -285,12 +282,12 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.GetUploaderModel().SetUuid("Existing Experiment")
+        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.GetUploaderModel().SetUuid(uploaderUuid)
+        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
 
         # Look up one of many existing experiment records with
         # experiment title set automatically, and with a user folder
@@ -300,11 +297,11 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
-        folderModel.settingsModel.GetUploaderModel().SetUuid("Multiple Existing Experiments")
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+        folderModel.settingsModel.uploaderModel.SetUuid("Multiple Existing Experiments")
         with self.assertRaises(MultipleObjectsReturned) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        folderModel.settingsModel.GetUploaderModel().SetUuid(uploaderUuid)
+        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, and with a group folder
@@ -314,7 +311,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -332,12 +329,12 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.GetUploaderModel().SetUuid("Existing Experiment")
+        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.GetUploaderModel().SetUuid(uploaderUuid)
+        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, and with a user folder
@@ -347,7 +344,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -365,12 +362,12 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.GetUploaderModel().SetUuid("Existing Experiment")
+        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.GetUploaderModel().SetUuid(uploaderUuid)
+        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, with neither a user folder
@@ -380,7 +377,7 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.GetInstrument().GetName()
+        instrument = settingsModel.instrument.GetName()
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -396,12 +393,12 @@ class ExperimentExceptionsTester(unittest.TestCase):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.GetUploaderModel().SetUuid("Existing Experiment")
+        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.GetUploaderModel().SetUuid(uploaderUuid)
+        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
 
         # CREATING EXPERIMENTS
 
@@ -434,11 +431,11 @@ class ExperimentExceptionsTester(unittest.TestCase):
 
         # Try to create an experiment record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.GetApiKey()
-        folderModel.settingsModel.SetApiKey("invalid")
+        apiKey = folderModel.settingsModel.general.apiKey
+        folderModel.settingsModel.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
-        folderModel.settingsModel.SetApiKey(apiKey)
+        folderModel.settingsModel.general.apiKey = apiKey
 
         # Now let's test experiment creation with the experiment's
         # title determined automatically (from the instrument's name
@@ -455,38 +452,3 @@ class ExperimentExceptionsTester(unittest.TestCase):
             "Request 404 from Fake MyTardis Server")
         with self.assertRaises(DoesNotExist):
             _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
-
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = HTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()
-
-    def WaitForFakeMyTardisServerToStart(self):
-        """
-        Wait for fake MyTardis server to start.
-        """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.fakeMyTardisUrl +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.fakeMyTardisUrl, str(err)))

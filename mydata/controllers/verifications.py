@@ -24,6 +24,7 @@ import traceback
 
 import wx
 
+from mydata.models.settings.miscellaneous import MiscellaneousSettingsModel
 from mydata.models.replica import ReplicaModel
 from mydata.models.verification import VerificationModel
 from mydata.models.verification import VerificationStatus
@@ -47,7 +48,6 @@ class VerifyDatafileRunnable(object):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, settingsModel, testRun=False):
-        # pylint: disable=too-many-arguments
         self.foldersController = foldersController
         self.foldersModel = foldersModel
         self.folderModel = folderModel
@@ -165,7 +165,7 @@ class VerifyDatafileRunnable(object):
         logger.debug(message)
         message = "Found unverified datafile record on MyTardis."
         self.verificationModel.SetMessage(message)
-        uploadToStagingRequest = self.settingsModel.GetUploadToStagingRequest()
+        uploadToStagingRequest = self.settingsModel.uploadToStagingRequest
         if self.foldersController.uploadMethod == \
                 UploadMethod.VIA_STAGING and \
                 uploadToStagingRequest is not None and \
@@ -236,7 +236,7 @@ class VerifyDatafileRunnable(object):
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         if existingDatafile and not self.testRun:
             if existingDatafile.GetMd5Sum() == \
-                    self.settingsModel.GetFakeMd5Sum():
+                    MiscellaneousSettingsModel.GetFakeMd5Sum():
                 logger.warning("MD5(%s): %s" %
                                (dataFilePath, existingDatafile.GetMd5Sum()))
             else:
@@ -307,7 +307,7 @@ class VerifyDatafileRunnable(object):
         self.verificationsModel.MessageUpdated(self.verificationModel)
         if existingDatafile and not self.testRun:
             if existingDatafile.GetMd5Sum() == \
-                    self.settingsModel.GetFakeMd5Sum():
+                    MiscellaneousSettingsModel.GetFakeMd5Sum():
                 logger.warning("MD5(%s): %s" %
                                (dataFilePath, existingDatafile.GetMd5Sum()))
             else:

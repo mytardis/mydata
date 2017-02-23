@@ -91,13 +91,12 @@ class DataFileModel(object):
         """
         Lookup datafile by dataset, filename and directory.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
             "&dataset__id=" + str(dataset.GetId()) + \
             "&filename=" + urllib.quote(filename.encode('utf-8')) + \
             "&directory=" + urllib.quote(directory.encode('utf-8'))
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=settingsModel.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             logger.debug("Failed to look up datafile \"%s\" "
                          "in dataset \"%s\"."
@@ -125,11 +124,10 @@ class DataFileModel(object):
         """
         Lookup datafile by ID.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = settingsModel.general.myTardisUrl
         url = "%s/api/v1/mydata_dataset_file/%s/?format=json" \
             % (myTardisUrl, dataFileId)
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=settingsModel.defaultHeaders)
         if response.status_code == 404:
             raise DoesNotExist(
                 message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
@@ -148,10 +146,9 @@ class DataFileModel(object):
         """
         Verify a datafile via the MyTardis API.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/dataset_file/%s/verify/" % datafileId
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=settingsModel.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             logger.warning("Failed to verify datafile id \"%s\" " % datafileId)
             logger.warning(response.text)
@@ -168,10 +165,10 @@ class DataFileModel(object):
         Create a DataFile record and return a temporary URL to upload
         to (e.g. by SCP).
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/"
         dataFileJson = json.dumps(dataFileDict)
-        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+        response = requests.post(headers=settingsModel.defaultHeaders,
                                  url=url, data=dataFileJson)
         return response
 
@@ -182,11 +179,10 @@ class DataFileModel(object):
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
         """
-        # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = settingsModel.general.username
+        myTardisApiKey = settingsModel.general.apiKey
+        myTardisUrl = settingsModel.general.myTardisUrl
         url = myTardisUrl + "/api/v1/dataset_file/"
         message = "Initializing buffered reader..."
         uploadsModel.SetMessage(uploadModel, message)

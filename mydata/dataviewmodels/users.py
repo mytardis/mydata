@@ -253,6 +253,6 @@ class UsersModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def GetNumUserOrGroupFolders(self):
-        dataDir = self.settingsModel.GetDataDirectory()
+        dataDir = self.settingsModel.general.dataDirectory
         userOrGroupFolderNames = os.walk(dataDir).next()[1]
         return len(userOrGroupFolderNames)

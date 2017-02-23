@@ -37,15 +37,13 @@ class ReplicaModel(object):
             self.datafileResourceUri = replicaJson['datafile']
 
     @staticmethod
-    def CountBytesUploadedToStaging(settingsModel, dfoId):
+    def CountBytesUploadedToStaging(settings, dfoId):
         """
         Count bytes uploaded to staging.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
         url = "%s/api/v1/mydata_replica/%s/?format=json" \
-            % (myTardisUrl, dfoId)
-        headers = settingsModel.GetDefaultHeaders()
-        response = requests.get(url=url, headers=headers)
+            % (settings.general.myTardisUrl, dfoId)
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
                 message = "Please ask your MyTardis administrator to " \

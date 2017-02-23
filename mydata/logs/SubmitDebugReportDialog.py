@@ -25,11 +25,11 @@ class SubmitDebugReportDialog(wx.Dialog):
     the bottom of the Log tab within MyData's main window.
     """
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, parent, title, debugLog, settingsModel):
+    def __init__(self, parent, title, debugLog, settings):
         # pylint: disable=too-many-statements
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title, wx.DefaultPosition)
 
-        self.settingsModel = settingsModel
+        self.settings = settings
 
         self.dialogSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
         self.SetSizer(self.dialogSizer)
@@ -80,7 +80,7 @@ class SubmitDebugReportDialog(wx.Dialog):
                                        wx.ID_ANY, "Name:")
         self.innerContactDetailsPanelSizer.Add(self.nameLabel)
 
-        contactName = self.settingsModel.GetContactName()
+        contactName = self.settings.general.contactName
 
         self.nameField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.nameField.SetValue(contactName)
@@ -99,7 +99,7 @@ class SubmitDebugReportDialog(wx.Dialog):
                                         wx.ID_ANY, "Email address:")
         self.innerContactDetailsPanelSizer.Add(self.emailLabel)
 
-        contactEmail = self.settingsModel.GetContactEmail()
+        contactEmail = self.settings.general.contactEmail
 
         self.emailField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.emailField.SetValue(contactEmail)

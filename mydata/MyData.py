@@ -60,8 +60,10 @@ from mydata.dataviewmodels.tasks import TasksModel
 from mydata.models.uploader import UploaderModel
 from mydata.views.log import LogView
 from mydata.models.settings import SettingsModel
+from mydata.models.settings.validation import ValidateSettings
 from mydata.views.settings import SettingsDialog
 from mydata.utils.exceptions import InvalidFolderStructure
+from mydata.utils.exceptions import InvalidSettings
 from mydata.logs import logger
 from mydata.views.taskbaricon import MyDataTaskBarIcon
 from mydata.events import MYDATA_EVENTS
@@ -177,7 +179,6 @@ class MyData(wx.App):
         self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
 
         self.settingsModel = settingsModel
-        self.settingsValidation = None
         self.foldersModel = None
         self.foldersView = None
         self.foldersController = None
@@ -363,7 +364,7 @@ class MyData(wx.App):
                 self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " +
-                                self.settingsModel.GetInstrumentName())
+                                self.settingsModel.general.instrumentName)
             if sys.platform.startswith("linux"):
                 if os.getenv('DESKTOP_SESSION', '') == 'ubuntu':
                     proc = subprocess.Popen(['dpkg', '-s',
@@ -634,9 +635,9 @@ class MyData(wx.App):
         """
         Scan folders and upload datafiles if necessary.
         """
-        self.settingsModel.SetScheduleType("Manually")
-        self.settingsModel.SetLastSettingsUpdateTrigger(
-            LastSettingsUpdateTrigger.UI_RESPONSE)
+        self.settingsModel.schedule.scheduleType = "Manually"
+        self.settingsModel.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
         self.SetShouldAbort(False)
         self.scheduleController.ApplySchedule(event, runManually=True)
 
@@ -646,9 +647,9 @@ class MyData(wx.App):
         """
         logger.debug("OnTestRunFromToolbar")
         self.SetTestRunRunning(True)
-        self.settingsModel.SetScheduleType("Manually")
-        self.settingsModel.SetLastSettingsUpdateTrigger(
-            LastSettingsUpdateTrigger.UI_RESPONSE)
+        self.settingsModel.schedule.scheduleType = "Manually"
+        self.settingsModel.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
         self.DisableTestAndUploadToolbarButtons()
         self.testRunFrame.saveButton.Disable()
         self.SetShouldAbort(False)
@@ -722,9 +723,8 @@ class MyData(wx.App):
             logger.info(message)
             if testRun:
                 logger.testrun(message)
-            self.settingsValidation = None
 
-            def ValidateSettings():
+            def ValidateSettingsWorker():
                 """
                 Validate settings.
                 """
@@ -760,49 +760,34 @@ class MyData(wx.App):
                         ReportNoActiveInterfaces()
                         return
 
-                    self.settingsValidation = \
-                        self.settingsModel.Validate(testRun=testRun)
-
-                    if self.ShouldAbort():
+                    try:
+                        ValidateSettings(self.settingsModel, testRun=testRun)
+                        event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
+                            testRun=testRun)
+                        PostEvent(event)
                         wx.CallAfter(EndBusyCursorIfRequired)
-                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
-                        self.SetScanningFolders(False)
-                        logger.debug("Just set ScanningFolders to False")
-                        message = "Data scans and uploads were canceled."
-                        if testRun:
-                            logger.testrun(message)
-                            self.SetTestRunRunning(False)
-                        self.frame.SetStatusMessage(message)
-                        return
-
-                    # If settings validation is run automatically shortly after
-                    # a scheduled task begins, ignore complaints from settings
-                    # validation about the "scheduled_time" being in the past.
-                    # Any other settings validation failure will be reported.
-                    field = self.settingsValidation.GetField()
-                    if needToValidateSettings and not \
-                            self.settingsValidation.IsValid() and \
-                            field != "scheduled_time":
-                        logger.debug(
-                            "Displaying result from settings validation.")
-                        message = self.settingsValidation.message
-                        logger.error(message)
-                        wx.CallAfter(EndBusyCursorIfRequired)
-                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
-                        self.SetScanningFolders(False)
-                        self.frame.SetStatusMessage(
-                            "Settings validation failed.")
-                        if testRun:
-                            wx.CallAfter(self.GetTestRunFrame().Hide)
-                        wx.CallAfter(self.OnSettings, None,
-                                     validationMessage=message)
-                        return
-
-                    event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
-                        needToValidateSettings=False,
-                        testRun=testRun)
-                    PostEvent(event)
-                    wx.CallAfter(EndBusyCursorIfRequired)
+                    except InvalidSettings as invalidSettings:
+                        # If settings validation is run automatically shortly
+                        # after a scheduled task begins, ignore complaints from
+                        # settings validation about the "scheduled_time" being
+                        # in the past.  Any other settings validation failure
+                        # will be reported.
+                        field = invalidSettings.GetField()
+                        if field != "scheduled_time":
+                            logger.debug(
+                                "Displaying result from settings validation.")
+                            message = invalidSettings.message
+                            logger.error(message)
+                            wx.CallAfter(EndBusyCursorIfRequired)
+                            wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                            self.SetScanningFolders(False)
+                            self.frame.SetStatusMessage(
+                                "Settings validation failed.")
+                            if testRun:
+                                wx.CallAfter(self.GetTestRunFrame().Hide)
+                            wx.CallAfter(self.OnSettings, None,
+                                         validationMessage=message)
+                            return
                 except:
                     logger.error(traceback.format_exc())
                     return
@@ -810,16 +795,16 @@ class MyData(wx.App):
                              % threading.current_thread().name)
 
             if wx.PyApp.IsMainLoopRunning():
-                thread = threading.Thread(target=ValidateSettings,
+                thread = threading.Thread(target=ValidateSettingsWorker,
                                           name="OnRefreshValidateSettingsThread")
                 logger.debug("Starting thread %s" % thread.name)
                 thread.start()
                 logger.debug("Started thread %s" % thread.name)
             else:
-                ValidateSettings()
+                ValidateSettingsWorker()
             return
 
-        if "Group" in self.settingsModel.GetFolderStructure():
+        if "Group" in self.settingsModel.advanced.folderStructure:
             userOrGroup = "user group"
         else:
             userOrGroup = "user"
@@ -856,7 +841,7 @@ class MyData(wx.App):
             message = "Scanning data folders..."
             wx.CallAfter(self.frame.SetStatusMessage, message)
             message = "Scanning data folders in %s..." \
-                % self.settingsModel.GetDataDirectory()
+                % self.settingsModel.general.dataDirectory
             logger.info(message)
             if testRun:
                 logger.testrun(message)
@@ -893,7 +878,7 @@ class MyData(wx.App):
                     self.SetTestRunRunning(False)
                 return
 
-            folderStructure = self.settingsModel.GetFolderStructure()
+            folderStructure = self.settingsModel.advanced.folderStructure
             # pylint: disable=too-many-boolean-expressions
             if self.usersModel.GetNumUserOrGroupFolders() == 0 or \
                     (folderStructure.startswith("Username") and
@@ -980,7 +965,7 @@ class MyData(wx.App):
         """
         intervalSinceLastCheck = \
             datetime.now() - self.lastConnectivityCheckTime
-        checkInterval = self.settingsModel.GetConnectivityCheckInterval()
+        checkInterval = self.settingsModel.connectivityCheckInterval
         if intervalSinceLastCheck.total_seconds() >= checkInterval or \
                 not self.lastConnectivityCheckSuccess:
             logger.debug("Checking network connectivity...")
@@ -1052,7 +1037,7 @@ class MyData(wx.App):
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
             self.frame.SetTitle("MyData - " +
-                                self.settingsModel.GetInstrumentName())
+                                self.settingsModel.general.instrumentName)
             self.tasksModel.DeleteAllRows()
             self.scheduleController.ApplySchedule(event)
 
@@ -1067,12 +1052,12 @@ class MyData(wx.App):
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.GetDatasetModel() is not None:
-                    self.OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
+                    self.OpenUrl(self.settingsModel.general.myTardisUrl + "/" +
                                  folderRecord.GetDatasetModel().GetViewUri())
                 else:
-                    self.OpenUrl(self.settingsModel.GetMyTardisUrl())
+                    self.OpenUrl(self.settingsModel.general.myTardisUrl)
             else:
-                self.OpenUrl(self.settingsModel.GetMyTardisUrl())
+                self.OpenUrl(self.settingsModel.general.myTardisUrl)
         except:
             logger.error(traceback.format_exc())
 

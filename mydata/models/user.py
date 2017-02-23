@@ -24,7 +24,6 @@ class UserModel(object):
                  username=None, name=None,
                  email=None, userRecordJson=None,
                  userNotFoundInMyTardis=False):
-        # pylint: disable=too-many-arguments
         self.settingsModel = settingsModel
         self.userId = None
         self.dataViewId = dataViewId
@@ -94,13 +93,11 @@ class UserModel(object):
         return self.userNotFoundInMyTardis
 
     @staticmethod
-    def GetUserByUsername(settingsModel, username):
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-
-        url = myTardisUrl + "/api/v1/user/?format=json&username=" + username
+    def GetUserByUsername(settings, username):
+        url = "%s/api/v1/user/?format=json&username=%s" \
+            % (settings.general.myTardisUrl, username)
         try:
-            response = requests.get(url=url,
-                                    headers=settingsModel.GetDefaultHeaders())
+            response = requests.get(url=url, headers=settings.defaultHeaders)
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
@@ -119,18 +116,16 @@ class UserModel(object):
                 response=response)
         else:
             logger.debug("Found user record for username '" + username + "'.")
-            return UserModel(settingsModel=settingsModel, username=username,
+            return UserModel(settingsModel=settings, username=username,
                              userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
-    def GetUserByEmail(settingsModel, email):
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-
-        url = myTardisUrl + "/api/v1/user/?format=json&email__iexact=" + \
-            urllib2.quote(email.encode('utf-8'))
+    def GetUserByEmail(settings, email):
+        url = "%s/api/v1/user/?format=json&email__iexact=%s" \
+            % (settings.general.myTardisUrl,
+               urllib2.quote(email.encode('utf-8')))
         try:
-            response = requests.get(url=url,
-                                    headers=settingsModel.GetDefaultHeaders())
+            response = requests.get(url=url, headers=settings.defaultHeaders)
         except:
             raise Exception(traceback.format_exc())
         if response.status_code != 200:
@@ -151,7 +146,7 @@ class UserModel(object):
                 response=response)
         else:
             logger.debug("Found user record for email '" + email + "'.")
-            return UserModel(settingsModel=settingsModel,
+            return UserModel(settingsModel=settings,
                              userRecordJson=userRecordsJson['objects'][0])
 
 

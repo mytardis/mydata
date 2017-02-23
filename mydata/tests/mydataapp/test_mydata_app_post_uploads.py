@@ -3,24 +3,17 @@ Test ability to create a MyData App instance and uploads files using POST.
 """
 import os
 import sys
-import time
 import tempfile
-import threading
 import unittest
-from BaseHTTPServer import HTTPServer
-from SocketServer import ThreadingMixIn
-
-import requests
 
 from mydata.MyData import MyData
 from mydata.models.settings import SettingsModel
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
+from mydata.models.settings.serialize import SaveSettingsToDisk
+from mydata.models.settings.validation import ValidateSettings
+from mydata.tests.utils import StartFakeMyTardisServer
+from mydata.tests.utils import WaitForFakeMyTardisServerToStart
 if sys.platform.startswith("linux"):
     from mydata.linuxsubprocesses import StopErrandBoy
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
 
 
 class MyDataAppInstanceTester(unittest.TestCase):
@@ -41,42 +34,29 @@ class MyDataAppInstanceTester(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
+        self.settingsModel = \
+            SettingsModel(configPath=configPath, checkForUpdates=False)
         self.tempConfig = tempfile.NamedTemporaryFile()
         self.tempFilePath = self.tempConfig.name
         self.tempConfig.close()
-        self.settingsModel.SetConfigPath(self.tempFilePath)
-        self.StartFakeMyTardisServer()
-        self.settingsModel.SetMyTardisUrl(
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort))
+        self.settingsModel.configPath = self.tempFilePath
+        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
+            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
+        self.settingsModel.general.myTardisUrl = \
+            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.SetDataDirectory(dataDirectory)
-        self.settingsModel.SaveToDisk()
+        self.settingsModel.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk(self.settingsModel)
 
     def test_mydata_app_post_uploads(self):
         """
         Test ability to create MyData App instance and upload files using POST.
         """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.settingsModel.GetMyTardisUrl() + "/api/v1/?format=json",
-                             timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.settingsModel.GetMyTardisUrl(),
-                                       str(err)))
-
-        settingsValidation = self.settingsModel.Validate()
-        self.assertTrue(settingsValidation.IsValid())
+        WaitForFakeMyTardisServerToStart(self.settingsModel.general.myTardisUrl)
+        ValidateSettings(self.settingsModel)
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
                                 settingsModel=self.settingsModel)
         self.mydataApp.taskBarIcon.CreatePopupMenu()
@@ -108,19 +88,3 @@ class MyDataAppInstanceTester(unittest.TestCase):
             os.remove(self.tempFilePath)
         if sys.platform.startswith("linux"):
             StopErrandBoy()
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = ThreadedHTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                        FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()

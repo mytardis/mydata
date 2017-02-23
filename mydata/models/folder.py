@@ -27,7 +27,6 @@ class FolderModel(object):
     def __init__(self, dataViewId, folder, location,
                  userFolderName, groupFolderName, owner,
                  settingsModel, isExperimentFilesFolder=False):
-        # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         self.settingsModel = settingsModel
         self.dataViewId = dataViewId
@@ -43,20 +42,20 @@ class FolderModel(object):
         self.numFiles = 0
         for dirname, _, files in os.walk(absoluteFolderPath):
             for filename in sorted(files):
-                if settingsModel.UseIncludesFile() and \
-                        not settingsModel.UseExcludesFile():
+                if settingsModel.filters.useIncludesFile and \
+                        not settingsModel.filters.useExcludesFile:
                     if not self.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, not matching includes."
                                      % filename)
                         continue
-                elif not settingsModel.UseIncludesFile() and \
-                        settingsModel.UseExcludesFile():
+                elif not settingsModel.filters.useIncludesFile and \
+                        settingsModel.filters.useExcludesFile:
                     if self.MatchesExcludes(filename):
                         logger.debug("Ignoring %s, matching excludes."
                                      % filename)
                         continue
-                elif settingsModel.UseIncludesFile() and \
-                        settingsModel.UseExcludesFile():
+                elif settingsModel.filters.useIncludesFile and \
+                        settingsModel.filters.useExcludesFile:
                     if self.MatchesExcludes(filename) and \
                             not self.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, matching excludes "
@@ -117,7 +116,7 @@ class FolderModel(object):
 
     def GetDataFileRelPath(self, dataFileIndex):
         return os.path.relpath(self.GetDataFilePath(dataFileIndex),
-                               self.settingsModel.GetDataDirectory())
+                               self.settingsModel.general.dataDirectory)
 
     def GetDataFileDirectory(self, dataFileIndex):
         return self.dataFileDirectories[dataFileIndex]
@@ -169,11 +168,11 @@ class FolderModel(object):
     def GetRelPath(self):
         if self.isExperimentFilesFolder:
             return os.path.relpath(self.location,
-                                   self.settingsModel.GetDataDirectory())
+                                   self.settingsModel.general.dataDirectory)
         else:
             return os.path.join(
                 os.path.relpath(self.location,
-                                self.settingsModel.GetDataDirectory()),
+                                self.settingsModel.general.dataDirectory),
                 self.folder)
 
     def GetNumFiles(self):
@@ -240,7 +239,7 @@ class FolderModel(object):
         file.
         """
         match = False
-        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
+        with open(self.settingsModel.filters.includesFile, 'r') as includesFile:
             for glob in includesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
@@ -258,7 +257,7 @@ class FolderModel(object):
         file.
         """
         match = False
-        with open(self.settingsModel.GetExcludesFile(), 'r') as excludesFile:
+        with open(self.settingsModel.filters.excludesFile, 'r') as excludesFile:
             for glob in excludesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
@@ -276,10 +275,10 @@ class FolderModel(object):
         modified too recently and might require further local modifications
         before its upload.
         """
-        if self.settingsModel.IgnoreNewFiles():
+        if self.settingsModel.filters.ignoreNewFiles:
             absoluteFilePath = self.GetDataFilePath(dataFileIndex)
             return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
-                (self.settingsModel.GetIgnoreNewFilesMinutes() * 60)
+                (self.settingsModel.filters.ignoreNewFilesMinutes * 60)
         else:
             return False
 

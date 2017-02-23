@@ -15,13 +15,13 @@ try:
         # pylint: disable=wrong-import-position
         from mydata.commitdef import LATEST_COMMIT
     else:
-        line = None  # pylint: disable=invalid-name
+        LINE = None
         with open(".git/logs/HEAD") as gitlog:
-            for line in gitlog:
+            for LINE in gitlog:
                 pass
-        if not line:
+        if not LINE:
             raise Exception("Couldn't read .git/logs/HEAD")
-        LATEST_COMMIT = line.split(" ")[1]
+        LATEST_COMMIT = LINE.split(" ")[1]
         with open("mydata/commitdef.py", 'w') as commitdef:
             commitdef.write('"""\n')
             commitdef.write('commitdef.py\n')

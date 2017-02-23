@@ -26,10 +26,9 @@ class FolderModelTester(unittest.TestCase):
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = SettingsModel(configPath=configPath,
                                            checkForUpdates=False)
-        self.settingsModel.SetDataDirectory(
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)),
-                "../testdata", "testdataUsernameDataset"))
+        self.settingsModel.general.dataDirectory = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../testdata", "testdataUsernameDataset")
         with tempfile.NamedTemporaryFile() as tempFile:
             self.includesFilePath = tempFile.name
         with tempfile.NamedTemporaryFile() as tempFile:
@@ -42,7 +41,7 @@ class FolderModelTester(unittest.TestCase):
         testuser1 = UserModel(username="testuser1")
         dataViewId = 1
         folder = "Flowers"
-        location = os.path.join(self.settingsModel.GetDataDirectory(),
+        location = os.path.join(self.settingsModel.general.dataDirectory,
                                 "testuser1")
         userFolderName = "testuser1"
         groupFolderName = None
@@ -59,8 +58,8 @@ class FolderModelTester(unittest.TestCase):
             excludesFile.write(".DS_Store\n")
             excludesFile.write("*.bak\n")
 
-        self.settingsModel.SetIncludesFile(self.includesFilePath)
-        self.settingsModel.SetExcludesFile(self.excludesFilePath)
+        self.settingsModel.filters.includesFile = self.includesFilePath
+        self.settingsModel.filters.excludesFile = self.excludesFilePath
         folderModel = \
             FolderModel(dataViewId, folder, location,
                         userFolderName, groupFolderName, testuser1,

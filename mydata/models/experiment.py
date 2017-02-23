@@ -41,7 +41,7 @@ class ExperimentModel(object):
                     "    Title: %s\n" \
                     "    Owner: %s" \
                     % (folderModel.GetRelPath(),
-                       folderModel.settingsModel.GetMyTardisUrl(),
+                       folderModel.settingsModel.general.myTardisUrl,
                        existingExperiment.GetViewUri(),
                        existingExperiment.GetTitle(),
                        folderModel.GetOwner().GetUsername())
@@ -64,18 +64,18 @@ class ExperimentModel(object):
         # pylint: disable=too-many-statements
         settingsModel = folderModel.GetSettingsModel()
 
-        uploaderName = settingsModel.GetUploaderModel().GetName()
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderName = settingsModel.uploaderModel.GetName()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         userFolderName = folderModel.GetUserFolderName()
         groupFolderName = folderModel.GetGroupFolderName()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        myTardisUrl = settingsModel.general.myTardisUrl
+        myTardisDefaultUsername = settingsModel.general.username
         experimentTitle = folderModel.GetExperimentTitle()
 
         if folderModel.ExperimentTitleSetManually():
             expTitleEncoded = urllib2.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
-                urllib2.quote(settingsModel.GetFolderStructure())
+                urllib2.quote(settingsModel.advanced.folderStructure)
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&title=" + expTitleEncoded + \
                 "&folder_structure=" + folderStructureEncoded
@@ -89,8 +89,7 @@ class ExperimentModel(object):
             url += "&group_folder_name=" + \
                 urllib2.quote(groupFolderName.encode('utf-8'))
 
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=settingsModel.defaultHeaders)
         try:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']
@@ -250,7 +249,7 @@ class ExperimentModel(object):
         # pylint: disable=too-many-statements
         settingsModel = folderModel.GetSettingsModel()
         userFolderName = folderModel.GetUserFolderName()
-        hostname = settingsModel.GetUploaderModel().GetHostname()
+        hostname = settingsModel.uploaderModel.GetHostname()
         location = folderModel.GetLocation()
         groupFolderName = folderModel.GetGroupFolderName()
         owner = folderModel.GetOwner()
@@ -260,12 +259,12 @@ class ExperimentModel(object):
         except:
             ownerUserId = None
 
-        uploaderName = settingsModel.GetUploaderModel().GetName()
-        uploaderUuid = settingsModel.GetUploaderModel().GetUuid()
+        uploaderName = settingsModel.uploaderModel.GetName()
+        uploaderUuid = settingsModel.uploaderModel.GetUuid()
         experimentTitle = folderModel.GetExperimentTitle()
 
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        myTardisUrl = settingsModel.general.myTardisUrl
+        myTardisDefaultUsername = settingsModel.general.username
 
         if userFolderName:
             message = "Creating experiment for uploader '%s', " \
@@ -320,7 +319,7 @@ class ExperimentModel(object):
                 {"name": "group_folder_name", "value": groupFolderName})
         url = myTardisUrl + "/api/v1/mydata_experiment/"
         logger.debug(url)
-        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+        response = requests.post(headers=settingsModel.defaultHeaders,
                                  url=url, data=json.dumps(experimentJson))
         if response.status_code == 201:
             createdExperimentJson = response.json()
@@ -333,7 +332,7 @@ class ExperimentModel(object):
                 message += " and group folder \"%s\"" % groupFolderName
             logger.debug(message)
 
-            facilityManagersGroup = settingsModel.GetFacility().GetManagerGroup()
+            facilityManagersGroup = settingsModel.facility.GetManagerGroup()
             ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                     facilityManagersGroup)
             # Avoid creating a duplicate ObjectACL if the user folder's

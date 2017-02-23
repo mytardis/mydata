@@ -99,7 +99,6 @@ class SshServerInterface(paramiko.ServerInterface):
 
     def check_channel_pty_request(self, channel, term, width, height,
                                   pixelwidth, pixelheight, modes):
-        # pylint: disable=too-many-arguments
         return True
 
 
