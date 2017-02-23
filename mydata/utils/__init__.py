@@ -68,13 +68,19 @@ def BytesToHuman(numBytes):
     return "%sB" % numBytes
 
 
-def BeginBusyCursorIfRequired():
+def BeginBusyCursorIfRequired(event=None):
     """
     Begin busy cursor if it's not already being displayed.
     """
     try:
         if not wx.IsBusy():
             wx.BeginBusyCursor()
+        if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
+            if wx.version().startswith("3.0.3.dev"):
+                busyCursor = wx.Cursor(wx.CURSOR_WAIT)
+            else:
+                busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
+            event.settingsDialog.dialogPanel.SetCursor(busyCursor)
     except wx.PyAssertionError, err:
         logger.warning(err)
 
@@ -85,7 +91,8 @@ def EndBusyCursorIfRequired(event=None):
     busy cursor has already been stopped.
     """
     try:
-        wx.EndBusyCursor()
+        if wx.IsBusy():
+            wx.EndBusyCursor()
         if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
             if wx.version().startswith("3.0.3.dev"):
                 arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
