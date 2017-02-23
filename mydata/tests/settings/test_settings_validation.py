@@ -151,6 +151,7 @@ class SettingsValidationTester(unittest.TestCase):
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
         self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
 
         # Test missing Facility Name:
         self.settingsModel.general.facilityName = ""
