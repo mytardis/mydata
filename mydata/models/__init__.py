@@ -4,13 +4,13 @@ mydata/models/__init__.py
 Functionality used by multiple model classes.
 """
 
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import InternalServerError
-from mydata.utils.exceptions import BadGateway
-from mydata.utils.exceptions import ServiceUnavailable
-from mydata.utils.exceptions import GatewayTimeout
-from mydata.utils.exceptions import HttpException
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import InternalServerError
+from ..utils.exceptions import BadGateway
+from ..utils.exceptions import ServiceUnavailable
+from ..utils.exceptions import GatewayTimeout
+from ..utils.exceptions import HttpException
 
 
 def HandleHttpError(response, message=None):
