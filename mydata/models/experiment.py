@@ -9,10 +9,10 @@ import json
 import urllib
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
+from ..logs import logger
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import MultipleObjectsReturned
 from .user import UserProfileModel
 from .objectacl import ObjectAclModel
 from .schema import SchemaModel

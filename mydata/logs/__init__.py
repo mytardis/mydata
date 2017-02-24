@@ -19,9 +19,9 @@ from StringIO import StringIO
 import requests
 import wx
 
-from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
-from mydata.logs.wxloghandler import WxLogHandler
-from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
+from .SubmitDebugReportDialog import SubmitDebugReportDialog
+from .wxloghandler import WxLogHandler
+from .wxloghandler import EVT_WX_LOG_EVENT
 
 TIMEOUT = 3
 

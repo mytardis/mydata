@@ -6,11 +6,11 @@ import unittest
 
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.utils.exceptions import InvalidSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ...utils.exceptions import InvalidSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class ScanFoldersTester(unittest.TestCase):

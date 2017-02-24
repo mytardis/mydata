@@ -13,9 +13,9 @@ import traceback
 
 import psutil
 
-from mydata.logs import logger
-from mydata.subprocesses import DEFAULT_STARTUP_INFO
-from mydata.subprocesses import DEFAULT_CREATION_FLAGS
+from ..logs import logger
+from ..subprocesses import DEFAULT_STARTUP_INFO
+from ..subprocesses import DEFAULT_CREATION_FLAGS
 
 
 def UpdateAutostartFile(settingsModel):

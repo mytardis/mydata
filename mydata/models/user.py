@@ -6,8 +6,8 @@ import traceback
 import urllib
 import requests
 
-from mydata.utils.exceptions import DoesNotExist
-from mydata.logs import logger
+from ..utils.exceptions import DoesNotExist
+from ..logs import logger
 from .group import GroupModel
 
 

@@ -11,9 +11,9 @@ import time
 
 import wx
 
-from mydata.models.task import TaskModel
-from mydata.models.settings import LastSettingsUpdateTrigger
-from mydata.logs import logger
+from ..models.task import TaskModel
+from ..models.settings import LastSettingsUpdateTrigger
+from ..logs import logger
 
 
 def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):

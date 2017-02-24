@@ -2,8 +2,7 @@
 Model class for MyTardis API v1's StorageBoxResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-
-from mydata.utils import UnderscoreToCamelcase
+from ..utils import UnderscoreToCamelcase
 
 
 # pylint: disable=too-many-instance-attributes

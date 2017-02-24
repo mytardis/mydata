@@ -26,13 +26,13 @@ else:
     from wx.aui import AuiNotebook  # pylint: disable=no-name-in-module
     from wx.aui import AUI_NB_TOP  # pylint: disable=no-name-in-module
 
-from mydata.models.settings.serialize import LoadSettings
-from mydata.models.settings.serialize import SaveFieldsFromDialog
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.logs import logger
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
+from ..models.settings.serialize import LoadSettings
+from ..models.settings.serialize import SaveFieldsFromDialog
+from ..utils import BeginBusyCursorIfRequired
+from ..utils import EndBusyCursorIfRequired
+from ..logs import logger
+from ..events import MYDATA_EVENTS
+from ..events import PostEvent
 
 
 class SettingsDropTarget(wx.FileDropTarget):

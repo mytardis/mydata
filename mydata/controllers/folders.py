@@ -19,22 +19,19 @@ import wx
 import wx.lib.newevent
 import wx.dataview
 
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.utils.openssh import CleanUpSshProcesses
-
-from mydata.models.experiment import ExperimentModel
-from mydata.models.dataset import DatasetModel
-from mydata.controllers.uploads import UploadMethod
-from mydata.controllers.uploads import UploadDatafileRunnable
-from mydata.controllers.verifications import VerifyDatafileRunnable
-
 import mydata.events as mde
-
-from mydata.logs import logger
+from ..models.experiment import ExperimentModel
+from ..models.dataset import DatasetModel
+from ..logs import logger
+from ..utils import BeginBusyCursorIfRequired
+from ..utils import EndBusyCursorIfRequired
+from ..utils.openssh import CleanUpSshProcesses
+from .uploads import UploadMethod
+from .uploads import UploadDatafileRunnable
+from .verifications import VerifyDatafileRunnable
 
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import RestartErrandBoy
+    from ..linuxsubprocesses import RestartErrandBoy
 
 
 class FoldersController(object):

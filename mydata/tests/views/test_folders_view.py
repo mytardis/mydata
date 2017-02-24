@@ -7,16 +7,16 @@ import os
 
 import wx
 
-from mydata.models.folder import FolderModel
-from mydata.models.user import UserModel
-from mydata.dataviewmodels.folders import FoldersModel
-from mydata.views.folders import FoldersView
+from ...models.folder import FolderModel
+from ...models.user import UserModel
+from ...dataviewmodels.folders import FoldersModel
+from ...views.folders import FoldersView
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.serialize import SaveSettingsToDisk
-from mydata.events import MYDATA_EVENTS
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.serialize import SaveSettingsToDisk
+from ...events import MYDATA_EVENTS
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class FoldersViewTester(unittest.TestCase):

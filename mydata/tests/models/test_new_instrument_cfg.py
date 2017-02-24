@@ -6,10 +6,10 @@ import unittest
 
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class NewInstrumentTester(unittest.TestCase):

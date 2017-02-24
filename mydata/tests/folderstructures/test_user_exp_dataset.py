@@ -6,14 +6,14 @@ import unittest
 
 import wx
 
-from mydata.events import MYDATA_EVENTS
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.dataviewmodels.folders import FoldersModel
-from mydata.dataviewmodels.users import UsersModel
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...events import MYDATA_EVENTS
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.folders import FoldersModel
+from ...dataviewmodels.users import UsersModel
+from ...dataviewmodels.groups import GroupsModel
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class ScanUserExpDatasetTester(unittest.TestCase):

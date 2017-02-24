@@ -8,8 +8,8 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import urllib
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
 
 
 class GroupModel(object):

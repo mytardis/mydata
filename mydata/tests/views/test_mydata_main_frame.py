@@ -4,8 +4,8 @@ Test ability to display MyData's main frame.
 import unittest
 import wx
 
-from mydata.MyData import MyDataFrame
-from mydata.models.settings import SettingsModel
+from ...MyData import MyDataFrame
+from ...models.settings import SettingsModel
 
 
 class MyDataMainFrameTester(unittest.TestCase):

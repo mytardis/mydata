@@ -6,9 +6,9 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import json
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
+from ..logs import logger
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import DoesNotExist
 from .user import UserProfileModel
 
 

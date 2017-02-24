@@ -11,7 +11,7 @@ if wx.version().startswith("3.0.3.dev"):
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-from mydata.logs import logger  # pylint: disable=wrong-import-position
+from ..logs import logger  # pylint: disable=wrong-import-position
 
 
 def TryRowValueChanged(dataViewModel, row, col):

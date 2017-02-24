@@ -11,24 +11,24 @@ import select
 
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.dataviewmodels.folders import FoldersModel
-from mydata.dataviewmodels.users import UsersModel
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.dataviewmodels.uploads import UploadsModel
-from mydata.dataviewmodels.verifications import VerificationsModel
-from mydata.views.folders import FoldersView
-from mydata.controllers.folders import FoldersController
 import mydata.utils.openssh as OpenSSH
-from mydata.models.upload import UploadStatus
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
-from mydata.tests.fake_ssh_server import ThreadedSshServer
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
-from mydata.events import MYDATA_EVENTS
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.folders import FoldersModel
+from ...dataviewmodels.users import UsersModel
+from ...dataviewmodels.groups import GroupsModel
+from ...dataviewmodels.uploads import UploadsModel
+from ...dataviewmodels.verifications import VerificationsModel
+from ...views.folders import FoldersView
+from ...controllers.folders import FoldersController
+from ...models.upload import UploadStatus
+from ...utils.exceptions import PrivateKeyDoesNotExist
+from ..fake_ssh_server import ThreadedSshServer
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
+from ...events import MYDATA_EVENTS
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
+    from ...linuxsubprocesses import StopErrandBoy
 
 
 class ScanUsernameDatasetTester(unittest.TestCase):

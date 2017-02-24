@@ -11,16 +11,16 @@ from glob import glob
 
 import wx
 
-from mydata.models.folder import FolderModel
-from mydata.models.user import UserModel
-from mydata.models.group import GroupModel
-from mydata.logs import logger
-from mydata.utils.exceptions import InvalidFolderStructure
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.utils import Compare
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
+from ..models.folder import FolderModel
+from ..models.user import UserModel
+from ..models.group import GroupModel
+from ..logs import logger
+from ..utils.exceptions import InvalidFolderStructure
+from ..utils.exceptions import DoesNotExist
+from ..utils import EndBusyCursorIfRequired
+from ..utils import Compare
+from ..events import MYDATA_EVENTS
+from ..events import PostEvent
 from .dataview import DataViewIndexListModel
 
 

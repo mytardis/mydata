@@ -38,22 +38,22 @@ import requests
 if sys.platform.startswith("win"):
     import win32process  # pylint: disable=import-error
 
-from mydata.logs import logger
-from mydata.models.datafile import DataFileModel
-from mydata.models.replica import ReplicaModel
-from mydata.models.upload import UploadStatus
-from mydata.utils.exceptions import SshException
-from mydata.utils.exceptions import ScpException
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
-from mydata.utils.exceptions import DoesNotExist
+from ..logs import logger
+from ..models.datafile import DataFileModel
+from ..models.replica import ReplicaModel
+from ..models.upload import UploadStatus
+from ..utils.exceptions import SshException
+from ..utils.exceptions import ScpException
+from ..utils.exceptions import PrivateKeyDoesNotExist
+from ..utils.exceptions import DoesNotExist
 
-from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
+from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import GetErrandBoyTransport
+    from ..linuxsubprocesses import GetErrandBoyTransport
 
-from mydata.subprocesses import DEFAULT_STARTUP_INFO
-from mydata.subprocesses import DEFAULT_CREATION_FLAGS
+from ..subprocesses import DEFAULT_STARTUP_INFO
+from ..subprocesses import DEFAULT_CREATION_FLAGS
 
 # Running subprocess's communicate from multiple threads can cause high CPU
 # usage, so we poll each subprocess before running communicate, using a sleep

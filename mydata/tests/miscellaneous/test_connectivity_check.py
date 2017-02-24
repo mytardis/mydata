@@ -4,8 +4,8 @@ Test ability to perform connectivity check.
 import unittest
 import wx
 
-from mydata.models.settings import SettingsModel
 import mydata.events as mde
+from ...models.settings import SettingsModel
 
 
 class ConnectivityCheckTester(unittest.TestCase):

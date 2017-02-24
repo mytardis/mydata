@@ -5,7 +5,7 @@ and the tabular data displayed on that tab view.
 import wx
 import wx.dataview as dv
 
-from mydata.dataviewmodels.uploads import ColumnType
+from ..dataviewmodels.uploads import ColumnType
 
 
 class UploadsView(wx.Panel):

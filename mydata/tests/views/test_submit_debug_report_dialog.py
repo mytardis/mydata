@@ -11,10 +11,10 @@ from BaseHTTPServer import HTTPServer
 import requests
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.tests.fake_submit_debug_log_server import FakeSubmitDebugLogHandler
-from mydata.tests.utils import GetEphemeralPort
-from mydata.logs import logger
+from ...models.settings import SettingsModel
+from ..fake_submit_debug_log_server import FakeSubmitDebugLogHandler
+from ..utils import GetEphemeralPort
+from ...logs import logger
 
 
 class SubmitDebugLogTester(unittest.TestCase):

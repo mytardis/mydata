@@ -5,9 +5,9 @@ import unittest
 
 import wx
 
-from mydata.dataviewmodels.users import UsersModel
-from mydata.models.user import UserModel
-from mydata.views.users import UsersView
+from ...dataviewmodels.users import UsersModel
+from ...models.user import UserModel
+from ...views.users import UsersView
 
 
 class UsersViewTester(unittest.TestCase):

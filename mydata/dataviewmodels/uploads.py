@@ -7,8 +7,8 @@ import datetime
 
 import wx
 
-from mydata.models.upload import UploadStatus
-from mydata.media import MYDATA_ICONS
+from ..models.upload import UploadStatus
+from ..media import MYDATA_ICONS
 from .dataview import DataViewIndexListModel
 from .dataview import TryRowValueChanged
 

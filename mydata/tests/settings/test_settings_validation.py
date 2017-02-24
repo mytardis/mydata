@@ -6,13 +6,13 @@ import tempfile
 import os
 import sys
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.serialize import SaveSettingsToDisk
 import mydata.models.settings.validation
-from mydata.models.settings.validation import ValidateSettings
-from mydata.utils.exceptions import InvalidSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.serialize import SaveSettingsToDisk
+from ...models.settings.validation import ValidateSettings
+from ...utils.exceptions import InvalidSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class SettingsValidationTester(unittest.TestCase):

@@ -10,7 +10,7 @@ from datetime import datetime
 
 import requests
 
-from mydata.logs import logger
+from ...logs import logger
 from .miscellaneous import LastSettingsUpdateTrigger
 
 

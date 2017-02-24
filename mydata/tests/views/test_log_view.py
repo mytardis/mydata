@@ -6,8 +6,8 @@ import logging
 
 import wx
 
-from mydata.views.log import LogView
-from mydata.logs import logger
+from ...views.log import LogView
+from ...logs import logger
 
 
 class LogViewTester(unittest.TestCase):

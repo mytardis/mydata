@@ -21,7 +21,7 @@ import urllib
 import cgi
 import logging
 
-from mydata.utils.openssh import GetCygwinPath
+from ..utils.openssh import GetCygwinPath
 
 # Set this to True to log URL requests:
 DEBUG = False

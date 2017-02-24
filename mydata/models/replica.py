@@ -5,8 +5,8 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 import requests
 
-from mydata.utils import UnderscoreToCamelcase
-from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
+from ..utils import UnderscoreToCamelcase
+from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 
 # pylint: disable=too-many-instance-attributes

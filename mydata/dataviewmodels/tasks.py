@@ -17,10 +17,10 @@ if wx.version().startswith("3.0.3.dev"):
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
-from mydata.models.task import TaskModel
-from mydata.utils.notification import Notification
-from mydata.logs import logger
-from mydata.utils import EndBusyCursorIfRequired
+from ..models.task import TaskModel
+from ..utils.notification import Notification
+from ..logs import logger
+from ..utils import EndBusyCursorIfRequired
 
 
 class TasksModel(DataViewIndexListModel):

@@ -11,7 +11,7 @@ from SocketServer import ThreadingMixIn
 
 import requests
 
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
+from .fake_mytardis_server import FakeMyTardisHandler
 
 
 def GetEphemeralPort():

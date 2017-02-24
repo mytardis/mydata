@@ -6,17 +6,17 @@ import unittest
 
 import wx
 
-from mydata.models.experiment import ExperimentModel
-from mydata.models.folder import FolderModel
-from mydata.models.schema import SchemaModel
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.models.user import UserProfileModel
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
-from mydata.utils.exceptions import Unauthorized
+from ...models.experiment import ExperimentModel
+from ...models.folder import FolderModel
+from ...models.schema import SchemaModel
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ...models.user import UserProfileModel
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
+from ...utils.exceptions import DoesNotExist
+from ...utils.exceptions import MultipleObjectsReturned
+from ...utils.exceptions import Unauthorized
 
 
 class ExperimentExceptionsTester(unittest.TestCase):

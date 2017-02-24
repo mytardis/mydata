@@ -4,8 +4,8 @@ Test ability to open uploads view.
 import unittest
 import wx
 
-from mydata.dataviewmodels.uploads import UploadsModel
-from mydata.views.uploads import UploadsView
+from ...dataviewmodels.uploads import UploadsModel
+from ...views.uploads import UploadsView
 
 
 class UploadsViewTester(unittest.TestCase):

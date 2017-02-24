@@ -7,8 +7,8 @@ import sys
 import os
 import wx
 
-from mydata.logs import logger
-from mydata.media import MYDATA_ICONS
+from ..logs import logger
+from ..media import MYDATA_ICONS
 
 
 class Notification(object):

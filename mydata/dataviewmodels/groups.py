@@ -6,7 +6,7 @@ import threading
 
 import wx
 
-from mydata.utils import Compare
+from ..utils import Compare
 from .dataview import DataViewIndexListModel
 
 

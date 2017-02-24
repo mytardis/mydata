@@ -20,16 +20,17 @@ class ImportMyDataTester(unittest.TestCase):
             sys.modules.pop("mydata")
             if os.path.exists("mydata/commitdef.py"):
                 os.remove("mydata/commitdef.py")
-        from mydata import LATEST_COMMIT
-        self.assertNotEqual(LATEST_COMMIT, "Couldn't determine LATEST_COMMIT.")
+        import mydata
+        self.assertNotEqual(mydata.LATEST_COMMIT,
+                            "Couldn't determine LATEST_COMMIT.")
         self.assertTrue(os.path.exists("mydata/commitdef.py"))
 
         frozen = getattr(sys, "frozen", None)
         sys.frozen = True
         sys.modules.pop("mydata")
-        commitHash = LATEST_COMMIT
-        from mydata import LATEST_COMMIT  # pylint: disable=reimported
-        self.assertEqual(LATEST_COMMIT, commitHash)
+        commitHash = mydata.LATEST_COMMIT
+        import mydata  # pylint: disable=reimported
+        self.assertEqual(mydata.LATEST_COMMIT, commitHash)
         if frozen:
             sys.frozen = frozen
         else:

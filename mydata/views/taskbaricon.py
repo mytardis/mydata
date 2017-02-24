@@ -20,8 +20,8 @@ else:
     from wx import EmptyIcon
     from wx import TaskBarIcon
 
-from mydata.media import MYDATA_ICONS
-from mydata.logs import logger
+from ..media import MYDATA_ICONS
+from ..logs import logger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):

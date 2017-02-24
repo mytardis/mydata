@@ -4,14 +4,14 @@ Test method for handling HTTP error.
 import unittest
 import wx
 
-from mydata.models import HandleHttpError
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import InternalServerError
-from mydata.utils.exceptions import BadGateway
-from mydata.utils.exceptions import ServiceUnavailable
-from mydata.utils.exceptions import GatewayTimeout
-from mydata.utils.exceptions import HttpException
+from ...models import HandleHttpError
+from ...utils.exceptions import Unauthorized
+from ...utils.exceptions import DoesNotExist
+from ...utils.exceptions import InternalServerError
+from ...utils.exceptions import BadGateway
+from ...utils.exceptions import ServiceUnavailable
+from ...utils.exceptions import GatewayTimeout
+from ...utils.exceptions import HttpException
 
 
 class MockResponse(object):

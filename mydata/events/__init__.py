@@ -8,16 +8,16 @@ import sys
 import logging
 import wx
 
-from mydata.models.settings.serialize import SaveFieldsFromDialog
-from mydata.models.settings.validation import ValidateSettings
-from mydata.models.uploader import UploaderModel
-from mydata.utils.exceptions import DuplicateKey
-from mydata.utils.exceptions import UserAbortedSettingsValidation
-from mydata.utils.exceptions import InvalidSettings
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.logs import logger
-from mydata.views.connectivity import ReportNoActiveInterfaces
+from ..models.settings.serialize import SaveFieldsFromDialog
+from ..models.settings.validation import ValidateSettings
+from ..models.uploader import UploaderModel
+from ..utils.exceptions import DuplicateKey
+from ..utils.exceptions import UserAbortedSettingsValidation
+from ..utils.exceptions import InvalidSettings
+from ..utils import BeginBusyCursorIfRequired
+from ..utils import EndBusyCursorIfRequired
+from ..logs import logger
+from ..views.connectivity import ReportNoActiveInterfaces
 
 
 def NewEvent(defaultTarget=None, defaultHandler=None):

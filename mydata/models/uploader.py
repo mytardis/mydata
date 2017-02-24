@@ -85,16 +85,16 @@ import netifaces
 import psutil
 import requests
 
-from mydata import __version__ as VERSION
-from mydata.models.storage import StorageBox
-from mydata.logs import logger
 import mydata.utils.openssh as OpenSSH
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import PrivateKeyDoesNotExist
-from mydata.utils.exceptions import MissingMyDataAppOnMyTardisServer
-from mydata.utils.exceptions import StorageBoxOptionNotFound
-from mydata.utils.exceptions import StorageBoxAttributeNotFound
-from mydata.utils import BytesToHuman
+from .. import __version__ as VERSION
+from .storage import StorageBox
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import PrivateKeyDoesNotExist
+from ..utils.exceptions import MissingMyDataAppOnMyTardisServer
+from ..utils.exceptions import StorageBoxOptionNotFound
+from ..utils.exceptions import StorageBoxAttributeNotFound
+from ..utils import BytesToHuman
 from . import HandleHttpError
 
 DEFAULT_TIMEOUT = 3

@@ -6,15 +6,15 @@ import unittest
 
 import wx
 
-from mydata.models.dataset import DatasetModel
-from mydata.models.experiment import ExperimentModel
-from mydata.models.folder import FolderModel
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import InternalServerError
+from ...models.dataset import DatasetModel
+from ...models.experiment import ExperimentModel
+from ...models.folder import FolderModel
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
+from ...utils.exceptions import Unauthorized
+from ...utils.exceptions import InternalServerError
 
 
 class DatasetExceptionsTester(unittest.TestCase):

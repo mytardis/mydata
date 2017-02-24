@@ -9,17 +9,17 @@ import unittest
 
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.serialize import SaveSettingsToDisk
-from mydata.models.settings.serialize import SaveFieldsFromDialog
-from mydata.utils.autostart import UpdateAutostartFile
-from mydata.views.settings import SettingsDialog
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
-from mydata.events import RenameInstrument
-from mydata.utils.exceptions import DuplicateKey
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.serialize import SaveSettingsToDisk
+from ...models.settings.serialize import SaveFieldsFromDialog
+from ...utils.autostart import UpdateAutostartFile
+from ...views.settings import SettingsDialog
+from ...events import MYDATA_EVENTS
+from ...events import PostEvent
+from ...events import RenameInstrument
+from ...utils.exceptions import DuplicateKey
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class SettingsDialogTester(unittest.TestCase):

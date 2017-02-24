@@ -8,7 +8,7 @@ import sys
 import psutil
 import wx
 
-from mydata.logs import logger
+from ..logs import logger
 
 
 def PidIsRunning(pid):

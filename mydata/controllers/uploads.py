@@ -23,20 +23,20 @@ from datetime import datetime
 
 import wx
 
-from mydata.utils.openssh import UploadFile
+from ..utils.openssh import UploadFile
 
-from mydata.models.settings.miscellaneous import MiscellaneousSettingsModel
-from mydata.models.upload import UploadModel
-from mydata.models.upload import UploadStatus
-from mydata.models.datafile import DataFileModel
-from mydata.utils import SafeStr
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import InternalServerError
-from mydata.utils.exceptions import SshException
-from mydata.utils.exceptions import StorageBoxAttributeNotFound
-from mydata.events import PostEvent
-from mydata.logs import logger
+from ..models.settings.miscellaneous import MiscellaneousSettingsModel
+from ..models.upload import UploadModel
+from ..models.upload import UploadStatus
+from ..models.datafile import DataFileModel
+from ..utils import SafeStr
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import InternalServerError
+from ..utils.exceptions import SshException
+from ..utils.exceptions import StorageBoxAttributeNotFound
+from ..events import PostEvent
+from ..logs import logger
 
 
 class UploadMethod(object):

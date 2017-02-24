@@ -5,9 +5,9 @@ import unittest
 
 import wx
 
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.models.group import GroupModel
-from mydata.views.groups import GroupsView
+from ...dataviewmodels.groups import GroupsModel
+from ...models.group import GroupModel
+from ...views.groups import GroupsView
 
 
 class GroupsViewTester(unittest.TestCase):

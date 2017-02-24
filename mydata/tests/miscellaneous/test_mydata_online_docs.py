@@ -5,7 +5,7 @@ import unittest
 
 import wx
 
-from mydata.MyData import MyData
+from ...MyData import MyData
 
 
 class MyDataOnlineDocsTester(unittest.TestCase):

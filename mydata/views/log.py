@@ -6,7 +6,7 @@ import sys
 import logging
 import wx
 
-from mydata.logs import logger
+from ..logs import logger
 
 
 class LogView(wx.Panel):

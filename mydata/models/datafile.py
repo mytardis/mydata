@@ -13,10 +13,10 @@ import requests
 # poster will soon be replaced by requests-toolbelt:
 import poster
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
-from mydata.utils import UnderscoreToCamelcase
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import MultipleObjectsReturned
+from ..utils import UnderscoreToCamelcase
 from .replica import ReplicaModel
 from . import HandleHttpError
 

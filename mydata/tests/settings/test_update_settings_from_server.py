@@ -5,11 +5,11 @@ import unittest
 import tempfile
 import os
 
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.serialize import LoadSettings
-from mydata.models.settings.serialize import SaveSettingsToDisk
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...models.settings import SettingsModel
+from ...models.settings.serialize import LoadSettings
+from ...models.settings.serialize import SaveSettingsToDisk
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 
 
 class UpdatedSettingsTester(unittest.TestCase):

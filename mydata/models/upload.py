@@ -10,8 +10,8 @@ import sys
 import signal
 import traceback
 
-from mydata.logs import logger
-from mydata.utils import HumanReadableSizeString
+from ..logs import logger
+from ..utils import HumanReadableSizeString
 
 
 class UploadStatus(object):

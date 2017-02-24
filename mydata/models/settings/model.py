@@ -5,12 +5,12 @@ and saved to disk in MyData.cfg
 import traceback
 import threading
 
-from mydata.logs import logger
-from mydata.models.facility import FacilityModel
-from mydata.models.instrument import InstrumentModel
-from mydata.models.uploader import UploaderModel
-from mydata.utils.exceptions import DuplicateKey
-from mydata.utils.exceptions import DoesNotExist
+from ...logs import logger
+from ...utils.exceptions import DuplicateKey
+from ...utils.exceptions import DoesNotExist
+from ..facility import FacilityModel
+from ..instrument import InstrumentModel
+from ..uploader import UploaderModel
 from .general import GeneralSettingsModel
 from .schedule import ScheduleSettingsModel
 from .filters import FiltersSettingsModel

@@ -7,10 +7,10 @@ import tempfile
 
 import wx
 
-from mydata.models.folder import FolderModel
-from mydata.models.user import UserModel
+from ...models.folder import FolderModel
+from ...models.user import UserModel
 
-from mydata.models.settings import SettingsModel
+from ...models.settings import SettingsModel
 
 
 class FolderModelTester(unittest.TestCase):

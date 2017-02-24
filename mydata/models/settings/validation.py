@@ -11,12 +11,12 @@ import requests
 from validate_email import validate_email
 import wx
 
-from mydata.logs import logger
-from mydata.models.facility import FacilityModel
-from mydata.utils.autostart import UpdateAutostartFile
-from mydata.utils.exceptions import InvalidSettings
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import UserAbortedSettingsValidation
+from ...logs import logger
+from ..facility import FacilityModel
+from ...utils.autostart import UpdateAutostartFile
+from ...utils.exceptions import InvalidSettings
+from ...utils.exceptions import Unauthorized
+from ...utils.exceptions import UserAbortedSettingsValidation
 
 DEFAULT_TIMEOUT = 5
 

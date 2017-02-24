@@ -12,7 +12,7 @@ import hashlib
 import traceback
 from fnmatch import fnmatch
 
-from mydata.logs import logger
+from ..logs import logger
 
 
 class FolderModel(object):

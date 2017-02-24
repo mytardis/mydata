@@ -6,8 +6,8 @@ import threading
 
 import wx
 
-from mydata.models.verification import VerificationStatus
-from mydata.dataviewmodels.uploads import ColumnType
+from ..models.verification import VerificationStatus
+from .uploads import ColumnType
 from .dataview import DataViewIndexListModel
 from .dataview import TryRowValueChanged
 

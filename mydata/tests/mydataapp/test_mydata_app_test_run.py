@@ -8,15 +8,15 @@ import unittest
 
 import wx
 
-from mydata.MyData import MyData
-from mydata.events import MYDATA_EVENTS
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.serialize import SaveSettingsToDisk
-from mydata.models.settings.validation import ValidateSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
+from ...MyData import MyData
+from ...events import MYDATA_EVENTS
+from ...models.settings import SettingsModel
+from ...models.settings.serialize import SaveSettingsToDisk
+from ...models.settings.validation import ValidateSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
+    from ...linuxsubprocesses import StopErrandBoy
 
 
 class MyDataAppInstanceTester(unittest.TestCase):

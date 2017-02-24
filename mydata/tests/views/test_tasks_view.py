@@ -4,8 +4,8 @@ Test ability to open tasks view.
 import unittest
 import wx
 
-from mydata.dataviewmodels.tasks import TasksModel
-from mydata.views.tasks import TasksView
+from ...dataviewmodels.tasks import TasksModel
+from ...views.tasks import TasksView
 
 
 class TasksViewTester(unittest.TestCase):

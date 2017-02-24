@@ -7,9 +7,9 @@ import json
 import urllib
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import Unauthorized
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import Unauthorized
 from .facility import FacilityModel
 from . import HandleHttpError
 

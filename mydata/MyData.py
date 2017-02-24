@@ -42,43 +42,43 @@ else:
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
-from mydata import __version__ as VERSION
-from mydata import LATEST_COMMIT
-from mydata.views.folders import FoldersView
-from mydata.dataviewmodels.folders import FoldersModel
-from mydata.controllers.folders import FoldersController
-from mydata.views.users import UsersView
-from mydata.dataviewmodels.users import UsersModel
-from mydata.views.groups import GroupsView
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.views.verifications import VerificationsView
-from mydata.dataviewmodels.verifications import VerificationsModel
-from mydata.views.uploads import UploadsView
-from mydata.dataviewmodels.uploads import UploadsModel
-from mydata.views.tasks import TasksView
-from mydata.dataviewmodels.tasks import TasksModel
-from mydata.models.uploader import UploaderModel
-from mydata.views.log import LogView
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.views.settings import SettingsDialog
-from mydata.utils.exceptions import InvalidFolderStructure
-from mydata.utils.exceptions import InvalidSettings
-from mydata.logs import logger
-from mydata.views.taskbaricon import MyDataTaskBarIcon
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
-from mydata.media import MYDATA_ICONS
-from mydata.media import IconStyle
-from mydata.utils.notification import Notification
-from mydata.models.settings import LastSettingsUpdateTrigger
-from mydata.controllers.schedule import ScheduleController
-from mydata.views.testrun import TestRunFrame
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.views.connectivity import ReportNoActiveInterfaces
+from . import __version__ as VERSION
+from . import LATEST_COMMIT
+from .views.folders import FoldersView
+from .dataviewmodels.folders import FoldersModel
+from .controllers.folders import FoldersController
+from .views.users import UsersView
+from .dataviewmodels.users import UsersModel
+from .views.groups import GroupsView
+from .dataviewmodels.groups import GroupsModel
+from .views.verifications import VerificationsView
+from .dataviewmodels.verifications import VerificationsModel
+from .views.uploads import UploadsView
+from .dataviewmodels.uploads import UploadsModel
+from .views.tasks import TasksView
+from .dataviewmodels.tasks import TasksModel
+from .models.uploader import UploaderModel
+from .views.log import LogView
+from .models.settings import SettingsModel
+from .models.settings.validation import ValidateSettings
+from .views.settings import SettingsDialog
+from .utils.exceptions import InvalidFolderStructure
+from .utils.exceptions import InvalidSettings
+from .logs import logger
+from .views.taskbaricon import MyDataTaskBarIcon
+from .events import MYDATA_EVENTS
+from .events import PostEvent
+from .media import MYDATA_ICONS
+from .media import IconStyle
+from .utils.notification import Notification
+from .models.settings import LastSettingsUpdateTrigger
+from .controllers.schedule import ScheduleController
+from .views.testrun import TestRunFrame
+from .utils import BeginBusyCursorIfRequired
+from .utils import EndBusyCursorIfRequired
+from .views.connectivity import ReportNoActiveInterfaces
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
+    from .linuxsubprocesses import StopErrandBoy
 
 
 class NotebookTabs(object):

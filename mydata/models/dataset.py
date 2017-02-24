@@ -10,9 +10,9 @@ import json
 import threading
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import InternalServerError
+from ..logs import logger
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import InternalServerError
 from . import HandleHttpError
 
 

@@ -4,7 +4,7 @@ the results of a dry run.
 """
 import wx
 
-from mydata.logs import logger
+from ..logs import logger
 
 
 class TestRunFrame(wx.Frame):

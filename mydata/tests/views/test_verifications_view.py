@@ -4,8 +4,8 @@ Test ability to open verifications view.
 import unittest
 import wx
 
-from mydata.dataviewmodels.verifications import VerificationsModel
-from mydata.views.verifications import VerificationsView
+from ...dataviewmodels.verifications import VerificationsModel
+from ...views.verifications import VerificationsView
 
 
 class VerificationsViewTester(unittest.TestCase):

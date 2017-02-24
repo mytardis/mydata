@@ -6,13 +6,13 @@ import unittest
 
 import wx
 
-from mydata.models.instrument import InstrumentModel
-from mydata.models.settings import SettingsModel
-from mydata.models.settings.validation import ValidateSettings
-from mydata.tests.utils import StartFakeMyTardisServer
-from mydata.tests.utils import WaitForFakeMyTardisServerToStart
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import InternalServerError
+from ...models.instrument import InstrumentModel
+from ...models.settings import SettingsModel
+from ...models.settings.validation import ValidateSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
+from ...utils.exceptions import Unauthorized
+from ...utils.exceptions import InternalServerError
 
 
 class InstrumentExceptionsTester(unittest.TestCase):

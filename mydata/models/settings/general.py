@@ -2,11 +2,11 @@
 Model class for the settings displayed in the General tab
 of the settings dialog and saved to disk in MyData.cfg
 """
-from mydata.models.user import UserModel
-from mydata.models.facility import FacilityModel
-from mydata.models.instrument import InstrumentModel
-from mydata.utils.exceptions import DoesNotExist
-from mydata.logs import logger
+from ...logs import logger
+from ...utils.exceptions import DoesNotExist
+from ..user import UserModel
+from ..facility import FacilityModel
+from ..instrument import InstrumentModel
 
 
 class GeneralSettingsModel(object):

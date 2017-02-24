@@ -3,7 +3,7 @@ mydata/views/connectivity.py
 """
 import wx
 
-from mydata.utils.exceptions import NoActiveNetworkInterface
+from ..utils.exceptions import NoActiveNetworkInterface
 
 
 def ReportNoActiveInterfaces():

@@ -24,16 +24,16 @@ import traceback
 
 import wx
 
-from mydata.models.settings.miscellaneous import MiscellaneousSettingsModel
-from mydata.models.replica import ReplicaModel
-from mydata.models.verification import VerificationModel
-from mydata.models.verification import VerificationStatus
-from mydata.models.datafile import DataFileModel
-from mydata.controllers.uploads import UploadMethod
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
-from mydata.events import PostEvent
-from mydata.logs import logger
+from ..models.settings.miscellaneous import MiscellaneousSettingsModel
+from ..models.replica import ReplicaModel
+from ..models.verification import VerificationModel
+from ..models.verification import VerificationStatus
+from ..models.datafile import DataFileModel
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
+from ..events import PostEvent
+from ..logs import logger
+from .uploads import UploadMethod
 
 
 class VerifyDatafileRunnable(object):
