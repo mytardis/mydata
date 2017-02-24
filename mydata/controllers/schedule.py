@@ -15,6 +15,7 @@ from mydata.models.task import TaskModel
 from mydata.models.settings import LastSettingsUpdateTrigger
 from mydata.logs import logger
 
+
 def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
     """
     Task to be run according to the schedule.
@@ -40,6 +41,7 @@ def HandleValueError(err):
         wx.MessageBox(str(err), "MyData", wx.ICON_ERROR)
     else:
         logger.error(str(err))
+
 
 class ScheduleController(object):
     """
@@ -109,7 +111,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateOnSettingsSavedTask(self, event):
@@ -137,7 +139,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateManualTask(self, event, needToValidateSettings=True,
@@ -166,7 +168,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateOnceTask(self, event, needToValidateSettings):
@@ -207,7 +209,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateDailyTask(self, event, needToValidateSettings):
@@ -239,7 +241,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateWeeklyTask(self, event, needToValidateSettings):
@@ -282,7 +284,7 @@ class ScheduleController(object):
                          days=days)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateTimerTask(self, event, needToValidateSettings):
@@ -317,5 +319,5 @@ class ScheduleController(object):
                          intervalMinutes=intervalMinutes)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)

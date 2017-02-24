@@ -2,6 +2,8 @@
 Model class for the settings displayed in the Filters tab
 of the settings dialog and saved to disk in MyData.cfg
 """
+
+
 class FiltersSettingsModel(object):
     """
     Model class for the settings displayed in the Filters tab

@@ -3,6 +3,7 @@ Model for representing a scheduled task (a.k.a. job), as listed
 in the Tasks view of MyData's main window.
 """
 
+
 class DayOfWeek(object):
     """
     Enumerated data type.

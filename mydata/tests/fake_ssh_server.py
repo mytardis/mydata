@@ -27,7 +27,8 @@ import subprocess
 import time
 import re
 import logging
-from cStringIO import StringIO
+# For Python 3, this will change to "from io import StringIO":
+from StringIO import StringIO
 
 import paramiko
 from paramiko.py3compat import decodebytes
@@ -133,6 +134,7 @@ DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
     "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n"
     "-----END RSA PRIVATE KEY-----\n"
 ))
+
 
 class SshRequestHandler(SocketServer.BaseRequestHandler):
     """
@@ -362,7 +364,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     m.add_int(window_size)
                     # pylint: disable=protected-access
                     self.transport._send_user_message(m)
-
 
                 def read_file_content():
                     try:

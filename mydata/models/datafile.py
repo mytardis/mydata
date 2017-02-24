@@ -6,9 +6,11 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import io
 import json
 import urllib
+# Only used for poster which will be replaced by requests-toolbelt:
 import urllib2
 
 import requests
+# poster will soon be replaced by requests-toolbelt:
 import poster
 
 from mydata.logs import logger

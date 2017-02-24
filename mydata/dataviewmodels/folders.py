@@ -2,8 +2,6 @@
 Represents the Folders tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-# pylint: disable=wrong-import-position
-
 import threading
 import os
 import sys
@@ -12,10 +10,6 @@ from datetime import datetime
 from glob import glob
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 from mydata.models.folder import FolderModel
 from mydata.models.user import UserModel
@@ -24,17 +18,19 @@ from mydata.logs import logger
 from mydata.utils.exceptions import InvalidFolderStructure
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils import EndBusyCursorIfRequired
+from mydata.utils import Compare
 from mydata.events import MYDATA_EVENTS
 from mydata.events import PostEvent
+from .dataview import DataViewIndexListModel
 
 
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-public-methods
 class FoldersModel(DataViewIndexListModel):
     """
     Represents the Folders tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
     def __init__(self, usersModel, groupsModel, settingsModel):
 
         self.foldersData = []
@@ -243,7 +239,8 @@ class FoldersModel(DataViewIndexListModel):
 
     def GetFilteredRowCount(self):
         """
-        Report how many rows this model provides data for.
+        Report how many rows this model provides data for,
+        taking into account the filter query string.
         """
         return len(self.ffd)
 
@@ -280,7 +277,7 @@ class FoldersModel(DataViewIndexListModel):
         need to convert them to row numbers with the GetRow method.
         Then it's just a matter of fetching the right values from our
         data set and comparing them.  The return value is -1, 0, or 1,
-        just like Python's cmp() function.
+        just like Python 2's cmp() function.
         """
         try:
             folderRecord1 = self.foldersData[self.GetRow(folderRecord1)]
@@ -292,11 +289,11 @@ class FoldersModel(DataViewIndexListModel):
         if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
-            return cmp(int(folderRecord1.GetDataViewId()),
-                       int(folderRecord2.GetDataViewId()))
+            return Compare(int(folderRecord1.GetDataViewId()),
+                           int(folderRecord2.GetDataViewId()))
         else:
-            return cmp(folderRecord1.GetValueForKey(self.columnKeys[col]),
-                       folderRecord2.GetValueForKey(self.columnKeys[col]))
+            return Compare(folderRecord1.GetValueForKey(self.columnKeys[col]),
+                           folderRecord2.GetValueForKey(self.columnKeys[col]))
 
     def GetMaxDataViewIdFromExistingRows(self):
         """

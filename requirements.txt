@@ -1,10 +1,10 @@
 appdirs==1.4.0
 netifaces==0.10.5
-poster==0.8.1
+poster==0.8.1 # TO DO: Use requests-toolbelt instead for POST uploads with progress updates
 psutil==2.2.1
 # py2app==0.9
 requests==2.4.3 # https://github.com/kennethreitz/requests/issues/2465
-validate_email==1.2
+validate_email==1.3
 # wxPython>=2.9.5.0
 # wxPython-common>=2.9.5.0
 nose==1.3.7

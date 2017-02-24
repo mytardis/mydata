@@ -8,7 +8,13 @@ class.
 # pylint: disable=missing-docstring
 
 import os
-import urllib2
+try:
+    import urllib2
+except ImportError:
+    # urllib2 is not available in Python 3
+    # But it is only used for poster,
+    # which can be replaced by requests-toolbelt
+    pass
 import json
 import traceback
 import mimetypes
@@ -23,7 +29,7 @@ from mydata.models.settings.miscellaneous import MiscellaneousSettingsModel
 from mydata.models.upload import UploadModel
 from mydata.models.upload import UploadStatus
 from mydata.models.datafile import DataFileModel
-from mydata.utils import ConvertToUtf8
+from mydata.utils import SafeStr
 from mydata.utils.exceptions import DoesNotExist
 from mydata.utils.exceptions import Unauthorized
 from mydata.utils.exceptions import InternalServerError
@@ -183,9 +189,8 @@ class UploadDatafileRunnable(object):
                 self.UploadFileWithPost(dataFileDict)
             else:
                 self.UploadFileToStaging(dataFileDict)
-        except Exception, err:
-            self.uploadsModel.SetMessage(self.uploadModel,
-                                         ConvertToUtf8(err.message))
+        except Exception as err:
+            self.uploadsModel.SetMessage(self.uploadModel, SafeStr(err))
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             self.uploadModel.SetTraceback(traceback.format_exc())
             if dataFileDirectory != "":
@@ -276,10 +281,10 @@ class UploadDatafileRunnable(object):
                 self.settingsModel, dataFilePath, dataFileDict,
                 self.uploadsModel, self.uploadModel, PosterCallback)
             self.FinalizeUpload(response, postSuccess=True, uploadSuccess=True)
-        except ValueError, err:
+        except ValueError as err:
             self.uploadModel.SetTraceback(
                 traceback.format_exc())
-            errString = ConvertToUtf8(err.message)
+            errString = SafeStr(err)
             if errString == "read of closed file" or \
                     errString == "seek of closed file":
                 logger.debug("Aborting upload for \"%s\" because "
@@ -288,7 +293,7 @@ class UploadDatafileRunnable(object):
                 return
             else:
                 raise
-        except urllib2.HTTPError, err:
+        except urllib2.HTTPError as err:
             self.uploadModel.SetTraceback(
                 traceback.format_exc())
             logger.error(traceback.format_exc())
@@ -305,7 +310,7 @@ class UploadDatafileRunnable(object):
                 message += "ERROR: \"%s\"" \
                     % json.loads(errorResponse)['error_message']
             except:
-                message += ConvertToUtf8(err.message)
+                message += SafeStr(err)
             PostEvent(
                 self.foldersController
                 .ShowMessageDialogEvent(title="MyData",
@@ -374,7 +379,7 @@ class UploadDatafileRunnable(object):
                            self.uploadModel)
                 # Break out of upload retries loop.
                 break
-            except IOError, err:
+            except IOError as err:
                 if self.foldersController.IsShuttingDown() or \
                         self.uploadModel.Canceled():
                     return
@@ -382,7 +387,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.advanced.maxUploadRetries:
-                    logger.warning(ConvertToUtf8(err.message))
+                    logger.warning(SafeStr(err))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)
@@ -390,7 +395,7 @@ class UploadDatafileRunnable(object):
                     continue
                 else:
                     raise
-            except DoesNotExist, err:
+            except DoesNotExist as err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
                 # This generally means that MyTardis's API couldn't assign
@@ -403,27 +408,27 @@ class UploadDatafileRunnable(object):
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = ConvertToUtf8(err.message)
+                message = SafeStr(err)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
-            except StorageBoxAttributeNotFound, err:
+            except StorageBoxAttributeNotFound as err:
                 self.uploadModel.SetTraceback(
                     traceback.format_exc())
                 PostEvent(
                     self.foldersController.ShutdownUploadsEvent(
                         failed=True))
-                message = ConvertToUtf8(err.message)
+                message = SafeStr(err)
                 PostEvent(
                     self.foldersController
                     .ShowMessageDialogEvent(title="MyData",
                                             message=message,
                                             icon=wx.ICON_ERROR))
                 return
-            except SshException, err:
+            except SshException as err:
                 if self.foldersController.IsShuttingDown() or \
                         self.uploadModel.Canceled():
                     return
@@ -431,7 +436,7 @@ class UploadDatafileRunnable(object):
                     traceback.format_exc())
                 if self.uploadModel.GetRetries() < \
                         self.settingsModel.advanced.maxUploadRetries:
-                    logger.warning(ConvertToUtf8(err.message))
+                    logger.warning(SafeStr(err))
                     self.uploadModel.IncrementRetries()
                     logger.debug("Restarting upload for " +
                                  dataFilePath)

@@ -218,7 +218,7 @@ class UploaderModel(object):
             headers = self.settingsModel.defaultHeaders
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
-        except Exception, err:
+        except Exception as err:
             logger.error(str(err))
             raise
         if response.status_code == 404:
@@ -440,7 +440,7 @@ class UploaderModel(object):
                                 "&uuid=" + urllib.quote(self.uuid)
             try:
                 response = requests.get(headers=headers, url=url)
-            except Exception, err:
+            except Exception as err:
                 logger.error(str(err))
                 raise
             if response.status_code == 404:
@@ -484,7 +484,7 @@ class UploaderModel(object):
         try:
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
-        except Exception, err:
+        except Exception as err:
             logger.error(str(err))
             raise
         if response.status_code == 404:
@@ -521,11 +521,11 @@ class UploaderModel(object):
         Get default interface type
         """
         defaultInterfaceType = netifaces.AF_INET
-        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
             defaultInterfaceType = netifaces.AF_INET6
-        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
             defaultInterfaceType = netifaces.AF_LINK
-        if not defaultInterfaceType in netifaces.gateways()['default'].keys():
+        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
             defaultInterfaceType = None
         return defaultInterfaceType
 

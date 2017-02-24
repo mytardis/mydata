@@ -2,6 +2,8 @@
 Model class for the settings displayed in the Advanced tab
 of the settings dialog and saved to disk in MyData.cfg
 """
+
+
 class AdvancedSettingsModel(object):
     """
     Model class for the settings displayed in the Advanced tab

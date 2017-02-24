@@ -9,6 +9,7 @@ import wx
 from mydata.views.log import LogView
 from mydata.logs import logger
 
+
 class LogViewTester(unittest.TestCase):
     """
     Test ability to open log view.

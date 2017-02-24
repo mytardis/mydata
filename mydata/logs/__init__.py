@@ -9,11 +9,12 @@ via HTTP POST for analysis by developers / sys admins.
 
 import threading
 import logging
-from StringIO import StringIO
 import os
 import sys
 import inspect
 import pkgutil
+# For Python 3, this will change to "from io import StringIO":
+from StringIO import StringIO
 
 import requests
 import wx
@@ -42,7 +43,7 @@ class Logger(object):
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
             self.appRootDir = \
-                os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
+                os.path.dirname(pkgutil.get_loader("mydata.MyData").get_filename())
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""
@@ -308,5 +309,6 @@ class Logger(object):
         msg = event.message.strip("\r") + "\n"
         self.logTextCtrl.AppendText(msg)
         event.Skip()
+
 
 logger = Logger("MyData")  # pylint: disable=invalid-name

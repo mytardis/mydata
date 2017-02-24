@@ -11,7 +11,8 @@ fields have been removed from the JSON responses.
 # pylint: disable=too-many-lines
 import datetime
 import sys
-import BaseHTTPServer
+# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
+from BaseHTTPServer import BaseHTTPRequestHandler
 import re
 import json
 import tempfile
@@ -27,9 +28,8 @@ DEBUG = False
 
 logger = logging.getLogger(__name__)
 
-handle = tempfile.NamedTemporaryFile()  # pylint: disable=invalid-name
-handle.close()
-STAGING_PATH = handle.name
+with tempfile.NamedTemporaryFile() as tempFile:
+    STAGING_PATH = tempFile.name
 os.makedirs(STAGING_PATH)
 logger.info("Created temporary staging directory: %s",
             STAGING_PATH)
@@ -37,7 +37,7 @@ if sys.platform.startswith("win"):
     STAGING_PATH = GetCygwinPath(STAGING_PATH)
 
 
-class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class FakeMyTardisHandler(BaseHTTPRequestHandler):
     """
     This class is used to handle the HTTP requests that arrive at the server.
 
@@ -48,9 +48,10 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     stored in instance variables of the handler. Subclasses should not need
     to override or extend the __init__() method.
     """
+    # pylint: disable=invalid-name
     datafileIdAutoIncrement = 0
 
-    def do_HEAD(self):  # pylint: disable=invalid-name
+    def do_HEAD(self):
         """
         Respond to a HEAD request
         """
@@ -62,7 +63,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
         self.end_headers()
 
-    def do_GET(self):  # pylint: disable=invalid-name
+    def do_GET(self):
         """
         Respond to a GET request.
         """
@@ -1179,7 +1180,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to GET: %s" % self.path)
 
-    def do_POST(self):  # pylint: disable=invalid-name
+    def do_POST(self):
         """
         Respond to a POST request
         """
@@ -1435,7 +1436,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to POST: %s" % self.path)
 
-    def do_PUT(self):  # pylint: disable=invalid-name
+    def do_PUT(self):
         """
         Respond to a PUT request
         """
@@ -1524,7 +1525,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to PUT: %s" % self.path)
 
-    def do_PATCH(self):  # pylint: disable=invalid-name
+    def do_PATCH(self):
         """
         Respond to a PATCH request
         """
@@ -1537,7 +1538,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Supressing logging of HTTP requests to STDERR.
         """
         if DEBUG:
-            return BaseHTTPServer.BaseHTTPRequestHandler.log_message(
+            return BaseHTTPRequestHandler.log_message(
                 self, format, *args)
         else:
             return

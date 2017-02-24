@@ -395,7 +395,7 @@ def CheckInstrument(settings, setStatusMessage):
     try:
         # Try to get the InstrumentModel from the instrument name:
         _ = settings.instrument
-    except Unauthorized, err:
+    except Unauthorized as err:
         message = str(err)
         raise InvalidSettings(message, "instrument_name")
 

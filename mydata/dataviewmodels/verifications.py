@@ -2,22 +2,14 @@
 Represents the Verifications tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=missing-docstring
-# pylint: disable=wrong-import-position
-
 import threading
-import traceback
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 from mydata.models.verification import VerificationStatus
 from mydata.dataviewmodels.uploads import ColumnType
-from mydata.logs import logger
+from .dataview import DataViewIndexListModel
+from .dataview import TryRowValueChanged
 
 
 class VerificationsModel(DataViewIndexListModel):
@@ -43,9 +35,6 @@ class VerificationsModel(DataViewIndexListModel):
         self.completedCount = 0
         self.completedCountLock = threading.Lock()
 
-    def SetFoldersModel(self, foldersModel):
-        self.foldersModel = foldersModel
-
     def GetColumnType(self, col):
         """
         All of our columns are strings.  If the model or the renderers
@@ -66,12 +55,21 @@ class VerificationsModel(DataViewIndexListModel):
         return str(self.verificationsData[row].GetValueForKey(columnKey))
 
     def GetColumnName(self, col):
+        """
+        Get column name
+        """
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
+        """
+        Get column key name
+        """
         return self.columnKeys[col]
 
     def GetDefaultColumnWidth(self, col):
+        """
+        Get default column width
+        """
         return self.defaultColumnWidths[col]
 
     def GetRowCount(self):
@@ -106,6 +104,9 @@ class VerificationsModel(DataViewIndexListModel):
         return False
 
     def DeleteAllRows(self):
+        """
+        Delete all rows
+        """
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.verificationsData[row]
@@ -121,14 +122,23 @@ class VerificationsModel(DataViewIndexListModel):
         self.completedCount = 0
 
     def GetMaxDataViewId(self):
+        """
+        Get maximum dataview ID
+        """
         return self.maxDataViewId
 
     def SetMaxDataViewId(self, dataViewId):
+        """
+        Set maximum dataview ID
+        """
         self.maxDataViewIdLock.acquire()
         self.maxDataViewId = dataViewId
         self.maxDataViewIdLock.release()
 
     def AddRow(self, verificationModel):
+        """
+        Add a row
+        """
         self.verificationsData.append(verificationModel)
         # Notify views
         if threading.current_thread().name == "MainThread":
@@ -138,19 +148,10 @@ class VerificationsModel(DataViewIndexListModel):
 
         self.SetMaxDataViewId(verificationModel.GetDataViewId())
 
-    def TryRowValueChanged(self, row, col):
-        try:
-            if row < self.GetCount():
-                self.RowValueChanged(row, col)
-            else:
-                logger.warning("TryRowValueChanged called with "
-                               "row=%d, self.GetRowCount()=%d" %
-                               (row, self.GetRowCount()))
-                self.RowValueChanged(row, col)
-        except wx.PyAssertionError:
-            logger.warning(traceback.format_exc())
-
     def SetComplete(self, verificationModel):
+        """
+        Set verificationModel's status to complete
+        """
         verificationModel.SetComplete()
         self.completedCountLock.acquire()
         try:
@@ -159,13 +160,20 @@ class VerificationsModel(DataViewIndexListModel):
             self.completedCountLock.release()
 
     def MessageUpdated(self, verificationModel):
+        """
+        Update verificationModel's message
+        """
         for row in reversed(range(0, self.GetCount())):
             if self.verificationsData[row] == verificationModel:
                 col = self.columnNames.index("Message")
-                wx.CallAfter(self.TryRowValueChanged, row, col)
+                wx.CallAfter(TryRowValueChanged, self, row, col)
                 break
 
     def GetFoundVerifiedCount(self):
+        """
+        Return the number of files which were found on the MyTardis server
+        and were verified by MyTardis
+        """
         foundVerifiedCount = 0
         for row in reversed(range(0, self.GetRowCount())):
             if self.verificationsData[row].GetStatus() == \
@@ -174,6 +182,9 @@ class VerificationsModel(DataViewIndexListModel):
         return foundVerifiedCount
 
     def GetNotFoundCount(self):
+        """
+        Return the number of files which were not found on the MyTardis server
+        """
         notFoundCount = 0
         for row in range(0, self.GetRowCount()):
             if self.verificationsData[row].GetStatus() == \
@@ -182,6 +193,10 @@ class VerificationsModel(DataViewIndexListModel):
         return notFoundCount
 
     def GetFoundUnverifiedFullSizeCount(self):
+        """
+        Return the number of files which were found on the MyTardis server
+        which are unverified on MyTardis but full size
+        """
         foundUnverifiedFullSizeCount = 0
         for row in range(0, self.GetRowCount()):
             if self.verificationsData[row].GetStatus() == \
@@ -190,6 +205,10 @@ class VerificationsModel(DataViewIndexListModel):
         return foundUnverifiedFullSizeCount
 
     def GetFoundUnverifiedNotFullSizeCount(self):
+        """
+        Return the number of files which were found on the MyTardis server
+        which are unverified on MyTardis and incomplete
+        """
         foundUnverifiedNotFullSizeCount = 0
         for row in range(0, self.GetRowCount()):
             if self.verificationsData[row].GetStatus() == \
@@ -198,6 +217,9 @@ class VerificationsModel(DataViewIndexListModel):
         return foundUnverifiedNotFullSizeCount
 
     def GetFailedCount(self):
+        """
+        Return the number of files whose MyTardis lookups failed
+        """
         failedCount = 0
         for row in range(0, self.GetRowCount()):
             if self.verificationsData[row].GetStatus() == \
@@ -206,4 +228,8 @@ class VerificationsModel(DataViewIndexListModel):
         return failedCount
 
     def GetCompletedCount(self):
+        """
+        Return the number of files which MyData has finished looking
+        up on the MyTardis server.
+        """
         return self.completedCount

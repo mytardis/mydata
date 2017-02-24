@@ -4,6 +4,7 @@ and saved to disk in MyData.cfg
 """
 import traceback
 import os
+# For Python 3, this will change to "from configparser import ConfigParser":
 from ConfigParser import ConfigParser
 from datetime import datetime
 

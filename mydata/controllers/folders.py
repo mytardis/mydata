@@ -8,7 +8,8 @@ and uploads from each of the folders in the Folders view.
 import sys
 import time
 import threading
-import Queue
+# For Python3, this will change to "from queue import Queue":
+from Queue import Queue
 import traceback
 import datetime
 
@@ -290,7 +291,7 @@ class FoldersController(object):
         fc.uploadsModel.DeleteAllRows()
         fc.uploadsModel.SetStartTime(datetime.datetime.now())
         fc.verifyDatafileRunnable = {}
-        fc.verificationsQueue = Queue.Queue()
+        fc.verificationsQueue = Queue()
         fc.numVerificationWorkerThreads = \
             settingsModel.miscellaneous.maxVerificationThreads
         fc.verificationWorkerThreads = []
@@ -303,7 +304,7 @@ class FoldersController(object):
                 fc.verificationWorkerThreads.append(thread)
                 thread.start()
         fc.uploadDatafileRunnable = {}
-        fc.uploadsQueue = Queue.Queue()
+        fc.uploadsQueue = Queue()
         fc.numUploadWorkerThreads = settingsModel.advanced.maxUploadThreads
         fc.uploadMethod = UploadMethod.HTTP_POST
         fc.getOrCreateExpThreadingLock = threading.Lock()
@@ -314,7 +315,7 @@ class FoldersController(object):
         try:
             settingsModel.uploaderModel.RequestStagingAccess()
             uploadToStagingRequest = settingsModel.uploadToStagingRequest
-        except Exception, err:
+        except Exception as err:
             # MyData app could be missing from MyTardis server.
             sys.stderr.write(traceback.format_exc())
             logger.error(traceback.format_exc())
@@ -411,7 +412,7 @@ class FoldersController(object):
                     experimentModel = ExperimentModel\
                         .GetOrCreateExperimentForFolder(folderModel,
                                                         fc.testRun)
-                except Exception, err:
+                except Exception as err:
                     logger.error(traceback.format_exc())
                     mde.PostEvent(
                         self.ShowMessageDialogEvent(
@@ -425,7 +426,7 @@ class FoldersController(object):
                 try:
                     datasetModel = DatasetModel\
                         .CreateDatasetIfNecessary(folderModel, fc.testRun)
-                except Exception, err:
+                except Exception as err:
                     logger.error(traceback.format_exc())
                     mde.PostEvent(
                         self.ShowMessageDialogEvent(
@@ -435,7 +436,7 @@ class FoldersController(object):
                     return
                 folderModel.SetDatasetModel(datasetModel)
                 self.VerifyDatafiles(folderModel)
-            except requests.exceptions.ConnectionError, err:
+            except requests.exceptions.ConnectionError as err:
                 logger.error(str(err))
                 return
             except ValueError:
@@ -482,7 +483,7 @@ class FoldersController(object):
                 return
             try:
                 task.Run()
-            except ValueError, err:
+            except ValueError as err:
                 if str(err) == "I/O operation on closed file":
                     logger.info(
                         "Ignoring closed file exception - it is normal "
@@ -516,7 +517,7 @@ class FoldersController(object):
                 break
             try:
                 task.Run()
-            except ValueError, err:
+            except ValueError as err:
                 if str(err) == "I/O operation on closed file":
                     logger.info(
                         "Ignoring closed file exception - it is normal "

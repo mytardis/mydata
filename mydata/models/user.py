@@ -3,7 +3,7 @@ Model class for MyTardis API v1's UserResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 import traceback
-import urllib2
+import urllib
 import requests
 
 from mydata.utils.exceptions import DoesNotExist
@@ -123,7 +123,7 @@ class UserModel(object):
     def GetUserByEmail(settings, email):
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
             % (settings.general.myTardisUrl,
-               urllib2.quote(email.encode('utf-8')))
+               urllib.quote(email.encode('utf-8')))
         try:
             response = requests.get(url=url, headers=settings.defaultHeaders)
         except:

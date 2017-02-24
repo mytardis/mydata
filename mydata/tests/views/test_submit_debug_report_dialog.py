@@ -72,7 +72,7 @@ class SubmitDebugLogTester(unittest.TestCase):
                 attempts += 1
                 requests.head(url, timeout=1)
                 break
-            except requests.exceptions.ConnectionError, err:
+            except requests.exceptions.ConnectionError as err:
                 time.sleep(0.25)
                 if attempts > 10:
                     raise Exception("Couldn't connect to %s: %s"

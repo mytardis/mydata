@@ -2,17 +2,13 @@
 Represents the Users tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=missing-docstring
-
 import os
 import threading
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from mydata.utils import Compare
+from .dataview import DataViewIndexListModel
 
 
 class UsersModel(DataViewIndexListModel):
@@ -45,10 +41,11 @@ class UsersModel(DataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-    def SetFoldersModel(self, foldersModel):
-        self.foldersModel = foldersModel
-
     def Filter(self, searchString):
+        """
+        Only show users matching the query string, typed in the search box
+        in the upper-right corner of the main window.
+        """
         # pylint: disable=too-many-branches
         self.searchString = searchString
         query = self.searchString.lower()
@@ -123,6 +120,9 @@ class UsersModel(DataViewIndexListModel):
         return str(self.usersData[row].GetValueForKey(columnKey))
 
     def GetValuesForColname(self, colname):
+        """
+        Get values for column name
+        """
         values = []
         col = -1
         for col in range(0, self.GetColumnCount()):
@@ -136,12 +136,21 @@ class UsersModel(DataViewIndexListModel):
         return values
 
     def GetColumnName(self, col):
+        """
+        Get column name
+        """
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
+        """
+        Get column key name
+        """
         return self.columnKeys[col]
 
     def GetDefaultColumnWidth(self, col):
+        """
+        Get default column width
+        """
         return self.defaultColumnWidths[col]
 
     def GetRowCount(self):
@@ -151,9 +160,17 @@ class UsersModel(DataViewIndexListModel):
         return len(self.usersData)
 
     def GetUnfilteredRowCount(self):
+        """
+        Report how many rows this model provides data for,
+        irrespective of the filter query string
+        """
         return len(self.unfilteredUsersData)
 
     def GetFilteredRowCount(self):
+        """
+        Report how many rows this model provides data for,
+        taking into account the filter query string
+        """
         return len(self.filteredUsersData)
 
     def GetColumnCount(self):
@@ -200,11 +217,11 @@ class UsersModel(DataViewIndexListModel):
         if not ascending:
             userRecord2, userRecord1 = userRecord1, userRecord2
         if col == 0 or col == 3:
-            return cmp(int(userRecord1.GetDataViewId()),
-                       int(userRecord2.GetDataViewId()))
+            return Compare(int(userRecord1.GetDataViewId()),
+                           int(userRecord2.GetDataViewId()))
         else:
-            return cmp(userRecord1.GetValueForKey(self.columnKeys[col]),
-                       userRecord2.GetValueForKey(self.columnKeys[col]))
+            return Compare(userRecord1.GetValueForKey(self.columnKeys[col]),
+                           userRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteAllRows(self):
         """
@@ -228,6 +245,9 @@ class UsersModel(DataViewIndexListModel):
         self.maxDataViewId = 0
 
     def GetMaxDataViewIdFromExistingRows(self):
+        """
+        Get maximum dataview ID from existing rows
+        """
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
             if self.usersData[row].GetDataViewId() > maxDataViewId:
@@ -235,11 +255,17 @@ class UsersModel(DataViewIndexListModel):
         return maxDataViewId
 
     def GetMaxDataViewId(self):
+        """
+        Get maximum dataview ID
+        """
         if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
     def AddRow(self, value):
+        """
+        Add a new row
+        """
         self.Filter("")
         self.usersData.append(value)
         # Notify views
@@ -253,6 +279,11 @@ class UsersModel(DataViewIndexListModel):
         self.Filter(self.searchString)
 
     def GetNumUserOrGroupFolders(self):
+        """
+        Get number of user or group folders.
+
+        Fast method, ignoring filters.
+        """
         dataDir = self.settingsModel.general.dataDirectory
         userOrGroupFolderNames = os.walk(dataDir).next()[1]
         return len(userOrGroupFolderNames)

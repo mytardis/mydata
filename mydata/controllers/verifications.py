@@ -212,7 +212,7 @@ class VerifyDatafileRunnable(object):
                                         message=message,
                                         icon=wx.ICON_ERROR))
             return
-        if bytesUploadedPreviously == long(existingDatafile.GetSize()):
+        if bytesUploadedPreviously == int(existingDatafile.GetSize()):
             self.HandleFullSizeResumableUpload(existingDatafile)
         else:
             self.HandleIncompleteResumableUpload(

@@ -585,7 +585,7 @@ class SettingsDialog(wx.Dialog):
                                        flag=wx.EXPAND | wx.ALL, border=5)
         self.showingSingularMinutes = True
         self.ignoreFilesIntervalUnitLabel = \
-           wx.StaticText(self.ignoreFilesIntervalPanel, wx.ID_ANY, "minute")
+            wx.StaticText(self.ignoreFilesIntervalPanel, wx.ID_ANY, "minute")
         self.ignoreFilesPanelSizer.Add(self.ignoreFilesIntervalUnitLabel,
                                        flag=wx.EXPAND | wx.ALL, border=5)
 

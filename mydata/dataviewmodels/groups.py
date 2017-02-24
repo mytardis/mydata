@@ -2,16 +2,12 @@
 Represents the Groups tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=missing-docstring
-
 import threading
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from mydata.utils import Compare
+from .dataview import DataViewIndexListModel
 
 
 class GroupsModel(DataViewIndexListModel):
@@ -43,10 +39,11 @@ class GroupsModel(DataViewIndexListModel):
         # largest ID, we don't decrement the maximum ID.
         self.maxDataViewId = 0
 
-    def SetFoldersModel(self, foldersModel):
-        self.foldersModel = foldersModel
-
     def Filter(self, searchString):
+        """
+        Only show groups matching the query string, typed in the search box
+        in the upper-right corner of the main window.
+        """
         # pylint: disable=too-many-branches
         self.searchString = searchString
         query = self.searchString.lower()
@@ -117,6 +114,9 @@ class GroupsModel(DataViewIndexListModel):
         return str(self.groupsData[row].GetValueForKey(columnKey))
 
     def GetValuesForColname(self, colname):
+        """
+        Get values for column name
+        """
         values = []
         col = -1
         for col in range(0, self.GetColumnCount()):
@@ -130,12 +130,21 @@ class GroupsModel(DataViewIndexListModel):
         return values
 
     def GetColumnName(self, col):
+        """
+        Get column name
+        """
         return self.columnNames[col]
 
     def GetColumnKeyName(self, col):
+        """
+        Get column key name
+        """
         return self.columnKeys[col]
 
     def GetDefaultColumnWidth(self, col):
+        """
+        Get default column width
+        """
         return self.defaultColumnWidths[col]
 
     def GetRowCount(self):
@@ -145,13 +154,17 @@ class GroupsModel(DataViewIndexListModel):
         return len(self.groupsData)
 
     def GetUnfilteredRowCount(self):
+        """
+        Report how many rows this model provides data for,
+        irrespective of the filter query string
+        """
         return len(self.unfilteredGroupsData)
 
     def GetFilteredRowCount(self):
         """
-        Report how many rows this model provides data for.
+        Report how many rows this model provides data for,
+        taking into account the filter query string
         """
-        # pylint: disable=arguments-differ
         return len(self.filteredGroupsData)
 
     def GetColumnCount(self):
@@ -185,7 +198,7 @@ class GroupsModel(DataViewIndexListModel):
         need to convert them to row numbers with the GetRow method.
         Then it's just a matter of fetching the right values from our
         data set and comparing them.  The return value is -1, 0, or 1,
-        just like Python's cmp() function.
+        just like Python 2's cmp() function.
         """
         # pylint: disable=arguments-differ
         try:
@@ -198,13 +211,16 @@ class GroupsModel(DataViewIndexListModel):
         if not ascending:
             groupRecord2, groupRecord1 = groupRecord1, groupRecord2
         if col == 0 or col == 3:
-            return cmp(int(groupRecord1.GetDataViewId()),
-                       int(groupRecord2.GetDataViewId()))
+            return Compare(int(groupRecord1.GetDataViewId()),
+                           int(groupRecord2.GetDataViewId()))
         else:
-            return cmp(groupRecord1.GetValueForKey(self.columnKeys[col]),
-                       groupRecord2.GetValueForKey(self.columnKeys[col]))
+            return Compare(groupRecord1.GetValueForKey(self.columnKeys[col]),
+                           groupRecord2.GetValueForKey(self.columnKeys[col]))
 
     def DeleteAllRows(self):
+        """
+        Delete all rows
+        """
         rowsDeleted = []
         for row in reversed(range(0, self.GetCount())):
             del self.groupsData[row]
@@ -223,6 +239,9 @@ class GroupsModel(DataViewIndexListModel):
         self.maxDataViewId = 0
 
     def GetMaxDataViewIdFromExistingRows(self):
+        """
+        Get maximum dataview ID from existing rows
+        """
         maxDataViewId = 0
         for row in range(0, self.GetCount()):
             if self.groupsData[row].GetDataViewId() > maxDataViewId:
@@ -230,11 +249,17 @@ class GroupsModel(DataViewIndexListModel):
         return maxDataViewId
 
     def GetMaxDataViewId(self):
+        """
+        Get maximum dataview ID
+        """
         if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
             self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
         return self.maxDataViewId
 
     def AddRow(self, value):
+        """
+        Add a row
+        """
         self.Filter("")
         self.groupsData.append(value)
         # Notify views

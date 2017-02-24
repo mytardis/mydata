@@ -90,7 +90,7 @@ class OpenSSH(object):
         if hasattr(sys, "frozen"):
             baseDir = os.path.dirname(sys.executable)
         else:
-            baseDir = os.path.dirname(pkgutil.get_loader("mydata").filename)
+            baseDir = os.path.dirname(pkgutil.get_loader("mydata").get_filename())
             winOpensshDir = os.path.join("resources", winOpensshDir)
         if sys.platform.startswith("win"):
             baseDir = os.path.join(baseDir, winOpensshDir)
@@ -356,7 +356,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     chunking files, so with SCP, we will always upload the whole
     file.
     """
-    bytesUploaded = long(0)
+    bytesUploaded = 0
     progressCallback(bytesUploaded, fileSize, message="Uploading...")
 
     if sys.platform.startswith("win"):
@@ -552,6 +552,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     bytesUploaded = fileSize
     progressCallback(bytesUploaded, fileSize)
     return
+
 
 REMOTE_DIRS_CREATED = dict()
 

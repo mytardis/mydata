@@ -228,7 +228,7 @@ class MyData(wx.App):
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
         args, _ = parser.parse_known_args(self.argv[1:])
         if args.version:
-            print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
+            sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
             sys.exit(0)
         if args.loglevel:
             if args.loglevel == "DEBUG":
@@ -263,7 +263,7 @@ class MyData(wx.App):
         self.groupsModel = GroupsModel(self.settingsModel)
         self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
                                          self.settingsModel)
-        self.usersModel.SetFoldersModel(self.foldersModel)
+        self.usersModel.foldersModel = self.foldersModel
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
         self.tasksModel = TasksModel(self.settingsModel)
@@ -393,7 +393,6 @@ class MyData(wx.App):
 
         return True
 
-
     def CheckIfAlreadyRunning(self, appdirPath):
         """
         Using wx.SingleInstanceChecker to check whether MyData is already
@@ -499,7 +498,6 @@ class MyData(wx.App):
             # sys.exit can raise exceptions if the wx.App
             # is shutting down:
             os._exit(0)  # pylint: disable=protected-access
-
 
     def OnMinimizeFrame(self, event):
         """
@@ -671,9 +669,9 @@ class MyData(wx.App):
         """
         self.LogOnRefreshCaller(event, jobId)
         shutdownForRefreshComplete = event and \
-            event.GetEventType() in \
-                (MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
-                 MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE)
+            event.GetEventType() in (
+                MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
+                MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE)
         if hasattr(event, "needToValidateSettings") and \
                 not event.needToValidateSettings:
             needToValidateSettings = False
@@ -736,7 +734,7 @@ class MyData(wx.App):
                     try:
                         activeNetworkInterfaces = \
                             UploaderModel.GetActiveNetworkInterfaces()
-                    except Exception, err:
+                    except Exception as err:
                         logger.error(traceback.format_exc())
                         if type(err).__name__ == "WindowsError" and \
                                 "The handle is invalid" in str(err):
@@ -856,7 +854,7 @@ class MyData(wx.App):
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
                 logger.debug("Just set ScanningFolders to False")
-            except InvalidFolderStructure, ifs:
+            except InvalidFolderStructure as ifs:
                 def ShowMessageDialog():
                     """
                     Needs to run in the main thread.
@@ -1284,5 +1282,7 @@ def Run(argv):
     app = MyData(argv)
     app.MainLoop()
 
+
 if __name__ == "__main__":
-    print "Please use run.py in MyData.py's parent directory instead."
+    sys.stderr.write(
+        "Please use run.py in MyData.py's parent directory instead.\n")

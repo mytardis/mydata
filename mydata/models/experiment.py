@@ -6,7 +6,7 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 # pylint: disable=missing-docstring
 
 import json
-import urllib2
+import urllib
 import requests
 
 from mydata.logs import logger
@@ -47,7 +47,7 @@ class ExperimentModel(object):
                        folderModel.GetOwner().GetUsername())
                 logger.testrun(message)
             return existingExperiment
-        except DoesNotExist, err:
+        except DoesNotExist as err:
             if err.GetModelClass() == ExperimentModel:
                 return ExperimentModel.CreateExperimentForFolder(folderModel,
                                                                  testRun)
@@ -73,9 +73,9 @@ class ExperimentModel(object):
         experimentTitle = folderModel.GetExperimentTitle()
 
         if folderModel.ExperimentTitleSetManually():
-            expTitleEncoded = urllib2.quote(experimentTitle.encode('utf-8'))
+            expTitleEncoded = urllib.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
-                urllib2.quote(settingsModel.advanced.folderStructure)
+                urllib.quote(settingsModel.advanced.folderStructure)
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&title=" + expTitleEncoded + \
                 "&folder_structure=" + folderStructureEncoded
@@ -84,10 +84,10 @@ class ExperimentModel(object):
                 "&uploader=" + uploaderUuid
         if userFolderName:
             url += "&user_folder_name=" + \
-                urllib2.quote(userFolderName.encode('utf-8'))
+                urllib.quote(userFolderName.encode('utf-8'))
         if groupFolderName:
             url += "&group_folder_name=" + \
-                urllib2.quote(groupFolderName.encode('utf-8'))
+                urllib.quote(groupFolderName.encode('utf-8'))
 
         response = requests.get(url=url, headers=settingsModel.defaultHeaders)
         try:

@@ -195,7 +195,8 @@ class MyDataThreads(object):
         """
         for thread in self.threads:
             thread.join()
-            print "\tJoined " + thread.name
+            logger.debug("\tJoined %s" % thread.name)
+
 
 MYDATA_THREADS = MyDataThreads()
 
@@ -273,7 +274,7 @@ def CheckConnectivity(event):
         try:
             activeNetworkInterfaces = \
                 UploaderModel.GetActiveNetworkInterfaces()
-        except Exception, err:
+        except Exception as err:
             logger.error(traceback.format_exc())
             if type(err).__name__ == "WindowsError" and \
                     "The handle is invalid" in str(err):

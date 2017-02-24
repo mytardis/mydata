@@ -13,7 +13,7 @@ try:
     if hasattr(sys, "frozen"):
         # pylint: disable=import-error
         # pylint: disable=wrong-import-position
-        from mydata.commitdef import LATEST_COMMIT
+        from .commitdef import LATEST_COMMIT
     else:
         LINE = None
         with open(".git/logs/HEAD") as gitlog:

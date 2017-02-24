@@ -92,4 +92,5 @@ class Icons(object):
                     wx.Image(iconPath, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         return self.iconsCache[cacheKey]
 
+
 MYDATA_ICONS = Icons()
