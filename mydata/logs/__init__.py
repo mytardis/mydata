@@ -43,7 +43,7 @@ class Logger(object):
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
             self.appRootDir = \
-                os.path.dirname(pkgutil.get_loader("mydata.MyData").get_filename())
+                os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""

@@ -90,7 +90,7 @@ class OpenSSH(object):
         if hasattr(sys, "frozen"):
             baseDir = os.path.dirname(sys.executable)
         else:
-            baseDir = os.path.dirname(pkgutil.get_loader("mydata").get_filename())
+            baseDir = os.path.dirname(pkgutil.get_loader("mydata").filename)
             winOpensshDir = os.path.join("resources", winOpensshDir)
         if sys.platform.startswith("win"):
             baseDir = os.path.join(baseDir, winOpensshDir)
