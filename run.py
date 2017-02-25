@@ -12,6 +12,6 @@ is pip-installable.  For earlier versions (2.9.5 or
 3.0.2), use the installer from http://wxpython.org
 """
 import sys
-from mydata import MyData
+import mydata.MyData
 
-MyData.Run(sys.argv)
+mydata.MyData.Run(sys.argv)
