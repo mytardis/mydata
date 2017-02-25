@@ -340,11 +340,9 @@ class UploaderModel(object):
         if response.status_code != 200:
             HandleHttpError(response)
         logger.debug(response.text)
-        existingUploaderRecords = response.json()
-        numExistingUploaderRecords = \
-            existingUploaderRecords['meta']['total_count']
-        if numExistingUploaderRecords > 0:
-            approvalJson = existingUploaderRecords['objects'][0]
+        existingUploaderRegReqRecords = response.json()
+        if existingUploaderRegReqRecords['meta']['total_count'] > 0:
+            approvalJson = existingUploaderRegReqRecords['objects'][0]
             logger.debug("A request already exists for this uploader.")
             return UploaderRegistrationRequest(
                 settingsModel=self.settingsModel,
