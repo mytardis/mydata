@@ -4,48 +4,30 @@ Test Daily schedule type.
 from datetime import datetime
 from datetime import timedelta
 import os
-import sys
-import tempfile
-import unittest
 
+from .. import MyDataSettingsTester
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
-if sys.platform.startswith("linux"):
-    from ...linuxsubprocesses import StopErrandBoy
 
 
-class DailyScheduleTester(unittest.TestCase):
+class DailyScheduleTester(MyDataSettingsTester):
     """
     Test Daily schedule type.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(DailyScheduleTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisUrl = None
-        self.fakeMyTardisServerThread = None
         self.mydataApp = None
 
     def setUp(self):
+        super(DailyScheduleTester, self).setUp()
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
         self.settingsModel.configPath = self.tempFilePath
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
         self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -62,7 +44,6 @@ class DailyScheduleTester(unittest.TestCase):
         """
         Test Daily schedule type.
         """
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
         ValidateSettings(self.settingsModel)
         self.assertIsNotNone(self.settingsModel)
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
@@ -76,11 +57,6 @@ class DailyScheduleTester(unittest.TestCase):
         # according to the timer interval.
 
     def tearDown(self):
+        super(DailyScheduleTester, self).tearDown()
         self.mydataApp.GetMainFrame().Hide()
         self.mydataApp.GetMainFrame().Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()

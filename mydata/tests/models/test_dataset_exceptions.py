@@ -2,50 +2,25 @@
 Test ability to handle dataset-related exceptions.
 """
 import os
-import unittest
 
-import wx
-
+from .. import MyDataTester
 from ...models.dataset import DatasetModel
 from ...models.experiment import ExperimentModel
 from ...models.folder import FolderModel
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import InternalServerError
 
 
-class DatasetExceptionsTester(unittest.TestCase):
+class DatasetExceptionsTester(MyDataTester):
     """
     Test ability to handle dataset-related exceptions.
     """
-    def __init__(self, *args, **kwargs):
-        super(DatasetExceptionsTester, self).__init__(*args, **kwargs)
-        self.app = None
-        self.frame = None
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.fakeMyTardisUrl = None
-
     def setUp(self):
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='DatasetExceptionsTester')
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
-
-    def tearDown(self):
-        self.frame.Hide()
-        self.frame.Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
+        super(DatasetExceptionsTester, self).setUp()
+        super(DatasetExceptionsTester, self).InitializeAppAndFrame(
+            'DatasetExceptionsTester')
 
     def test_dataset_exceptions(self):
         """

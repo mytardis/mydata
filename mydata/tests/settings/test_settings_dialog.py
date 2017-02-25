@@ -4,11 +4,10 @@ Test ability to open settings dialog and save fields.
 from datetime import datetime
 from datetime import timedelta
 import os
-import tempfile
-import unittest
 
 import wx
 
+from .. import MyDataSettingsTester
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.serialize import SaveFieldsFromDialog
@@ -18,27 +17,15 @@ from ...events import MYDATA_EVENTS
 from ...events import PostEvent
 from ...events import RenameInstrument
 from ...utils.exceptions import DuplicateKey
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 
 
-class SettingsDialogTester(unittest.TestCase):
+class SettingsDialogTester(MyDataSettingsTester):
     """
     Test ability to open settings dialog and save fields.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(SettingsDialogTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.app = None
-        self.frame = None
-        self.settingsModel = None
         self.settingsDialog = None
-        self.tempConfig = None
-        self.tempFilePath = None
 
     def setUp(self):
         """
@@ -46,25 +33,17 @@ class SettingsDialogTester(unittest.TestCase):
         safest to do it in setUp, because we know that setUp
         will only be called once, so only one app will be created.
         """
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title="Settings Dialog test")
-        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
-        self.frame.Show()
+        super(SettingsDialogTester, self).setUp()
+        super(SettingsDialogTester, self).InitializeAppAndFrame(
+            "Settings Dialog test")
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = \
             SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
         self.settingsModel.configPath = self.tempFilePath
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.settingsModel.general.myTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset"))
@@ -74,13 +53,8 @@ class SettingsDialogTester(unittest.TestCase):
         self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
 
     def tearDown(self):
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
         self.settingsDialog.Hide()
-        self.frame.Hide()
-        self.frame.Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
+        super(SettingsDialogTester, self).tearDown()
 
     def test_settings_dialog(self):
         """
@@ -142,9 +116,6 @@ class SettingsDialogTester(unittest.TestCase):
 
         # Simulate browsing for excludes file:
         self.settingsDialog.OnBrowseExcludesFile(pyCommandEvent)
-
-        # Start fake MyTardis server to test settings dialog validation:
-        WaitForFakeMyTardisServerToStart(self.settingsModel.general.myTardisUrl)
 
         # Test settings dialog validation with invalid settings,
         # which will prompt a suggestion, based on which facilities

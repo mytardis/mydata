@@ -1,52 +1,30 @@
 """
 Test ability to update settings from server.
 """
-import unittest
-import tempfile
 import os
 
+from .. import MyDataSettingsTester
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import LoadSettings
 from ...models.settings.serialize import SaveSettingsToDisk
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 
 
-class UpdatedSettingsTester(unittest.TestCase):
+class UpdatedSettingsTester(MyDataSettingsTester):
     """
     Test ability to update settings from server.
     """
-    # pylint: disable=too-many-instance-attributes
-    def __init__(self, *args, **kwargs):
-        super(UpdatedSettingsTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisUrl = None
-        self.fakeMyTardisServerThread = None
-        self.settingsModel = None
-        self.tempConfig = None
-        self.tempFilePath = None
-
     def setUp(self):
         """
         Set up for test.
         """
+        super(UpdatedSettingsTester, self).setUp()
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = SettingsModel(configPath=configPath,
                                            checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
         self.settingsModel.configPath = self.tempFilePath
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
         self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -54,15 +32,6 @@ class UpdatedSettingsTester(unittest.TestCase):
         self.assertTrue(os.path.exists(dataDirectory))
         self.settingsModel.general.dataDirectory = dataDirectory
         SaveSettingsToDisk(self.settingsModel)
-
-    def tearDown(self):
-        """
-        Clean up after test.
-        """
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
 
     def test_update_settings_from_server(self):
         """

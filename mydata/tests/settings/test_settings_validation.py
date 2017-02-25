@@ -1,55 +1,38 @@
 """
 Test ability to validate settings.
 """
-import unittest
-import tempfile
 import os
 import sys
+import tempfile
 
 import mydata.models.settings.validation
+from .. import MyDataSettingsTester
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 
 
-class SettingsValidationTester(unittest.TestCase):
+class SettingsValidationTester(MyDataSettingsTester):
     """
     Test ability to validate settings.
     """
-    # pylint: disable=too-many-instance-attributes
-    def __init__(self, *args, **kwargs):
-        super(SettingsValidationTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.settingsModel = None
-        self.tempConfig = None
-        self.tempFilePath = None
-
     def setUp(self):
         """
         If we're creating a wx application in the test, it's
         safest to do it in setUp, because we know that setUp
         will only be called once, so only one app will be created.
         """
+        super(SettingsValidationTester, self).setUp()
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = SettingsModel(configPath=configPath,
                                            checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
         self.settingsModel.configPath = self.tempFilePath
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
         self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -58,21 +41,11 @@ class SettingsValidationTester(unittest.TestCase):
         self.settingsModel.general.dataDirectory = dataDirectory
         SaveSettingsToDisk(self.settingsModel)
 
-    def tearDown(self):
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
-
     def test_settings_validation(self):
         """
         Test ability to validate settings.
         """
         # pylint: disable=too-many-statements
-
-        # Wait for fake MyTardis server to start:
-        WaitForFakeMyTardisServerToStart(
-            self.settingsModel.general.myTardisUrl)
 
         # Let's populate some settings which will trigger warnings
         # when using MyData's Test Run feature:

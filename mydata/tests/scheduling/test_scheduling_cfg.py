@@ -3,45 +3,20 @@ Test ability to read and validate scheduling config.
 """
 from datetime import datetime
 import os
-import unittest
 
-import wx
-
+from .. import MyDataTester
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 
 
-class SchedulingConfigTester(unittest.TestCase):
+class SchedulingConfigTester(MyDataTester):
     """
     Test ability to read and validate scheduling config.
     """
-    def __init__(self, *args, **kwargs):
-        super(SchedulingConfigTester, self).__init__(*args, **kwargs)
-        self.app = None
-        self.frame = None
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.fakeMyTardisUrl = None
-
     def setUp(self):
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='SchedulingConfigTester')
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
-
-    def tearDown(self):
-        self.frame.Hide()
-        self.frame.Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
+        super(SchedulingConfigTester, self).setUp()
+        super(SchedulingConfigTester, self).InitializeAppAndFrame(
+            'SchedulingConfigTester')
 
     def test_read_timer_cfg(self):
         """

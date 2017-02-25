@@ -2,48 +2,23 @@
 Test ability to handle instrument-related exceptions.
 """
 import os
-import unittest
 
-import wx
-
+from .. import MyDataTester
 from ...models.instrument import InstrumentModel
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import InternalServerError
 
 
-class InstrumentExceptionsTester(unittest.TestCase):
+class InstrumentExceptionsTester(MyDataTester):
     """
     Test ability to handle instrument-related exceptions.
     """
-    def __init__(self, *args, **kwargs):
-        super(InstrumentExceptionsTester, self).__init__(*args, **kwargs)
-        self.app = None
-        self.frame = None
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.fakeMyTardisUrl = None
-
     def setUp(self):
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='InstrumentExceptionsTester')
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
-
-    def tearDown(self):
-        self.frame.Hide()
-        self.frame.Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
+        super(InstrumentExceptionsTester, self).setUp()
+        super(InstrumentExceptionsTester, self).InitializeAppAndFrame(
+            'InstrumentExceptionsTester')
 
     def test_instrument_exceptions(self):
         """

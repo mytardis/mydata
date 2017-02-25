@@ -2,48 +2,32 @@
 Test ability to create a MyData App instance and uploads files using POST.
 """
 import os
-import sys
-import tempfile
-import unittest
 
+from .. import MyDataSettingsTester
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
-if sys.platform.startswith("linux"):
-    from ...linuxsubprocesses import StopErrandBoy
 
 
-class MyDataAppInstanceTester(unittest.TestCase):
+class MyDataAppInstanceTester(MyDataSettingsTester):
     """
     Test ability to create MyData App instance and upload files using POST.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(MyDataAppInstanceTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
         self.mydataApp = None
 
     def setUp(self):
+        super(MyDataAppInstanceTester, self).setUp()
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
         self.settingsModel = \
             SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
         self.settingsModel.configPath = self.tempFilePath
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.settingsModel.general.myTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
@@ -55,7 +39,6 @@ class MyDataAppInstanceTester(unittest.TestCase):
         """
         Test ability to create MyData App instance and upload files using POST.
         """
-        WaitForFakeMyTardisServerToStart(self.settingsModel.general.myTardisUrl)
         ValidateSettings(self.settingsModel)
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
                                 settingsModel=self.settingsModel)
@@ -77,14 +60,7 @@ class MyDataAppInstanceTester(unittest.TestCase):
                          "Upload complete!")
 
     def tearDown(self):
+        super(MyDataAppInstanceTester, self).tearDown()
         if self.mydataApp:
             self.mydataApp.GetMainFrame().Hide()
             self.mydataApp.GetMainFrame().Destroy()
-        if self.httpd:
-            self.httpd.shutdown()
-        if self.fakeMyTardisServerThread:
-            self.fakeMyTardisServerThread.join()
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()

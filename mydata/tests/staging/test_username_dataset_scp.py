@@ -4,14 +4,12 @@ Test scanning the Username / Dataset structure and uploading with SCP.
 import os
 import sys
 import time
-import unittest
 import threading
 import socket
 import select
 
-import wx
-
 import mydata.utils.openssh as OpenSSH
+from .. import MyDataTester
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.folders import FoldersModel
@@ -24,35 +22,20 @@ from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
 from ...utils.exceptions import PrivateKeyDoesNotExist
 from ..fake_ssh_server import ThreadedSshServer
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
-from ...events import MYDATA_EVENTS
-if sys.platform.startswith("linux"):
-    from ...linuxsubprocesses import StopErrandBoy
 
 
-class ScanUsernameDatasetTester(unittest.TestCase):
+class ScanUsernameDatasetTester(MyDataTester):
     """
     Test scanning the Username / Dataset structure and uploading with SCP.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(ScanUsernameDatasetTester, self).__init__(*args, **kwargs)
-        self.app = None
-        self.frame = None
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
         self.fakeSshServerThread = None
 
     def setUp(self):
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
-                              title='ScanUsernameDatasetTester')
-        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
+        super(ScanUsernameDatasetTester, self).setUp()
+        super(ScanUsernameDatasetTester, self).InitializeAppAndFrame(
+            'ScanUsernameDatasetTester')
         # The fake SSH server needs to know the public
         # key so it can authenticate the test client.
         # So we need to ensure that the MyData keypair
@@ -64,20 +47,15 @@ class ScanUsernameDatasetTester(unittest.TestCase):
         self.StartFakeSshServer()
 
     def tearDown(self):
+        super(ScanUsernameDatasetTester, self).tearDown()
         self.keyPair.Delete()
-        self.frame.Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
         self.sshd.server_close()
         self.fakeSshServerThread.join()
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()
 
     def test_scan_folders(self):
         """
         Test scanning the Username / Dataset structure and uploading with SCP.
         """
-        # pylint: disable=no-self-use
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -92,10 +70,8 @@ class ScanUsernameDatasetTester(unittest.TestCase):
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
         settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
+        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
         settingsModel.sshKeyPair = self.keyPair
-        WaitForFakeMyTardisServerToStart(settingsModel.general.myTardisUrl)
         ValidateSettings(settingsModel)
         usersModel = UsersModel(settingsModel)
         groupsModel = GroupsModel(settingsModel)
