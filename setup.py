@@ -218,10 +218,18 @@ class CustomBuildCommand(build):
 
 class CustomBdistCommand(bdist):
     r"""
+    Custom "python setup.py bdist" command
+
     On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
     On Mac OS X, create dist/MyData_vX.Y.Z.dmg
     """
     def run(self):
+        r"""
+        Custom "python setup.py bdist" command
+
+        On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
+        On Mac OS X, create dist/MyData_vX.Y.Z.dmg
+        """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -515,11 +523,20 @@ tell application "Finder"
 
 class CustomInstallCommand(install):
     """
+    Custom "python setup.py install" command
+
     On Windows open InnoSetup-generated installation wizard for MyData
     On Mac OS X, open DMG which prompts user to copy MyData.app into
     /Applications/
     """
     def run(self):
+        """
+        Custom "python setup.py install" command
+
+        On Windows open InnoSetup-generated installation wizard for MyData
+        On Mac OS X, open DMG which prompts user to copy MyData.app into
+        /Applications/
+        """
         # install.run(self)
         self.run_command("bdist")
         if sys.platform.startswith("win"):
@@ -576,6 +593,10 @@ if sys.platform.startswith("darwin"):
         On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
         """
         def run(self):
+            """
+            On Mac OS X, copy "MyData Notifications" tool into MyData.app
+            bundle.
+            """
             py2app.run(self)
             shutil.copy(
                 "resources/macosx/MyData Notifications.app/Contents/MacOS"
