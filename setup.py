@@ -117,12 +117,19 @@ else:
 
 class CustomBuildCommand(build):
     """
+    Custom "python setup.py build" command
+
     On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
     On Mac OS X, create dist/MyData.app/*
     """
     # pylint: disable=too-many-branches
     def run(self):
-        # build.run(self)
+        """
+        Custom "python setup.py build" command
+
+        On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
+        On Mac OS X, create dist/MyData.app/*
+        """
         if sys.platform.startswith("win"):
             # The forward slashes and backslashes below should work in
             # both a DOS environment and a Unix-like environment (e.g. MSYS)
@@ -175,9 +182,9 @@ class CustomBuildCommand(build):
                 subdirpath = os.path.join(cygwin64HomeDir, subdir)
                 if os.path.isdir(subdirpath):
                     shutil.rmtree(subdirpath)
-            distutils.dir_util\
-                .copy_tree("resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
-                           "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
+            distutils.dir_util.copy_tree(
+                "resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
+                "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
             cygwin32HomeDir = \
                 "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1/home"
             for subdir in os.listdir(cygwin32HomeDir):
@@ -298,10 +305,11 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
 
             # Digitally sign application:
             if whether_to_sign:
-                cmd = "codesign --force -i org.mytardis.MyData " \
-                    "--sign \"%s\" " \
-                    "--verbose=4 dist/MyData.app/Contents/Frameworks/*.dylib*" \
-                    % certificateName
+                cmd = ("codesign --force -i org.mytardis.MyData "
+                       "--sign \"%s\" "
+                       "--verbose=4 "
+                       "dist/MyData.app/Contents/Frameworks/*.dylib*"
+                       % certificateName)
                 print cmd
                 os.system(cmd)
                 cmd = "codesign --force -i org.mytardis.MyData " \
@@ -569,8 +577,9 @@ if sys.platform.startswith("darwin"):
         """
         def run(self):
             py2app.run(self)
-            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
-                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
+            shutil.copy(
+                "resources/macosx/MyData Notifications.app/Contents/MacOS"
+                "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
             distutils.dir_util\
                 .copy_tree("resources/macosx/MyData Notifications.app/Contents"
                            "/Resources/en.lproj",
