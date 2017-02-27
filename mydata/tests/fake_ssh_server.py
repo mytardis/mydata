@@ -18,7 +18,7 @@ mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 """
 
 # pylint: disable=invalid-name
-# pylint: disable=missing-docstring
+# pylint: disable=unused-argument
 
 import SocketServer
 import sys
@@ -366,12 +366,14 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     self.transport._send_user_message(m)
 
                 def read_file_content():
+                    """
+                    Read the file content from the SSH channel,
+                    and write it into the "scp -t" subprocess
+                    """
                     try:
                         while not self.chan.recv_ready():
                             time.sleep(0.01)
 
-                        # Read the file content from the SSH channel,
-                        # and write it into the "scp -t" subprocess:
                         chunk_size = 1024
                         # pylint: disable=unsubscriptable-object
                         previous_chunk = None
@@ -451,6 +453,9 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
             return
 
     def handle_timeout(self):
+        """
+        Close SSH transport in the event of a timeout.
+        """
         try:
             self.transport.close()
         finally:
