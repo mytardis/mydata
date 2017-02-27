@@ -37,9 +37,6 @@ class GroupModel(object):
     def GetId(self):
         return self.groupId
 
-    def GetDataViewId(self):
-        return self.dataViewId
-
     def SetDataViewId(self, dataViewId):
         self.dataViewId = dataViewId
 

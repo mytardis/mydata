@@ -53,24 +53,6 @@ class VerificationModel(object):
 
         self.existingUnverifiedDatafile = None
 
-    def GetDataViewId(self):
-        """
-        Returns data view ID.
-        """
-        return self.dataViewId
-
-    def GetFilename(self):
-        """
-        Returns filename.
-        """
-        return self.filename
-
-    def GetSubdirectory(self):
-        """
-        Returns subdirectory.
-        """
-        return self.subdirectory
-
     def GetStatus(self):
         """
         Returns status.

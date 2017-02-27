@@ -39,9 +39,6 @@ class TaskModel(object):
         self.days = days
         self.callLater = None
 
-    def GetDataViewId(self):
-        return self.dataViewId
-
     def GetJobFunc(self):
         return self.jobFunc
 

@@ -49,9 +49,6 @@ class UserModel(object):
     def GetId(self):
         return self.userId
 
-    def GetDataViewId(self):
-        return self.dataViewId
-
     def SetDataViewId(self, dataViewId):
         self.dataViewId = dataViewId
 

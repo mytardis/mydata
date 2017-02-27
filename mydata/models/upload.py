@@ -72,12 +72,6 @@ class UploadModel(object):
         # if necessary:
         self.verificationTimer = None
 
-    def GetDataViewId(self):
-        return self.dataViewId
-
-    def GetFilename(self):
-        return self.filename
-
     def GetBytesUploaded(self):
         return self.bytesUploaded
 

@@ -186,8 +186,7 @@ class ScanUsernameDatasetTester(MyDataTester):
             if uploadModel.GetStatus() == UploadStatus.FAILED:
                 sys.stderr.write(
                     "Upload failed for %s: %s\n" %
-                    (uploadModel.GetFilename(),
-                     uploadModel.GetMessage().strip()))
+                    (uploadModel.filename, uploadModel.GetMessage().strip()))
                 if uploadModel.GetTraceback():
                     sys.stderr.write(uploadModel.GetTraceback())
         sys.stderr.write("\n")
