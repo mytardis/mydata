@@ -16,7 +16,6 @@ scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
 /cygdrive/C/Users/jsmith/Desktop/hello.txt \
 mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 """
-
 # pylint: disable=invalid-name
 # pylint: disable=unused-argument
 
@@ -68,34 +67,47 @@ class SshServerInterface(paramiko.ServerInterface):
         self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def check_channel_request(self, kind, chanid):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         if kind == 'session':
             return paramiko.OPEN_SUCCEEDED
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):
         """
-        Returns:
-        True if this channel is now hooked up to the stdin, stdout, and stderr
-        of the executing command; False if the command will not be executed.
+        See http://docs.paramiko.org/en/1.15/api/server.html
         """
         self.command = command
         return True
 
     def check_auth_password(self, username, password):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         logger.warning("JUST FOR TESTING - IGNORING password.")
         if username == 'mydata':
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
     def check_auth_publickey(self, username, key):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         if (username == 'mydata') and (key == self.mydata_pub_key):
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return 'publickey,password'
 
     def check_channel_shell_request(self, channel):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return False
 
     def check_channel_pty_request(self, channel, term, width, height,
@@ -226,10 +238,6 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
 
             if sys.platform.startswith("win"):
                 # Use bundled Cygwin binaries for these commands:
-                if self.server_instance.command.startswith("/bin/rm -f"):
-                    self.server_instance.command = \
-                        self.server_instance.command.replace("/bin/rm",
-                                                             OpenSSH.OPENSSH.rm)
                 if self.server_instance.command.startswith("mkdir"):
                     self.server_instance.command = \
                         self.server_instance.command.replace("mkdir",
