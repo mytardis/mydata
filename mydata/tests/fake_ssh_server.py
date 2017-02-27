@@ -112,6 +112,9 @@ class SshServerInterface(paramiko.ServerInterface):
 
     def check_channel_pty_request(self, channel, term, width, height,
                                   pixelwidth, pixelheight, modes):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return True
 
 
@@ -495,9 +498,19 @@ class ThreadedSshServer(ThreadedTCPServer):
         SocketServer.TCPServer.__init__(self, address, SshRequestHandler)
 
     def shutdown_request(self, request):
+        """
+        Called to shutdown and close an individual request.
+
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py
+        """
         # Prevent TCPServer from closing the connection prematurely
         return
 
     def close_request(self, request):
+        """
+        Called to clean up an individual request.
+
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py
+        """
         # Prevent TCPServer from closing the connection prematurely
         return
