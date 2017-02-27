@@ -51,9 +51,5 @@ class GroupExceptionsTester(MyDataTester):
             _ = GroupModel.GetGroupByName(settingsModel, "TestFacility-Group 1")
         settingsModel.general.apiKey = apiKey
 
-        myTardisUrl = settingsModel.general.myTardisUrl
-        settingsModel.general.myTardisUrl = \
-            "%s/request/http/code/404/" % myTardisUrl
         with self.assertRaises(DoesNotExist):
-            _ = GroupModel.GetGroupByName(settingsModel, "TestFacility-Group 1")
-        settingsModel.general.myTardisUrl = myTardisUrl
+            _ = GroupModel.GetGroupByName(settingsModel, "INVALID_GROUP")

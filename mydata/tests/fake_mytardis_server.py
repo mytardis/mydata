@@ -281,7 +281,9 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 }
             ]
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=INVALID_USER":
+        elif self.path == "/api/v1/user/?format=json&username=INVALID_USER" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=invalid%40email.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -332,6 +334,11 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 }
             ]
             self.wfile.write(json.dumps(groupsJson))
+        elif self.path == "/api/v1/group/?format=json&name=INVALID_GROUP":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(EMPTY_API_LIST))
         elif self.path.startswith("/api/v1/instrument/?format=json"
                                   "&facility__id=2&name=Instrument1"):
             self.send_response(200)

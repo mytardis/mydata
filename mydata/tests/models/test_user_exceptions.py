@@ -93,9 +93,8 @@ class UserExceptionsTester(MyDataTester):
 
         self.assertIsNone(owner.GetValueForKey('invalid'))
 
-        myTardisUrl = settingsModel.general.myTardisUrl
-        settingsModel.general.myTardisUrl = \
-            "%s/request/http/code/404/" % myTardisUrl
         with self.assertRaises(DoesNotExist):
-            _ = UserModel.GetUserByUsername(settingsModel, owner.username)
-        settingsModel.general.myTardisUrl = myTardisUrl
+            _ = UserModel.GetUserByUsername(settingsModel, "INVALID_USER")
+
+        with self.assertRaises(DoesNotExist):
+            _ = UserModel.GetUserByEmail(settingsModel, "invalid@email.com")
