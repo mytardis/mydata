@@ -2,13 +2,13 @@
 Model class for MyTardis API v1's UserResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import traceback
 import urllib
 import requests
 
 from ..utils.exceptions import DoesNotExist
 from ..logs import logger
 from .group import GroupModel
+from . import HandleHttpError
 
 
 class UserModel(object):
@@ -16,7 +16,6 @@ class UserModel(object):
     Model class for MyTardis API v1's UserResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    # pylint: disable=missing-docstring
     userNotFoundString = "USER NOT FOUND IN MYTARDIS"
 
     def __init__(self, settingsModel=None, dataViewId=None,
@@ -46,64 +45,60 @@ class UserModel(object):
                 self.groups.append(GroupModel(settingsModel=settingsModel,
                                               groupJson=group))
 
-    def GetId(self):
-        return self.userId
-
-    def SetDataViewId(self, dataViewId):
-        self.dataViewId = dataViewId
-
     def GetUsername(self):
+        """
+        Return the username or a string indicating that
+        the user was not found on the MyTardis server
+        """
         if self.username:
             return self.username
         else:
             return UserModel.userNotFoundString
 
     def GetName(self):
+        """
+        Return the user's full name or a string indicating
+        that the user was not found on the MyTardis server
+        """
         if self.name:
             return self.name
         else:
             return UserModel.userNotFoundString
 
     def GetEmail(self):
+        """
+        Return the user's email address or a string indicating
+        that the user was not found on the MyTardis server
+        """
         if self.email:
             return self.email
         else:
             return UserModel.userNotFoundString
 
-    def GetGroups(self):
-        return self.groups
-
     def GetValueForKey(self, key):
-        if self.__dict__[key]:
+        """
+        Return value of field from the User model
+        to display in the Users or Folders view
+        """
+        if key in self.__dict__ and self.__dict__[key]:
             return self.__dict__[key]
-        if key in ('username', 'name', 'email') and \
-                self.UserNotFoundInMyTardis():
+        elif key in ('username', 'name', 'email') and \
+                self.userNotFoundInMyTardis:
             return UserModel.userNotFoundString
         else:
             return None
 
-    def GetJson(self):
-        return self.userRecordJson
-
-    def UserNotFoundInMyTardis(self):
-        return self.userNotFoundInMyTardis
-
     @staticmethod
     def GetUserByUsername(settings, username):
+        """
+        Get user by username
+        """
         url = "%s/api/v1/user/?format=json&username=%s" \
             % (settings.general.myTardisUrl, username)
-        try:
-            response = requests.get(url=url, headers=settings.defaultHeaders)
-        except:
-            raise Exception(traceback.format_exc())
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
-            message = response.text
-            raise Exception(message)
-        try:
-            userRecordsJson = response.json()
-        except:
-            logger.error(traceback.format_exc())
-            raise
+            HandleHttpError(response)
+        userRecordsJson = response.json()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:
@@ -117,22 +112,16 @@ class UserModel(object):
 
     @staticmethod
     def GetUserByEmail(settings, email):
+        """
+        Get user by email
+        """
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
             % (settings.general.myTardisUrl,
                urllib.quote(email.encode('utf-8')))
-        try:
-            response = requests.get(url=url, headers=settings.defaultHeaders)
-        except:
-            raise Exception(traceback.format_exc())
+        response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
-            logger.debug(url)
-            message = response.text
-            raise Exception(message)
-        try:
-            userRecordsJson = response.json()
-        except:
-            logger.error(traceback.format_exc())
-            raise
+            HandleHttpError(response)
+        userRecordsJson = response.json()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
         if numUserRecordsFound == 0:

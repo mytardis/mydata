@@ -48,6 +48,7 @@ EMPTY_API_LIST = {
     "objects": []
 }
 
+
 class FakeMyTardisHandler(BaseHTTPRequestHandler):
     """
     This class is used to handle the HTTP requests that arrive at the server.
@@ -215,7 +216,9 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 }
             ]
             self.wfile.write(json.dumps(instrumentsJson))
-        elif self.path == "/api/v1/user/?format=json&username=testfacility":
+        elif self.path == "/api/v1/user/?format=json&username=testfacility" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testfacility%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()

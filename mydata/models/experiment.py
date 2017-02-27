@@ -255,7 +255,7 @@ class ExperimentModel(object):
         owner = folderModel.owner
         ownerUsername = folderModel.owner.GetUsername()
         try:
-            ownerUserId = folderModel.owner.GetJson()['id']
+            ownerUserId = folderModel.owner.userId
         except:
             ownerUserId = None
 
@@ -344,8 +344,8 @@ class ExperimentModel(object):
                 ObjectAclModel.ShareExperimentWithUser(createdExperiment,
                                                        owner)
             if folderModel.group is not None and \
-                    folderModel.group.GetId() != \
-                    facilityManagersGroup.GetId():
+                    folderModel.group.groupId() != \
+                    facilityManagersGroup.groupId:
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.group)
             return createdExperiment

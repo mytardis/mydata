@@ -30,11 +30,11 @@ class GroupsViewTester(unittest.TestCase):
 
         dataViewId = self.groupsModel.GetMaxDataViewId() + 1
         testgroup1 = GroupModel(name="Test Group 1")
-        testgroup1.SetDataViewId(dataViewId)
+        testgroup1.dataViewId = dataViewId
         self.groupsModel.AddRow(testgroup1)
         dataViewId = self.groupsModel.GetMaxDataViewId() + 1
         testgroup2 = GroupModel(name="Test Group 2")
-        testgroup2.SetDataViewId(dataViewId)
+        testgroup2.dataViewId = dataViewId
         self.groupsModel.AddRow(testgroup2)
 
         self.groupsModel.Compare(testgroup1, testgroup2, col=1, ascending=True)

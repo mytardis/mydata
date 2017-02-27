@@ -31,7 +31,7 @@ class ObjectAclModel(object):
 
         objectAclJson = {
             "pluginId": "django_user",
-            "entityId": str(user.GetId()),
+            "entityId": str(user.userId),
             "content_object": experiment.GetResourceUri().replace("mydata_",
                                                                   ""),
             "content_type": "experiment",
@@ -81,7 +81,7 @@ class ObjectAclModel(object):
         Grants read access to experiment to group.
         """
         logger.debug("\nSharing via ObjectACL with group \"" +
-                     group.GetName() + "\"...\n")
+                     group.name + "\"...\n")
 
         settings = experiment.settingsModel
         myTardisUrl = settings.general.myTardisUrl
@@ -89,7 +89,7 @@ class ObjectAclModel(object):
 
         objectAclJson = {
             "pluginId": "django_group",
-            "entityId": str(group.GetId()),
+            "entityId": str(group.groupId),
             "content_object": experiment.GetResourceUri().replace("mydata_",
                                                                   ""),
             "content_type": "experiment",
@@ -107,7 +107,7 @@ class ObjectAclModel(object):
                                  data=json.dumps(objectAclJson))
         if response.status_code == 201:
             logger.debug("Shared experiment with group " +
-                         group.GetName() + ".")
+                         group.name + ".")
         else:
             logger.debug(url)
             logger.debug(response.text)

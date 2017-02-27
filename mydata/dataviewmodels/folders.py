@@ -321,7 +321,7 @@ class FoldersModel(MyDataDataViewModel):
                         UserModel(settingsModel=self.settingsModel,
                                   email=userFolderName,
                                   userNotFoundInMyTardis=True)
-            userRecord.SetDataViewId(usersDataViewId)
+            userRecord.dataViewId = usersDataViewId
             self.usersModel.AddRow(userRecord)
 
             userFolderPath = os.path.join(dataDir, userFolderName)
@@ -408,7 +408,7 @@ class FoldersModel(MyDataDataViewModel):
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if groupRecord:
-                groupRecord.SetDataViewId(groupsDataViewId)
+                groupRecord.dataViewId = groupsDataViewId
                 self.groupsModel.AddRow(groupRecord)
             groupFolderPath = os.path.join(dataDir, groupFolderName)
             if folderStructure == \
@@ -472,7 +472,7 @@ class FoldersModel(MyDataDataViewModel):
                                 owner=owner,
                                 settingsModel=self.settingsModel)
                 folderModel.SetCreatedDate()
-                if not owner.UserNotFoundInMyTardis():
+                if not owner.userNotFoundInMyTardis:
                     if owner.GetName().strip() != "":
                         experimentTitle = "%s - %s" \
                             % (self.settingsModel.general.instrumentName,
@@ -559,7 +559,7 @@ class FoldersModel(MyDataDataViewModel):
                 elif folderStructure.startswith("User Group"):
                     folderModel.group = groupRecord
                     if groupRecord:
-                        groupName = groupRecord.GetShortName()
+                        groupName = groupRecord.shortName
                     else:
                         groupName = groupFolderName
                     folderModel.experimentTitle = \

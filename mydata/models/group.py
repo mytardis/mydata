@@ -2,14 +2,12 @@
 Model class for MyTardis API v1's GroupResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-
-# pylint: disable=missing-docstring
-
 import urllib
 import requests
 
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
+from . import HandleHttpError
 
 
 class GroupModel(object):
@@ -34,32 +32,24 @@ class GroupModel(object):
             length = len(settingsModel.advanced.groupPrefix)
             self.shortName = self.name[length:]
 
-    def GetId(self):
-        return self.groupId
-
-    def SetDataViewId(self, dataViewId):
-        self.dataViewId = dataViewId
-
-    def GetName(self):
-        return self.name
-
-    def GetShortName(self):
-        return self.shortName
-
     def GetValueForKey(self, key):
+        """
+        Return value of field from the Group model
+        to display in the Groups or Folders view
+        """
         return self.__dict__[key]
 
     @staticmethod
     def GetGroupByName(settings, name):
+        """
+        Return the group record matching the supplied name
+        """
         url = "%s/api/v1/group/?format=json&name=%s" \
             % (settings.general.myTardisUrl,
                urllib.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=settings.defaultHeaders)
         if response.status_code != 200:
-            logger.debug("Failed to look up group record for name \"" +
-                         name + "\".")
-            logger.debug(response.text)
-            raise Exception(response.text)
+            HandleHttpError(response)
         groupsJson = response.json()
         numGroupsFound = groupsJson['meta']['total_count']
 

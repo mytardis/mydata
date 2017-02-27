@@ -38,7 +38,7 @@ class GroupsModel(MyDataDataViewModel):
             self.unfilteredData = list(self.rowsData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.rowsData[row].GetName().lower():
+            if query not in self.rowsData[row].name.lower():
                 self.filteredData.append(self.rowsData[row])
                 del self.rowsData[row]
                 # notify the view(s) using this model that it has been removed
@@ -50,7 +50,7 @@ class GroupsModel(MyDataDataViewModel):
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
             fgd = self.filteredData[filteredRow]
-            if query in fgd.GetName().lower():
+            if query in fgd.name.lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0

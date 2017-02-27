@@ -54,9 +54,3 @@ class GroupsView(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(sizer)
         sizer.Add(self.groupsDataViewControl, 1, wx.EXPAND)
-
-    def GetGroupsModel(self):
-        """
-        Returns the GroupsModel instance associated with the view.
-        """
-        return self.groupsModel
