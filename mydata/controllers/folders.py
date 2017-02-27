@@ -62,6 +62,7 @@ class FoldersController(object):
         self.completed = threading.Event()
 
         self.finishedCountingVerifications = dict()
+        self.finishedCountingThreadingLock = threading.Lock()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
         self.lastErrorMessageThreadingLock = threading.Lock()
@@ -314,7 +315,6 @@ class FoldersController(object):
             uploadToStagingRequest = settingsModel.uploadToStagingRequest
         except Exception as err:
             # MyData app could be missing from MyTardis server.
-            sys.stderr.write(traceback.format_exc())
             logger.error(traceback.format_exc())
             mde.PostEvent(
                 self.ShowMessageDialogEvent(
@@ -387,8 +387,9 @@ class FoldersController(object):
         # pylint: disable=too-many-branches
         fc = self  # pylint: disable=invalid-name
         try:
-            fc.finishedCountingVerifications[folderModel] = \
-                threading.Event()
+            self.finishedCountingThreadingLock.acquire()
+            fc.finishedCountingVerifications[folderModel] = threading.Event()
+            self.finishedCountingThreadingLock.release()
             app = wx.GetApp()
             if self.IsShuttingDown() or \
                     (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
@@ -451,7 +452,9 @@ class FoldersController(object):
             if self.IsShuttingDown() or \
                     (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
                 return
+            self.finishedCountingThreadingLock.acquire()
             fc.finishedCountingVerifications[folderModel].set()
+            self.finishedCountingThreadingLock.release()
             if self.foldersModel.GetRowCount() == 0 or \
                     fc.numVerificationsToBePerformed == 0:
                 # For the case of zero folders or zero files, we
