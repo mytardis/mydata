@@ -55,7 +55,7 @@ class ObjectAclExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
         ObjectAclModel.ShareExperimentWithUser(experimentModel, owner)

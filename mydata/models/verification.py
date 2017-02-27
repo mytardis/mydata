@@ -40,11 +40,10 @@ class VerificationModel(object):
     """
     Model for datafile verification / lookup.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
-        self.folderModelId = folderModel.GetDataViewId()
-        self.folder = folderModel.GetFolder()
+        self.folderModelId = folderModel.dataViewId
+        self.folder = folderModel.folder
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.dataFileIndex = dataFileIndex
         self.filename = folderModel.GetDataFileName(dataFileIndex)

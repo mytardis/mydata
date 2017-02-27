@@ -156,7 +156,7 @@ class UploadDatafileRunnable(object):
                 return
             message = "Defining JSON data for POST..."
             self.uploadsModel.SetMessage(self.uploadModel, message)
-            datasetUri = self.folderModel.GetDatasetModel().GetResourceUri()
+            datasetUri = self.folderModel.datasetModel.GetResourceUri()
             dataFileCreatedTime = \
                 self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
             dataFileModifiedTime = \
@@ -196,10 +196,10 @@ class UploadDatafileRunnable(object):
             if dataFileDirectory != "":
                 logger.error("Upload failed for datafile " + dataFileName +
                              " in subdirectory " + dataFileDirectory +
-                             " of folder " + self.folderModel.GetFolder())
+                             " of folder " + self.folderModel.folder)
             else:
                 logger.error("Upload failed for datafile " + dataFileName +
-                             " in folder " + self.folderModel.GetFolder())
+                             " in folder " + self.folderModel.folder)
             logger.error(traceback.format_exc())
 
     def CanceledCallback(self):
@@ -338,7 +338,7 @@ class UploadDatafileRunnable(object):
             logger.debug(response.text)
             if not postSuccess:
                 dataFileName = os.path.basename(dataFilePath)
-                folderName = self.folderModel.GetFolder()
+                folderName = self.folderModel.folder
                 myTardisUsername = self.settingsModel.general.username
                 UploadDatafileRunnable.HandleFailedCreateDataFile(
                     response, dataFileName, folderName, myTardisUsername)

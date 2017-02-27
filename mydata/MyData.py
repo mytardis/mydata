@@ -1049,9 +1049,9 @@ class MyData(wx.App):
             rows = [self.foldersModel.GetRow(item) for item in items]
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
-                if folderRecord.GetDatasetModel() is not None:
+                if folderRecord.datasetModel is not None:
                     self.OpenUrl(self.settingsModel.general.myTardisUrl + "/" +
-                                 folderRecord.GetDatasetModel().GetViewUri())
+                                 folderRecord.datasetModel.GetViewUri())
                 else:
                     self.OpenUrl(self.settingsModel.general.myTardisUrl)
             else:

@@ -40,7 +40,7 @@ class UploadModel(object):
         self.dataFileId = None
         self.dfoId = None
         self.existingUnverifiedDatafile = None
-        self.folder = folderModel.GetFolder()
+        self.folder = folderModel.folder
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = folderModel.GetDataFileName(dataFileIndex)
         self.filesize = ""  # Human-readable string displayed in data view

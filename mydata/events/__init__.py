@@ -731,7 +731,7 @@ def StartDataUploadsForFolder(event):
         logger.debug("StartDataUploadsForFolderWorker")
         wx.CallAfter(BeginBusyCursorIfRequired)
         message = "Checking for data files on MyTardis and uploading " \
-            "if necessary for folder: %s" % event.folderModel.GetFolder()
+            "if necessary for folder: %s" % event.folderModel.folder
         logger.info(message)
         app = wx.GetApp()
         if hasattr(app, "TestRunRunning") and app.TestRunRunning():

@@ -107,7 +107,7 @@ class VerifyDatafileRunnable(object):
         self.verificationsModel.MessageUpdated(self.verificationModel)
 
         try:
-            dataset = self.folderModel.GetDatasetModel()
+            dataset = self.folderModel.datasetModel
             if not dataset:  # test runs don't create required datasets
                 raise DoesNotExist("Dataset doesn't exist.")
             existingDatafile = DataFileModel.GetDataFile(

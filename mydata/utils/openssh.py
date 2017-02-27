@@ -678,6 +678,11 @@ def CleanUpSshProcesses(settingsModel):
                     pass
         except psutil.AccessDenied:
             pass
+        except psutil.ZombieProcess:
+            # Process has completed execution but hasn't been removed from
+            # the process table yet.  Usually the process will be removed
+            # shortly after this exception is caused, so no action is needed.
+            pass
 
 
 # Singleton instance of OpenSSH class:

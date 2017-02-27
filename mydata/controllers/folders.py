@@ -400,7 +400,7 @@ class FoldersController(object):
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " +
-                folderModel.GetFolder())
+                folderModel.folder)
             if self.IsShuttingDown() or \
                     (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
                 return
@@ -420,7 +420,7 @@ class FoldersController(object):
                     return
                 finally:
                     self.getOrCreateExpThreadingLock.release()
-                folderModel.SetExperiment(experimentModel)
+                folderModel.experimentModel = experimentModel
                 try:
                     datasetModel = DatasetModel\
                         .CreateDatasetIfNecessary(folderModel, fc.testRun)
@@ -432,22 +432,20 @@ class FoldersController(object):
                             message=str(err),
                             icon=wx.ICON_ERROR))
                     return
-                folderModel.SetDatasetModel(datasetModel)
+                folderModel.datasetModel = datasetModel
                 self.VerifyDatafiles(folderModel)
             except requests.exceptions.ConnectionError as err:
                 logger.error(str(err))
                 return
             except ValueError:
                 logger.error("Failed to retrieve experiment "
-                             "for folder " +
-                             str(folderModel.GetFolder()))
+                             "for folder " + folderModel.folder)
                 logger.error(traceback.format_exc())
                 return
             if experimentModel is None and not fc.testRun:
                 logger.error("Failed to acquire a MyTardis "
                              "experiment to store data in for "
-                             "folder " +
-                             folderModel.GetFolder())
+                             "folder " + folderModel.folder)
                 return
             if self.IsShuttingDown() or \
                     (hasattr(app, "ShouldAbort") and app.ShouldAbort()):

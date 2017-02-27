@@ -44,7 +44,7 @@ class ExperimentModel(object):
                        folderModel.settingsModel.general.myTardisUrl,
                        existingExperiment.GetViewUri(),
                        existingExperiment.GetTitle(),
-                       folderModel.GetOwner().GetUsername())
+                       folderModel.owner.GetUsername())
                 logger.testrun(message)
             return existingExperiment
         except DoesNotExist as err:
@@ -62,17 +62,17 @@ class ExperimentModel(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        settingsModel = folderModel.GetSettingsModel()
+        settingsModel = folderModel.settingsModel
 
         uploaderName = settingsModel.uploaderModel.GetName()
         uploaderUuid = settingsModel.uploaderModel.GetUuid()
-        userFolderName = folderModel.GetUserFolderName()
-        groupFolderName = folderModel.GetGroupFolderName()
+        userFolderName = folderModel.userFolderName
+        groupFolderName = folderModel.groupFolderName
         myTardisUrl = settingsModel.general.myTardisUrl
         myTardisDefaultUsername = settingsModel.general.username
-        experimentTitle = folderModel.GetExperimentTitle()
+        experimentTitle = folderModel.experimentTitle
 
-        if folderModel.ExperimentTitleSetManually():
+        if folderModel.experimentTitleSetManually:
             expTitleEncoded = urllib.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
                 urllib.quote(settingsModel.advanced.folderStructure)
@@ -101,7 +101,7 @@ class ExperimentModel(object):
             if response.status_code == 401:
                 message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.folder)
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" user " \
@@ -110,7 +110,7 @@ class ExperimentModel(object):
             elif response.status_code == 404:
                 message = "Failed to confirm existence of experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.folder)
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
                 try:
@@ -153,7 +153,7 @@ class ExperimentModel(object):
                                    modelClass=modelClassOfObjectNotFound)
             raise
         if numExperimentsFound == 0:
-            if folderModel.ExperimentTitleSetManually():
+            if folderModel.experimentTitleSetManually:
                 if userFolderName:
                     message = "Experiment not found for '%s', %s, '%s'" \
                         % (uploaderName, userFolderName, experimentTitle)
@@ -180,7 +180,7 @@ class ExperimentModel(object):
             logger.debug(message)
             raise DoesNotExist(message, modelClass=ExperimentModel)
         elif numExperimentsFound == 1 or \
-                folderModel.ExperimentTitleSetManually():
+                folderModel.experimentTitleSetManually:
             # When an experiment is created for a single MyData
             # uploader instance, we shouldn't find any duplicates,
             # but when MyData is instructed to add datasets to an
@@ -188,7 +188,7 @@ class ExperimentModel(object):
             # folder structure), we don't raise a critical error
             # for duplicate experiments - instead we just use the
             # first one we find.
-            if folderModel.ExperimentTitleSetManually():
+            if folderModel.experimentTitleSetManually:
                 if userFolderName:
                     message = "Found existing experiment with title '%s' " \
                         "and user folder '%s'" % (experimentTitle,
@@ -236,7 +236,7 @@ class ExperimentModel(object):
                       "uploader \"%s\" and user folder \"%s\"%s " \
                       "for folder \"%s\"." \
                       % (uploaderName, userFolderName, groupFolderString,
-                         folderModel.GetFolder())
+                         folderModel.folder)
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
                        "MyTardis administrator to investigate."
@@ -247,21 +247,21 @@ class ExperimentModel(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        settingsModel = folderModel.GetSettingsModel()
-        userFolderName = folderModel.GetUserFolderName()
+        settingsModel = folderModel.settingsModel
+        userFolderName = folderModel.userFolderName
         hostname = settingsModel.uploaderModel.GetHostname()
-        location = folderModel.GetLocation()
-        groupFolderName = folderModel.GetGroupFolderName()
-        owner = folderModel.GetOwner()
-        ownerUsername = folderModel.GetOwner().GetUsername()
+        location = folderModel.location
+        groupFolderName = folderModel.groupFolderName
+        owner = folderModel.owner
+        ownerUsername = folderModel.owner.GetUsername()
         try:
-            ownerUserId = folderModel.GetOwner().GetJson()['id']
+            ownerUserId = folderModel.owner.GetJson()['id']
         except:
             ownerUserId = None
 
         uploaderName = settingsModel.uploaderModel.GetName()
         uploaderUuid = settingsModel.uploaderModel.GetUuid()
-        experimentTitle = folderModel.GetExperimentTitle()
+        experimentTitle = folderModel.experimentTitle
 
         myTardisUrl = settingsModel.general.myTardisUrl
         myTardisDefaultUsername = settingsModel.general.username
@@ -343,11 +343,11 @@ class ExperimentModel(object):
                     ownerUserId is not None:
                 ObjectAclModel.ShareExperimentWithUser(createdExperiment,
                                                        owner)
-            if folderModel.GetGroup() is not None and \
-                    folderModel.GetGroup().GetId() != \
+            if folderModel.group is not None and \
+                    folderModel.group.GetId() != \
                     facilityManagersGroup.GetId():
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
-                                                        folderModel.GetGroup())
+                                                        folderModel.group)
             return createdExperiment
         else:
             message = "Failed to create experiment for uploader " \
@@ -363,7 +363,7 @@ class ExperimentModel(object):
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.folder)
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" user " \
@@ -372,7 +372,7 @@ class ExperimentModel(object):
             elif response.status_code == 404:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.GetFolder())
+                          % (experimentTitle, folderModel.folder)
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
                 try:
@@ -425,6 +425,3 @@ class ExperimentModel(object):
 
     def GetViewUri(self):
         return "experiment/view/%d/" % (self.GetId(),)
-
-    def GetSettingsModel(self):
-        return self.settingsModel

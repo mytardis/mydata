@@ -53,10 +53,10 @@ class DatasetExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.SetExperiment(experimentModel)
+        folderModel.experimentModel = experimentModel
         testRun = False
         datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
         self.assertEqual(datasetModel.GetDescription(), datasetFolderName)

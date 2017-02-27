@@ -62,7 +62,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -81,7 +81,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
 
@@ -94,7 +94,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle("Multiple Existing Experiments")
+        folderModel.experimentTitle = "Multiple Existing Experiments"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment1")
 
@@ -107,7 +107,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -126,7 +126,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
 
@@ -139,7 +139,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -159,7 +159,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
 
@@ -172,7 +172,7 @@ class ExperimentExceptionsTester(MyDataTester):
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
         instrument = settingsModel.instrument.GetName()
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -190,7 +190,7 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner, settingsModel)
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
 
@@ -205,7 +205,7 @@ class ExperimentExceptionsTester(MyDataTester):
         # Try to look up experiment record with a missing UserProfile
         # for the authorizing user, which can result in a 404 from the
         # MyTardis API:
-        folderModel.SetExperimentTitle("Missing UserProfile")
+        folderModel.experimentTitle = "Missing UserProfile"
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -213,7 +213,7 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # Try to look up experiment record with a missing Schema,
         # which can result in a 404 from the MyTardis API:
-        folderModel.SetExperimentTitle("Missing Schema")
+        folderModel.experimentTitle = "Missing Schema"
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -221,7 +221,7 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # Try to look up experiment record and handle a 404 of
         # unknown origin from the MyTardis API:
-        folderModel.SetExperimentTitle("Unknown 404")
+        folderModel.experimentTitle = "Unknown 404"
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -229,7 +229,7 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # LOOKING UP EXPERIMENTS WITH TITLE SET AUTOMATICALLY
 
-        folderModel.SetExperimentTitle("")
+        folderModel.experimentTitle = ""
         folderModel.experimentTitleSetManually = False
 
         # Try to look up nonexistent experiment record with
@@ -380,7 +380,7 @@ class ExperimentExceptionsTester(MyDataTester):
         # Try to create an experiment with a title specified manually
         # and check that the title is correct:
         testRun = False
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         experimentModel = \
             ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
         self.assertEqual(experimentModel.GetTitle(), expFolderName)
@@ -388,7 +388,7 @@ class ExperimentExceptionsTester(MyDataTester):
         # Try to create an experiment with a title specified manually,
         # and with testRun activated:
         testRun = True
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         experimentModel = \
             ExperimentModel.GetOrCreateExperimentForFolder(folderModel, testRun)
         self.assertEqual(experimentModel, None)
@@ -397,11 +397,11 @@ class ExperimentExceptionsTester(MyDataTester):
         # Get or create an experiment with a title specified manually,
         # which already exists and with testRun activated:
         testRun = True
-        folderModel.SetExperimentTitle("Existing Experiment")
+        folderModel.experimentTitle = "Existing Experiment"
         experimentModel = \
             ExperimentModel.GetOrCreateExperimentForFolder(folderModel, testRun)
         self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.SetExperimentTitle(expFolderName)
+        folderModel.experimentTitle = expFolderName
         testRun = False
 
         # Try to create an experiment record with
@@ -423,7 +423,6 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # Test case where MyTardis API returns a 404, e.g. because a
         # requested Experiment Schema can't be found.
-        folderModel.SetExperimentTitle(
-            "Request 404 from Fake MyTardis Server")
+        folderModel.experimentTitle = "Request 404 from Fake MyTardis Server"
         with self.assertRaises(DoesNotExist):
             _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)

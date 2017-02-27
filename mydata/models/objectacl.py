@@ -25,7 +25,7 @@ class ObjectAclModel(object):
         logger.debug("\nSharing via ObjectACL with username \"" +
                      user.GetUsername() + "\"...\n")
 
-        settings = experiment.GetSettingsModel()
+        settings = experiment.settingsModel
         myTardisUrl = settings.general.myTardisUrl
         myTardisDefaultUsername = settings.general.username
 
@@ -83,7 +83,7 @@ class ObjectAclModel(object):
         logger.debug("\nSharing via ObjectACL with group \"" +
                      group.GetName() + "\"...\n")
 
-        settings = experiment.GetSettingsModel()
+        settings = experiment.settingsModel
         myTardisUrl = settings.general.myTardisUrl
         myTardisDefaultUsername = settings.general.username
 

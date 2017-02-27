@@ -61,7 +61,7 @@ class ScanUserGroupInstrumentTester(MyDataTester):
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).GetFolder())
+            folders.append(foldersModel.GetFolderRecord(row).folder)
         self.assertEqual(sorted(folders), [
             'Dataset 001', 'Dataset 002', 'Dataset 003', 'Dataset 004',
             'Dataset 005', 'Dataset 006', 'Dataset 007', 'Dataset 008'])

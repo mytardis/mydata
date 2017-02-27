@@ -61,7 +61,7 @@ class ScanUserMyTardisExpDatasetTester(MyDataTester):
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).GetFolder())
+            folders.append(foldersModel.GetFolderRecord(row).folder)
         self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0

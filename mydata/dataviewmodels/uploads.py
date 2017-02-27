@@ -9,8 +9,7 @@ import wx
 
 from ..models.upload import UploadStatus
 from ..media import MYDATA_ICONS
-from .dataview import DataViewIndexListModel
-from .dataview import TryRowValueChanged
+from .dataview import MyDataDataViewModel
 
 
 class ColumnType(object):
@@ -22,30 +21,27 @@ class ColumnType(object):
     PROGRESS = 2
 
 
-class UploadsModel(DataViewIndexListModel):
+class UploadsModel(MyDataDataViewModel):
     """
     Represents the Uploads tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
+    # pylint: disable=arguments-differ
     def __init__(self):
-        self.uploadsData = []
+        super(UploadsModel, self).__init__()
 
-        DataViewIndexListModel.__init__(self, len(self.uploadsData))
-
-        self.columnNames = ("Id", "Folder", "Subdirectory", "Filename",
-                            "File Size", "Status", "Progress", "Message", "Speed")
-        self.columnKeys = ("dataViewId", "folder", "subdirectory", "filename",
-                           "filesize", "status", "progress", "message", "speed")
-        self.defaultColumnWidths = (40, 170, 170, 200, 75, 55, 100, 200, 100)
+        self.columnNames = ["Id", "Folder", "Subdirectory", "Filename",
+                            "File Size", "Status", "Progress", "Message", "Speed"]
+        self.columnKeys = ["dataViewId", "folder", "subdirectory", "filename",
+                           "filesize", "status", "progress", "message", "speed"]
+        self.defaultColumnWidths = [40, 170, 170, 200, 75, 55, 100, 200, 100]
         self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.TEXT, ColumnType.TEXT,
                             ColumnType.BITMAP, ColumnType.PROGRESS,
                             ColumnType.TEXT, ColumnType.TEXT)
 
-        self.maxDataViewId = 0
-        self.maxDataViewIdLock = threading.Lock()
         self.completedCount = 0
         self.completedSize = 0
         self.completedCountLock = threading.Lock()
@@ -64,7 +60,6 @@ class UploadsModel(DataViewIndexListModel):
         All of our columns are strings.  If the model or the renderers
         in the view are other types then that should be reflected here.
         """
-        # pylint: disable=arguments-differ
         if col == self.columnNames.index("Status"):
             return "wxBitmap"
         if col == self.columnNames.index("Progress"):
@@ -73,95 +68,38 @@ class UploadsModel(DataViewIndexListModel):
 
     def GetValueByRow(self, row, col):
         """
-        This method is called to provide the uploadsData object for a
+        This method is called to provide the rowsData object for a
         particular row,col
         """
-        # pylint: disable=arguments-differ
         try:
             if col == self.columnNames.index("Status"):
                 icon = wx.NullBitmap
-                if self.uploadsData[row].GetStatus() == \
+                if self.rowsData[row].GetStatus() == \
                         UploadStatus.IN_PROGRESS:
                     icon = self.inProgressIcon
-                elif self.uploadsData[row].GetStatus() == \
+                elif self.rowsData[row].GetStatus() == \
                         UploadStatus.COMPLETED:
                     icon = self.completedIcon
-                elif self.uploadsData[row].GetStatus() in \
+                elif self.rowsData[row].GetStatus() in \
                         (UploadStatus.FAILED,
                          UploadStatus.CANCELED):
                     icon = self.failedIcon
                 return icon
             columnKey = self.GetColumnKeyName(col)
             if self.GetColumnType(col) == "string":
-                return str(self.uploadsData[row].GetValueForKey(columnKey))
+                return str(self.rowsData[row].GetValueForKey(columnKey))
             else:
-                return self.uploadsData[row].GetValueForKey(columnKey)
+                return self.rowsData[row].GetValueForKey(columnKey)
         except IndexError:
             # A "list index out of range" exception can be
             # thrown if the row is currently being deleted
             return None
 
-    def GetColumnName(self, col):
-        """
-        Get column name
-        """
-        return self.columnNames[col]
-
-    def GetColumnKeyName(self, col):
-        """
-        Get column key name
-        """
-        return self.columnKeys[col]
-
-    def GetDefaultColumnWidth(self, col):
-        """
-        Get default column width
-        """
-        return self.defaultColumnWidths[col]
-
-    def GetRowCount(self):
-        """
-        Report how many rows this model provides data for.
-        """
-        return len(self.uploadsData)
-
-    def GetColumnCount(self):
-        """
-        Report how many columns this model provides data for.
-        """
-        # pylint: disable=arguments-differ
-        return len(self.columnNames)
-
-    def GetCount(self):
-        """
-        Report the number of rows in the model
-        """
-        # pylint: disable=arguments-differ
-        return len(self.uploadsData)
-
-    def GetAttrByRow(self, row, col, attr):
-        """
-        Called to check if non-standard attributes should be
-        used in the cell at (row, col)
-        """
-        # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        return False
-
     def DeleteAllRows(self):
         """
         Delete all rows
         """
-        rowsDeleted = []
-        for row in reversed(range(0, self.GetCount())):
-            del self.uploadsData[row]
-            rowsDeleted.append(row)
-
-        # notify the view(s) using this model that it has been removed
-        wx.CallAfter(self.RowsDeleted, rowsDeleted)
-
-        self.maxDataViewId = 0
+        super(UploadsModel, self).DeleteAllRows()
         self.completedCount = 0
         self.completedSize = 0
         self.failedCount = 0
@@ -172,50 +110,26 @@ class UploadsModel(DataViewIndexListModel):
         """
         rowsToCancel = []
         for row in range(0, self.GetRowCount()):
-            if self.uploadsData[row].GetStatus() != UploadStatus.COMPLETED \
+            if self.rowsData[row].GetStatus() != UploadStatus.COMPLETED \
                     and \
-                    self.uploadsData[row].GetStatus() != UploadStatus.FAILED:
+                    self.rowsData[row].GetStatus() != UploadStatus.FAILED:
                 rowsToCancel.append(row)
         for row in rowsToCancel:
-            uploadModel = self.uploadsData[row]
+            uploadModel = self.rowsData[row]
             uploadModel.Cancel()
             self.SetStatus(uploadModel, UploadStatus.CANCELED)
             self.SetMessage(uploadModel, 'Canceled')
-
-    def GetMaxDataViewId(self):
-        """
-        Return the maximum dataview ID
-        """
-        return self.maxDataViewId
-
-    def SetMaxDataViewId(self, dataViewId):
-        """
-        Set the maximum dataview ID
-        """
-        self.maxDataViewIdLock.acquire()
-        self.maxDataViewId = dataViewId
-        self.maxDataViewIdLock.release()
-
-    def AddRow(self, uploadModel):
-        """
-        Add a row
-        """
-        self.uploadsData.append(uploadModel)
-        # Notify views
-        wx.CallAfter(self.RowAppended)
-
-        self.SetMaxDataViewId(uploadModel.GetDataViewId())
 
     def UploadProgressUpdated(self, uploadModel):
         """
         Notify views that upload progress has been updated
         """
         for row in reversed(range(0, self.GetCount())):
-            if self.uploadsData[row] == uploadModel:
+            if self.rowsData[row] == uploadModel:
                 col = self.columnNames.index("Progress")
-                wx.CallAfter(TryRowValueChanged, self, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 col = self.columnNames.index("Speed")
-                wx.CallAfter(TryRowValueChanged, self, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def StatusUpdated(self, uploadModel):
@@ -223,9 +137,9 @@ class UploadsModel(DataViewIndexListModel):
         Notify views that upload status has been updated
         """
         for row in reversed(range(0, self.GetCount())):
-            if self.uploadsData[row] == uploadModel:
+            if self.rowsData[row] == uploadModel:
                 col = self.columnNames.index("Status")
-                wx.CallAfter(TryRowValueChanged, self, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def MessageUpdated(self, uploadModel):
@@ -233,9 +147,9 @@ class UploadsModel(DataViewIndexListModel):
         Notify views that upload message has been updated
         """
         for row in reversed(range(0, self.GetCount())):
-            if self.uploadsData[row] == uploadModel:
+            if self.rowsData[row] == uploadModel:
                 col = self.columnNames.index("Message")
-                wx.CallAfter(TryRowValueChanged, self, row, col)
+                wx.CallAfter(self.TryRowValueChanged, row, col)
                 break
 
     def SetStatus(self, uploadModel, status):

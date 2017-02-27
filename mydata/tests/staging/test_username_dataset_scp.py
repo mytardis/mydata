@@ -97,7 +97,7 @@ class ScanUsernameDatasetTester(MyDataTester):
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).GetFolder())
+            folders.append(foldersModel.GetFolderRecord(row).folder)
         self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
@@ -182,7 +182,7 @@ class ScanUsernameDatasetTester(MyDataTester):
                                                           uploadsProcessed))
 
         for i in range(uploadsProcessed):
-            uploadModel = uploadsModel.uploadsData[i]
+            uploadModel = uploadsModel.rowsData[i]
             if uploadModel.GetStatus() == UploadStatus.FAILED:
                 sys.stderr.write(
                     "Upload failed for %s: %s\n" %

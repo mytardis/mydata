@@ -44,13 +44,13 @@ class DatasetModel(object):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
-        description = folderModel.GetFolder()
+        description = folderModel.folder
         settingsModel = folderModel.settingsModel
 
         myTardisUsername = settingsModel.general.username
         myTardisUrl = settingsModel.general.myTardisUrl
 
-        experiment = folderModel.GetExperiment()
+        experiment = folderModel.experimentModel
         if experiment:  # Could be None in test run
             url = myTardisUrl + "/api/v1/dataset/?format=json" + \
                 "&experiments__id=" + str(experiment.GetId())
@@ -84,7 +84,7 @@ class DatasetModel(object):
         if numExistingMatchingDatasets == 0:
             logger.debug("Creating dataset record for folder: " + description)
 
-            description = folderModel.GetFolder()
+            description = folderModel.folder
             if experiment:
                 experimentUri = experiment.GetResourceUri()
             else:
@@ -119,18 +119,18 @@ class DatasetModel(object):
                              str(response.status_code))
                 logger.error(response.text)
                 if response.status_code == 401:
-                    message = "Couldn't create dataset \"%s\" " \
-                              "for folder \"%s\"." \
-                              % (description, folderModel.GetFolder())
+                    message = (
+                        "Couldn't create dataset \"%s\" for folder \"%s\"."
+                        % (description, folderModel.folder))
                     message += "\n\n"
                     message += "Please ask your MyTardis administrator to " \
                                "check the permissions of the \"%s\" user " \
                                "account." % myTardisUsername
                     raise Unauthorized(message)
                 elif response.status_code == 500:
-                    message = "Couldn't create dataset \"%s\" " \
-                              "for folder \"%s\"." \
-                              % (description, folderModel.GetFolder())
+                    message = (
+                        "Couldn't create dataset \"%s\" for folder \"%s\"."
+                        % (description, folderModel.folder))
                     message += "\n\n"
                     message += "An Internal Server Error occurred."
                     message += "\n\n"
@@ -163,7 +163,7 @@ class DatasetModel(object):
                        viewUri,
                        description,
                        folderModel.settingsModel.general.myTardisUrl,
-                       folderModel.GetExperiment().GetViewUri())
+                       folderModel.experimentModel.GetViewUri())
                 logger.testrun(message)
             return DatasetModel(settingsModel,
                                 existingMatchingDatasets['objects'][0])

@@ -9,7 +9,6 @@ from ..utils import UnderscoreToCamelcase
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 
-# pylint: disable=too-many-instance-attributes
 class ReplicaModel(object):
     """
     The Replica model has been removed from MyTardis and replaced by

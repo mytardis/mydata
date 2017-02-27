@@ -2,9 +2,6 @@
 Model class representing a data folder which may or may not
 have a corresponding dataset record in MyTardis.
 """
-
-# pylint: disable=missing-docstring
-
 import os
 import time
 from datetime import datetime
@@ -30,7 +27,9 @@ class FolderModel(object):
         # pylint: disable=too-many-locals
         self.settingsModel = settingsModel
         self.dataViewId = dataViewId
+        # The folder name, e.g. "Dataset1":
         self.folder = folder
+        # The folder's location, e.g. "C:\Data\testuser1":
         self.location = location
         self.isExperimentFilesFolder = isExperimentFilesFolder
         if self.isExperimentFilesFolder:
@@ -74,7 +73,7 @@ class FolderModel(object):
             self.dataFileDirectories[i] = \
                 self.dataFileDirectories[i].replace("\\", "/")
         self.created = ""
-        self.experimentTitle = ""
+        self._experimentTitle = ""
         self.group = None
         self.experimentTitleSetManually = False
         self.status = "0 of %d files uploaded" % (self.numFiles,)
@@ -97,37 +96,69 @@ class FolderModel(object):
         self.numFilesVerified = 0
 
     def __hash__(self):
+        """
+        Required to be able to use folderModel as a dictionary key
+        in FoldersController
+        """
         return hash(self.dataViewId)
 
     def __eq__(self, other):
+        """
+        Required to be able to use folderModel as a dictionary key
+        in FoldersController
+        """
         return self.dataViewId == other.dataViewId
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
+        """
+        Set a DataFile's upload status
+
+        Used to update the number of files uploaded per folder
+        displayed in the Status column of the Folders view.
+        """
         self.dataFileUploaded[dataFileIndex] = uploaded
         self.numFilesUploaded = sum(self.dataFileUploaded)
         self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
                                                    self.numFiles)
 
-    def GetDatasetModel(self):
-        return self.datasetModel
-
     def GetDataFilePath(self, dataFileIndex):
+        """
+        Get the absolute path to a file within this folder's root directory
+        which is os.path.join(self.location, self.folder)
+        """
         return self.dataFilePaths[dataFileIndex]
 
     def GetDataFileRelPath(self, dataFileIndex):
+        """
+        Get the path to a file relative to the folder's root directory
+        which is os.path.join(self.location, self.folder)
+        """
         return os.path.relpath(self.GetDataFilePath(dataFileIndex),
                                self.settingsModel.general.dataDirectory)
 
     def GetDataFileDirectory(self, dataFileIndex):
+        """
+        Get the relative path to a file's subdirectory relative to the
+        folder's root directory which isos.path.join(self.location, self.folder)
+        """
         return self.dataFileDirectories[dataFileIndex]
 
     def GetDataFileName(self, dataFileIndex):
+        """
+        Return a file's filename
+        """
         return os.path.basename(self.dataFilePaths[dataFileIndex])
 
     def GetDataFileSize(self, dataFileIndex):
+        """
+        Return a file's size on disk
+        """
         return os.stat(self.GetDataFilePath(dataFileIndex)).st_size
 
     def GetDataFileCreatedTime(self, dataFileIndex):
+        """
+        Return a file's created time on disk
+        """
         absoluteFilePath = self.GetDataFilePath(dataFileIndex)
         try:
             createdTimeIsoString = datetime.fromtimestamp(
@@ -138,6 +169,9 @@ class FolderModel(object):
             return None
 
     def GetDataFileModifiedTime(self, dataFileIndex):
+        """
+        Return a file's modified time on disk
+        """
         absoluteFilePath = self.GetDataFilePath(dataFileIndex)
         try:
             modifiedTimeIsoString = datetime.fromtimestamp(
@@ -147,25 +181,11 @@ class FolderModel(object):
             logger.error(traceback.format_exc())
             return None
 
-    def SetExperiment(self, experimentModel):
-        self.experimentModel = experimentModel
-
-    def GetExperiment(self):
-        return self.experimentModel
-
-    def SetDatasetModel(self, datasetModel):
-        self.datasetModel = datasetModel
-
-    def GetDataViewId(self):
-        return self.dataViewId
-
-    def GetFolder(self):
-        return self.folder
-
-    def GetLocation(self):
-        return self.location
-
     def GetRelPath(self):
+        """
+        Return the relative path of the folder, relative to the root
+        data directory configured in MyData's settings
+        """
         if self.isExperimentFilesFolder:
             return os.path.relpath(self.location,
                                    self.settingsModel.general.dataDirectory)
@@ -176,27 +196,15 @@ class FolderModel(object):
                 self.folder)
 
     def GetNumFiles(self):
+        """
+        Return total number of files in this folder
+        """
         return self.numFiles
 
-    def GetCreated(self):
-        return self.created
-
-    def GetStatus(self):
-        return self.status
-
-    def GetUserFolderName(self):
-        return self.userFolderName
-
-    def GetGroupFolderName(self):
-        return self.groupFolderName
-
-    def GetOwnerId(self):
-        return self.owner.GetId()
-
-    def GetOwner(self):
-        return self.owner
-
     def GetValueForKey(self, key):
+        """
+        Used in the data view model to look up a value from a column key
+        """
         if key.startswith("owner."):
             ownerKey = key.split("owner.")[1]
             return self.owner.GetValueForKey(ownerKey) if self.owner else None
@@ -205,10 +213,10 @@ class FolderModel(object):
             return self.group.GetValueForKey(groupKey) if self.group else None
         return self.__dict__[key]
 
-    def GetSettingsModel(self):
-        return self.settingsModel
-
     def SetCreatedDate(self):
+        """
+        Set created date
+        """
         if self.isExperimentFilesFolder:
             absoluteFolderPath = self.location
         else:
@@ -217,21 +225,20 @@ class FolderModel(object):
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
 
-    def GetExperimentTitle(self):
-        return self.experimentTitle
+    @property
+    def experimentTitle(self):
+        """
+        Get MyTardis experiment title associated with this folder
+        """
+        return self._experimentTitle
 
-    def SetExperimentTitle(self, title):
-        self.experimentTitle = title
+    @experimentTitle.setter
+    def experimentTitle(self, title):
+        """
+        Set MyTardis experiment title associated with this folder
+        """
+        self._experimentTitle = title
         self.experimentTitleSetManually = True
-
-    def ExperimentTitleSetManually(self):
-        return self.experimentTitleSetManually
-
-    def GetGroup(self):
-        return self.group
-
-    def SetGroup(self, group):
-        self.group = group
 
     def MatchesIncludes(self, filename):
         """

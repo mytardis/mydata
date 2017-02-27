@@ -25,7 +25,6 @@ class TaskModel(object):
     A task can be a folder scan, datafile lookup and upload,
     or it could be a notification POSTed to MyTardis administrators.
     """
-    # pylint: disable=too-many-instance-attributes
     # pylint: disable=missing-docstring
     def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime,
                  scheduleType="Once", intervalMinutes=None, days=None):

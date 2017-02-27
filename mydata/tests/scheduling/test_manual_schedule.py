@@ -17,7 +17,6 @@ class ManualScheduleTester(MyDataSettingsTester):
     """
     Test Manual schedule type.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(ManualScheduleTester, self).__init__(*args, **kwargs)
         self.mydataApp = None

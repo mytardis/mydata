@@ -7,62 +7,41 @@ and the tabular data displayed on that tab view.
 
 import sys
 import threading
-import traceback
 from datetime import datetime
 from datetime import timedelta
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 from ..models.task import TaskModel
 from ..utils.notification import Notification
 from ..logs import logger
 from ..utils import EndBusyCursorIfRequired
+from .dataview import MyDataDataViewModel
 
 
-class TasksModel(DataViewIndexListModel):
+class TasksModel(MyDataDataViewModel):
     """
     Represents the Tasks tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
+    # pylint: disable=arguments-differ
     def __init__(self, settingsModel):
+        super(TasksModel, self).__init__()
         self.settingsModel = settingsModel
-        self.tasksData = list()
-        DataViewIndexListModel.__init__(self, len(self.tasksData))
-        self.columnNames = ("Id", "Job", "Start Time", "Finish Time",
-                            "Schedule Type", "Interval (minutes)")
-        self.columnKeys = ("dataViewId", "jobDesc", "startTime", "finishTime",
-                           "scheduleType", "intervalMinutes")
-        self.defaultColumnWidths = (40, 300, 200, 200, 115, 100)
-
-        # This is the largest ID value which has been used in this model.
-        # It may no longer exist, i.e. if we delete the row with the
-        # largest ID, we don't decrement the maximum ID.
-        self.maxDataViewId = 0
-
-    def GetColumnType(self, col):
-        """
-        All of our columns are strings.  If the model or the renderers
-        in the view are other types then that should be reflected here.
-        """
-        # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        return "string"
+        self.columnNames = ["Id", "Job", "Start Time", "Finish Time",
+                            "Schedule Type", "Interval (minutes)"]
+        self.columnKeys = ["dataViewId", "jobDesc", "startTime", "finishTime",
+                           "scheduleType", "intervalMinutes"]
+        self.defaultColumnWidths = [40, 300, 200, 200, 115, 100]
 
     def GetValueByRow(self, row, col):
         """
-        This method is called to provide the tasksData object
+        This method is called to provide the rowsData object
         for a particular row, col
         """
-        # pylint: disable=arguments-differ
         columnKey = self.GetColumnKeyName(col)
-        value = self.tasksData[row].GetValueForKey(columnKey)
+        value = self.rowsData[row].GetValueForKey(columnKey)
         if value is None:
             return ""
         elif columnKey in ("startTime", "finishTime"):
@@ -71,7 +50,7 @@ class TasksModel(DataViewIndexListModel):
             return value.strftime("%s on %s" % (timeString, dateString))
         elif columnKey == "scheduleType" and value == "Weekly":
             value += " ("
-            days = self.tasksData[row].GetDays()
+            days = self.rowsData[row].GetDays()
             value += 'M' if days[0] else '-'
             value += 'T' if days[1] else '-'
             value += 'W' if days[2] else '-'
@@ -82,119 +61,11 @@ class TasksModel(DataViewIndexListModel):
             value += ")"
         return str(value)
 
-    def GetColumnName(self, col):
-        """
-        Get column name.
-        """
-        # pylint: disable=arguments-differ
-        return self.columnNames[col]
-
-    def GetColumnKeyName(self, col):
-        """
-        Get column key name.
-        """
-        return self.columnKeys[col]
-
-    def GetDefaultColumnWidth(self, col):
-        """
-        Get default column width.
-        """
-        return self.defaultColumnWidths[col]
-
-    def GetRowCount(self):
-        """
-        Report how many rows this model provides data for.
-        """
-        # pylint: disable=arguments-differ
-        return len(self.tasksData)
-
-    def GetColumnCount(self):
-        """
-        Report how many columns this model provides data for.
-        """
-        # pylint: disable=arguments-differ
-        return len(self.columnNames)
-
-    def GetCount(self):
-        """
-        Report the number of rows in the model
-        """
-        # pylint: disable=arguments-differ
-        return len(self.tasksData)
-
-    def GetAttrByRow(self, row, col, attr):
-        """
-        Called to check if non-standard attributes should be
-        used in the cell at (row, col)
-        """
-        # pylint: disable=unused-argument
-        # pylint: disable=arguments-differ
-        # pylint: disable=no-self-use
-        return False
-
-    def DeleteAllRows(self):
-        """
-        Delete all rows.
-        """
-        rowsDeleted = []
-        for row in reversed(range(0, self.GetCount())):
-            self.tasksData[row].Cancel()
-            del self.tasksData[row]
-            rowsDeleted.append(row)
-
-        # notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rowsDeleted)
-        else:
-            wx.CallAfter(self.RowsDeleted, rowsDeleted)
-
-    def GetMaxDataViewIdFromExistingRows(self):
-        """
-        Get maximum dataview ID from existing rows.
-        """
-        maxDataViewId = 0
-        for row in range(0, self.GetCount()):
-            if self.tasksData[row].GetDataViewId() > maxDataViewId:
-                maxDataViewId = self.tasksData[row].GetDataViewId()
-        return maxDataViewId
-
-    def GetMaxDataViewId(self):
-        """
-        Get maximum dataview ID.
-        """
-        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
-            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
-        return self.maxDataViewId
-
-    def TryRowValueChanged(self, row, col):
-        """
-        Use try/except when calling RowValueChanged, because
-        sometimes there are timing issues which raise wx
-        assertions suggesting that the row index we are trying
-        to report a change on is greater than or equal to the
-        total number of rows in the model.
-        """
-        try:
-            if row < self.GetCount():
-                self.RowValueChanged(row, col)
-            else:
-                logger.warning("TryRowValueChanged called with "
-                               "row=%d, self.GetRowCount()=%d" %
-                               (row, self.GetRowCount()))
-                self.RowValueChanged(row, col)
-        except wx.PyAssertionError:
-            logger.warning(traceback.format_exc())
-
     def AddRow(self, taskModel):
-        """ Add a task to the Tasks view and activate it. """
-        self.tasksData.append(taskModel)
-        # Ensure that we save the largest ID used so far:
-        self.GetMaxDataViewId()
-        # Notify views
-        if threading.current_thread().name == "MainThread":
-            self.RowAppended()
-        else:
-            wx.CallAfter(self.RowAppended)
+        """
+        Add a task to the Tasks view and activate it.
+        """
+        super(TasksModel, self).AddRow(taskModel)
 
         def JobFunc(taskModel, tasksModel, row, col):
             """
@@ -314,7 +185,7 @@ class TasksModel(DataViewIndexListModel):
                 wx.GetApp().GetMainFrame().SetStatusMessage(message)
                 return
 
-        row = len(self.tasksData) - 1
+        row = len(self.rowsData) - 1
         col = self.columnKeys.index("finishTime")
         delta = taskModel.GetStartTime() - datetime.now()
         millis = delta.total_seconds() * 1000
@@ -323,8 +194,7 @@ class TasksModel(DataViewIndexListModel):
                 millis = 1
             else:
                 raise Exception("Scheduled time for task ID %d "
-                                "is in the past."
-                                % taskModel.GetDataViewId())
+                                "is in the past." % taskModel.dataViewId)
         args = [taskModel, self, row, col]
 
         def ScheduleTask():
@@ -343,5 +213,5 @@ class TasksModel(DataViewIndexListModel):
         """
         Shut down all tasks.
         """
-        for task in self.tasksData:
+        for task in self.rowsData:
             task.GetCallLater().Stop()

@@ -17,7 +17,6 @@ class UserModel(object):
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     # pylint: disable=missing-docstring
-    # pylint: disable=too-many-instance-attributes
     userNotFoundString = "USER NOT FOUND IN MYTARDIS"
 
     def __init__(self, settingsModel=None, dataViewId=None,
