@@ -122,7 +122,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
 
         # Simulate ConnectionError while trying to access MyTardis URL:
         sys.stderr.write(
-            "\nSimulating connection error while uploading file...\n")
+            "\nAsking fake MyTardis server to shut down abruptly...\n")
         loggerOutput = logger.loggerOutput.getvalue()
         SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
@@ -131,4 +131,6 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
-        self.assertIn("urlopen error", newLogs)
+        self.assertTrue(
+            "urlopen error [Errno 32] Broken pipe" in newLogs or
+            "ConnectionError: ('Connection aborted" in newLogs)
