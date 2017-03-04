@@ -131,6 +131,10 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        # We should see some sort of connection error in the log, but we don't
+        # know which one it will be.
+        # Errno 10053 is a Winsock error: "Software caused connection abort"
         self.assertTrue(
             "urlopen error [Errno 32] Broken pipe" in newLogs or
-            "BadStatusLine" in newLogs)
+            "BadStatusLine" in newLogs or
+            "urlopen error [Errno 10053]" in newLogs)
