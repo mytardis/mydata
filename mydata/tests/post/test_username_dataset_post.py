@@ -133,4 +133,4 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
         self.assertTrue(
             "urlopen error [Errno 32] Broken pipe" in newLogs or
-            "ConnectionError: ('Connection aborted" in newLogs)
+            "BadStatusLine" in newLogs)
