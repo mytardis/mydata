@@ -14,22 +14,23 @@ import traceback
 import psutil
 
 from ..logs import logger
+from ..settings import SETTINGS
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
 
 
-def UpdateAutostartFile(settingsModel):
+def UpdateAutostartFile():
     """
     Ensure that MyData starts automatically when the user logs in if
     the "Start Automatically" checkbox is ticked in the Advanced tab
     of the Settings dialog.
     """
     if sys.platform.startswith("win"):
-        UpdateWindowsAutostartFile(settingsModel)
+        UpdateWindowsAutostartFile()
     elif sys.platform.startswith("darwin"):
-        UpdateMacAutostartFile(settingsModel)
+        UpdateMacAutostartFile()
     elif sys.platform.startswith("linux") and hasattr(sys, "frozen"):
-        UpdateLinuxAutostartFile(settingsModel)
+        UpdateLinuxAutostartFile()
 
 
 def IsMyDataShortcutInWinStartupItems(allUsers=False):
@@ -142,7 +143,7 @@ oFS.DeleteFile sLinkFile
         logger.error(traceback.format_exc())
 
 
-def UpdateWindowsAutostartFile(settingsModel):
+def UpdateWindowsAutostartFile():
     """
     Ensure that MyData starts automatically on Windows when the user
     logs in if the "Start Automatically" checkbox is ticked in the
@@ -161,20 +162,20 @@ def UpdateWindowsAutostartFile(settingsModel):
     else:
         logger.info("Didn't find MyData shortcut in common startup items.")
     if (shortcutInStartupItems or shortcutInCommonStartupItems) \
-            and settingsModel.advanced.startAutomaticallyOnLogin:
+            and SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.debug("MyData is already set to start automatically "
                      "on login.")
     elif (not shortcutInStartupItems and
           not shortcutInCommonStartupItems) and \
-            settingsModel.advanced.startAutomaticallyOnLogin:
+            SETTINGS.advanced.startAutomaticallyOnLogin:
         AddMyDataToWinStartupFolder()
     elif (shortcutInStartupItems or
           shortcutInCommonStartupItems) and \
-            not settingsModel.advanced.startAutomaticallyOnLogin:
+            not SETTINGS.advanced.startAutomaticallyOnLogin:
         RemoveMyDataFromWinStartupFolder()
 
 
-def UpdateMacAutostartFile(settingsModel):
+def UpdateMacAutostartFile():
     """
     Ensure that MyData starts automatically on macOS when the user
     logs in if the "Start Automatically" checkbox is ticked in the
@@ -195,11 +196,11 @@ def UpdateMacAutostartFile(settingsModel):
                                                shell=True)
     loginItems = [item.strip() for item in
                   loginItemsString.split(',')]
-    if 'MyData' in loginItems and settingsModel.advanced.startAutomaticallyOnLogin:
+    if 'MyData' in loginItems and SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.debug("MyData is already set to start automatically "
                      "on login.")
     elif 'MyData' not in loginItems and \
-            settingsModel.advanced.startAutomaticallyOnLogin:
+            SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.info("Adding MyData to login items.")
         pathToMyDataApp = "/Applications/MyData.app"
         if hasattr(sys, "frozen"):
@@ -216,7 +217,7 @@ def UpdateMacAutostartFile(settingsModel):
             logger.error("Received exit code %d from %s"
                          % (exitCode, cmdString))
     elif 'MyData' in loginItems and \
-            not settingsModel.advanced.startAutomaticallyOnLogin:
+            not SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.info("Removing MyData from login items.")
         applescript = \
             'tell application "System Events" to ' \
@@ -228,7 +229,7 @@ def UpdateMacAutostartFile(settingsModel):
                          % (exitCode, cmdString))
 
 
-def UpdateLinuxAutostartFile(settingsModel):
+def UpdateLinuxAutostartFile():
     """
     Ensure that MyData starts automatically on Linux when the user
     logs in if the "Start Automatically" checkbox is ticked in the
@@ -236,7 +237,7 @@ def UpdateLinuxAutostartFile(settingsModel):
     """
     autostartDir = os.path.join(os.path.expanduser('~'),
                                 ".config", "autostart")
-    if settingsModel.advanced.startAutomaticallyOnLogin:
+    if SETTINGS.advanced.startAutomaticallyOnLogin:
         if not os.path.exists(autostartDir):
             os.makedirs(autostartDir)
         pathToMyDataDesktop = \

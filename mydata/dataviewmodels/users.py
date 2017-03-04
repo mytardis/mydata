@@ -7,6 +7,7 @@ import threading
 
 import wx
 
+from ..settings import SETTINGS
 from ..utils import Compare
 from .dataview import MyDataDataViewModel
 
@@ -17,13 +18,10 @@ class UsersModel(MyDataDataViewModel):
     and the tabular data displayed on that tab view.
     """
     # pylint: disable=arguments-differ
-    def __init__(self, settingsModel):
+    def __init__(self):
         super(UsersModel, self).__init__()
-
-        self.settingsModel = settingsModel
-
         self.columnNames = ["Id", "Username", "Name", "Email"]
-        self.columnKeys = ["dataViewId", "username", "name", "email"]
+        self.columnKeys = ["dataViewId", "username", "fullName", "email"]
         self.defaultColumnWidths = [40, 100, 200, 260]
 
     def Filter(self, searchString):
@@ -39,9 +37,9 @@ class UsersModel(MyDataDataViewModel):
             self.unfilteredData = list(self.rowsData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.rowsData[row].GetUsername().lower() and \
-                    query not in self.rowsData[row].GetName().lower() and \
-                    query not in self.rowsData[row].GetEmail().lower():
+            if query not in self.rowsData[row].username.lower() and \
+                    query not in self.rowsData[row].fullName.lower() and \
+                    query not in self.rowsData[row].email.lower():
                 self.filteredData.append(self.rowsData[row])
                 del self.rowsData[row]
                 # notify the view(s) using this model that it has been removed
@@ -52,10 +50,10 @@ class UsersModel(MyDataDataViewModel):
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fud = self.filteredData[filteredRow]
-            if query in fud.GetName().lower() or \
-                    query in fud.GetUsername().lower() or \
-                    query in fud.GetEmail().lower():
+            userModel = self.filteredData[filteredRow]
+            if query in userModel.fullName.lower() or \
+                    query in userModel.username.lower() or \
+                    query in userModel.email.lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -64,18 +62,18 @@ class UsersModel(MyDataDataViewModel):
                 ascending = True
                 while row < self.GetRowCount() and \
                         self.Compare(self.rowsData[row],
-                                     fud, col, ascending) < 0:
+                                     userModel, col, ascending) < 0:
                     row += 1
 
                 if row == self.GetRowCount():
-                    self.rowsData.append(fud)
+                    self.rowsData.append(userModel)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowAppended()
                     else:
                         wx.CallAfter(self.RowAppended)
                 else:
-                    self.rowsData.insert(row, fud)
+                    self.rowsData.insert(row, userModel)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowInserted(row)
@@ -110,12 +108,13 @@ class UsersModel(MyDataDataViewModel):
             return Compare(userRecord1.GetValueForKey(self.columnKeys[col]),
                            userRecord2.GetValueForKey(self.columnKeys[col]))
 
-    def GetNumUserOrGroupFolders(self):
+    @staticmethod
+    def GetNumUserOrGroupFolders():
         """
         Get number of user or group folders.
 
         Fast method, ignoring filters.
         """
-        dataDir = self.settingsModel.general.dataDirectory
+        dataDir = SETTINGS.general.dataDirectory
         userOrGroupFolderNames = os.walk(dataDir).next()[1]
         return len(userOrGroupFolderNames)

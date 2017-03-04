@@ -11,6 +11,7 @@ import time
 
 import wx
 
+from ..settings import SETTINGS
 from ..models.task import TaskModel
 from ..models.settings import LastSettingsUpdateTrigger
 from ..logs import logger
@@ -47,8 +48,7 @@ class ScheduleController(object):
     """
     Functionality for scheduling tasks.
     """
-    def __init__(self, settingsModel, tasksModel):
-        self.settingsModel = settingsModel
+    def __init__(self, tasksModel):
         self.tasksModel = tasksModel
 
     def ApplySchedule(self, event, runManually=False,
@@ -58,14 +58,14 @@ class ScheduleController(object):
         the Schedule tab of the Settings dialog.
         """
         logger.debug("runManually: %s" % str(runManually))
-        scheduleType = self.settingsModel.schedule.scheduleType
+        scheduleType = SETTINGS.schedule.scheduleType
         logger.debug("Schedule Type: %s" % scheduleType)
         if scheduleType == "On Startup" and \
-                self.settingsModel.lastSettingsUpdateTrigger == \
+                SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
             self.CreateOnStartupTask(event, needToValidateSettings)
         elif scheduleType == "On Settings Saved" and \
-                self.settingsModel.lastSettingsUpdateTrigger == \
+                SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE:
             self.CreateOnSettingsSavedTask(event)
         elif scheduleType == "Manually":
@@ -180,8 +180,8 @@ class ScheduleController(object):
         logger.debug("Schedule type is Once.")
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
-            datetime.combine(self.settingsModel.schedule.scheduledDate,
-                             self.settingsModel.schedule.scheduledTime)
+            datetime.combine(SETTINGS.schedule.scheduledDate,
+                             SETTINGS.schedule.scheduledTime)
         if startTime < datetime.now():
             delta = datetime.now() - startTime
             if delta.total_seconds() < 10:
@@ -189,7 +189,7 @@ class ScheduleController(object):
             else:
                 message = "Scheduled time is in the past."
                 logger.error(message)
-                if self.settingsModel.lastSettingsUpdateTrigger != \
+                if SETTINGS.lastSettingsUpdateTrigger != \
                         LastSettingsUpdateTrigger.READ_FROM_DISK:
                     if wx.PyApp.IsMainLoopRunning():
                         wx.MessageBox(message, "MyData", wx.ICON_ERROR)
@@ -222,7 +222,7 @@ class ScheduleController(object):
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
-                             self.settingsModel.schedule.scheduledTime)
+                             SETTINGS.schedule.scheduledTime)
         if startTime < datetime.now():
             startTime = startTime + timedelta(days=1)
         timeString = startTime.strftime("%I:%M %p")
@@ -252,19 +252,19 @@ class ScheduleController(object):
         scheduleType = "Weekly"
         logger.debug("Schedule type is Weekly.")
         jobDesc = "Scan folders and upload datafiles"
-        days = [self.settingsModel.schedule.mondayChecked,
-                self.settingsModel.schedule.tuesdayChecked,
-                self.settingsModel.schedule.wednesdayChecked,
-                self.settingsModel.schedule.thursdayChecked,
-                self.settingsModel.schedule.fridayChecked,
-                self.settingsModel.schedule.saturdayChecked,
-                self.settingsModel.schedule.sundayChecked]
+        days = [SETTINGS.schedule.mondayChecked,
+                SETTINGS.schedule.tuesdayChecked,
+                SETTINGS.schedule.wednesdayChecked,
+                SETTINGS.schedule.thursdayChecked,
+                SETTINGS.schedule.fridayChecked,
+                SETTINGS.schedule.saturdayChecked,
+                SETTINGS.schedule.sundayChecked]
         if not max(days):
             logger.warning("No days selected for weekly schedule.")
             return
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
-                             self.settingsModel.schedule.scheduledTime)
+                             SETTINGS.schedule.scheduledTime)
         while not days[startTime.weekday()]:
             startTime = startTime + timedelta(days=1)
         timeString = startTime.strftime("%I:%M %p")
@@ -295,8 +295,8 @@ class ScheduleController(object):
         scheduleType = "Timer"
         logger.debug("Schedule type is Timer.")
         jobDesc = "Scan folders and upload datafiles"
-        intervalMinutes = self.settingsModel.schedule.timerMinutes
-        if self.settingsModel.lastSettingsUpdateTrigger == \
+        intervalMinutes = SETTINGS.schedule.timerMinutes
+        if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
             startTime = datetime.now() + timedelta(seconds=5)
         else:

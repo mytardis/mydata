@@ -6,13 +6,14 @@ import sys
 import tempfile
 
 import mydata.models.settings.validation
-from .. import MyDataSettingsTester
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
+from ..utils import StartFakeMyTardisServer
+from ..utils import WaitForFakeMyTardisServerToStart
+from .. import MyDataSettingsTester
 
 
 class SettingsValidationTester(MyDataSettingsTester):
@@ -26,20 +27,20 @@ class SettingsValidationTester(MyDataSettingsTester):
         will only be called once, so only one app will be created.
         """
         super(SettingsValidationTester, self).setUp()
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
+            "../testdata/testdataUsernameDataset_POST.cfg"))
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath,
-                                           checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.Update(SettingsModel(configPath=configPath,
+                                      checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        SaveSettingsToDisk(self.settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk()
 
     def test_settings_validation(self):
         """
@@ -49,72 +50,74 @@ class SettingsValidationTester(MyDataSettingsTester):
 
         # Let's populate some settings which will trigger warnings
         # when using MyData's Test Run feature:
-        self.settingsModel.filters.ignoreOldDatasets = True
-        self.settingsModel.filters.ignoreNewFiles = True
-        self.settingsModel.filters.userFilter = "*"
-        self.settingsModel.filters.datasetFilter = "*"
-        self.settingsModel.filters.experimentFilter = "*"
-        self.settingsModel.advanced.uploadInvalidUserOrGroupFolders = False
-        folderStructure = self.settingsModel.advanced.folderStructure
+        SETTINGS.filters.ignoreOldDatasets = True
+        SETTINGS.filters.ignoreNewFiles = True
+        SETTINGS.filters.userFilter = "*"
+        SETTINGS.filters.datasetFilter = "*"
+        SETTINGS.filters.experimentFilter = "*"
+        SETTINGS.advanced.uploadInvalidUserOrGroupFolders = False
+        folderStructure = SETTINGS.advanced.folderStructure
         self.assertEqual(folderStructure, 'Username / Dataset')
-        ValidateSettings(self.settingsModel, testRun=True)
-        self.settingsModel.advanced.folderStructure = 'User Group / Dataset'
-        ValidateSettings(self.settingsModel, testRun=True)
-        self.settingsModel.advanced.folderStructure = folderStructure
+        ValidateSettings(testRun=True)
+        SETTINGS.advanced.folderStructure = 'User Group / Dataset'
+        ValidateSettings(testRun=True)
+        SETTINGS.advanced.folderStructure = folderStructure
 
         # Now let's make some settings invalid and test validation:
 
         # Test missing MyTardis URL.
-        self.settingsModel.general.myTardisUrl = ""
+        SETTINGS.general.myTardisUrl = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
 
         # Test invalid MyTardis URL:
-        self.settingsModel.general.myTardisUrl = "invalid://tardis.url"
+        SETTINGS.general.myTardisUrl = "invalid://tardis.url"
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Test invalid HTTP status code from MyTardis URL:
-        self.settingsModel.general.myTardisUrl = \
+        SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/401" % self.fakeMyTardisUrl
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Test invalid HTTP status code from MyTardis URL:
-        self.settingsModel.general.myTardisUrl = \
+        SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Simulate timeout while trying to access MyTardis URL:
         timeout = mydata.models.settings.validation.DEFAULT_TIMEOUT
         mydata.models.settings.validation.DEFAULT_TIMEOUT = \
             sys.float_info.epsilon
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
         mydata.models.settings.validation.DEFAULT_TIMEOUT = timeout
 
         # Simulate ConnectionError while trying to access MyTardis URL:
-        self.settingsModel.general.myTardisUrl = \
+        sys.stderr.write(
+            "\n*** Asking fake MyTardis server to shut down abruptly...\n\n")
+        SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Now we need to restart the fake MyTardis server, because
         # our last test asked it to shut down abruptly, simulating
@@ -123,106 +126,106 @@ class SettingsValidationTester(MyDataSettingsTester):
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
 
         # Test missing Facility Name:
-        self.settingsModel.general.facilityName = ""
+        SETTINGS.general.facilityName = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "facility_name")
-        self.settingsModel.general.facilityName = "Test Facility"
+        SETTINGS.general.facilityName = "Test Facility"
 
         # Test invalid Facility Name:
-        self.settingsModel.general.facilityName = "Invalid Facility"
+        SETTINGS.general.facilityName = "Invalid Facility"
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "facility_name")
-        self.settingsModel.general.facilityName = "Test Facility"
+        SETTINGS.general.facilityName = "Test Facility"
 
         # Test another invalid Facility Name:
         # This simulates a bug leading to ValidateSettings attempting
         # to validate a non-string as though it were a string.
         # A logged exception and a failed settings validation is better
         # than having the GUI become unresponsive.
-        self.settingsModel.general.facilityName = 12345  # pylint: disable=redefined-variable-type
+        SETTINGS.general.facilityName = 12345  # pylint: disable=redefined-variable-type
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         # With this type of exception, ValidateSettings can't be expected
         # to provide the invalid field name - it's just a catch all
         # exception:
         self.assertEqual(invalidSettings.field, "")
-        self.settingsModel.general.facilityName = "Test Facility"
+        SETTINGS.general.facilityName = "Test Facility"
 
         # Test missing Instrument Name:
-        self.settingsModel.general.instrumentName = ""
+        SETTINGS.general.instrumentName = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "instrument_name")
-        self.settingsModel.general.instrumentName = "Test Instrument"
+        SETTINGS.general.instrumentName = "Test Instrument"
 
         # Test missing Contact Name:
-        self.settingsModel.general.contactName = ""
+        SETTINGS.general.contactName = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "contact_name")
-        self.settingsModel.general.contactName = "Test User"
+        SETTINGS.general.contactName = "Test User"
 
         # Test missing Contact Email:
-        self.settingsModel.general.contactEmail = ""
+        SETTINGS.general.contactEmail = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "contact_email")
-        self.settingsModel.general.contactEmail = "testuser@example.com"
+        SETTINGS.general.contactEmail = "testuser@example.com"
 
         # Test invalid Contact Email:
-        self.settingsModel.general.contactEmail = "invalid.email_address"
+        SETTINGS.general.contactEmail = "invalid.email_address"
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "contact_email")
-        self.settingsModel.general.contactEmail = "testuser@example.com"
+        SETTINGS.general.contactEmail = "testuser@example.com"
 
         # Test invalid data directory:
-        dataDirectory = self.settingsModel.general.dataDirectory
-        self.settingsModel.general.dataDirectory = "/invalid/path"
+        dataDirectory = SETTINGS.general.dataDirectory
+        SETTINGS.general.dataDirectory = "/invalid/path"
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "data_directory")
-        self.settingsModel.general.dataDirectory = dataDirectory
+        SETTINGS.general.dataDirectory = dataDirectory
 
         # Test missing MyTardis Username:
-        self.settingsModel.general.username = ""
+        SETTINGS.general.username = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "username")
-        self.settingsModel.general.username = "testfacility"
+        SETTINGS.general.username = "testfacility"
 
         # Test missing MyTardis API Key:
-        self.settingsModel.general.apiKey = ""
+        SETTINGS.general.apiKey = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "api_key")
-        self.settingsModel.general.apiKey = "????????"
+        SETTINGS.general.apiKey = "????????"
 
         # Test invalid MyTardis API Key:
-        self.settingsModel.general.apiKey = "invalid"
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         # Settings validation doesn't know whether it's the username
         # or API key which is wrong when authentication fails:
         self.assertEqual(invalidSettings.field, "username")
-        self.settingsModel.general.apiKey = "????????"
+        SETTINGS.general.apiKey = "????????"
 
         # Test globs validations for valid includes file:
         includesFileObj = tempfile.NamedTemporaryFile()
@@ -230,25 +233,25 @@ class SettingsValidationTester(MyDataSettingsTester):
         includesFileObj.close()
         with open(includesFilePath, 'w') as includesFile:
             includesFile.write("*.tif\n")
-        self.settingsModel.filters.useIncludesFile = True
-        self.settingsModel.filters.includesFile = includesFilePath
-        ValidateSettings(self.settingsModel, testRun=True)
+        SETTINGS.filters.useIncludesFile = True
+        SETTINGS.filters.includesFile = includesFilePath
+        ValidateSettings(testRun=True)
         os.remove(includesFilePath)
 
         # Test globs validation for non-existent includes file:
-        self.settingsModel.filters.useIncludesFile = True
-        self.settingsModel.filters.includesFile = ("/path/doesn't/exist")
+        SETTINGS.filters.useIncludesFile = True
+        SETTINGS.filters.includesFile = ("/path/doesn't/exist")
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "includes_file")
 
         # Test globs validation for includes file path which is
         # actually a directory:
-        self.settingsModel.filters.useIncludesFile = True
-        self.settingsModel.filters.includesFile = os.getcwd()
+        SETTINGS.filters.useIncludesFile = True
+        SETTINGS.filters.includesFile = os.getcwd()
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "includes_file")
 
@@ -258,43 +261,43 @@ class SettingsValidationTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata",
             "testdataDataset/Flowers/Pond_Water_Hyacinth_Flowers.jpg"))
-        self.settingsModel.filters.useIncludesFile = True
-        self.settingsModel.filters.includesFile = includesFilePath
+        SETTINGS.filters.useIncludesFile = True
+        SETTINGS.filters.includesFile = includesFilePath
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
 
         # Test globs validation where checkbox is ticked for using
         # an includes file, but no includes file is specified:
-        self.settingsModel.filters.useIncludesFile = True
-        self.settingsModel.filters.includesFile = ""
+        SETTINGS.filters.useIncludesFile = True
+        SETTINGS.filters.includesFile = ""
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "includes_file")
 
         # Test "Test Run" warnings triggered when use_includes_file
         # and/or use_excludes_file are activated.  The warning should
         # appear in STDERR output of this test.
-        self.settingsModel.filters.useIncludesFile = True
+        SETTINGS.filters.useIncludesFile = True
         includesFileObj = tempfile.NamedTemporaryFile()
         includesFilePath = includesFileObj.name
         includesFileObj.close()
         with open(includesFilePath, 'w') as includesFile:
             includesFile.write("*.tif\n")
-        self.settingsModel.filters.includesFile = includesFilePath
-        self.settingsModel.filters.useExcludesFile = True
+        SETTINGS.filters.includesFile = includesFilePath
+        SETTINGS.filters.useExcludesFile = True
         excludesFileObj = tempfile.NamedTemporaryFile()
         excludesFilePath = excludesFileObj.name
         excludesFileObj.close()
         with open(excludesFilePath, 'w') as excludesFile:
             excludesFile.write("*.tif\n")
-        self.settingsModel.filters.excludesFile = excludesFilePath
-        ValidateSettings(self.settingsModel, testRun=True)
+        SETTINGS.filters.excludesFile = excludesFilePath
+        ValidateSettings(testRun=True)
 
         # Test "Test Run" warnings triggered when use_includes_file
         # and/or use_excludes_file are activated.  The warning should
         # appear in STDERR output of this test.
-        self.settingsModel.filters.useIncludesFile = False
-        self.settingsModel.filters.useExcludesFile = True
-        ValidateSettings(self.settingsModel, testRun=True)
+        SETTINGS.filters.useIncludesFile = False
+        SETTINGS.filters.useExcludesFile = True
+        ValidateSettings(testRun=True)

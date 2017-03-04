@@ -7,7 +7,7 @@ import wx
 
 from ...dataviewmodels.groups import GroupsModel
 from ...models.group import GroupModel
-from ...views.groups import GroupsView
+from ...views.dataview import MyDataDataView
 
 
 class GroupsViewTester(unittest.TestCase):
@@ -17,9 +17,8 @@ class GroupsViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='GroupsViewTester')
-        self.settingsModel = None
-        self.groupsModel = GroupsModel(self.settingsModel)
-        self.groupsView = GroupsView(self.frame, groupsModel=self.groupsModel)
+        self.groupsModel = GroupsModel()
+        self.groupsView = MyDataDataView(self.frame, self.groupsModel)
         self.frame.Show()
 
     def test_groups_view(self):

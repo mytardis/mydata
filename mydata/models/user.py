@@ -5,6 +5,7 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import urllib
 import requests
 
+from ..settings import SETTINGS
 from ..utils.exceptions import DoesNotExist
 from ..logs import logger
 from .group import GroupModel
@@ -18,16 +19,13 @@ class UserModel(object):
     """
     userNotFoundString = "USER NOT FOUND IN MYTARDIS"
 
-    def __init__(self, settingsModel=None, dataViewId=None,
-                 username=None, name=None,
-                 email=None, userRecordJson=None,
-                 userNotFoundInMyTardis=False):
-        self.settingsModel = settingsModel
+    def __init__(self, dataViewId=None, username=None, fullName=None, email=None,
+                 userRecordJson=None, userNotFoundInMyTardis=False):
         self.userId = None
         self.dataViewId = dataViewId
-        self.username = username
-        self.name = name
-        self.email = email
+        self._username = username
+        self._fullName = fullName
+        self._email = email
         self.groups = []
         self.userRecordJson = userRecordJson
         self.userNotFoundInMyTardis = userNotFoundInMyTardis
@@ -35,67 +33,90 @@ class UserModel(object):
         if userRecordJson is not None:
             self.userId = userRecordJson['id']
             if username is None:
-                self.username = userRecordJson['username']
-            if name is None:
-                self.name = userRecordJson['first_name'] + " " + \
+                self._username = userRecordJson['username']
+            if fullName is None:
+                self._fullName = userRecordJson['first_name'] + " " + \
                     userRecordJson['last_name']
             if email is None:
-                self.email = userRecordJson['email']
+                self._email = userRecordJson['email']
             for group in userRecordJson['groups']:
-                self.groups.append(GroupModel(settingsModel=settingsModel,
-                                              groupJson=group))
+                self.groups.append(GroupModel(groupJson=group))
 
-    def GetUsername(self):
+    @property
+    def username(self):
         """
         Return the username or a string indicating that
         the user was not found on the MyTardis server
         """
-        if self.username:
-            return self.username
+        if self._username:
+            return self._username
         else:
             return UserModel.userNotFoundString
 
-    def GetName(self):
+    @username.setter
+    def username(self, username):
+        """
+        Set the username
+        """
+        self._username = username
+
+    @property
+    def fullName(self):
         """
         Return the user's full name or a string indicating
         that the user was not found on the MyTardis server
         """
-        if self.name:
-            return self.name
+        if self._fullName:
+            return self._fullName
         else:
             return UserModel.userNotFoundString
 
-    def GetEmail(self):
+    @fullName.setter
+    def fullName(self, fullName):
+        """
+        Set the user's full name
+        """
+        self._fullName = fullName
+
+    @property
+    def email(self):
         """
         Return the user's email address or a string indicating
         that the user was not found on the MyTardis server
         """
-        if self.email:
-            return self.email
+        if self._email:
+            return self._email
         else:
             return UserModel.userNotFoundString
+
+    @email.setter
+    def email(self, email):
+        """
+        Set the user's email address
+        """
+        self._email = email
 
     def GetValueForKey(self, key):
         """
         Return value of field from the User model
         to display in the Users or Folders view
         """
-        if key in self.__dict__ and self.__dict__[key]:
-            return self.__dict__[key]
-        elif key in ('username', 'name', 'email') and \
+        if hasattr(self, key) and getattr(self, key, None):
+            return getattr(self, key)
+        elif key in ('username', 'fullName', 'email') and \
                 self.userNotFoundInMyTardis:
             return UserModel.userNotFoundString
         else:
             return None
 
     @staticmethod
-    def GetUserByUsername(settings, username):
+    def GetUserByUsername(username):
         """
         Get user by username
         """
         url = "%s/api/v1/user/?format=json&username=%s" \
-            % (settings.general.myTardisUrl, username)
-        response = requests.get(url=url, headers=settings.defaultHeaders)
+            % (SETTINGS.general.myTardisUrl, username)
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code != 200:
             HandleHttpError(response)
         userRecordsJson = response.json()
@@ -107,18 +128,18 @@ class UserModel(object):
                 response=response)
         else:
             logger.debug("Found user record for username '" + username + "'.")
-            return UserModel(settingsModel=settings, username=username,
+            return UserModel(username=username,
                              userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
-    def GetUserByEmail(settings, email):
+    def GetUserByEmail(email):
         """
         Get user by email
         """
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
-            % (settings.general.myTardisUrl,
+            % (SETTINGS.general.myTardisUrl,
                urllib.quote(email.encode('utf-8')))
-        response = requests.get(url=url, headers=settings.defaultHeaders)
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code != 200:
             HandleHttpError(response)
         userRecordsJson = response.json()
@@ -131,8 +152,7 @@ class UserModel(object):
                 response=response)
         else:
             logger.debug("Found user record for email '" + email + "'.")
-            return UserModel(settingsModel=settings,
-                             userRecordJson=userRecordsJson['objects'][0])
+            return UserModel(userRecordJson=userRecordsJson['objects'][0])
 
 
 class UserProfileModel(object):

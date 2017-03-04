@@ -2,13 +2,11 @@
 Model class for MyTardis API v1's ExperimentResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-
-# pylint: disable=missing-docstring
-
 import json
 import urllib
 import requests
 
+from ..settings import SETTINGS
 from ..logs import logger
 from ..utils.exceptions import Unauthorized
 from ..utils.exceptions import DoesNotExist
@@ -16,6 +14,7 @@ from ..utils.exceptions import MultipleObjectsReturned
 from .user import UserProfileModel
 from .objectacl import ObjectAclModel
 from .schema import SchemaModel
+from . import HandleHttpError
 
 
 class ExperimentModel(object):
@@ -23,8 +22,7 @@ class ExperimentModel(object):
     Model class for MyTardis API v1's ExperimentResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel, experimentJson):
-        self.settingsModel = settingsModel
+    def __init__(self, experimentJson):
         self.json = experimentJson
 
     @staticmethod
@@ -41,10 +39,10 @@ class ExperimentModel(object):
                     "    Title: %s\n" \
                     "    Owner: %s" \
                     % (folderModel.GetRelPath(),
-                       folderModel.settingsModel.general.myTardisUrl,
-                       existingExperiment.GetViewUri(),
-                       existingExperiment.GetTitle(),
-                       folderModel.owner.GetUsername())
+                       SETTINGS.general.myTardisUrl,
+                       existingExperiment.viewUri,
+                       existingExperiment.title,
+                       folderModel.owner.username)
                 logger.testrun(message)
             return existingExperiment
         except DoesNotExist as err:
@@ -62,20 +60,17 @@ class ExperimentModel(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        settingsModel = folderModel.settingsModel
-
-        uploaderName = settingsModel.uploaderModel.GetName()
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+        uploaderName = SETTINGS.uploaderModel.name
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         userFolderName = folderModel.userFolderName
         groupFolderName = folderModel.groupFolderName
-        myTardisUrl = settingsModel.general.myTardisUrl
-        myTardisDefaultUsername = settingsModel.general.username
+        myTardisUrl = SETTINGS.general.myTardisUrl
         experimentTitle = folderModel.experimentTitle
 
         if folderModel.experimentTitleSetManually:
             expTitleEncoded = urllib.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
-                urllib.quote(settingsModel.advanced.folderStructure)
+                urllib.quote(SETTINGS.advanced.folderStructure)
             url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
                 "&title=" + expTitleEncoded + \
                 "&folder_structure=" + folderStructureEncoded
@@ -89,69 +84,25 @@ class ExperimentModel(object):
             url += "&group_folder_name=" + \
                 urllib.quote(groupFolderName.encode('utf-8'))
 
-        response = requests.get(url=url, headers=settingsModel.defaultHeaders)
-        try:
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
+        if response.status_code == 200:
             experimentsJson = response.json()
             numExperimentsFound = experimentsJson['meta']['total_count']
-            logger.debug(url)
-        except:
-            logger.error(url)
-            logger.error(response.text)
-            logger.error("response.status_code = " + str(response.status_code))
-            if response.status_code == 401:
-                message = "Failed to confirm existence of experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folder)
-                message += "\n\n"
-                message += "Please ask your MyTardis administrator to " \
-                           "check the permissions of the \"%s\" user " \
-                           "account." % myTardisDefaultUsername
-                raise Unauthorized(message)
-            elif response.status_code == 404:
-                message = "Failed to confirm existence of experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folder)
-                message += "\n\n"
-                modelClassOfObjectNotFound = None
+        else:
+            if response.status_code == 404:
                 try:
-                    errorResponse = response.json()
-                    if errorResponse['error_message'] == \
-                            "UserProfile matching query does not exist.":
+                    message = response.json()['error_message']
+                    modelClassOfObjectNotFound = None
+                    if "UserProfile" in message:
                         modelClassOfObjectNotFound = UserProfileModel
-                    elif errorResponse['error_message'] == \
-                            "Schema matching query does not exist.":
+                    elif "Schema" in message:
                         modelClassOfObjectNotFound = SchemaModel
-                    message += "A 404 (Not Found) error occurred while " \
-                               "attempting to retrieve the experiment " \
-                               "record:\n\n" \
-                               "    %s\n\n" % errorResponse['error_message']
-                except:
-                    message += "A 404 (Not Found) error occurred while " \
-                               "attempting to retrieve the experiment " \
-                               "record.  This could be caused by a missing " \
-                               "UserProfile record for user \"%s\" or it " \
-                               "could be caused by a missing Schema record " \
-                               "(see https://github.com/mytardis/" \
-                               "mytardis-app-mydata/blob/master/README.md)" \
-                               "\n\n" \
-                               "Turning on DEBUG mode on the MyTardis " \
-                               "server could help to isolate the problem." \
-                               % myTardisDefaultUsername
-                if modelClassOfObjectNotFound == UserProfileModel:
-                    message += "Please ask your MyTardis administrator to " \
-                               "ensure that a User Profile record exists " \
-                               "for the \"%s\" user account." \
-                               % myTardisDefaultUsername
-                elif modelClassOfObjectNotFound == SchemaModel:
-                    message += "Please ask your MyTardis administrator to " \
-                               "create the experiment metadata schema " \
-                               "described in the \"MyTardis Prerequisites\" " \
-                               "section of the MyData documentation:\n\n" \
-                               "http://mydata.readthedocs.org/en/latest/" \
-                               "mytardis-prerequisites.html"
-                raise DoesNotExist(message,
-                                   modelClass=modelClassOfObjectNotFound)
-            raise
+                    raise DoesNotExist(
+                        message, modelClass=modelClassOfObjectNotFound)
+                except (KeyError, ValueError):
+                    message = "Received 404 while looking up experiment(s)"
+                    raise DoesNotExist(message, modelClass=None)
+            HandleHttpError(response)
         if numExperimentsFound == 0:
             if folderModel.experimentTitleSetManually:
                 if userFolderName:
@@ -218,8 +169,7 @@ class ExperimentModel(object):
                         % uploaderName
 
             logger.debug(message)
-            return ExperimentModel(settingsModel,
-                                   experimentsJson['objects'][0])
+            return ExperimentModel(experimentsJson['objects'][0])
         elif numExperimentsFound > 1:
             message = "ERROR: Found multiple experiments matching " + \
                 "Uploader UUID for user '%s'" % userFolderName
@@ -236,7 +186,7 @@ class ExperimentModel(object):
                       "uploader \"%s\" and user folder \"%s\"%s " \
                       "for folder \"%s\"." \
                       % (uploaderName, userFolderName, groupFolderString,
-                         folderModel.folder)
+                         folderModel.folderName)
             message += "\n\n"
             message += "This shouldn't happen.  Please ask your " \
                        "MyTardis administrator to investigate."
@@ -247,24 +197,26 @@ class ExperimentModel(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        settingsModel = folderModel.settingsModel
+        """
+        Create a MyTardis experiment to create this folder's dataset within
+        """
         userFolderName = folderModel.userFolderName
-        hostname = settingsModel.uploaderModel.GetHostname()
+        hostname = SETTINGS.uploaderModel.hostname
         location = folderModel.location
         groupFolderName = folderModel.groupFolderName
         owner = folderModel.owner
-        ownerUsername = folderModel.owner.GetUsername()
+        ownerUsername = folderModel.owner.username
         try:
             ownerUserId = folderModel.owner.userId
         except:
             ownerUserId = None
 
-        uploaderName = settingsModel.uploaderModel.GetName()
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+        uploaderName = SETTINGS.uploaderModel.name
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         experimentTitle = folderModel.experimentTitle
 
-        myTardisUrl = settingsModel.general.myTardisUrl
-        myTardisDefaultUsername = settingsModel.general.username
+        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisDefaultUsername = SETTINGS.general.username
 
         if userFolderName:
             message = "Creating experiment for uploader '%s', " \
@@ -319,12 +271,11 @@ class ExperimentModel(object):
                 {"name": "group_folder_name", "value": groupFolderName})
         url = myTardisUrl + "/api/v1/mydata_experiment/"
         logger.debug(url)
-        response = requests.post(headers=settingsModel.defaultHeaders,
+        response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=json.dumps(experimentJson))
         if response.status_code == 201:
             createdExperimentJson = response.json()
-            createdExperiment = ExperimentModel(settingsModel,
-                                                createdExperimentJson)
+            createdExperiment = ExperimentModel(createdExperimentJson)
             message = "Succeeded in creating experiment '%s' for uploader " \
                 "\"%s\" and user folder \"%s\"" \
                 % (experimentTitle, uploaderName, userFolderName)
@@ -332,7 +283,7 @@ class ExperimentModel(object):
                 message += " and group folder \"%s\"" % groupFolderName
             logger.debug(message)
 
-            facilityManagersGroup = settingsModel.facility.GetManagerGroup()
+            facilityManagersGroup = SETTINGS.facility.managerGroup
             ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                     facilityManagersGroup)
             # Avoid creating a duplicate ObjectACL if the user folder's
@@ -363,7 +314,7 @@ class ExperimentModel(object):
             if response.status_code == 401:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folder)
+                          % (experimentTitle, folderModel.folderName)
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator to " \
                            "check the permissions of the \"%s\" user " \
@@ -372,7 +323,7 @@ class ExperimentModel(object):
             elif response.status_code == 404:
                 message = "Couldn't create experiment \"%s\" " \
                           "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folder)
+                          % (experimentTitle, folderModel.folderName)
                 message += "\n\n"
                 modelClassOfObjectNotFound = None
                 try:
@@ -414,14 +365,31 @@ class ExperimentModel(object):
                 raise DoesNotExist(message,
                                    modelClass=modelClassOfObjectNotFound)
 
-    def GetId(self):
+    @property
+    def experimentId(self):
+        """
+        Return the experiment ID
+        """
         return self.json['id']
 
-    def GetTitle(self):
+    @property
+    def title(self):
+        """
+        Return the experiment title
+        """
         return self.json['title']
 
-    def GetResourceUri(self):
+    @property
+    def resourceUri(self):
+        """
+        Return the experiment's MyTardis API resource URI
+        e.g. /api/v1/experiment/123/
+        """
         return self.json['resource_uri']
 
-    def GetViewUri(self):
-        return "experiment/view/%d/" % (self.GetId(),)
+    @property
+    def viewUri(self):
+        """
+        Return the experiment's view URI
+        """
+        return "experiment/view/%d/" % self.experimentId

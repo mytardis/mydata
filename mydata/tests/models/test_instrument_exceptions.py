@@ -3,12 +3,13 @@ Test ability to handle instrument-related exceptions.
 """
 import os
 
-from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.instrument import InstrumentModel
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import InternalServerError
+from .. import MyDataTester
 
 
 class InstrumentExceptionsTester(MyDataTester):
@@ -25,41 +26,40 @@ class InstrumentExceptionsTester(MyDataTester):
         Test ability to handle instrument-related exceptions.
         """
         # pylint: disable=too-many-locals
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg")
+            "../testdata/testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg")
+            "../testdata", "testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        ValidateSettings(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings()
 
-        facility = settingsModel.facility
+        facility = SETTINGS.facility
         self.assertIsNotNone(facility)
 
-        apiKey = settingsModel.general.apiKey
-        settingsModel.general.apiKey = "invalid"
+        apiKey = SETTINGS.general.apiKey
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
-            _ = InstrumentModel.GetInstrument(settingsModel, facility,
+            _ = InstrumentModel.GetInstrument(facility,
                                               "Unauthorized Instrument")
         with self.assertRaises(Unauthorized):
-            _ = InstrumentModel.CreateInstrument(settingsModel, facility,
+            _ = InstrumentModel.CreateInstrument(facility,
                                                  "Unauthorized Instrument")
-        settingsModel.general.apiKey = apiKey
+        SETTINGS.general.apiKey = apiKey
 
-        settingsModel.general.myTardisUrl = \
+        SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
         with self.assertRaises(InternalServerError):
-            _ = InstrumentModel.CreateInstrument(settingsModel, facility,
-                                                 "Instrument name")
+            _ = InstrumentModel.CreateInstrument(facility, "Instrument name")
 
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        instrument = settingsModel.instrument
-        settingsModel.general.myTardisUrl = \
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        instrument = SETTINGS.instrument
+        SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
         with self.assertRaises(InternalServerError):
             instrument.Rename("New instrument name")

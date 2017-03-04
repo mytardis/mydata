@@ -48,6 +48,10 @@ EMPTY_API_LIST = {
     "objects": []
 }
 
+TASTYPIE_CANNED_ERROR = {
+    "error_message":
+    "Sorry, this request could not be processed. Please try again later."
+}
 
 class FakeMyTardisHandler(BaseHTTPRequestHandler):
     """
@@ -101,8 +105,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
             return
 
         if self.path.startswith("/api/v1/"):
@@ -112,8 +115,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                fakeJson = "{}"
-                self.wfile.write(json.dumps(fakeJson))
+                self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
                 return
             authorized = False
             authorization = self.headers.getheader("Authorization", "")
@@ -436,6 +438,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
             if match:
                 uuid = urllib.unquote(match.groups()[0])
                 existingApprovedRequest = (uuid == "1234567890")
+                missingStorageBoxAttribute = (uuid == "1234567891")
                 fingerprint = urllib.unquote(match.groups()[1])
             else:
                 self.send_response(400)
@@ -448,12 +451,13 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            if existingApprovedRequest:
+            if existingApprovedRequest or missingStorageBoxAttribute:
                 uploaderRegRequestsJson = copy.deepcopy(EMPTY_API_LIST)
                 uploaderRegRequestsJson['meta']['total_count'] = 1
                 uploaderRegRequestsJson['objects'] = [
                     {
                         "id": 25,
+                        "name": "Fake UploaderName",
                         "approved": True,
                         "approved_storage_box": {
                             "id": 10,
@@ -510,6 +514,17 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                         "uploader": "/api/v1/mydata_uploader/25/"
                     }
                 ]
+                if missingStorageBoxAttribute:
+                    uploaderRegRequest = uploaderRegRequestsJson['objects'][0]
+                    attrs = \
+                        uploaderRegRequest['approved_storage_box']['attributes']
+                    attrNum = -1
+                    for attr in attrs:
+                        if attr['key'] == 'scp_username':
+                            attrNum = attrs.index(attr)
+                            break
+                    if attrNum != -1:
+                        attrs.pop(attrNum)
             else:
                 uploaderRegRequestsJson = EMPTY_API_LIST
             self.wfile.write(json.dumps(uploaderRegRequestsJson))
@@ -569,7 +584,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 self.send_response(404)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                errorJson = {}
+                errorJson = TASTYPIE_CANNED_ERROR
                 self.wfile.write(json.dumps(errorJson))
                 return
             self.send_response(200)
@@ -992,8 +1007,11 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+            return
+
+        if self.path.startswith("/request/connectionerror/"):
+            self.server.server_close()
             return
 
         if self.path.startswith("/api/v1/"):
@@ -1016,17 +1034,24 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 self.wfile.write("</body></html>")
                 return
 
-        length = int(self.headers['Content-Length'])
-        ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
-        if ctype == 'multipart/form-data':
-            form = \
-                cgi.FieldStorage(
-                    fp=self.rfile, headers=self.headers,
-                    environ={'REQUEST_METHOD': 'POST',
-                             'CONTENT_TYPE': self.headers['Content-Type']})
-            postData = form['json_data']
-        else:
-            postData = json.loads(self.rfile.read(length))
+        try:
+            length = int(self.headers['Content-Length'])
+            ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
+            if ctype == 'multipart/form-data':
+                form = \
+                    cgi.FieldStorage(
+                        fp=self.rfile, headers=self.headers,
+                        environ={'REQUEST_METHOD': 'POST',
+                                 'CONTENT_TYPE': self.headers['Content-Type']})
+                postData = form['json_data']
+            else:
+                postData = json.loads(self.rfile.read(length))
+        except KeyError:
+            self.send_response(500)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+            return
 
         if self.path == "/api/v1/mydata_dataset_file/" or \
                 self.path == "/api/v1/dataset_file/":
@@ -1062,7 +1087,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                 self.send_response(404)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                errorJson = {}
+                errorJson = TASTYPIE_CANNED_ERROR
                 self.wfile.write(json.dumps(errorJson))
                 return
             self.send_response(201)
@@ -1244,8 +1269,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
             return
 
         if self.path.startswith("/api/v1/mydata_uploader/"):

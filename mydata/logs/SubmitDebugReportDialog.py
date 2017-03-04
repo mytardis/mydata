@@ -5,9 +5,6 @@ to a server.  The user can add their name, email and a comment.
 The dialog is launched from the "Submit debug log" button at
 the bottom of the Log tab within MyData's main window.
 """
-
-# pylint: disable=missing-docstring
-
 import os
 import sys
 import wx
@@ -237,22 +234,40 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.CenterOnParent()
 
     def OnCancel(self, event):
+        """
+        Close the Submit Debug Report dialog without submitting the report
+        """
         self.EndModal(wx.ID_CANCEL)
         event.Skip()
 
     def OnSubmit(self, event):
+        """
+        Close the Submit Debug Report dialog and submit the report
+        """
         self.EndModal(wx.ID_OK)
         event.Skip()
 
-    def GetName(self):
-        # pylint: disable=arguments-differ
+    def GetContactName(self):
+        """
+        Get the contact name to include in the header of the report
+        """
         return self.nameField.GetValue().strip()
 
-    def GetEmail(self):
+    def GetContactEmail(self):
+        """
+        Get the contact email to include in the header of the report
+        """
         return self.emailField.GetValue().strip()
 
     def GetComments(self):
+        """
+        Get the comments to include in the header of the report
+        """
         return self.commentsField.GetValue().strip()
 
     def GetPleaseContactMe(self):
+        """
+        Get the "Please Contact Me" checkbox state to include in
+        the header of the report
+        """
         return self.pleaseContactMeCheckBox.GetValue()

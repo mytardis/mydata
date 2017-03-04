@@ -5,7 +5,6 @@ import unittest
 import wx
 
 from ...MyData import MyDataFrame
-from ...models.settings import SettingsModel
 
 
 class MyDataMainFrameTester(unittest.TestCase):
@@ -14,11 +13,8 @@ class MyDataMainFrameTester(unittest.TestCase):
     """
     def setUp(self):
         self.app = wx.App()
-        self.settingsModel = SettingsModel(configPath=None)
         self.mydataFrame = MyDataFrame(
-            title="MyData",
-            style=wx.DEFAULT_FRAME_STYLE,
-            settingsModel=self.settingsModel)
+            title="MyData", style=wx.DEFAULT_FRAME_STYLE)
 
     def tearDown(self):
         self.mydataFrame.Hide()
@@ -29,7 +25,3 @@ class MyDataMainFrameTester(unittest.TestCase):
         Test ability to display MyData's main frame.
         """
         self.mydataFrame.Show()
-
-
-if __name__ == '__main__':
-    unittest.main()

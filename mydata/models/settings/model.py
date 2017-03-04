@@ -6,11 +6,6 @@ import traceback
 import threading
 
 from ...logs import logger
-from ...utils.exceptions import DuplicateKey
-from ...utils.exceptions import DoesNotExist
-from ..facility import FacilityModel
-from ..instrument import InstrumentModel
-from ..uploader import UploaderModel
 from .general import GeneralSettingsModel
 from .schedule import ScheduleSettingsModel
 from .filters import FiltersSettingsModel
@@ -42,7 +37,7 @@ class SettingsModel(object):
 
         self.connectivityCheckInterval = 30  # seconds
 
-        self.general = GeneralSettingsModel(self)
+        self.general = GeneralSettingsModel()
         self.schedule = ScheduleSettingsModel()
         self.filters = FiltersSettingsModel()
         self.advanced = AdvancedSettingsModel()
@@ -128,11 +123,12 @@ class SettingsModel(object):
         This could be called from multiple threads
         simultaneously, so it requires locking.
         """
+        from ..uploader import UploaderModel
         if self._uploaderModel:
             return self._uploaderModel
         try:
             self.createUploaderThreadingLock.acquire()
-            self._uploaderModel = UploaderModel(self)
+            self._uploaderModel = UploaderModel()
             return self._uploaderModel
         finally:
             self.createUploaderThreadingLock.release()
@@ -143,6 +139,12 @@ class SettingsModel(object):
         Set uploader model (representing this MyData instance)
         """
         self._uploaderModel = uploaderModel
+
+    def Update(self, settingsModel):
+        """
+        Update this instance from another
+        """
+        self.__dict__.update(settingsModel.__dict__)
 
     def RollBack(self):
         """
@@ -163,36 +165,6 @@ class SettingsModel(object):
             self.general.myTardisUrl == "" or \
             self.general.username == "" or \
             self.general.apiKey == ""
-
-    def RenameInstrument(self, facilityName,
-                         oldInstrumentName, newInstrumentName):
-        """
-        Rename the instrument
-        """
-        facilities = FacilityModel.GetMyFacilities(self)
-        facility = None
-        for facil in facilities:
-            if facilityName == facil.GetName():
-                facility = facil
-                break
-        if facility is None:
-            raise Exception("Facility is None in "
-                            "SettingsModel's RenameInstrument.")
-        try:
-            oldInstrument = \
-                InstrumentModel.GetInstrument(self, facility, oldInstrumentName)
-        except DoesNotExist:
-            raise Exception("Instrument record for old instrument "
-                            "name not found in SettingsModel's "
-                            "RenameInstrument.")
-        try:
-            _ = InstrumentModel.GetInstrument(self, facility,
-                                              newInstrumentName)
-            raise DuplicateKey(
-                message="Instrument with name \"%s\" "
-                        "already exists" % newInstrumentName)
-        except DoesNotExist:
-            oldInstrument.Rename(newInstrumentName)
 
     def SetDefaultConfig(self):
         """

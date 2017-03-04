@@ -1,6 +1,14 @@
 """
-Model classes for the settings displayed in the settings dialog
-and saved to disk in MyData.cfg
+Methods for saving / loading / retrieving settings between the
+global SETTINGS singleton, the settings dialog, and the MyData.cfg file.
+
+The global SETTINGS singleton is imported inline when needed to avoid
+circular dependencies.
+
+The methods for loading settings from disk and checking for updates
+on the MyTardis server can't use the global SETTINGS singleton, because
+they are called from SettingsModel's constructor which would cause a
+circular dependency, so we pass the settings as an argument instead.
 """
 import traceback
 import os
@@ -14,44 +22,53 @@ from ...logs import logger
 from .miscellaneous import LastSettingsUpdateTrigger
 
 
-def LoadSettings(settingsModel, configPath=None, checkForUpdates=True):
+def LoadSettings(settings, configPath=None, checkForUpdates=True):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configPath: Path to MyData.cfg
+    :param checkForUpdates: Whether to look for updated settings in the
+                            UploaderSettings model on the MyTardis server.
+
     Sets some default values for settings fields, then loads a settings
     file,
     e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
     """
-    settingsModel.SetDefaultConfig()
+    settings.SetDefaultConfig()
 
     if configPath is None:
-        configPath = settingsModel.configPath
+        configPath = settings.configPath
 
     if configPath is not None and os.path.exists(configPath):
         logger.info("Reading settings from: " + configPath)
         try:
             configParser = ConfigParser()
             configParser.read(configPath)
-            LoadGeneralSettings(settingsModel, configParser)
-            LoadScheduleSettings(settingsModel, configParser)
-            LoadFilterSettings(settingsModel, configParser)
-            LoadAdvancedSettings(settingsModel, configParser)
-            LoadMiscellaneousSettings(settingsModel, configParser)
+            LoadGeneralSettings(settings, configParser)
+            LoadScheduleSettings(settings, configParser)
+            LoadFilterSettings(settings, configParser)
+            LoadAdvancedSettings(settings, configParser)
+            LoadMiscellaneousSettings(settings, configParser)
         except:
             logger.error(traceback.format_exc())
 
-    if settingsModel.miscellaneous.uuid and checkForUpdates:
-        if CheckForUpdatedSettingsOnServer(settingsModel):
+    if settings.miscellaneous.uuid and checkForUpdates:
+        if CheckForUpdatedSettingsOnServer(settings):
             logger.debug("Updated local settings from server.")
         else:
             logger.debug("Settings were not updated from the server.")
 
-    settingsModel.previousDict.update(settingsModel.__dict__)
+    settings.previousDict.update(settings.__dict__)
 
-    settingsModel.lastSettingsUpdateTrigger = \
+    settings.lastSettingsUpdateTrigger = \
         LastSettingsUpdateTrigger.READ_FROM_DISK
 
 
-def LoadGeneralSettings(settingsModel, configParser):
+def LoadGeneralSettings(settings, configParser):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configParser: The ConfigParser object which stores data read from
+                         MyData.cfg
+
     Loads General settings from a ConfigParser object.
 
     These settings appear in the General tab of the settings dialog.
@@ -62,12 +79,15 @@ def LoadGeneralSettings(settingsModel, configParser):
               "username", "api_key"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.get(configFileSection, field)
+            settings[field] = configParser.get(configFileSection, field)
 
 
-def LoadScheduleSettings(settingsModel, configParser):
+def LoadScheduleSettings(settings, configParser):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configParser: The ConfigParser object which stores data read from
+                         MyData.cfg
+
     Loads Schedule settings from a ConfigParser object
 
     These settings appear in the Schedule tab of the settings dialog.
@@ -80,48 +100,44 @@ def LoadScheduleSettings(settingsModel, configParser):
               "timer_minutes", "timer_from_time", "timer_to_time"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.get(configFileSection, field)
+            settings[field] = configParser.get(configFileSection, field)
     intFields = ["ignore_interval_number", "ignore_new_files_minutes"]
     for field in intFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getint(configFileSection, field)
+            settings[field] = configParser.getint(configFileSection, field)
     if configParser.has_option(configFileSection, "scheduled_date"):
         datestring = configParser.get(configFileSection, "scheduled_date")
-        settingsModel['scheduled_date'] = \
+        settings['scheduled_date'] = \
             datetime.date(datetime.strptime(datestring, "%Y-%m-%d"))
     if configParser.has_option(configFileSection, "scheduled_time"):
         timestring = configParser.get(configFileSection, "scheduled_time")
-        settingsModel['scheduled_time'] = \
-            datetime.strptime(timestring, "%H:%M:%S")
-        settingsModel['scheduled_time'] = \
-            datetime.time(settingsModel['scheduled_time'])
+        settings['scheduled_time'] = datetime.strptime(timestring, "%H:%M:%S")
+        settings['scheduled_time'] = datetime.time(settings['scheduled_time'])
     if configParser.has_option(configFileSection, "timer_minutes"):
-        settingsModel['timer_minutes'] = \
+        settings['timer_minutes'] = \
             configParser.getint(configFileSection, "timer_minutes")
     if configParser.has_option(configFileSection, "timer_from_time"):
         timestring = configParser.get(configFileSection, "timer_from_time")
-        settingsModel['timer_from_time'] = \
-            datetime.strptime(timestring, "%H:%M:%S")
-        settingsModel['timer_from_time'] = \
-            datetime.time(settingsModel['timer_from_time'])
+        settings['timer_from_time'] = datetime.strptime(timestring, "%H:%M:%S")
+        settings['timer_from_time'] = \
+            datetime.time(settings['timer_from_time'])
     if configParser.has_option(configFileSection, "timer_to_time"):
         timestring = configParser.get(configFileSection, "timer_to_time")
-        settingsModel['timer_to_time'] = \
-            datetime.strptime(timestring, "%H:%M:%S")
-        settingsModel['timer_to_time'] = \
-            datetime.time(settingsModel['timer_to_time'])
+        settings['timer_to_time'] = datetime.strptime(timestring, "%H:%M:%S")
+        settings['timer_to_time'] = datetime.time(settings['timer_to_time'])
     for day in ["monday_checked", "tuesday_checked", "wednesday_checked",
                 "thursday_checked", "friday_checked", "saturday_checked",
                 "sunday_checked"]:
         if configParser.has_option(configFileSection, day):
-            settingsModel[day] = \
-                configParser.getboolean(configFileSection, day)
+            settings[day] = configParser.getboolean(configFileSection, day)
 
 
-def LoadFilterSettings(settingsModel, configParser):
+def LoadFilterSettings(settings, configParser):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configParser: The ConfigParser object which stores data read from
+                         MyData.cfg
+
     Loads Filter settings from a ConfigParser object
 
     These settings appear in the Filter tab of the settings dialog.
@@ -131,23 +147,24 @@ def LoadFilterSettings(settingsModel, configParser):
               "includes_file", "excludes_file", "ignore_interval_unit"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.get(configFileSection, field)
+            settings[field] = configParser.get(configFileSection, field)
     booleanFields = ["ignore_old_datasets", "ignore_new_files",
                      "use_includes_file", "use_excludes_file"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getboolean(configFileSection, field)
+            settings[field] = configParser.getboolean(configFileSection, field)
     intFields = ["ignore_interval_number", "ignore_new_files_minutes"]
     for field in intFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getint(configFileSection, field)
+            settings[field] = configParser.getint(configFileSection, field)
 
 
-def LoadAdvancedSettings(settingsModel, configParser):
+def LoadAdvancedSettings(settings, configParser):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configParser: The ConfigParser object which stores data read from
+                         MyData.cfg
+
     Loads Advanced settings from a ConfigParser object
 
     These settings appear in the Advanced tab of the settings dialog.
@@ -159,24 +176,25 @@ def LoadAdvancedSettings(settingsModel, configParser):
               "upload_invalid_user_folders"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.get(configFileSection, field)
+            settings[field] = configParser.get(configFileSection, field)
     booleanFields = ["validate_folder_structure",
                      "start_automatically_on_login",
                      "upload_invalid_user_folders"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getboolean(configFileSection, field)
+            settings[field] = configParser.getboolean(configFileSection, field)
     intFields = ["max_upload_threads", "max_upload_retries"]
     for field in intFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getint(configFileSection, field)
+            settings[field] = configParser.getint(configFileSection, field)
 
 
-def LoadMiscellaneousSettings(settingsModel, configParser):
+def LoadMiscellaneousSettings(settings, configParser):
     """
+    :param settings: Object of class SettingsModel to load the settings into.
+    :param configParser: The ConfigParser object which stores data read from
+                         MyData.cfg
+
     Loads Miscellaneous settings from a ConfigParser object
 
     These settings don't appear in the settings dialog, except for "locked",
@@ -193,33 +211,30 @@ def LoadMiscellaneousSettings(settingsModel, configParser):
               "fake_md5_sum", "progress_poll_interval"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.get(configFileSection, field)
+            settings[field] = configParser.get(configFileSection, field)
     booleanFields = ["fake_md5_sum", "use_none_cipher", "locked"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getboolean(configFileSection, field)
+            settings[field] = configParser.getboolean(configFileSection, field)
     intFields = ["max_verification_threads"]
     for field in intFields:
         if configParser.has_option(configFileSection, field):
-            settingsModel[field] = \
-                configParser.getint(configFileSection, field)
+            settings[field] = configParser.getint(configFileSection, field)
 
 
-def CheckForUpdatedSettingsOnServer(settingsModel):
+def CheckForUpdatedSettingsOnServer(settings):
     """
     Check for updated settings on server.
     """
-    uploaderModel = settingsModel.uploaderModel
+    uploaderModel = settings.uploaderModel
     try:
         localModTime = \
-            datetime.fromtimestamp(os.stat(settingsModel.configPath).st_mtime)
+            datetime.fromtimestamp(os.stat(settings.configPath).st_mtime)
     except OSError:
         localModTime = datetime.fromtimestamp(0)
     try:
         settingsFromServer = uploaderModel.GetSettings()
-        settingsUpdated = uploaderModel.GetSettingsUpdated()
+        settingsUpdated = uploaderModel.settingsUpdated
     except requests.exceptions.RequestException as err:
         logger.error(err)
         settingsFromServer = None
@@ -228,7 +243,7 @@ def CheckForUpdatedSettingsOnServer(settingsModel):
             settingsUpdated > localModTime:
         logger.debug("Settings will be updated from the server.")
         for setting in settingsFromServer:
-            settingsModel[setting['key']] = setting['value']
+            settings[setting['key']] = setting['value']
             if setting['key'] in (
                     "ignore_old_datasets", "ignore_new_files",
                     "validate_folder_structure",
@@ -240,36 +255,36 @@ def CheckForUpdatedSettingsOnServer(settingsModel):
                     "friday_checked", "saturday_checked",
                     "sunday_checked", "use_includes_file",
                     "use_excludes_file"):
-                settingsModel[setting['key']] = \
-                    (setting['value'] == "True")
+                settings[setting['key']] = (setting['value'] == "True")
             if setting['key'] in (
                     "timer_minutes", "ignore_interval_number",
                     "ignore_new_files_minutes",
                     "progress_poll_interval", "verification_delay",
                     "max_verification_threads",
                     "max_upload_threads", "max_upload_retries"):
-                settingsModel[setting['key']] = int(setting['value'])
+                settings[setting['key']] = int(setting['value'])
             if setting['key'] in (
                     "scheduled_date"):
-                settingsModel[setting['key']] = \
+                settings[setting['key']] = \
                     datetime.date(datetime.strptime(setting['value'],
                                                     "%Y-%m-%d"))
             if setting['key'] in (
                     "scheduled_time", "timer_from_time",
                     "timer_to_time"):
-                settingsModel[setting['key']] = \
+                settings[setting['key']] = \
                     datetime.time(datetime.strptime(setting['value'],
                                                     "%H:%M:%S"))
         return True
     return False
 
 
-def SaveSettingsToDisk(settingsModel, configPath=None):
+def SaveSettingsToDisk(configPath=None):
     """
     Save configuration to disk.
     """
+    from ...settings import SETTINGS
     if configPath is None:
-        configPath = settingsModel.configPath
+        configPath = SETTINGS.configPath
     if configPath is None:
         raise Exception("SaveSettingsToDisk called "
                         "with configPath == None.")
@@ -301,86 +316,90 @@ def SaveSettingsToDisk(settingsModel, configPath=None):
                   "upload_invalid_user_folders"]
         settingsList = []
         for field in fields:
-            value = settingsModel[field]
+            value = SETTINGS[field]
             configParser.set("MyData", field, value)
             settingsList.append(dict(key=field, value=str(value)))
         configParser.write(configFile)
     logger.info("Saved settings to " + configPath)
-    if settingsModel.uploaderModel:
+    if SETTINGS.uploaderModel:
         try:
-            settingsModel.uploaderModel.UpdateSettings(settingsList)
+            SETTINGS.uploaderModel.UpdateSettings(settingsList)
         except requests.exceptions.RequestException as err:
             logger.error(err)
 
 
-def SaveFieldsFromDialog(settingsModel, settingsDialog, configPath=None,
-                         saveToDisk=True):
+def SaveFieldsFromDialog(settingsDialog, configPath=None, saveToDisk=True):
     """
-    Save fields from settings dialog to setings model
+    Save fields from settings dialog to the global SETTINGS singleton.
+
+    When the Settings dialog's OK button is clicked, we call this with
+    saveToDisk=False, to save the dialog's settings to a temporary
+    settings model instance which we can validate.  Then if the settings
+    are valid, we call this again with saveToDisk=True.
     """
-    settingsModel.previousDict.update(settingsModel.__dict__)
+    from ...settings import SETTINGS
+    SETTINGS.previousDict.update(SETTINGS.__dict__)
     if configPath is None:
-        configPath = settingsModel.configPath
+        configPath = SETTINGS.configPath
 
     # General tab
-    settingsModel.general.instrumentName = settingsDialog.GetInstrumentName()
-    settingsModel.general.facilityName = settingsDialog.GetFacilityName()
-    settingsModel.general.myTardisUrl = settingsDialog.GetMyTardisUrl()
-    settingsModel.general.contactName = settingsDialog.GetContactName()
-    settingsModel.general.contactEmail = settingsDialog.GetContactEmail()
-    settingsModel.general.dataDirectory = settingsDialog.GetDataDirectory()
-    settingsModel.general.username = settingsDialog.GetUsername()
-    settingsModel.general.apiKey = settingsDialog.GetApiKey()
+    SETTINGS.general.instrumentName = settingsDialog.GetInstrumentName()
+    SETTINGS.general.facilityName = settingsDialog.GetFacilityName()
+    SETTINGS.general.myTardisUrl = settingsDialog.GetMyTardisUrl()
+    SETTINGS.general.contactName = settingsDialog.GetContactName()
+    SETTINGS.general.contactEmail = settingsDialog.GetContactEmail()
+    SETTINGS.general.dataDirectory = settingsDialog.GetDataDirectory()
+    SETTINGS.general.username = settingsDialog.GetUsername()
+    SETTINGS.general.apiKey = settingsDialog.GetApiKey()
 
     # Schedule tab
-    settingsModel.schedule.scheduleType = settingsDialog.GetScheduleType()
-    settingsModel.schedule.mondayChecked = settingsDialog.IsMondayChecked()
-    settingsModel.schedule.tuesdayChecked = settingsDialog.IsTuesdayChecked()
-    settingsModel.schedule.wednesdayChecked = settingsDialog.IsWednesdayChecked()
-    settingsModel.schedule.thursdayChecked = settingsDialog.IsThursdayChecked()
-    settingsModel.schedule.fridayChecked = settingsDialog.IsFridayChecked()
-    settingsModel.schedule.saturdayChecked = settingsDialog.IsSaturdayChecked()
-    settingsModel.schedule.sundayChecked = settingsDialog.IsSundayChecked()
-    settingsModel.schedule.scheduledDate = settingsDialog.GetScheduledDate()
-    settingsModel.schedule.scheduledTime = settingsDialog.GetScheduledTime()
-    settingsModel.schedule.timerMinutes = settingsDialog.GetTimerMinutes()
-    settingsModel.schedule.timerFromTime = settingsDialog.GetTimerFromTime()
-    settingsModel.schedule.timerToTime = settingsDialog.GetTimerToTime()
+    SETTINGS.schedule.scheduleType = settingsDialog.GetScheduleType()
+    SETTINGS.schedule.mondayChecked = settingsDialog.IsMondayChecked()
+    SETTINGS.schedule.tuesdayChecked = settingsDialog.IsTuesdayChecked()
+    SETTINGS.schedule.wednesdayChecked = settingsDialog.IsWednesdayChecked()
+    SETTINGS.schedule.thursdayChecked = settingsDialog.IsThursdayChecked()
+    SETTINGS.schedule.fridayChecked = settingsDialog.IsFridayChecked()
+    SETTINGS.schedule.saturdayChecked = settingsDialog.IsSaturdayChecked()
+    SETTINGS.schedule.sundayChecked = settingsDialog.IsSundayChecked()
+    SETTINGS.schedule.scheduledDate = settingsDialog.GetScheduledDate()
+    SETTINGS.schedule.scheduledTime = settingsDialog.GetScheduledTime()
+    SETTINGS.schedule.timerMinutes = settingsDialog.GetTimerMinutes()
+    SETTINGS.schedule.timerFromTime = settingsDialog.GetTimerFromTime()
+    SETTINGS.schedule.timerToTime = settingsDialog.GetTimerToTime()
 
     # Filters tab
-    settingsModel.filters.userFilter = settingsDialog.GetUserFilter()
-    settingsModel.filters.datasetFilter = settingsDialog.GetDatasetFilter()
-    settingsModel.filters.experimentFilter = settingsDialog.GetExperimentFilter()
-    settingsModel.filters.ignoreOldDatasets = settingsDialog.IgnoreOldDatasets()
-    settingsModel.filters.ignoreOldDatasetIntervalNumber = \
+    SETTINGS.filters.userFilter = settingsDialog.GetUserFilter()
+    SETTINGS.filters.datasetFilter = settingsDialog.GetDatasetFilter()
+    SETTINGS.filters.experimentFilter = settingsDialog.GetExperimentFilter()
+    SETTINGS.filters.ignoreOldDatasets = settingsDialog.IgnoreOldDatasets()
+    SETTINGS.filters.ignoreOldDatasetIntervalNumber = \
         settingsDialog.GetIgnoreOldDatasetIntervalNumber()
-    settingsModel.filters.ignoreOldDatasetIntervalUnit = \
+    SETTINGS.filters.ignoreOldDatasetIntervalUnit = \
         settingsDialog.GetIgnoreOldDatasetIntervalUnit()
-    settingsModel.filters.ignoreNewFiles = settingsDialog.IgnoreNewFiles()
-    settingsModel.filters.ignoreNewFilesMinutes = \
+    SETTINGS.filters.ignoreNewFiles = settingsDialog.IgnoreNewFiles()
+    SETTINGS.filters.ignoreNewFilesMinutes = \
         settingsDialog.GetIgnoreNewFilesMinutes()
-    settingsModel.filters.useIncludesFile = settingsDialog.UseIncludesFile()
-    settingsModel.filters.includesFile = settingsDialog.GetIncludesFile()
-    settingsModel.filters.useExcludesFile = settingsDialog.UseExcludesFile()
-    settingsModel.filters.excludesFile = settingsDialog.GetExcludesFile()
+    SETTINGS.filters.useIncludesFile = settingsDialog.UseIncludesFile()
+    SETTINGS.filters.includesFile = settingsDialog.GetIncludesFile()
+    SETTINGS.filters.useExcludesFile = settingsDialog.UseExcludesFile()
+    SETTINGS.filters.excludesFile = settingsDialog.GetExcludesFile()
 
     # Advanced tab
-    settingsModel.advanced.folderStructure = settingsDialog.GetFolderStructure()
-    settingsModel.advanced.datasetGrouping = settingsDialog.GetDatasetGrouping()
-    settingsModel.advanced.groupPrefix = settingsDialog.GetGroupPrefix()
-    settingsModel.advanced.validateFolderStructure = \
+    SETTINGS.advanced.folderStructure = settingsDialog.GetFolderStructure()
+    SETTINGS.advanced.datasetGrouping = settingsDialog.GetDatasetGrouping()
+    SETTINGS.advanced.groupPrefix = settingsDialog.GetGroupPrefix()
+    SETTINGS.advanced.validateFolderStructure = \
         settingsDialog.ValidateFolderStructure()
-    settingsModel.advanced.startAutomaticallyOnLogin = \
+    SETTINGS.advanced.startAutomaticallyOnLogin = \
         settingsDialog.StartAutomaticallyOnLogin()
-    settingsModel.advanced.uploadInvalidUserOrGroupFolders = \
+    SETTINGS.advanced.uploadInvalidUserOrGroupFolders = \
         settingsDialog.UploadInvalidUserOrGroupFolders()
-    settingsModel.advanced.maxUploadThreads = settingsDialog.GetMaxUploadThreads()
-    settingsModel.advanced.maxUploadRetries = settingsDialog.GetMaxUploadRetries()
+    SETTINGS.advanced.maxUploadThreads = settingsDialog.GetMaxUploadThreads()
+    SETTINGS.advanced.maxUploadRetries = settingsDialog.GetMaxUploadRetries()
 
-    settingsModel.miscellaneous.locked = settingsDialog.Locked()
+    SETTINGS.miscellaneous.locked = settingsDialog.Locked()
 
     if saveToDisk:
-        SaveSettingsToDisk(settingsModel, configPath)
+        SaveSettingsToDisk(configPath)
 
-    settingsModel.lastSettingsUpdateTrigger = \
-        LastSettingsUpdateTrigger.UI_RESPONSE
+    SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE

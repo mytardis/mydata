@@ -5,7 +5,7 @@ import unittest
 import wx
 
 from ...dataviewmodels.tasks import TasksModel
-from ...views.tasks import TasksView
+from ...views.dataview import MyDataDataView
 
 
 class TasksViewTester(unittest.TestCase):
@@ -15,9 +15,8 @@ class TasksViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='TasksViewTester')
-        self.settingsModel = None
-        self.tasksModel = TasksModel(self.settingsModel)
-        self.tasksView = TasksView(self.frame, tasksModel=self.tasksModel)
+        self.tasksModel = TasksModel()
+        self.tasksView = MyDataDataView(self.frame, self.tasksModel)
         self.frame.Show()
 
     def test_tasks_view(self):

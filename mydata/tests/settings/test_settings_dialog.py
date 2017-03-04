@@ -7,7 +7,7 @@ import os
 
 import wx
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.serialize import SaveFieldsFromDialog
@@ -17,6 +17,7 @@ from ...events import MYDATA_EVENTS
 from ...events import PostEvent
 from ...events import RenameInstrument
 from ...utils.exceptions import DuplicateKey
+from .. import MyDataSettingsTester
 
 
 class SettingsDialogTester(MyDataSettingsTester):
@@ -40,17 +41,17 @@ class SettingsDialogTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = \
-            SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        SaveSettingsToDisk(self.settingsModel)
-        self.settingsDialog = SettingsDialog(self.frame, self.settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk()
+        self.settingsDialog = SettingsDialog(self.frame)
 
     def tearDown(self):
         self.settingsDialog.Hide()
@@ -125,8 +126,7 @@ class SettingsDialogTester(MyDataSettingsTester):
         self.settingsDialog.SetFacilityName("")
         settingsDialogValidationEvent = \
             MYDATA_EVENTS.SettingsDialogValidationEvent(
-                settingsDialog=self.settingsDialog,
-                settingsModel=self.settingsModel)
+                settingsDialog=self.settingsDialog)
         PostEvent(settingsDialogValidationEvent)
         self.settingsDialog.SetFacilityName(facilityName)
 
@@ -222,15 +222,14 @@ class SettingsDialogTester(MyDataSettingsTester):
         PostEvent(settingsDialogValidationEvent)
 
         # Test updating autostart file:
-        self.settingsModel.advanced.startAutomaticallyOnLogin = True
-        UpdateAutostartFile(self.settingsModel)
-        self.settingsModel.advanced.startAutomaticallyOnLogin = False
-        UpdateAutostartFile(self.settingsModel)
+        SETTINGS.advanced.startAutomaticallyOnLogin = True
+        UpdateAutostartFile()
+        SETTINGS.advanced.startAutomaticallyOnLogin = False
+        UpdateAutostartFile()
 
         # Test renaming instrument to an available instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
             settingsDialog=self.settingsDialog,
-            settingsModel=self.settingsModel,
             facilityName=self.settingsDialog.GetFacilityName(),
             oldInstrumentName=self.settingsDialog.GetInstrumentName(),
             newInstrumentName="Renamed Instrument")
@@ -239,7 +238,6 @@ class SettingsDialogTester(MyDataSettingsTester):
         # Test renaming instrument to an already used instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
             settingsDialog=self.settingsDialog,
-            settingsModel=self.settingsModel,
             facilityName=self.settingsDialog.GetFacilityName(),
             oldInstrumentName=self.settingsDialog.GetInstrumentName(),
             newInstrumentName="Test Instrument2")
@@ -247,8 +245,8 @@ class SettingsDialogTester(MyDataSettingsTester):
             RenameInstrument(renameInstrumentEvent)
 
         # Test saving config to disk:
-        SaveFieldsFromDialog(self.settingsModel, self.settingsDialog,
-                             configPath=self.tempFilePath, saveToDisk=True)
+        SaveFieldsFromDialog(
+            self.settingsDialog, configPath=self.tempFilePath, saveToDisk=True)
         # Test dragging and dropping a MyData.cfg onto settings dialog:
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),

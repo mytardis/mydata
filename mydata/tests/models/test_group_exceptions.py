@@ -4,6 +4,7 @@ Test ability to handle group-related exceptions.
 import os
 
 from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.group import GroupModel
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
@@ -24,32 +25,32 @@ class GroupExceptionsTester(MyDataTester):
         """
         Test ability to handle group-related exceptions.
         """
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg")
+            "../testdata/testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg")
+            "../testdata", "testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        ValidateSettings(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings()
 
         # Test retrieving a valid group record (using GroupModel's
         # GetGroupByName method) and ensure that no exception is raised:
-        group = GroupModel.GetGroupByName(settingsModel, "TestFacility-Group1")
+        group = GroupModel.GetGroupByName("TestFacility-Group1")
         self.assertEqual(group.name, "TestFacility-Group1")
         self.assertEqual(group.GetValueForKey('name'), group.name)
 
         # Try to look up group record with an invalid API key,
         # which should give 401 (Unauthorized).
-        apiKey = settingsModel.general.apiKey
-        settingsModel.general.apiKey = "invalid"
+        apiKey = SETTINGS.general.apiKey
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
-            _ = GroupModel.GetGroupByName(settingsModel, "TestFacility-Group 1")
-        settingsModel.general.apiKey = apiKey
+            _ = GroupModel.GetGroupByName("TestFacility-Group 1")
+        SETTINGS.general.apiKey = apiKey
 
         with self.assertRaises(DoesNotExist):
-            _ = GroupModel.GetGroupByName(settingsModel, "INVALID_GROUP")
+            _ = GroupModel.GetGroupByName("INVALID_GROUP")

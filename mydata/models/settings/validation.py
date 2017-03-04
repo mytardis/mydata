@@ -1,6 +1,8 @@
 """
-Model classes for the settings displayed in the settings dialog
-and saved to disk in MyData.cfg
+Methods for validating settings.
+
+The global SETTINGS singleton is imported inline to avoid
+circular dependencies.
 """
 import traceback
 import os
@@ -21,10 +23,12 @@ from ...utils.exceptions import UserAbortedSettingsValidation
 DEFAULT_TIMEOUT = 5
 
 
-def ValidateSettings(settings, setStatusMessage=None, testRun=False):
+def ValidateSettings(setStatusMessage=None, testRun=False):
     """
-    Validate settings (an instance of SettingsModel)
+    Validate SETTINGS (an instance of SettingsModel)
     """
+    from ...settings import SETTINGS
+
     datasetCount = -1
 
     def LogIfTestRun(message):
@@ -35,29 +39,28 @@ def ValidateSettings(settings, setStatusMessage=None, testRun=False):
             logger.testrun(message)
 
     try:
-        CheckForMissingRequiredField(settings)
+        CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
-                     % settings.advanced.folderStructure)
-        WarnIfIgnoringInvalidUserFolders(settings, testRun)
-        CheckFilters(settings, setStatusMessage, testRun)
+                     % SETTINGS.advanced.folderStructure)
+        WarnIfIgnoringInvalidUserFolders(testRun)
+        CheckFilters(setStatusMessage, testRun)
         CheckIfShouldAbort(setStatusMessage)
-        if settings.advanced.validateFolderStructure:
-            datasetCount = \
-                CheckStructureAndCountDatasets(settings, setStatusMessage)
+        if SETTINGS.advanced.validateFolderStructure:
+            datasetCount = CheckStructureAndCountDatasets(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckMyTardisUrl(settings, setStatusMessage, testRun)
+        CheckMyTardisUrl(setStatusMessage, testRun)
         CheckIfShouldAbort(setStatusMessage)
-        CheckMyTardisCredentials(settings, setStatusMessage)
+        CheckMyTardisCredentials(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckFacility(settings, setStatusMessage)
+        CheckFacility(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckInstrument(settings, setStatusMessage)
+        CheckInstrument(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckContactEmailAndEmailFolders(settings, setStatusMessage)
+        CheckContactEmailAndEmailFolders(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckAutostart(settings, setStatusMessage)
+        CheckAutostart(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckScheduledTime(settings)
+        CheckScheduledTime()
         message = "Settings validation - succeeded!"
         logger.debug(message)
         LogIfTestRun(message)
@@ -73,30 +76,31 @@ def ValidateSettings(settings, setStatusMessage=None, testRun=False):
         raise InvalidSettings(message, "")
 
 
-def CheckForMissingRequiredField(settings):
+def CheckForMissingRequiredField():
     """
     Check if a required field is missing
     """
-    if settings.general.instrumentName.strip() == "":
+    from ...settings import SETTINGS
+    if SETTINGS.general.instrumentName.strip() == "":
         message = "Please enter a valid instrument name."
         raise InvalidSettings(message, "instrument_name")
-    if settings.general.dataDirectory.strip() == "":
+    if SETTINGS.general.dataDirectory.strip() == "":
         message = "Please enter a valid data directory."
         raise InvalidSettings(message, "data_directory")
-    if settings.general.myTardisUrl.strip() == "":
+    if SETTINGS.general.myTardisUrl.strip() == "":
         message = "Please enter a valid MyTardis URL, " \
             "beginning with \"http://\" or \"https://\"."
         raise InvalidSettings(message, "mytardis_url")
-    if settings.general.contactName.strip() == "":
+    if SETTINGS.general.contactName.strip() == "":
         message = "Please enter a valid contact name."
         raise InvalidSettings(message, "contact_name")
-    if settings.general.contactEmail.strip() == "":
+    if SETTINGS.general.contactEmail.strip() == "":
         message = "Please enter a valid contact email."
         raise InvalidSettings(message, "contact_email")
-    if settings.general.username.strip() == "":
+    if SETTINGS.general.username.strip() == "":
         message = "Please enter a MyTardis username."
         raise InvalidSettings(message, "username")
-    if settings.general.apiKey.strip() == "":
+    if SETTINGS.general.apiKey.strip() == "":
         message = "Please enter your MyTardis API key.\n\n" \
             "To find your API key, log into MyTardis using the " \
             "account you wish to use with MyData (\"%s\"), " \
@@ -111,18 +115,19 @@ def CheckForMissingRequiredField(settings):
             "    ApiKey <username>:<API key>\n\n" \
             "Copy the <API key> (after the colon) to your clipboard," \
             " and paste it into MyData's \"MyTardis API Key\" field." \
-            % settings.general.username.strip()
+            % SETTINGS.general.username.strip()
         raise InvalidSettings(message, "api_key")
-    if not os.path.exists(settings.general.dataDirectory):
+    if not os.path.exists(SETTINGS.general.dataDirectory):
         message = "The data directory: \"%s\" doesn't exist!" % \
-            settings.general.dataDirectory
+            SETTINGS.general.dataDirectory
         raise InvalidSettings(message, "data_directory")
 
 
-def WarnIfIgnoringInvalidUserFolders(settings, testRun):
+def WarnIfIgnoringInvalidUserFolders(testRun):
     """
     Warn if ignoring invalid user (or group) folders
     """
+    from ...settings import SETTINGS
 
     def LogIfTestRun(message):
         """
@@ -131,22 +136,23 @@ def WarnIfIgnoringInvalidUserFolders(settings, testRun):
         if testRun:
             logger.testrun(message)
 
-    if not settings.advanced.uploadInvalidUserOrGroupFolders:
-        if settings.advanced.folderStructure.startswith("User Group"):
+    if not SETTINGS.advanced.uploadInvalidUserOrGroupFolders:
+        if SETTINGS.advanced.folderStructure.startswith("User Group"):
             message = "Invalid user group folders are being ignored."
             logger.warning(message)
             LogIfTestRun("WARNING: %s" % message)
-        elif "User" in settings.advanced.folderStructure or \
-                "Email" in settings.advanced.folderStructure:
+        elif "User" in SETTINGS.advanced.folderStructure or \
+                "Email" in SETTINGS.advanced.folderStructure:
             message = "Invalid user folders are being ignored."
             logger.warning(message)
             LogIfTestRun("WARNING: %s" % message)
 
 
-def CheckFilters(settings, setStatusMessage, testRun):
+def CheckFilters(setStatusMessage, testRun):
     """
     Check filter-related fields
     """
+    from ...settings import SETTINGS
 
     def LogIfTestRun(message):
         """
@@ -155,8 +161,8 @@ def CheckFilters(settings, setStatusMessage, testRun):
         if testRun:
             logger.testrun(message)
 
-    if settings.filters.userFilter.strip() != "":
-        if settings.advanced.folderStructure.startswith("User Group"):
+    if SETTINGS.filters.userFilter.strip() != "":
+        if SETTINGS.advanced.folderStructure.startswith("User Group"):
             message = "User group folders are being filtered."
             logger.warning(message)
             LogIfTestRun("WARNING: %s" % message)
@@ -164,72 +170,75 @@ def CheckFilters(settings, setStatusMessage, testRun):
             message = "User folders are being filtered."
             logger.warning(message)
             LogIfTestRun("WARNING: %s" % message)
-    if settings.filters.datasetFilter.strip() != "":
+    if SETTINGS.filters.datasetFilter.strip() != "":
         message = "Dataset folders are being filtered."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    if settings.filters.experimentFilter.strip() != "":
+    if SETTINGS.filters.experimentFilter.strip() != "":
         message = "Experiment folders are being filtered."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    if settings.filters.ignoreOldDatasets:
+    if SETTINGS.filters.ignoreOldDatasets:
         message = "Old datasets are being ignored."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    if settings.filters.ignoreNewFiles:
+    if SETTINGS.filters.ignoreNewFiles:
         message = "Files newer than %s minute(s) are being ignored." \
-            % settings.filters.ignoreNewFilesMinutes
+            % SETTINGS.filters.ignoreNewFilesMinutes
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    if settings.filters.useIncludesFile \
-            and not settings.filters.useExcludesFile:
+    if SETTINGS.filters.useIncludesFile \
+            and not SETTINGS.filters.useExcludesFile:
         message = "Only files matching patterns in includes " \
             "file will be scanned for upload."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    elif not settings.filters.useIncludesFile \
-            and settings.filters.useExcludesFile:
+    elif not SETTINGS.filters.useIncludesFile \
+            and SETTINGS.filters.useExcludesFile:
         message = "Files matching patterns in excludes " \
             "file will not be scanned for upload."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    elif settings.filters.useIncludesFile \
-            and settings.filters.useExcludesFile:
+    elif SETTINGS.filters.useIncludesFile \
+            and SETTINGS.filters.useExcludesFile:
         message = "Files matching patterns in excludes " \
             "file will not be scanned for upload, " \
             "unless they match patterns in the includes file."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
-    CheckDataFileGlobFiles(settings, setStatusMessage)
+    CheckDataFileGlobFiles(setStatusMessage)
 
 
-def CheckDataFileGlobFiles(settings, setStatusMessage):
+def CheckDataFileGlobFiles(setStatusMessage):
     """
     Check includes and excludes files
     """
-    if settings.filters.useIncludesFile:
+    from ...settings import SETTINGS
+
+    if SETTINGS.filters.useIncludesFile:
         message = "Settings validation - checking includes file..."
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        PerformGlobsFileValidation(settings.filters.includesFile,
+        PerformGlobsFileValidation(SETTINGS.filters.includesFile,
                                    "Includes", "includes", "includes_file")
 
     CheckIfShouldAbort(setStatusMessage)
 
-    if settings.filters.useExcludesFile:
+    if SETTINGS.filters.useExcludesFile:
         message = "Settings validation - checking excludes file..."
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        PerformGlobsFileValidation(settings.filters.excludesFile,
+        PerformGlobsFileValidation(SETTINGS.filters.excludesFile,
                                    "Excludes", "excludes", "excludes_file")
 
 
-def CheckMyTardisUrl(settings, setStatusMessage, testRun):
+def CheckMyTardisUrl(setStatusMessage, testRun):
     """
     Check MyTardis URL
     """
+    from ...settings import SETTINGS
 
     def LogIfTestRun(message):
         """
@@ -243,14 +252,14 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        response = requests.get(settings.general.myTardisApiUrl,
+        response = requests.get(SETTINGS.general.myTardisApiUrl,
                                 timeout=DEFAULT_TIMEOUT)
         history = response.history
         url = response.url
         if history:
             message = "MyData attempted to access MyTardis at " \
                 "\"%s\", but was redirected to:" \
-                "\n\n" % settings.general.myTardisApiUrl
+                "\n\n" % SETTINGS.general.myTardisApiUrl
             message += "\t%s" % url
             message += "\n\n"
             message += "A redirection could be caused by any of " \
@@ -280,7 +289,7 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
             raise InvalidSettings(message, "mytardis_url")
         elif response.status_code == 200:
             message = "Retrieved %s in %.3f seconds." \
-                % (settings.general.myTardisApiUrl,
+                % (SETTINGS.general.myTardisApiUrl,
                    response.elapsed.total_seconds())
             logger.debug(message)
             LogIfTestRun(message)
@@ -288,7 +297,7 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
             logger.debug("Received HTTP %d while trying to access "
                          "MyTardis server (%s)."
                          % (response.status_code,
-                            settings.general.myTardisUrl))
+                            SETTINGS.general.myTardisUrl))
             message = (
                 "Please enter a valid MyTardis URL.\n\n"
                 "Received HTTP status code %d" % response.status_code)
@@ -296,7 +305,7 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
             raise InvalidSettings(message, "mytardis_url")
     except requests.exceptions.Timeout:
         message = "Attempt to connect to %s timed out after " \
-            "%s seconds." % (settings.general.myTardisApiUrl, DEFAULT_TIMEOUT)
+            "%s seconds." % (SETTINGS.general.myTardisApiUrl, DEFAULT_TIMEOUT)
         LogIfTestRun("ERROR: %s" % message)
         logger.error(traceback.format_exc())
         raise InvalidSettings(message, "mytardis_url")
@@ -306,8 +315,8 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
             "beginning with \"http://\" or \"https://\".\n\n"
             "%s" % str(err))
         LogIfTestRun("ERROR: %s" % message)
-        if not settings.general.myTardisUrl.startswith("http"):
-            suggestion = "http://" + settings.general.myTardisUrl
+        if not SETTINGS.general.myTardisUrl.startswith("http"):
+            suggestion = "http://" + SETTINGS.general.myTardisUrl
         else:
             suggestion = None
         raise InvalidSettings(message, "mytardis_url", suggestion)
@@ -320,20 +329,21 @@ def CheckMyTardisUrl(settings, setStatusMessage, testRun):
         raise InvalidSettings(message, "mytardis_url")
 
 
-def CheckMyTardisCredentials(settings, setStatusMessage):
+def CheckMyTardisCredentials(setStatusMessage):
     """
     Check MyTardis credentials
 
     Here we run an arbitrary query, to test whether
     our MyTardis credentials work OK with the API.
     """
+    from ...settings import SETTINGS
     message = "Settings validation - checking MyTardis credentials..."
     logger.debug(message)
     if setStatusMessage:
         setStatusMessage(message)
-    url = settings.general.myTardisUrl + \
-        "/api/v1/user/?format=json&username=" + settings.general.username
-    response = requests.get(headers=settings.defaultHeaders, url=url)
+    url = SETTINGS.general.myTardisUrl + \
+        "/api/v1/user/?format=json&username=" + SETTINGS.general.username
+    response = requests.get(headers=SETTINGS.defaultHeaders, url=url)
     statusCode = response.status_code
     if statusCode < 200 or statusCode >= 300:
         message = "Your MyTardis credentials are invalid.\n\n" \
@@ -341,79 +351,82 @@ def CheckMyTardisCredentials(settings, setStatusMessage):
         raise InvalidSettings(message, "username")
 
 
-def CheckFacility(settings, setStatusMessage):
+def CheckFacility(setStatusMessage):
     """
     Check facility
     """
+    from ...settings import SETTINGS
     message = "Settings validation - checking MyTardis facility..."
     logger.debug(message)
     if setStatusMessage:
         setStatusMessage(message)
-    if settings.general.facilityName.strip() == "":
+    if SETTINGS.general.facilityName.strip() == "":
         message = "Please enter a valid facility name."
         suggestion = None
         try:
-            facilities = FacilityModel.GetMyFacilities(settings)
+            facilities = FacilityModel.GetMyFacilities()
             if len(facilities) == 1:
-                suggestion = facilities[0].GetName()
+                suggestion = facilities[0].name
             raise InvalidSettings(message, "facility_name", suggestion)
         except:
             logger.error(traceback.format_exc())
             raise InvalidSettings(message, "facility_name")
-    if settings.facility is None:
-        facilities = FacilityModel.GetMyFacilities(settings)
+    if SETTINGS.facility is None:
+        facilities = FacilityModel.GetMyFacilities()
         message = "Facility \"%s\" was not found in MyTardis." \
-            % settings.general.facilityName
+            % SETTINGS.general.facilityName
         if len(facilities) > 0:
             message += "\n\n" + \
                 "The facilities which user \"%s\" " \
-                "has access to are:\n\n" % settings.general.username
+                "has access to are:\n\n" % SETTINGS.general.username
             for facility in facilities:
-                message = message + "    " + facility.GetName() + "\n"
+                message = message + "    " + facility.name + "\n"
         else:
             message += "\n\n" + \
                 "Please ask your MyTardis administrator to " \
                 "ensure that the \"%s\" facility exists and that " \
                 "user \"%s\" is a member of the managers group for " \
                 "that facility." \
-                % (settings.general.facilityName,
-                   settings.general.username)
+                % (SETTINGS.general.facilityName,
+                   SETTINGS.general.username)
         suggestion = None
         if len(facilities) == 1:
-            suggestion = facilities[0].GetName()
+            suggestion = facilities[0].name
         raise InvalidSettings(message, "facility_name", suggestion)
 
 
-def CheckInstrument(settings, setStatusMessage):
+def CheckInstrument(setStatusMessage):
     """
     Check instrument
     """
+    from ...settings import SETTINGS
     message = "Settings validation - checking instrument name..."
     logger.debug(message)
     if setStatusMessage:
         setStatusMessage(message)
     try:
         # Try to get the InstrumentModel from the instrument name:
-        _ = settings.instrument
+        _ = SETTINGS.instrument
     except Unauthorized as err:
         message = str(err)
         raise InvalidSettings(message, "instrument_name")
 
 
-def CheckContactEmailAndEmailFolders(settings, setStatusMessage):
+def CheckContactEmailAndEmailFolders(setStatusMessage):
     """
     Check contact email and email folders
     """
+    from ...settings import SETTINGS
     message = "Settings validation - validating email address..."
     logger.debug(message)
     if setStatusMessage:
         setStatusMessage(message)
 
-    if not validate_email(settings.general.contactEmail):
+    if not validate_email(SETTINGS.general.contactEmail):
         message = "Please enter a valid contact email."
         raise InvalidSettings(message, "contact_email")
-    if settings.advanced.folderStructure.startswith('Email'):
-        dataDir = settings.general.dataDirectory
+    if SETTINGS.advanced.folderStructure.startswith('Email'):
+        dataDir = SETTINGS.general.dataDirectory
         folderNames = os.walk(dataDir).next()[1]
         for folderName in folderNames:
             if not validate_email(folderName):
@@ -422,28 +435,30 @@ def CheckContactEmailAndEmailFolders(settings, setStatusMessage):
                 raise InvalidSettings(message, "data_directory")
 
 
-def CheckAutostart(settings, setStatusMessage):
+def CheckAutostart(setStatusMessage):
     """
     Check if MyData is configured to start automatically
     """
-    if 'start_automatically_on_login' in settings.previousDict and \
-            settings.previousDict['start_automatically_on_login'] != \
-            settings.advanced.startAutomaticallyOnLogin:
+    from ...settings import SETTINGS
+    if 'start_automatically_on_login' in SETTINGS.previousDict and \
+            SETTINGS.previousDict['start_automatically_on_login'] != \
+            SETTINGS.advanced.startAutomaticallyOnLogin:
         message = "Settings validation - " \
             "checking if MyData is set to start automatically..."
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        UpdateAutostartFile(settings)
+        UpdateAutostartFile()
 
 
-def CheckScheduledTime(settings):
+def CheckScheduledTime():
     """
     Check scheduled time
     """
-    if settings.schedule.scheduleType == "Once":
-        dateTime = datetime.combine(settings.schedule.scheduledDate,
-                                    settings.schedule.scheduledTime)
+    from ...settings import SETTINGS
+    if SETTINGS.schedule.scheduleType == "Once":
+        dateTime = datetime.combine(SETTINGS.schedule.scheduledDate,
+                                    SETTINGS.schedule.scheduledTime)
         if dateTime < datetime.now():
             message = "Scheduled time is in the past."
             raise InvalidSettings(message, "scheduled_time")
@@ -483,7 +498,7 @@ def PerformGlobsFileValidation(filePath, upper, lower, field):
                 raise InvalidSettings(message, field)
 
 
-def CheckStructureAndCountDatasets(settings, setStatusMessage=None):
+def CheckStructureAndCountDatasets(setStatusMessage=None):
     """
     Counts datasets, while traversing the folder structure.  Previous versions
     of this method would alert the user about missing folders.
@@ -492,42 +507,42 @@ def CheckStructureAndCountDatasets(settings, setStatusMessage=None):
     this method is to count datasets, although the Settings dialog checkbox
     which enables it is still called "Validate folder structure"
     """
+    from ...settings import SETTINGS
     message = "Settings validation - checking folder structure..."
     logger.debug(message)
     if setStatusMessage:
         setStatusMessage(message)
-    dataDirectory = settings.general.dataDirectory
-    folderStructure = settings.advanced.folderStructure
-    levels = len(folderStructure.split('/'))
+    dataDirectory = SETTINGS.general.dataDirectory
+    levels = len(SETTINGS.advanced.folderStructure.split('/'))
     datasetCount = -1
     folderGlobs = []
     for level in range(1, levels + 1):
-        folderGlobs.append(FolderGlob(folderStructure, level,
-                                      settings.filters))
+        folderGlobs.append(FolderGlob(level))
         files = glob(os.path.join(dataDirectory, *folderGlobs))
         dirs = [item for item in files if os.path.isdir(item)]
         if level == levels:
-            datasetCount = CountDatasetsInDirs(dirs, settings.filters)
+            datasetCount = CountDatasetsInDirs(dirs)
 
     return datasetCount
 
 
-def CountDatasetsInDirs(dirs, filters):
+def CountDatasetsInDirs(dirs):
     """
     :param dirs: List of absolute directory paths which could be dataset
                  folders, depending on the active dataset filter(s)
-    :param filters: FiltersSettingsModel object
     """
+    from ...settings import SETTINGS
     seconds = dict(day=24 * 60 * 60)
     seconds['year'] = int(365.25 * seconds['day'])
     seconds['month'] = seconds['year'] / 12
     singularIgnoreIntervalUnit = \
-        filters.ignoreOldDatasetIntervalUnit.rstrip('s')
+        SETTINGS.filters.ignoreOldDatasetIntervalUnit.rstrip('s')
     ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
-    ignoreIntervalSeconds = \
-        filters.ignoreOldDatasetIntervalNumber * ignoreIntervalUnitSeconds
+    ignoreIntervalSeconds = (
+        SETTINGS.filters.ignoreOldDatasetIntervalNumber *
+        ignoreIntervalUnitSeconds)
 
-    if filters.ignoreOldDatasets:
+    if SETTINGS.filters.ignoreOldDatasets:
         datasetCount = 0
         for folder in dirs:
             ctimestamp = os.path.getctime(folder)
@@ -540,19 +555,18 @@ def CountDatasetsInDirs(dirs, filters):
     return datasetCount
 
 
-def FolderGlob(folderStructure, level, filters, instrumentName='*'):
+def FolderGlob(level, instrumentName='*'):
     """
     Get the glob used to restrict folders at a certain level, based on filters
     specified in settings.
 
-    :param folderStructure: Folder structure, e.g. "Username / Dataset"
     :param level: Folder level (1 for folders which are direct children of
-                  settings.general.dataDirectory, 2 for grandchildren etc.)
-    :param filters: FiltersSettingsModel object
+                  SETTINGS.general.dataDirectory, 2 for grandchildren etc.)
     """
-    userOrGroupGlob = "*%s*" % filters.userFilter
-    datasetGlob = "*%s*" % filters.datasetFilter
-    expGlob = "*%s*" % filters.experimentFilter
+    from ...settings import SETTINGS
+    userOrGroupGlob = "*%s*" % SETTINGS.filters.userFilter
+    datasetGlob = "*%s*" % SETTINGS.filters.datasetFilter
+    expGlob = "*%s*" % SETTINGS.filters.experimentFilter
     globDict = {
         'Dataset': [datasetGlob],
         'Username / Dataset': [userOrGroupGlob, datasetGlob],
@@ -571,7 +585,7 @@ def FolderGlob(folderStructure, level, filters, instrumentName='*'):
         'User Group / Instrument / Full Name / Dataset':
             [userOrGroupGlob, instrumentName, '*', datasetGlob]
     }
-    return globDict[folderStructure][level - 1]
+    return globDict[SETTINGS.advanced.folderStructure][level - 1]
 
 
 def CheckIfShouldAbort(setStatusMessage):

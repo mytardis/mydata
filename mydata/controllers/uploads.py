@@ -4,17 +4,10 @@ The main controller class for managing datafile uploads.
 Most of this content used to be part of the FoldersController
 class.
 """
-
-# pylint: disable=missing-docstring
-
 import os
-try:
-    import urllib2
-except ImportError:
-    # urllib2 is not available in Python 3
-    # But it is only used for poster,
-    # which can be replaced by requests-toolbelt
-    pass
+# urllib2 is not available in Python 3, but it is only used
+# for poster which can be replaced by requests-toolbelt:
+import urllib2
 import json
 import traceback
 import mimetypes
@@ -25,6 +18,7 @@ import wx
 
 from ..utils.openssh import UploadFile
 
+from ..settings import SETTINGS
 from ..models.settings.miscellaneous import MiscellaneousSettingsModel
 from ..models.upload import UploadModel
 from ..models.upload import UploadStatus
@@ -40,15 +34,23 @@ from ..logs import logger
 
 
 class UploadMethod(object):
+    """
+    Enumerated data type for upload methods,
+    POST to MyTardis API and SCP via staging
+    """
     # pylint: disable=invalid-name
     HTTP_POST = 0
     VIA_STAGING = 1
 
 
 class UploadDatafileRunnable(object):
+    """
+    The Run method of this class provides the functionality of
+    the upload workers.
+    """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
-                 dataFileIndex, uploadsModel, settingsModel,
+                 dataFileIndex, uploadsModel,
                  existingUnverifiedDatafile, verificationModel,
                  bytesUploadedPreviously=None):
         self.foldersController = foldersController
@@ -57,18 +59,11 @@ class UploadDatafileRunnable(object):
         self.dataFileIndex = dataFileIndex
         self.uploadsModel = uploadsModel
         self.uploadModel = None
-        self.settingsModel = settingsModel
         self.existingUnverifiedDatafile = existingUnverifiedDatafile
         self.verificationModel = verificationModel
         self.bytesUploadedPreviously = bytesUploadedPreviously
         self.mimeTypes = mimetypes.MimeTypes()
         self.uploadsThreadingLock = threading.Lock()
-
-    def GetDatafileIndex(self):
-        return self.dataFileIndex
-
-    def GetDatafilePath(self):
-        return self.folderModel.GetDataFilePath(self.dataFileIndex)
 
     def Run(self):
         """
@@ -82,25 +77,31 @@ class UploadDatafileRunnable(object):
         self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
                                        folderModel=self.folderModel,
                                        dataFileIndex=self.dataFileIndex)
-        self.uploadModel.SetExistingUnverifiedDatafile(
-            self.verificationModel.GetExistingUnverifiedDatafile())
+        if self.verificationModel:
+            self.uploadModel.existingUnverifiedDatafile = \
+                self.verificationModel.existingUnverifiedDatafile
         self.uploadsModel.AddRow(self.uploadModel)
         self.uploadsThreadingLock.release()
-        self.uploadModel.SetBytesUploadedPreviously(
-            self.bytesUploadedPreviously)
+        self.uploadModel.bytesUploadedPreviously = self.bytesUploadedPreviously
 
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         dataFileDirectory = \
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
 
-        if self.folderModel.FileIsTooNewToUpload(self.dataFileIndex):
-            message = "Not uploading file, in case it is still being modified."
+        if not os.path.exists(dataFilePath) or \
+                self.folderModel.FileIsTooNewToUpload(self.dataFileIndex):
+            if not os.path.exists(dataFilePath):
+                message = ("Not uploading file, because it has been "
+                           "moved, renamed or deleted.")
+            else:
+                message = ("Not uploading file, "
+                           "in case it is still being modified.")
             logger.warning(message.replace('file', dataFilePath))
             self.uploadsModel.SetMessage(self.uploadModel, message)
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             PostEvent(
-                self.foldersController.UploadCompleteEvent(
+                self.foldersController.UploadFailedEvent(
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
@@ -109,7 +110,7 @@ class UploadDatafileRunnable(object):
         message = "Getting data file size..."
         self.uploadsModel.SetMessage(self.uploadModel, message)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
-        self.uploadModel.SetFileSize(dataFileSize)
+        self.uploadModel.fileSize = dataFileSize
 
         if self.foldersController.IsShuttingDown():
             return
@@ -120,7 +121,7 @@ class UploadDatafileRunnable(object):
             message = "Calculating MD5 checksum..."
             self.uploadsModel.SetMessage(self.uploadModel, message)
 
-            if self.settingsModel.miscellaneous.fakeMd5Sum:
+            if SETTINGS.miscellaneous.fakeMd5Sum:
                 dataFileMd5Sum = MiscellaneousSettingsModel.GetFakeMd5Sum()
                 logger.warning("Faking MD5 sum for %s" % dataFilePath)
             else:
@@ -130,14 +131,14 @@ class UploadDatafileRunnable(object):
                         progressCallback=self.Md5ProgressCallback,
                         canceledCallback=self.CanceledCallback)
 
-            if self.uploadModel.Canceled():
-                self.foldersController.SetCanceled()
+            if self.uploadModel.canceled:
+                self.foldersController.canceled = True
                 logger.debug("Upload for \"%s\" was canceled "
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
                 return
         else:
-            dataFileSize = int(self.existingUnverifiedDatafile.GetSize())
+            dataFileSize = int(self.existingUnverifiedDatafile.size)
 
         self.uploadModel.SetProgress(0)
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
@@ -156,7 +157,7 @@ class UploadDatafileRunnable(object):
                 return
             message = "Defining JSON data for POST..."
             self.uploadsModel.SetMessage(self.uploadModel, message)
-            datasetUri = self.folderModel.datasetModel.GetResourceUri()
+            datasetUri = self.folderModel.datasetModel.resourceUri
             dataFileCreatedTime = \
                 self.folderModel.GetDataFileCreatedTime(self.dataFileIndex)
             dataFileModifiedTime = \
@@ -171,18 +172,18 @@ class UploadDatafileRunnable(object):
                 "created_time": dataFileCreatedTime,
                 "modification_time": dataFileModifiedTime,
             }
-            if self.uploadModel.Canceled():
-                self.foldersController.SetCanceled()
+            if self.uploadModel.canceled:
+                self.foldersController.canceled = True
                 logger.debug("Upload for \"%s\" was canceled "
                              "before it began uploading." %
                              self.uploadModel.GetRelativePathToUpload())
                 return
         else:
-            dataFileDict = self.existingUnverifiedDatafile.GetJson()
+            dataFileDict = self.existingUnverifiedDatafile.json
 
         message = "Uploading..."
         self.uploadsModel.SetMessage(self.uploadModel, message)
-        self.uploadModel.SetStartTime(datetime.now())
+        self.uploadModel.startTime = datetime.now()
 
         try:
             if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
@@ -190,17 +191,9 @@ class UploadDatafileRunnable(object):
             else:
                 self.UploadFileToStaging(dataFileDict)
         except Exception as err:
-            self.uploadsModel.SetMessage(self.uploadModel, SafeStr(err))
-            self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
-            self.uploadModel.SetTraceback(traceback.format_exc())
-            if dataFileDirectory != "":
-                logger.error("Upload failed for datafile " + dataFileName +
-                             " in subdirectory " + dataFileDirectory +
-                             " of folder " + self.folderModel.folder)
-            else:
-                logger.error("Upload failed for datafile " + dataFileName +
-                             " in folder " + self.folderModel.folder)
             logger.error(traceback.format_exc())
+            self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+            return
 
     def CanceledCallback(self):
         """
@@ -208,25 +201,23 @@ class UploadDatafileRunnable(object):
         have been canceled.
         """
         return self.foldersController.IsShuttingDown() or \
-            self.uploadModel.Canceled()
+            self.uploadModel.canceled
 
-    def Md5ProgressCallback(self, bytesProcessed):
+    def Md5ProgressCallback(self, bytesSummed):
         """
         Called by MD5 calculation method to update progress.
         """
-        if self.uploadModel.Canceled():
-            self.foldersController.SetCanceled()
+        if self.uploadModel.canceled:
+            self.foldersController.canceled = True
             return
-        dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
-        if dataFileSize > 0:
-            percentComplete = \
-                100.0 - ((dataFileSize - bytesProcessed) * 100.0) \
-                / dataFileSize
+        size = self.folderModel.GetDataFileSize(self.dataFileIndex)
+        if size > 0:
+            percentComplete = 100.0 - ((size - bytesSummed) * 100.0) / size
         else:
             percentComplete = 100
         self.uploadModel.SetProgress(int(percentComplete))
         self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-        if dataFileSize >= (1024 * 1024 * 1024):
+        if size >= (1024 * 1024 * 1024):
             message = "%3.1f %%  MD5 summed" % percentComplete
         else:
             message = "%3d %%  MD5 summed" % int(percentComplete)
@@ -236,10 +227,10 @@ class UploadDatafileRunnable(object):
         """
         Updates upload progress.
         """
-        if self.uploadModel.Canceled():
-            self.foldersController.SetCanceled()
+        if self.uploadModel.canceled:
+            self.foldersController.canceled = True
             return
-        elif self.uploadModel.GetStatus() == UploadStatus.COMPLETED:
+        elif self.uploadModel.status == UploadStatus.COMPLETED:
             return
         if current is None:
             # For a zero-sized file, current will be None
@@ -273,17 +264,20 @@ class UploadDatafileRunnable(object):
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
 
         def PosterCallback(param, current, total):
+            """
+            Callback for progress updates from POST uploads
+            """
             # pylint: disable=unused-argument
             self.ProgressCallback(current, total)
 
         try:
-            response = DataFileModel.UploadDataFileWithPost(
-                self.settingsModel, dataFilePath, dataFileDict,
-                self.uploadsModel, self.uploadModel, PosterCallback)
-            self.FinalizeUpload(response, postSuccess=True, uploadSuccess=True)
+            _ = DataFileModel.UploadDataFileWithPost(
+                dataFilePath, dataFileDict, self.uploadsModel,
+                self.uploadModel, PosterCallback)
+            self.FinalizeUpload(uploadSuccess=True)
+            return
         except ValueError as err:
-            self.uploadModel.SetTraceback(
-                traceback.format_exc())
+            self.uploadModel.traceback = traceback.format_exc()
             errString = SafeStr(err)
             if errString == "read of closed file" or \
                     errString == "seek of closed file":
@@ -292,10 +286,11 @@ class UploadDatafileRunnable(object):
                              self.uploadModel.GetRelativePathToUpload())
                 return
             else:
-                raise
+                logger.error(traceback.format_exc())
+                self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+                return
         except urllib2.HTTPError as err:
-            self.uploadModel.SetTraceback(
-                traceback.format_exc())
+            self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())
             errorResponse = err.read()
             logger.error(errorResponse)
@@ -312,10 +307,8 @@ class UploadDatafileRunnable(object):
             except:
                 message += SafeStr(err)
             PostEvent(
-                self.foldersController
-                .ShowMessageDialogEvent(title="MyData",
-                                        message=message,
-                                        icon=wx.ICON_ERROR))
+                self.foldersController.ShowMessageDialogEvent(
+                    title="MyData", message=message, icon=wx.ICON_ERROR))
 
     def UploadFileToStaging(self, dataFileDict):
         """
@@ -323,38 +316,43 @@ class UploadDatafileRunnable(object):
         """
         # pylint:disable=too-many-locals
         # pylint:disable=too-many-branches
-        # pylint:disable=too-many-return-statements
-        dataFileDict['uploader_uuid'] = self.settingsModel.miscellaneous.uuid
+        dataFileDict['uploader_uuid'] = SETTINGS.miscellaneous.uuid
         dataFileDict['requester_key_fingerprint'] = \
-            self.settingsModel.sshKeyPair.GetFingerprint()
+            SETTINGS.sshKeyPair.fingerprint
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
-        postSuccess = False
         response = None
         if not self.existingUnverifiedDatafile:
-            response = DataFileModel.CreateDataFileForStagingUpload(
-                self.settingsModel, dataFileDict)
-            postSuccess = (response.status_code == 201)
-            logger.debug(response.text)
-            if not postSuccess:
+            response = \
+                DataFileModel.CreateDataFileForStagingUpload(dataFileDict)
+            if response.status_code != 201:
                 dataFileName = os.path.basename(dataFilePath)
                 folderName = self.folderModel.folder
-                myTardisUsername = self.settingsModel.general.username
+                myTardisUsername = SETTINGS.general.username
                 UploadDatafileRunnable.HandleFailedCreateDataFile(
                     response, dataFileName, folderName, myTardisUsername)
                 return
-        uploadToStagingRequest = self.settingsModel.uploadToStagingRequest
-        host = uploadToStagingRequest.GetScpHostname()
-        port = uploadToStagingRequest.GetScpPort()
-        location = uploadToStagingRequest.GetLocation()
-        username = uploadToStagingRequest.GetScpUsername()
-        privateKeyFilePath = \
-            self.settingsModel.sshKeyPair.GetPrivateKeyFilePath()
+        uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+        try:
+            host = uploadToStagingRequest.scpHostname
+            port = uploadToStagingRequest.scpPort
+            location = uploadToStagingRequest.location
+            username = uploadToStagingRequest.scpUsername
+        except StorageBoxAttributeNotFound as err:
+            self.uploadModel.traceback = traceback.format_exc()
+            PostEvent(
+                self.foldersController.ShutdownUploadsEvent(
+                    failed=True))
+            message = SafeStr(err)
+            logger.error(message)
+            PostEvent(
+                self.foldersController.ShowMessageDialogEvent(
+                    title="MyData", message=message, icon=wx.ICON_ERROR))
+            return
+        privateKeyFilePath = SETTINGS.sshKeyPair.privateKeyFilePath
         if self.existingUnverifiedDatafile:
-            uri = self.existingUnverifiedDatafile\
-                .GetReplicas()[0].GetUri()
-            remoteFilePath = "%s/%s" % (location.rstrip('/'),
-                                        uri)
+            uri = self.existingUnverifiedDatafile.replicas[0].uri
+            remoteFilePath = "%s/%s" % (location.rstrip('/'), uri)
         else:
             # DataFile creation via the MyTardis API doesn't
             # return JSON, but if a DataFile record is created
@@ -363,9 +361,8 @@ class UploadDatafileRunnable(object):
             # to copy/upload the file to.
             tempUrl = response.text
             remoteFilePath = tempUrl
-            dataFileId = \
-                response.headers['Location'].split('/')[-2]
-            self.uploadModel.SetDataFileId(dataFileId)
+            dataFileId = response.headers['Location'].split('/')[-2]
+            self.uploadModel.dataFileId = dataFileId
         while True:
             # Upload retries loop:
             try:
@@ -379,108 +376,68 @@ class UploadDatafileRunnable(object):
                            self.uploadModel)
                 # Break out of upload retries loop.
                 break
-            except IOError as err:
-                if self.foldersController.IsShuttingDown() or \
-                        self.uploadModel.Canceled():
-                    return
-                self.uploadModel.SetTraceback(
-                    traceback.format_exc())
-                if self.uploadModel.GetRetries() < \
-                        self.settingsModel.advanced.maxUploadRetries:
-                    logger.warning(SafeStr(err))
-                    self.uploadModel.IncrementRetries()
-                    logger.debug("Restarting upload for " +
-                                 dataFilePath)
-                    self.uploadModel.SetProgress(0)
-                    continue
-                else:
-                    raise
-            except DoesNotExist as err:
-                self.uploadModel.SetTraceback(
-                    traceback.format_exc())
-                # This generally means that MyTardis's API couldn't assign
-                # a staging storage box, possibly because the MyTardis
-                # administrator hasn't created a storage box record with
-                # the correct storage box attribute, i.e.
-                # (key="type", value="receiving"). The staging storage box
-                # should also have a storage box option with
-                # (key="location", value="/mnt/.../MYTARDIS_STAGING")
-                PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = SafeStr(err)
-                PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
-            except StorageBoxAttributeNotFound as err:
-                self.uploadModel.SetTraceback(
-                    traceback.format_exc())
-                PostEvent(
-                    self.foldersController.ShutdownUploadsEvent(
-                        failed=True))
-                message = SafeStr(err)
-                PostEvent(
-                    self.foldersController
-                    .ShowMessageDialogEvent(title="MyData",
-                                            message=message,
-                                            icon=wx.ICON_ERROR))
-                return
             except SshException as err:
+                # includes the ScpException subclass
                 if self.foldersController.IsShuttingDown() or \
-                        self.uploadModel.Canceled():
+                        self.uploadModel.canceled:
                     return
-                self.uploadModel.SetTraceback(
-                    traceback.format_exc())
-                if self.uploadModel.GetRetries() < \
-                        self.settingsModel.advanced.maxUploadRetries:
+                self.uploadModel.traceback = traceback.format_exc()
+                if self.uploadModel.retries < \
+                        SETTINGS.advanced.maxUploadRetries:
                     logger.warning(SafeStr(err))
-                    self.uploadModel.IncrementRetries()
-                    logger.debug("Restarting upload for " +
-                                 dataFilePath)
+                    self.uploadModel.retries += 1
+                    logger.debug("Restarting upload for " + dataFilePath)
                     self.uploadModel.SetProgress(0)
                     continue
                 else:
-                    raise
-        if self.uploadModel.Canceled():
+                    logger.error(traceback.format_exc())
+                    self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+                    # break
+                    return
+        if self.uploadModel.canceled:
             logger.debug("FoldersController: "
                          "Aborting upload for \"%s\"."
                          % self.uploadModel
                          .GetRelativePathToUpload())
             return
-        bytesUploaded = self.uploadModel.GetBytesUploaded()
-        if bytesUploaded == dataFileSize:
+        # If an exception occurs (e.g. can't connect to SCP server)
+        # while uploading a zero-byte file, don't want to mark it
+        # as completed, just because zero bytes have been uploaded.
+        if self.uploadModel.bytesUploaded == dataFileSize and \
+                self.uploadModel.status != UploadStatus.CANCELED and \
+                self.uploadModel.status != UploadStatus.FAILED:
             uploadSuccess = True
             if self.existingUnverifiedDatafile:
                 datafileId = \
-                    self.existingUnverifiedDatafile.GetId()
+                    self.existingUnverifiedDatafile.datafileId
             else:
                 location = response.headers['location']
                 datafileId = location.split("/")[-2]
-            verificationDelay = \
-                self.settingsModel.miscellaneous.verificationDelay
+            verificationDelay = SETTINGS.miscellaneous.verificationDelay
 
             def RequestVerification():
-                DataFileModel.Verify(self.settingsModel,
-                                     datafileId)
+                """
+                Request verification via MyTardis API
+
+                POST-uploaded files are verified automatically by MyTardis, but
+                for staged files, we need to request verification after
+                uploading to staging.
+                """
+                DataFileModel.Verify(datafileId)
             if wx.PyApp.IsMainLoopRunning() and \
                     int(verificationDelay) > 0:
                 timer = threading.Timer(verificationDelay,
                                         RequestVerification)
                 timer.start()
-                self.uploadModel.SetVerificationTimer(timer)
+                self.uploadModel.verificationTimer = timer
             else:
                 # Don't use a timer if we are running
                 # unit tests:
                 RequestVerification()
-
-            self.FinalizeUpload(response, postSuccess, uploadSuccess)
-            return
         else:
-            raise Exception("Only %d of %d bytes were uploaded for %s"
-                            % (bytesUploaded, dataFileSize, dataFilePath))
+            uploadSuccess = False
+        self.FinalizeUpload(uploadSuccess)
+        return
 
     @staticmethod
     def HandleFailedCreateDataFile(response, dataFileName, folderName,
@@ -532,58 +489,47 @@ class UploadDatafileRunnable(object):
             finally:
                 raise InternalServerError(message)
 
-    def FinalizeUpload(self, response, postSuccess, uploadSuccess):
+    def FinalizeUpload(self, uploadSuccess, message=None):
         """
         Finalize upload
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
+        dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
+        uploadMethod = self.foldersController.uploadMethod
         if uploadSuccess:
             logger.debug("Upload succeeded for %s" % dataFileName)
-            self.uploadsModel.SetStatus(self.uploadModel,
-                                        UploadStatus.COMPLETED)
-            message = "Upload complete!"
+            self.uploadsModel.SetStatus(
+                self.uploadModel, UploadStatus.COMPLETED)
+            if not message:
+                message = "Upload complete!"
             self.uploadsModel.SetMessage(self.uploadModel, message)
             self.uploadModel.SetLatestTime(datetime.now())
             self.uploadModel.SetProgress(100)
-            self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=True)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
-            event = self.foldersController.UploadCompleteEvent(
-                folderModel=self.folderModel,
-                dataFileIndex=self.dataFileIndex,
-                uploadModel=self.uploadModel)
-            PostEvent(event)
         else:
-            if self.foldersController.IsShuttingDown() or \
-                    self.uploadModel.Canceled():
-                return
-            logger.error("Upload failed for " + dataFileName)
             self.uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
-            if not postSuccess and response is not None:
-                message = "Internal Server Error: " \
-                    "See MyData's log for further " \
-                    "information."
-                logger.error(message)
-                message = response.text
-            else:
-                message = "Upload failed."
+            if not message:
+                if uploadMethod == UploadMethod.VIA_STAGING and \
+                        self.uploadModel.bytesUploaded < dataFileSize:
+                    message = "Only %s of %s bytes were uploaded for %s" \
+                        % (self.uploadModel.bytesUploaded, dataFileSize,
+                           dataFilePath)
+                else:
+                    message = "Upload failed for %s" % dataFileName
+            logger.error(message)
             self.uploadsModel.SetMessage(self.uploadModel, message)
-
-            # self.uploadModel.SetProgress(0.0)
             self.uploadModel.SetProgress(0)
-            self.uploadsModel.UploadProgressUpdated(self.uploadModel)
-            self.folderModel.SetDataFileUploaded(self.dataFileIndex,
-                                                 uploaded=False)
-            self.foldersModel.FolderStatusUpdated(self.folderModel)
-            event = self.foldersController.UploadCompleteEvent(
-                folderModel=self.folderModel,
-                dataFileIndex=self.dataFileIndex,
-                uploadModel=self.uploadModel)
-            PostEvent(event)
-        if self.foldersController.uploadMethod == UploadMethod.HTTP_POST:
+        self.uploadsModel.UploadProgressUpdated(self.uploadModel)
+        self.folderModel.SetDataFileUploaded(
+            self.dataFileIndex, uploaded=uploadSuccess)
+        self.foldersModel.FolderStatusUpdated(self.folderModel)
+        event = self.foldersController.UploadCompleteEvent(
+            folderModel=self.folderModel,
+            dataFileIndex=self.dataFileIndex,
+            uploadModel=self.uploadModel)
+        PostEvent(event)
+        if uploadMethod == UploadMethod.HTTP_POST:
             try:
-                self.uploadModel.GetBufferedReader().close()
+                self.uploadModel.bufferedReader.close()
             except:
                 logger.error(traceback.format_exc())

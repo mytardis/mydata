@@ -14,6 +14,15 @@ else:
 from ..logs import logger  # pylint: disable=wrong-import-position
 
 
+class ColumnRenderer(object):
+    """
+    Enumerated data type.
+    """
+    TEXT = 0
+    BITMAP = 1
+    PROGRESS = 2
+
+
 class MyDataDataViewModel(DataViewIndexListModel):
     """
     Generic base class to inherit from
@@ -211,3 +220,9 @@ class MyDataDataViewModel(DataViewIndexListModel):
                 self.RowValueChanged(row, col)
         except wx.PyAssertionError:
             logger.warning(traceback.format_exc())
+
+    def GetColumnRenderer(self, col):
+        """
+        Return the renderer to be used for the specified dataview column
+        """
+        return ColumnRenderer.TEXT

@@ -164,7 +164,7 @@ class StorageBoxAttributeNotFound(Exception):
     """
     def __init__(self, storageBox, key):
         message = "Key '%s' not found in attributes for storage box '%s'" \
-            % (key, storageBox.GetName())
+            % (key, storageBox.name)
         super(StorageBoxAttributeNotFound, self).__init__(message)
 
 
@@ -174,7 +174,7 @@ class StorageBoxOptionNotFound(Exception):
     """
     def __init__(self, storageBox, key):
         message = "Key '%s' not found in options for storage box '%s'" \
-            % (key, storageBox.GetName())
+            % (key, storageBox.name)
         super(StorageBoxOptionNotFound, self).__init__(message)
 
 

@@ -3,15 +3,16 @@ Test ability to scan folders with the Email / Dataset structure.
 """
 import os
 
-from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.folders import FoldersModel
 from ...dataviewmodels.users import UsersModel
 from ...dataviewmodels.groups import GroupsModel
+from .. import MyDataScanFoldersTester
 
 
-class ScanFoldersTester(MyDataTester):
+class ScanFoldersTester(MyDataScanFoldersTester):
     """
     Test ability to scan folders with the Email / Dataset structure.
     """
@@ -24,41 +25,30 @@ class ScanFoldersTester(MyDataTester):
         """
         Test ability to scan folders with the Email / Dataset structure.
         """
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataEmailDataset.cfg")
+            "../testdata/testdataEmailDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataEmailDataset")
+            "../testdata", "testdataEmailDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        ValidateSettings(settingsModel)
-        usersModel = UsersModel(settingsModel)
-        groupsModel = GroupsModel(settingsModel)
-        foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
-
-        def IncrementProgressDialog():
-            """
-            Callback for ScanFolders.
-            """
-            pass
-
-        def ShouldAbort():
-            """
-            Callback for ScanFolders.
-            """
-            return False
-
-        foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings()
+        usersModel = UsersModel()
+        groupsModel = GroupsModel()
+        foldersModel = FoldersModel(usersModel, groupsModel)
+        foldersModel.ScanFolders(
+            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ShouldAbort)
         self.assertEqual(sorted(usersModel.GetValuesForColname("Username")),
                          ["testuser1", "testuser2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).folder)
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0

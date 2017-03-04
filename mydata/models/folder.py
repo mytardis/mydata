@@ -9,6 +9,7 @@ import hashlib
 import traceback
 from fnmatch import fnmatch
 
+from ..settings import SETTINGS
 from ..logs import logger
 
 
@@ -21,42 +22,40 @@ class FolderModel(object):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def __init__(self, dataViewId, folder, location,
-                 userFolderName, groupFolderName, owner,
-                 settingsModel, isExperimentFilesFolder=False):
+    def __init__(self, dataViewId, folderName, location, userFolderName,
+                 groupFolderName, owner, isExperimentFilesFolder=False):
         # pylint: disable=too-many-locals
-        self.settingsModel = settingsModel
         self.dataViewId = dataViewId
         # The folder name, e.g. "Dataset1":
-        self.folder = folder
+        self.folderName = folderName
         # The folder's location, e.g. "C:\Data\testuser1":
         self.location = location
         self.isExperimentFilesFolder = isExperimentFilesFolder
         if self.isExperimentFilesFolder:
             absoluteFolderPath = location
         else:
-            absoluteFolderPath = os.path.join(location, folder)
+            absoluteFolderPath = os.path.join(location, folderName)
         self.dataFilePaths = []
         self.dataFileDirectories = []
         self.numFiles = 0
         for dirname, _, files in os.walk(absoluteFolderPath):
             for filename in sorted(files):
-                if settingsModel.filters.useIncludesFile and \
-                        not settingsModel.filters.useExcludesFile:
-                    if not self.MatchesIncludes(filename):
+                if SETTINGS.filters.useIncludesFile and \
+                        not SETTINGS.filters.useExcludesFile:
+                    if not FolderModel.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, not matching includes."
                                      % filename)
                         continue
-                elif not settingsModel.filters.useIncludesFile and \
-                        settingsModel.filters.useExcludesFile:
-                    if self.MatchesExcludes(filename):
+                elif not SETTINGS.filters.useIncludesFile and \
+                        SETTINGS.filters.useExcludesFile:
+                    if FolderModel.MatchesExcludes(filename):
                         logger.debug("Ignoring %s, matching excludes."
                                      % filename)
                         continue
-                elif settingsModel.filters.useIncludesFile and \
-                        settingsModel.filters.useExcludesFile:
-                    if self.MatchesExcludes(filename) and \
-                            not self.MatchesIncludes(filename):
+                elif SETTINGS.filters.useIncludesFile and \
+                        SETTINGS.filters.useExcludesFile:
+                    if FolderModel.MatchesExcludes(filename) and \
+                            not FolderModel.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, matching excludes "
                                      "and not matching includes."
                                      % filename)
@@ -124,22 +123,23 @@ class FolderModel(object):
     def GetDataFilePath(self, dataFileIndex):
         """
         Get the absolute path to a file within this folder's root directory
-        which is os.path.join(self.location, self.folder)
+        which is os.path.join(self.location, self.folderName)
         """
         return self.dataFilePaths[dataFileIndex]
 
     def GetDataFileRelPath(self, dataFileIndex):
         """
         Get the path to a file relative to the folder's root directory
-        which is os.path.join(self.location, self.folder)
+        which is os.path.join(self.location, self.folderName)
         """
         return os.path.relpath(self.GetDataFilePath(dataFileIndex),
-                               self.settingsModel.general.dataDirectory)
+                               SETTINGS.general.dataDirectory)
 
     def GetDataFileDirectory(self, dataFileIndex):
         """
         Get the relative path to a file's subdirectory relative to the
-        folder's root directory which isos.path.join(self.location, self.folder)
+        folder's root directory which is
+        os.path.join(self.location, self.folderName)
         """
         return self.dataFileDirectories[dataFileIndex]
 
@@ -188,12 +188,11 @@ class FolderModel(object):
         """
         if self.isExperimentFilesFolder:
             return os.path.relpath(self.location,
-                                   self.settingsModel.general.dataDirectory)
+                                   SETTINGS.general.dataDirectory)
         else:
             return os.path.join(
-                os.path.relpath(self.location,
-                                self.settingsModel.general.dataDirectory),
-                self.folder)
+                os.path.relpath(self.location, SETTINGS.general.dataDirectory),
+                self.folderName)
 
     def GetNumFiles(self):
         """
@@ -220,7 +219,7 @@ class FolderModel(object):
         if self.isExperimentFilesFolder:
             absoluteFolderPath = self.location
         else:
-            absoluteFolderPath = os.path.join(self.location, self.folder)
+            absoluteFolderPath = os.path.join(self.location, self.folderName)
         self.created = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
@@ -240,13 +239,14 @@ class FolderModel(object):
         self._experimentTitle = title
         self.experimentTitleSetManually = True
 
-    def MatchesIncludes(self, filename):
+    @staticmethod
+    def MatchesIncludes(filename):
         """
         Return True if file matches at least one pattern in the includes
         file.
         """
         match = False
-        with open(self.settingsModel.filters.includesFile, 'r') as includesFile:
+        with open(SETTINGS.filters.includesFile, 'r') as includesFile:
             for glob in includesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
@@ -258,13 +258,14 @@ class FolderModel(object):
                 match = match or fnmatch(filename, glob)
         return match
 
-    def MatchesExcludes(self, filename):
+    @staticmethod
+    def MatchesExcludes(filename):
         """
         Return True if file matches at least one pattern in the excludes
         file.
         """
         match = False
-        with open(self.settingsModel.filters.excludesFile, 'r') as excludesFile:
+        with open(SETTINGS.filters.excludesFile, 'r') as excludesFile:
             for glob in excludesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
@@ -282,10 +283,10 @@ class FolderModel(object):
         modified too recently and might require further local modifications
         before its upload.
         """
-        if self.settingsModel.filters.ignoreNewFiles:
+        if SETTINGS.filters.ignoreNewFiles:
             absoluteFilePath = self.GetDataFilePath(dataFileIndex)
             return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
-                (self.settingsModel.filters.ignoreNewFilesMinutes * 60)
+                (SETTINGS.filters.ignoreNewFilesMinutes * 60)
         else:
             return False
 

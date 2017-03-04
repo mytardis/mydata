@@ -92,7 +92,7 @@ class MiscellaneousSettingsModel(object):
         """
         Return the maximum number of concurrent DataFile lookups
         """
-        return self.mydataConfig['max_verification_threads']
+        return int(self.mydataConfig['max_verification_threads'])
 
     @maxVerificationThreads.setter
     def maxVerificationThreads(self, maxVerificationThreads):

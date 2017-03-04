@@ -23,8 +23,7 @@ class LogViewTester(unittest.TestCase):
         """
         Test ability to open log view.
         """
-        settingsModel = None
-        logView = LogView(self.frame, settingsModel)
+        logView = LogView(self.frame)
         pyCommandEvent = wx.PyCommandEvent(wx.wxEVT_COMMAND_CHECKBOX_CLICKED)
         logView.debugCheckBox.SetValue(True)
         logView.OnDebugLogging(pyCommandEvent)

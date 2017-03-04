@@ -10,15 +10,7 @@ import wx
 from ..models.upload import UploadStatus
 from ..media import MYDATA_ICONS
 from .dataview import MyDataDataViewModel
-
-
-class ColumnType(object):
-    """
-    Enumerated data type.
-    """
-    TEXT = 0
-    BITMAP = 1
-    PROGRESS = 2
+from .dataview import ColumnRenderer
 
 
 class UploadsModel(MyDataDataViewModel):
@@ -33,14 +25,12 @@ class UploadsModel(MyDataDataViewModel):
         super(UploadsModel, self).__init__()
 
         self.columnNames = ["Id", "Folder", "Subdirectory", "Filename",
-                            "File Size", "Status", "Progress", "Message", "Speed"]
+                            "File Size", "Status", "Progress", "Message",
+                            "Speed"]
         self.columnKeys = ["dataViewId", "folder", "subdirectory", "filename",
-                           "filesize", "status", "progress", "message", "speed"]
+                           "filesizeString", "status", "progress", "message",
+                           "speed"]
         self.defaultColumnWidths = [40, 170, 170, 200, 75, 55, 100, 200, 100]
-        self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
-                            ColumnType.TEXT, ColumnType.TEXT,
-                            ColumnType.BITMAP, ColumnType.PROGRESS,
-                            ColumnType.TEXT, ColumnType.TEXT)
 
         self.completedCount = 0
         self.completedSize = 0
@@ -74,15 +64,12 @@ class UploadsModel(MyDataDataViewModel):
         try:
             if col == self.columnNames.index("Status"):
                 icon = wx.NullBitmap
-                if self.rowsData[row].GetStatus() == \
-                        UploadStatus.IN_PROGRESS:
+                if self.rowsData[row].status == UploadStatus.IN_PROGRESS:
                     icon = self.inProgressIcon
-                elif self.rowsData[row].GetStatus() == \
-                        UploadStatus.COMPLETED:
+                elif self.rowsData[row].status == UploadStatus.COMPLETED:
                     icon = self.completedIcon
-                elif self.rowsData[row].GetStatus() in \
-                        (UploadStatus.FAILED,
-                         UploadStatus.CANCELED):
+                elif self.rowsData[row].status in \
+                        (UploadStatus.FAILED, UploadStatus.CANCELED):
                     icon = self.failedIcon
                 return icon
             columnKey = self.GetColumnKeyName(col)
@@ -108,15 +95,16 @@ class UploadsModel(MyDataDataViewModel):
         """
         Cancel remaining
         """
-        rowsToCancel = []
+        rowsCanceled = []
         for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].GetStatus() != UploadStatus.COMPLETED \
-                    and \
-                    self.rowsData[row].GetStatus() != UploadStatus.FAILED:
-                rowsToCancel.append(row)
-        for row in rowsToCancel:
             uploadModel = self.rowsData[row]
-            uploadModel.Cancel()
+            if uploadModel.status != UploadStatus.COMPLETED and \
+                    uploadModel.status != UploadStatus.FAILED:
+                uploadModel.Cancel()
+                rowsCanceled.append(row)
+
+        for row in rowsCanceled:
+            uploadModel = self.rowsData[row]
             self.SetStatus(uploadModel, UploadStatus.CANCELED)
             self.SetMessage(uploadModel, 'Canceled')
 
@@ -156,12 +144,12 @@ class UploadsModel(MyDataDataViewModel):
         """
         Update upload status for one UploadModel instance
         """
-        uploadModel.SetStatus(status)
+        uploadModel.status = status
         if status == UploadStatus.COMPLETED:
             self.completedCountLock.acquire()
             try:
                 self.completedCount += 1
-                self.completedSize += uploadModel.GetFileSize()
+                self.completedSize += uploadModel.fileSize
                 self.finishTime = datetime.datetime.now()
             finally:
                 self.completedCountLock.release()
@@ -192,7 +180,7 @@ class UploadsModel(MyDataDataViewModel):
         """
         Update upload message for one UploadModel instance
         """
-        uploadModel.SetMessage(message)
+        uploadModel.message = message
         self.MessageUpdated(uploadModel)
 
     def GetCompletedCount(self):
@@ -212,3 +200,14 @@ class UploadsModel(MyDataDataViewModel):
         Return the number of failed uploads
         """
         return self.failedCount
+
+    def GetColumnRenderer(self, col):
+        """
+        Return the renderer to be used for the specified dataview column
+        """
+        if col == 5:
+            return ColumnRenderer.BITMAP,
+        elif col == 6:
+            return ColumnRenderer.PROGRESS,
+        else:
+            return ColumnRenderer.TEXT

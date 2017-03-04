@@ -36,18 +36,6 @@ class StorageBox(object):
             for attrJson in storageBoxJson['attributes']:
                 self.attributes.append(StorageBoxAttribute(attrJson=attrJson))
 
-    def GetOptions(self):
-        """
-        Returns storage box options.
-        """
-        return self.options
-
-    def GetAttributes(self):
-        """
-        Returns storage box attributes.
-        """
-        return self.attributes
-
 
 class StorageBoxOption(object):
     """
@@ -67,18 +55,6 @@ class StorageBoxOption(object):
                 if hasattr(self, attr):
                     self.__dict__[attr] = optionJson[key]
 
-    def GetKey(self):
-        """
-        Return key.
-        """
-        return self.key
-
-    def GetValue(self):
-        """
-        Return value.
-        """
-        return self.value
-
 
 class StorageBoxAttribute(object):
     """
@@ -97,15 +73,3 @@ class StorageBoxAttribute(object):
                     attr = "storageBoxAttributeId"
                 if hasattr(self, attr):
                     self.__dict__[attr] = attrJson[key]
-
-    def GetKey(self):
-        """
-        Return key.
-        """
-        return self.key
-
-    def GetValue(self):
-        """
-        Return value.
-        """
-        return self.value

@@ -5,7 +5,7 @@ import unittest
 import wx
 
 from ...dataviewmodels.verifications import VerificationsModel
-from ...views.verifications import VerificationsView
+from ...views.dataview import MyDataDataView
 
 
 class VerificationsViewTester(unittest.TestCase):
@@ -23,7 +23,7 @@ class VerificationsViewTester(unittest.TestCase):
         Test ability to open verifications view.
         """
         verificationsModel = VerificationsModel()
-        VerificationsView(self.frame, verificationsModel=verificationsModel)
+        MyDataDataView(self.frame, verificationsModel)
 
     def tearDown(self):
         self.frame.Hide()

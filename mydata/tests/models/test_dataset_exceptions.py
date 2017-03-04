@@ -3,6 +3,7 @@ Test ability to handle dataset-related exceptions.
 """
 import os
 
+from ...settings import SETTINGS
 from .. import MyDataTester
 from ...models.dataset import DatasetModel
 from ...models.experiment import ExperimentModel
@@ -27,20 +28,21 @@ class DatasetExceptionsTester(MyDataTester):
         Test ability to handle dataset-related exceptions.
         """
         # pylint: disable=too-many-locals
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg")
+            "../testdata/testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg")
+            "../testdata", "testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        ValidateSettings(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
-        owner = settingsModel.defaultOwner
+        ValidateSettings()
+
+        owner = SETTINGS.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
@@ -48,18 +50,18 @@ class DatasetExceptionsTester(MyDataTester):
 
         # Test creating dataset record and ensure that no exception
         # is raised:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
+                        userFolderName, groupFolderName, owner)
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
         folderModel.experimentModel = experimentModel
         testRun = False
         datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
-        self.assertEqual(datasetModel.GetDescription(), datasetFolderName)
+        self.assertEqual(datasetModel.description, datasetFolderName)
 
         # Simulate creating dataset record with testRun True
         # and ensure that no exception is raised:
@@ -71,29 +73,29 @@ class DatasetExceptionsTester(MyDataTester):
         # Simulate retrieving existing dataset record with testRun True
         # and ensure that no exception is raised:
         testRun = True
-        folderModel.folder = "Existing Dataset"
+        folderModel.folderName = "Existing Dataset"
         datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
-        self.assertEqual(datasetModel.GetDescription(), "Existing Dataset")
+        self.assertEqual(datasetModel.description, "Existing Dataset")
         testRun = False
 
         # Try to look up dataset record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.general.apiKey
-        folderModel.settingsModel.general.apiKey = "invalid"
+        apiKey = SETTINGS.general.apiKey
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
-        folderModel.settingsModel.general.apiKey = apiKey
+        SETTINGS.general.apiKey = apiKey
 
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where the user doesn't have
         # permission to do so.
-        folderModel.folder = "New Dataset Folder Without Permission"
+        folderModel.folderName = "New Dataset Folder Without Permission"
         with self.assertRaises(Unauthorized):
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
 
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where an Internal Server Error
         # occurs.
-        folderModel.folder = "New Dataset Folder With Internal Server Error"
+        folderModel.folderName = "New Dataset Folder With Internal Server Error"
         with self.assertRaises(InternalServerError):
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)

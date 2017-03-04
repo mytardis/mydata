@@ -7,7 +7,6 @@ import threading
 import wx
 
 from ..models.verification import VerificationStatus
-from .uploads import ColumnType
 from .dataview import MyDataDataViewModel
 
 
@@ -26,8 +25,6 @@ class VerificationsModel(MyDataDataViewModel):
         self.columnKeys = ["dataViewId", "folder", "subdirectory", "filename",
                            "message"]
         self.defaultColumnWidths = [40, 170, 170, 200, 500]
-        self.columnTypes = (ColumnType.TEXT, ColumnType.TEXT, ColumnType.TEXT,
-                            ColumnType.TEXT, ColumnType.TEXT)
         self.completedCount = 0
         self.completedCountLock = threading.Lock()
 
@@ -42,7 +39,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         Set verificationModel's status to complete
         """
-        verificationModel.SetComplete()
+        verificationModel.complete = True
         self.completedCountLock.acquire()
         try:
             self.completedCount += 1
@@ -66,7 +63,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         foundVerifiedCount = 0
         for row in reversed(range(0, self.GetRowCount())):
-            if self.rowsData[row].GetStatus() == \
+            if self.rowsData[row].status == \
                     VerificationStatus.FOUND_VERIFIED:
                 foundVerifiedCount += 1
         return foundVerifiedCount
@@ -77,7 +74,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         notFoundCount = 0
         for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].GetStatus() == \
+            if self.rowsData[row].status == \
                     VerificationStatus.NOT_FOUND:
                 notFoundCount += 1
         return notFoundCount
@@ -89,7 +86,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         foundUnverifiedFullSizeCount = 0
         for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].GetStatus() == \
+            if self.rowsData[row].status == \
                     VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE:
                 foundUnverifiedFullSizeCount += 1
         return foundUnverifiedFullSizeCount
@@ -101,7 +98,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         foundUnverifiedNotFullSizeCount = 0
         for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].GetStatus() == \
+            if self.rowsData[row].status == \
                     VerificationStatus.FOUND_UNVERIFIED_NOT_FULL_SIZE:
                 foundUnverifiedNotFullSizeCount += 1
         return foundUnverifiedNotFullSizeCount
@@ -112,7 +109,7 @@ class VerificationsModel(MyDataDataViewModel):
         """
         failedCount = 0
         for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].GetStatus() == \
+            if self.rowsData[row].status == \
                     VerificationStatus.FAILED:
                 failedCount += 1
         return failedCount

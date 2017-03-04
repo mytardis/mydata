@@ -118,7 +118,7 @@ class AdvancedSettingsModel(object):
         """
         Return the maximum number of concurrent uploads
         """
-        return self.mydataConfig['max_upload_threads']
+        return int(self.mydataConfig['max_upload_threads'])
 
     @maxUploadThreads.setter
     def maxUploadThreads(self, maxUploadThreads):
@@ -132,7 +132,7 @@ class AdvancedSettingsModel(object):
         """
         Get the maximum number of retries per upload
         """
-        return self.mydataConfig['max_upload_retries']
+        return int(self.mydataConfig['max_upload_retries'])
 
     @maxUploadRetries.setter
     def maxUploadRetries(self, maxUploadRetries):

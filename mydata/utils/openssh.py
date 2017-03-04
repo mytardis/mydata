@@ -15,9 +15,6 @@ otherwise we need to worry about escaping special characters like
 '>' with carets (i.e. '^>').
 
 """
-
-# Disabling some Pylint warnings for now...
-# pylint: disable=missing-docstring
 # pylint: disable=wrong-import-position
 
 import sys
@@ -38,6 +35,7 @@ import requests
 if sys.platform.startswith("win"):
     import win32process  # pylint: disable=import-error
 
+from ..settings import SETTINGS
 from ..logs import logger
 from ..models.datafile import DataFileModel
 from ..models.replica import ReplicaModel
@@ -60,19 +58,17 @@ from ..subprocesses import DEFAULT_CREATION_FLAGS
 # interval of SLEEP_FACTOR * maxThreads.
 SLEEP_FACTOR = 0.01
 
+CONNECTION_TIMEOUT = 3
+
 
 class OpenSSH(object):
+    """
+    A singleton instance of this class (called OPENSSH) is created in this
+    module which contains paths to SSH binaries and quoting methods used for
+    running remote commands over SSH via subprocesses.
+    """
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=no-self-use
-    def DoubleQuote(self, string):
-        return '"' + string.replace('"', r'\"') + '"'
-
-    def DoubleQuoteRemotePath(self, string):
-        path = string.replace('"', r'\"')
-        path = path.replace('`', r'\\`')
-        path = path.replace('$', r'\\$')
-        return '"%s"' % path
-
     def __init__(self):
         """
         Locate the SSH binaries on various systems. On Windows we bundle a
@@ -114,6 +110,33 @@ class OpenSSH(object):
         self.mkdir = os.path.join(binBaseDir, "mkdir" + binarySuffix)
         self.cat = os.path.join(binBaseDir, "cat" + binarySuffix)
 
+    def DoubleQuote(self, string):
+        """
+        Return double-quoted string
+        """
+        return '"' + string.replace('"', r'\"') + '"'
+
+    def DoubleQuoteRemotePath(self, string):
+        """
+        Return double-quoted remote path, escaping double quotes,
+        backticks and dollar signs
+        """
+        path = string.replace('"', r'\"')
+        path = path.replace('`', r'\\`')
+        path = path.replace('$', r'\\$')
+        return '"%s"' % path
+
+    def DefaultSshOptions(self):
+        """
+        Returns default SSH options
+        """
+        return [
+            "-oPasswordAuthentication=no",
+            "-oNoHostAuthenticationForLocalhost=yes",
+            "-oStrictHostKeyChecking=no",
+            "-oConnectTimeout=%s" % CONNECTION_TIMEOUT
+        ]
+
 
 class KeyPair(object):
     """
@@ -122,12 +145,9 @@ class KeyPair(object):
     def __init__(self, privateKeyFilePath, publicKeyFilePath):
         self.privateKeyFilePath = privateKeyFilePath
         self.publicKeyFilePath = publicKeyFilePath
-        self.publicKey = None
-        self.fingerprint = None
+        self._publicKey = None
+        self._fingerprint = None
         self.keyType = None
-
-    def GetPrivateKeyFilePath(self):
-        return self.privateKeyFilePath
 
     def ReadPublicKey(self):
         """
@@ -141,6 +161,11 @@ class KeyPair(object):
             raise SshException("Couldn't access MyData.pub in ~/.ssh/")
 
     def Delete(self):
+        """
+        Delete SSH keypair
+
+        Only used by tests
+        """
         try:
             os.unlink(self.privateKeyFilePath)
             if self.publicKeyFilePath is not None:
@@ -151,10 +176,14 @@ class KeyPair(object):
 
         return True
 
-    def GetPublicKey(self):
-        if self.publicKey is None:
-            self.publicKey = self.ReadPublicKey()
-        return self.publicKey
+    @property
+    def publicKey(self):
+        """
+        Return public key as string
+        """
+        if self._publicKey is None:
+            self._publicKey = self.ReadPublicKey()
+        return self._publicKey
 
     def ReadFingerprintAndKeyType(self):
         """
@@ -188,9 +217,8 @@ class KeyPair(object):
         if self.publicKeyFilePath is None:
             self.publicKeyFilePath = self.privateKeyFilePath + ".pub"
         if not os.path.exists(self.publicKeyFilePath):
-            publicKey = self.GetPublicKey()
             with open(self.publicKeyFilePath, "w") as pubKeyFile:
-                pubKeyFile.write(publicKey)
+                pubKeyFile.write(self.publicKey)
 
         if sys.platform.startswith('win'):
             quotedPrivateKeyFilePath = \
@@ -229,18 +257,20 @@ class KeyPair(object):
 
         return fingerprint, keyType
 
-    def GetFingerprint(self):
-        if self.fingerprint is None:
-            self.fingerprint, self.keyType = self.ReadFingerprintAndKeyType()
-        return self.fingerprint
-
-    def GetKeyType(self):
-        if self.keyType is None:
-            self.fingerprint, self.keyType = self.ReadFingerprintAndKeyType()
-        return self.keyType
+    @property
+    def fingerprint(self):
+        """
+        Return public key fingerprint
+        """
+        if self._fingerprint is None:
+            self._fingerprint, self.keyType = self.ReadFingerprintAndKeyType()
+        return self._fingerprint
 
 
 def FindKeyPair(keyName="MyData", keyPath=None):
+    """
+    Find an SSH key pair
+    """
     if keyPath is None:
         keyPath = os.path.join(os.path.expanduser('~'), ".ssh")
     if os.path.exists(os.path.join(keyPath, keyName)):
@@ -304,9 +334,11 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
         raise SshException(stdout)
 
 
-# pylint: disable=too-many-locals
 def SshServerIsReady(username, privateKeyFilePath,
                      host, port):
+    """
+    Check if SSH server is ready
+    """
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
 
@@ -314,9 +346,6 @@ def SshServerIsReady(username, privateKeyFilePath,
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oPasswordAuthentication=no",
-                      "-oNoHostAuthenticationForLocalhost=yes",
-                      "-oStrictHostKeyChecking=no",
                       "-l", username,
                       host,
                       OPENSSH.DoubleQuote("echo Ready")]
@@ -324,12 +353,10 @@ def SshServerIsReady(username, privateKeyFilePath,
         cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
                       "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-                      "-oPasswordAuthentication=no",
-                      "-oNoHostAuthenticationForLocalhost=yes",
-                      "-oStrictHostKeyChecking=no",
                       "-l", username,
                       host,
                       OPENSSH.DoubleQuote("echo Ready")]
+    cmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
@@ -376,45 +403,40 @@ def MonitorProgress(foldersController, progressPollInterval, uploadModel,
     """
     Monitor progress via RESTful queries.
     """
-    settingsModel = foldersController.settingsModel
-    if foldersController.IsShuttingDown() or \
-            (uploadModel.GetStatus() != UploadStatus.IN_PROGRESS and
-             uploadModel.GetStatus() != UploadStatus.NOT_STARTED):
+    if foldersController.canceled or uploadModel.canceled or \
+            (uploadModel.status != UploadStatus.IN_PROGRESS and
+             uploadModel.status != UploadStatus.NOT_STARTED):
         return
+
     timer = threading.Timer(progressPollInterval, MonitorProgress,
                             args=[foldersController, progressPollInterval,
                                   uploadModel, fileSize, monitoringProgress,
                                   progressCallback])
     timer.start()
-    if uploadModel.GetStatus() == UploadStatus.NOT_STARTED:
+    if uploadModel.status == UploadStatus.NOT_STARTED:
         return
     if monitoringProgress.isSet():
         return
     monitoringProgress.set()
-    dfoId = uploadModel.GetDfoId()
-    if dfoId is None:
-        dataFileId = uploadModel.GetDataFileId()
-        if dataFileId is not None:
+    if uploadModel.dfoId is None:
+        if uploadModel.dataFileId is not None:
             try:
-                dataFile = \
-                    DataFileModel.GetDataFileFromId(settingsModel,
-                                                    dataFileId)
-                dfoId = dataFile.GetReplicas()[0].GetId()
-                uploadModel.SetDfoId(dfoId)
+                dataFile = DataFileModel.GetDataFileFromId(
+                    uploadModel.dataFileId)
+                uploadModel.dfoId = dataFile.replicas[0].dfoId
             except DoesNotExist:
                 # If the DataFile ID reported in the location header
                 # after POSTing to the API doesn't exist yet, don't
                 # worry, just check again later.
                 pass
             except IndexError:
-                # If the dataFile.GetReplicas()[0] DFO doesn't exist yet,
+                # If the dataFile.replicas[0] DFO doesn't exist yet,
                 # don't worry, just check again later.
                 pass
-    if dfoId:
+    if uploadModel.dfoId:
         try:
             bytesUploaded = \
-                ReplicaModel.CountBytesUploadedToStaging(settingsModel,
-                                                         dfoId)
+                ReplicaModel.CountBytesUploadedToStaging(uploadModel.dfoId)
             latestUpdateTime = datetime.now()
             # If this file already has a partial upload in staging,
             # progress and speed estimates can be misleading.
@@ -436,11 +458,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     """
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    settingsModel = foldersController.settingsModel
-    cipher = settingsModel.miscellaneous.cipher
-    progressPollInterval = settingsModel.miscellaneous.progressPollInterval
+    # pylint: disable=too-many-locals
+    cipher = SETTINGS.miscellaneous.cipher
+    progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
-    uploadModel.SetStartTime(datetime.now())
+    uploadModel.startTime = datetime.now()
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     remoteDir = os.path.dirname(remoteFilePath)
@@ -452,12 +474,10 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
              "-n",
              "-c", cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oPasswordAuthentication=no",
-             "-oNoHostAuthenticationForLocalhost=yes",
-             "-oStrictHostKeyChecking=no",
              "-l", username,
              host,
              OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
         mkdirCmdString = " ".join(mkdirCmdAndArgs)
         logger.debug(mkdirCmdString)
         if not sys.platform.startswith("linux"):
@@ -478,24 +498,21 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if uploadModel.Canceled():
+    if foldersController.canceled or uploadModel.canceled:
         logger.debug("UploadFileFromPosixSystem: Aborting upload "
                      "for %s" % filePath)
         return
 
-    maxThreads = settingsModel.advanced.maxUploadThreads
+    maxThreads = SETTINGS.advanced.maxUploadThreads
     remoteDir = os.path.dirname(remoteFilePath)
-    if settingsModel.miscellaneous.useNoneCipher:
+    if SETTINGS.miscellaneous.useNoneCipher:
         cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
     else:
         cipherString = "-c %s" % cipher
     scpCommandString = \
-        '%s -P %s -i %s %s ' \
-        '-oPasswordAuthentication=no ' \
-        '-oNoHostAuthenticationForLocalhost=yes ' \
-        '-oStrictHostKeyChecking=no ' \
-        '%s "%s@%s:\\"%s\\""' \
+        '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s\\""' \
         % (OPENSSH.DoubleQuote(OPENSSH.scp),
+           " ".join(OPENSSH.DefaultSshOptions()),
            port,
            privateKeyFilePath,
            cipherString,
@@ -513,7 +530,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
-        uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
+        uploadModel.scpUploadProcessPid = scpUploadProcess.pid
         while True:
             poll = scpUploadProcess.poll()
             if poll is not None:
@@ -533,8 +550,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             scpUploadProcess = \
                 ebSubprocess.Popen(scpCommandString, shell=True,
                                    close_fds=True, preexec_fn=preexecFunction)
-            uploadModel.SetStatus(UploadStatus.IN_PROGRESS)
-            uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
+            uploadModel.status = UploadStatus.IN_PROGRESS
+            uploadModel.scpUploadProcessPid = scpUploadProcess.pid
 
             while True:
                 poll = scpUploadProcess.poll()
@@ -564,14 +581,14 @@ def UploadFileFromWindows(filePath, fileSize, username,
     Upload file using SCP.
     """
     # pylint: disable=too-many-statements
-    uploadModel.SetStartTime(datetime.now())
-    settingsModel = foldersController.settingsModel
-    maxThreads = settingsModel.advanced.maxUploadThreads
-    progressPollInterval = settingsModel.miscellaneous.progressPollInterval
+    # pylint: disable=too-many-locals
+    uploadModel.startTime = datetime.now()
+    maxThreads = SETTINGS.advanced.maxUploadThreads
+    progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
-    cipher = settingsModel.miscellaneous.cipher
+    cipher = SETTINGS.miscellaneous.cipher
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
@@ -581,12 +598,10 @@ def UploadFileFromWindows(filePath, fileSize, username,
              "-n",
              "-c", cipher,
              "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
-             "-oPasswordAuthentication=no",
-             "-oNoHostAuthenticationForLocalhost=yes",
-             "-oStrictHostKeyChecking=no",
              "-l", username,
              host,
              OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
         mkdirCmdString = " ".join(mkdirCmdAndArgs)
         logger.debug(mkdirCmdString)
         mkdirProcess = \
@@ -601,20 +616,23 @@ def UploadFileFromWindows(filePath, fileSize, username,
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if uploadModel.Canceled():
+    if foldersController.canceled or uploadModel.canceled:
         logger.debug("UploadFileFromWindows: Aborting upload "
                      "for %s" % filePath)
         return
 
     remoteDir = os.path.dirname(remoteFilePath)
+    if SETTINGS.miscellaneous.useNoneCipher:
+        cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
+    else:
+        cipherString = "-c %s" % cipher
     scpCommandString = \
-        '%s -v -P %s -i %s -c %s ' \
-        '-oNoHostAuthenticationForLocalhost=yes ' \
-        '-oPasswordAuthentication=no -oStrictHostKeyChecking=no ' \
-        '%s "%s@%s:\\"%s/\\""' \
-        % (OPENSSH.DoubleQuote(OPENSSH.scp), port,
+        '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s/\\""' \
+        % (OPENSSH.DoubleQuote(OPENSSH.scp),
+           " ".join(OPENSSH.DefaultSshOptions()),
+           port,
            OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-           cipher,
+           cipherString,
            OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
            remoteDir
@@ -627,8 +645,8 @@ def UploadFileFromWindows(filePath, fileSize, username,
         stderr=subprocess.STDOUT,
         startupinfo=DEFAULT_STARTUP_INFO,
         creationflags=DEFAULT_CREATION_FLAGS)
-    uploadModel.SetScpUploadProcessPid(scpUploadProcess.pid)
-    uploadModel.SetStatus(UploadStatus.IN_PROGRESS)
+    uploadModel.scpUploadProcessPid = scpUploadProcess.pid
+    uploadModel.status = UploadStatus.IN_PROGRESS
     while True:
         poll = scpUploadProcess.poll()
         if poll is not None:
@@ -657,7 +675,7 @@ def GetCygwinPath(path):
                         "a valid path." % path)
 
 
-def CleanUpSshProcesses(settingsModel):
+def CleanUpScpAndSshProcesses():
     """
     SCP can leave orphaned SSH processes which need to be cleaned up.
     On Windows, we bundle our own SSH binary with MyData, so we can
@@ -665,14 +683,13 @@ def CleanUpSshProcesses(settingsModel):
     matches MyData's SSH path.  On other platforms, we can use proc.cmdline()
     to ensure that the SSH process we're killing uses MyData's private key.
     """
-    privateKeyPath = settingsModel.sshKeyPair.GetPrivateKeyFilePath()
+    privateKeyPath = SETTINGS.sshKeyPair.privateKeyFilePath
     for proc in psutil.process_iter():
         try:
-            if proc.exe() == OPENSSH.ssh:
+            if proc.exe() == OPENSSH.ssh or proc.exe() == OPENSSH.scp:
                 try:
-                    if privateKeyPath in proc.cmdline():
-                        proc.kill()
-                    elif sys.platform.startswith("win"):
+                    if privateKeyPath in proc.cmdline() or \
+                            sys.platform.startswith("win"):
                         proc.kill()
                 except:
                     pass

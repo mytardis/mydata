@@ -7,7 +7,7 @@ import wx
 
 from ...dataviewmodels.users import UsersModel
 from ...models.user import UserModel
-from ...views.users import UsersView
+from ...views.dataview import MyDataDataView
 
 
 class UsersViewTester(unittest.TestCase):
@@ -17,9 +17,8 @@ class UsersViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='UsersViewTester')
-        self.settingsModel = None
-        self.usersModel = UsersModel(self.settingsModel)
-        self.usersView = UsersView(self.frame, usersModel=self.usersModel)
+        self.usersModel = UsersModel()
+        self.usersView = MyDataDataView(self.frame, self.usersModel)
         self.frame.Show()
 
     def test_users_view(self):
@@ -29,14 +28,14 @@ class UsersViewTester(unittest.TestCase):
         dataViewId = self.usersModel.GetMaxDataViewId() + 1
         testuser1 = UserModel(
             username="testuser1",
-            name="Test User1",
+            fullName="Test User1",
             email="testuser1@example.com",
             dataViewId=dataViewId)
         self.usersModel.AddRow(testuser1)
         dataViewId = self.usersModel.GetMaxDataViewId() + 1
         testuser2 = UserModel(
             username="testuser2",
-            name="Test User2",
+            fullName="Test User2",
             email="testuser2@example.com",
             dataViewId=dataViewId)
         self.usersModel.AddRow(testuser2)

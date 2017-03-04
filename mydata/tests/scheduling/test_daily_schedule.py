@@ -5,11 +5,13 @@ from datetime import datetime
 from datetime import timedelta
 import os
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
+from ...logs import logger
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
+from .. import MyDataSettingsTester
 
 
 class DailyScheduleTester(MyDataSettingsTester):
@@ -22,37 +24,37 @@ class DailyScheduleTester(MyDataSettingsTester):
 
     def setUp(self):
         super(DailyScheduleTester, self).setUp()
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
+            "../testdata/testdataUsernameDataset_POST.cfg"))
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.join(
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset")
+            "../testdata", "testdataUsernameDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        self.settingsModel.schedule.scheduleType = "Daily"
-        self.settingsModel.schedule.scheduledTime = \
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.schedule.scheduleType = "Daily"
+        SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) +
                           timedelta(minutes=1))
-        SaveSettingsToDisk(self.settingsModel)
+        SaveSettingsToDisk()
 
     def test_daily_schedule(self):
         """
         Test Daily schedule type.
         """
-        ValidateSettings(self.settingsModel)
-        self.assertIsNotNone(self.settingsModel)
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
-        self.assertIsNotNone(self.settingsModel)
-        # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
-        # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
-        # in the uploads completed count:
+        ValidateSettings()
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
+
+        self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
         self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        self.assertIn(
+            "CreateDailyTask - MainThread - DEBUG - Schedule type is Daily",
+            logger.loggerOutput.getvalue())
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
 

@@ -40,8 +40,9 @@ def StartFakeMyTardisServer(host="127.0.0.1"):
         """ Run fake MyTardis server """
         try:
             httpd.serve_forever()
-        except (socket.error, select.error) as err:
-            sys.stderr.write("FakeMyTardisServer aborted with error: %s\n" % str(err))
+        except (socket.error, select.error, EOFError) as err:
+            sys.stderr.write(
+                "FakeMyTardisServer aborted with error: %s\n" % str(err))
 
     thread = threading.Thread(target=FakeMyTardisServer,
                               name="FakeMyTardisServerThread")
@@ -65,3 +66,11 @@ def WaitForFakeMyTardisServerToStart(url):
             time.sleep(0.25)
             if attempts > 10:
                 raise
+
+
+def Subtract(str1, str2):
+    """
+    Subtract strings, e.g. "foobar" - "foo" = "bar"
+    to isolate recently added logs from total log history.
+    """
+    return "".join(str1.rsplit(str2))

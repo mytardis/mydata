@@ -3,11 +3,11 @@ Test ability to open folders view.
 """
 import os
 
+from ...settings import SETTINGS
 from ...models.folder import FolderModel
 from ...models.user import UserModel
 from ...dataviewmodels.folders import FoldersModel
-from ...views.folders import FoldersView
-
+from ...views.dataview import MyDataDataView
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from .. import MyDataSettingsTester
@@ -23,28 +23,27 @@ class FoldersViewTester(MyDataSettingsTester):
             'FoldersViewTester')
         self.usersModel = None
         self.groupsModel = None
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
+            "../testdata/testdataUsernameDataset_POST.cfg"))
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath,
-                                           checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        self.settingsModel.general.dataDirectory = \
+        SETTINGS.Update(SettingsModel(configPath=configPath,
+                                      checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.dataDirectory = os.path.realpath(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "../testdata", "testdataUsernameDataset")
-        SaveSettingsToDisk(self.settingsModel)
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
-                                         self.settingsModel)
-        self.foldersView = FoldersView(self.frame, foldersModel=self.foldersModel)
+                "../testdata", "testdataUsernameDataset"))
+        SaveSettingsToDisk()
+        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
+        self.foldersView = MyDataDataView(self.frame, self.foldersModel)
 
     def test_folders_view(self):
         """
         Test ability to open folders view.
         """
-        testuser1 = UserModel.GetUserByUsername(self.settingsModel, "testuser1")
+        testuser1 = UserModel.GetUserByUsername("testuser1")
         dataViewId = 1
         folder = "Flowers"
         location = "/path/to/testuser1/"
@@ -52,8 +51,7 @@ class FoldersViewTester(MyDataSettingsTester):
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, folder, location,
-                        userFolderName, groupFolderName, testuser1,
-                        self.settingsModel)
+                        userFolderName, groupFolderName, testuser1)
         self.foldersModel.AddRow(folderModel)
         self.assertEqual(self.foldersModel.GetValueByRow(0, 1), "Flowers")
         self.assertEqual(self.foldersModel.GetRowCount(), 1)
@@ -62,8 +60,7 @@ class FoldersViewTester(MyDataSettingsTester):
         folder = "Birds"
         folderModel = \
             FolderModel(dataViewId, folder, location,
-                        userFolderName, groupFolderName, testuser1,
-                        self.settingsModel)
+                        userFolderName, groupFolderName, testuser1)
         self.foldersModel.AddRow(folderModel)
         self.assertEqual(self.foldersModel.GetUnfilteredRowCount(), 2)
         self.assertEqual(self.foldersModel.GetFilteredRowCount(), 0)

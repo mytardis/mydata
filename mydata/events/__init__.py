@@ -2,14 +2,15 @@
 Custom events for MyData.
 """
 import threading
-from datetime import datetime
 import traceback
 import sys
 import logging
 import wx
 
+from ..settings import SETTINGS
 from ..models.settings.serialize import SaveFieldsFromDialog
 from ..models.settings.validation import ValidateSettings
+from ..models.instrument import InstrumentModel
 from ..models.uploader import UploaderModel
 from ..utils.exceptions import DuplicateKey
 from ..utils.exceptions import UserAbortedSettingsValidation
@@ -17,11 +18,11 @@ from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..logs import logger
-from ..views.connectivity import ReportNoActiveInterfaces
 
 
 def NewEvent(defaultTarget=None, defaultHandler=None):
-    """Generate new (Event, Binder) tuple
+    """
+    Generate new (Event, eventType) tuple
         e.g. MooEvent, EVT_MOO = NewEvent()
     """
     eventType = wx.NewEventType()
@@ -51,7 +52,7 @@ def NewEvent(defaultTarget=None, defaultHandler=None):
     if defaultTarget and defaultHandler:
         defaultTarget.Bind(eventBinder, defaultHandler)
 
-    return Event, eventType, eventBinder
+    return Event, eventType
 
 
 def PostEvent(event):
@@ -132,34 +133,34 @@ class MyDataEvents(object):
         """
         self.notifyWindow = notifyWindow
         self.ShutdownForRefreshEvent, \
-            self.EVT_SHUTDOWN_FOR_REFRESH, _ = \
+            self.EVT_SHUTDOWN_FOR_REFRESH = \
             NewEvent(notifyWindow, ShutdownForRefresh)
         self.ShutdownForRefreshCompleteEvent, \
-            self.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE, _ = \
+            self.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE = \
             NewEvent(notifyWindow, ShutdownForRefreshComplete)
         self.ValidateSettingsForRefreshEvent, \
-            self.EVT_VALIDATE_SETTINGS_FOR_REFRESH, _ = \
+            self.EVT_VALIDATE_SETTINGS_FOR_REFRESH = \
             NewEvent(notifyWindow, ValidateSettingsForRefresh)
         self.CheckConnectivityEvent, \
-            self.EVT_CHECK_CONNECTIVITY, _ = \
+            self.EVT_CHECK_CONNECTIVITY = \
             NewEvent(notifyWindow, CheckConnectivity)
         self.InstrumentNameMismatchEvent, \
-            self.EVT_INSTRUMENT_NAME_MISMATCH, _ = \
+            self.EVT_INSTRUMENT_NAME_MISMATCH = \
             NewEvent(notifyWindow, InstrumentNameMismatch)
         self.RenameInstrumentEvent, \
-            self.EVT_RENAME_INSTRUMENT, _ = \
+            self.EVT_RENAME_INSTRUMENT = \
             NewEvent(notifyWindow, RenameInstrument)
         self.SettingsDialogValidationEvent, \
-            self.EVT_SETTINGS_DIALOG_VALIDATION, _ = \
+            self.EVT_SETTINGS_DIALOG_VALIDATION = \
             NewEvent(notifyWindow, SettingsDialogValidation)
         self.ProvideSettingsValidationResultsEvent, \
-            self.EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS, _ = \
+            self.EVT_PROVIDE_SETTINGS_VALIDATION_RESULTS = \
             NewEvent(notifyWindow, ProvideSettingsValidationResults)
         self.SettingsValidationCompleteEvent, \
-            self.EVT_SETTINGS_VALIDATION_COMPLETE, _ = \
+            self.EVT_SETTINGS_VALIDATION_COMPLETE = \
             NewEvent(notifyWindow, SettingsValidationForRefreshComplete)
         self.StartUploadsForFolderEvent, \
-            self.EVT_START_UPLOADS_FOR_FOLDER, _ = \
+            self.EVT_START_UPLOADS_FOR_FOLDER = \
             NewEvent(notifyWindow, StartDataUploadsForFolder)
 
     def GetNotifyWindow(self):
@@ -265,65 +266,15 @@ def CheckConnectivity(event):
     """
     Checks network connectivity.
     """
-
-    def CheckConnectivityWorker():
-        """
-        Checks network connectivity in separate thread.
-        """
-        wx.CallAfter(BeginBusyCursorIfRequired)
-        try:
-            activeNetworkInterfaces = \
-                UploaderModel.GetActiveNetworkInterfaces()
-        except Exception as err:
-            logger.error(traceback.format_exc())
-            if type(err).__name__ == "WindowsError" and \
-                    "The handle is invalid" in str(err):
-                message = "An error occurred, suggesting " \
-                    "that you have launched MyData.exe from a " \
-                    "Command Prompt window.  Please launch it " \
-                    "from a shortcut or from a Windows Explorer " \
-                    "window instead.\n" \
-                    "\n" \
-                    "See: https://bugs.python.org/issue3905"
-
-                def ShowErrorDialog(message):
-                    """
-                    Show error dialog in main thread.
-                    """
-                    dlg = wx.MessageDialog(None, message, "MyData",
-                                           wx.OK | wx.ICON_ERROR)
-                    dlg.ShowModal()
-                wx.CallAfter(ShowErrorDialog, message)
-                return
-            else:
-                raise
-        wx.CallAfter(EndBusyCursorIfRequired, event)
-        if len(activeNetworkInterfaces) > 0:
-            logger.debug("Found at least one active network interface: %s."
-                         % activeNetworkInterfaces[0])
-            app = wx.GetApp()
-            # An app created by mydata/tests/test*.py might be just a
-            # vanilla wx.App(), not a full MyData app instance.
-            if hasattr(app, "GetMainFrame"):
-                app.SetLastConnectivityCheckSuccess(True)
-                app.SetLastConnectivityCheckTime(datetime.now())
-                app.SetActiveNetworkInterface(activeNetworkInterfaces[0])
-            if hasattr(event, "nextEvent") and event.nextEvent:
-                PostEvent(event.nextEvent)
-        else:
-            wx.GetApp().SetLastConnectivityCheckSuccess(False)
-            wx.GetApp().SetLastConnectivityCheckTime(datetime.now())
-            wx.GetApp().SetActiveNetworkInterface(None)
-            ReportNoActiveInterfaces()
-
+    app = wx.GetApp()
     if wx.PyApp.IsMainLoopRunning():
-        checkConnectivityThread = \
-            threading.Thread(target=CheckConnectivityWorker,
-                             name="CheckConnectivityThread")
+        checkConnectivityThread = threading.Thread(
+            target=app.connectivity.Check,
+            name="CheckConnectivityThread", args=[event])
         MYDATA_THREADS.Add(checkConnectivityThread)
         checkConnectivityThread.start()
     else:
-        CheckConnectivityWorker()
+        app.connectivity.Check(event)
 
 
 def InstrumentNameMismatch(event):
@@ -352,11 +303,9 @@ def InstrumentNameMismatch(event):
                         "existing instrument record.")
             settingsDialogValidationEvent = \
                 MYDATA_EVENTS.SettingsDialogValidationEvent(
-                    settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel)
+                    settingsDialog=event.settingsDialog)
             renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
                 settingsDialog=event.settingsDialog,
-                settingsModel=event.settingsModel,
                 facilityName=event.settingsDialog.GetFacilityName(),
                 oldInstrumentName=event.oldInstrumentName,
                 newInstrumentName=event.newInstrumentName,
@@ -366,25 +315,18 @@ def InstrumentNameMismatch(event):
         elif dlg.GetStringSelection() == discardChoice:
             logger.info("OK, we will discard the new instrument name.")
             event.settingsDialog.SetInstrumentName(
-                event.settingsModel.general.instrumentName)
+                SETTINGS.general.instrumentName)
             event.settingsDialog.instrumentNameField.SetFocus()
             event.settingsDialog.instrumentNameField.SelectAll()
         elif dlg.GetStringSelection() == createChoice:
             logger.info("OK, we will create a new instrument record.")
+            app = wx.GetApp()
             settingsDialogValidationEvent = \
                 MYDATA_EVENTS.SettingsDialogValidationEvent(
-                    settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel)
-            intervalSinceLastCheck = \
-                datetime.now() - \
-                wx.GetApp().GetLastConnectivityCheckTime()
-            checkInterval = event.settingsModel.connectivityCheckInterval
-            if intervalSinceLastCheck.total_seconds() >= checkInterval \
-                    or not wx.GetApp()\
-                    .GetLastConnectivityCheckSuccess():
+                    settingsDialog=event.settingsDialog)
+            if app.connectivity.NeedToCheck():
                 checkConnectivityEvent = \
                     MYDATA_EVENTS.CheckConnectivityEvent(
-                        settingsModel=event.settingsModel,
                         nextEvent=settingsDialogValidationEvent)
                 PostEvent(checkConnectivityEvent)
             else:
@@ -404,7 +346,7 @@ def RenameInstrument(event):
                      % threading.current_thread().name)
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
-            event.settingsModel.RenameInstrument(
+            InstrumentModel.RenameInstrument(
                 event.facilityName,
                 event.oldInstrumentName,
                 event.newInstrumentName)
@@ -455,7 +397,7 @@ def SettingsDialogValidation(event):
     Handles settings validation request from Settings dialog.
     """
 
-    def ValidateWorker(settingsModel):
+    def ValidateWorker():
         """
         Performs settings validation in separate thread.
         """
@@ -467,27 +409,20 @@ def SettingsDialogValidation(event):
             wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Disable)
 
             app = wx.GetApp()
-            if hasattr(app, "GetLastConnectivityCheckTime"):
-                intervalSinceLastCheck = datetime.now() - \
-                    app.GetLastConnectivityCheckTime()
-                checkInterval = event.settingsModel.connectivityCheckInterval
-                if intervalSinceLastCheck.total_seconds() >= checkInterval \
-                        or not app.GetLastConnectivityCheckSuccess():
+            if hasattr(app, "connectivity"):
+                if app.connectivity.NeedToCheck():
                     settingsDialogValidationEvent = \
                         MYDATA_EVENTS.SettingsDialogValidationEvent(
                             settingsDialog=event.settingsDialog,
-                            settingsModel=settingsModel,
                             okEvent=event)
                     checkConnectivityEvent = \
                         MYDATA_EVENTS.CheckConnectivityEvent(
                             settingsDialog=event.settingsDialog,
-                            settingsModel=settingsModel,
                             nextEvent=settingsDialogValidationEvent)
                     PostEvent(checkConnectivityEvent)
                     return
             try:
-                SaveFieldsFromDialog(event.settingsModel, event.settingsDialog,
-                                     saveToDisk=False)
+                SaveFieldsFromDialog(event.settingsDialog, saveToDisk=False)
             except:
                 logger.error(traceback.format_exc())
 
@@ -499,26 +434,19 @@ def SettingsDialogValidation(event):
                     wx.CallAfter(
                         wx.GetApp().GetMainFrame().SetStatusMessage, message)
             try:
-                datasetCount = ValidateSettings(settingsModel, SetStatusMessage)
+                datasetCount = ValidateSettings(SetStatusMessage)
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
                     settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel,
                     datasetCount=datasetCount))
             except UserAbortedSettingsValidation:
-                event.settingsModel.RollBack()
+                SETTINGS.RollBack()
                 return
             except InvalidSettings as invalidSettings:
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
                     settingsDialog=event.settingsDialog,
-                    settingsModel=event.settingsModel,
                     invalidSettings=invalidSettings))
             finally:
                 wx.CallAfter(EndBusyCursorIfRequired, event)
-                if wx.version().startswith("3.0.3.dev"):
-                    arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
-                else:
-                    arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-                event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
         finally:
             wx.CallAfter(event.settingsDialog.okButton.Enable)
             wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
@@ -529,13 +457,12 @@ def SettingsDialogValidation(event):
 
     if wx.PyApp.IsMainLoopRunning():
         thread = threading.Thread(target=ValidateWorker,
-                                  args=(event.settingsModel,),
                                   name="SettingsModelValidationThread")
         logger.debug("Starting thread %s" % thread.name)
         thread.start()
         logger.debug("Started thread %s" % thread.name)
     else:
-        ValidateWorker(event.settingsModel)
+        ValidateWorker()
 
 
 def ProvideSettingsValidationResults(event):
@@ -626,18 +553,14 @@ def ProvideSettingsValidationResults(event):
             event.settingsDialog.excludesFileField.SelectAll()
         logger.debug("Settings were not valid, so Settings dialog "
                      "should remain visible.")
-        if wx.version().startswith("3.0.3.dev"):
-            arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
-        else:
-            arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-        event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
-        event.settingsModel.RollBack()
+        EndBusyCursorIfRequired(event)
+        SETTINGS.RollBack()
         return
 
-    if event.settingsModel.filters.ignoreOldDatasets:
+    if SETTINGS.filters.ignoreOldDatasets:
         intervalIfUsed = " (created within the past %d %s)" \
-            % (event.settingsModel.filters.ignoreOldDatasetIntervalNumber,
-               event.settingsModel.filters.ignoreOldDatasetIntervalUnit)
+            % (SETTINGS.filters.ignoreOldDatasetIntervalNumber,
+               SETTINGS.filters.ignoreOldDatasetIntervalUnit)
     else:
         intervalIfUsed = ""
     numDatasets = getattr(event, "datasetCount", None)
@@ -645,7 +568,7 @@ def ProvideSettingsValidationResults(event):
         message = "Assuming a folder structure of '%s', " \
             "there %s %d %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
-            % (event.settingsModel.advanced.folderStructure,
+            % (SETTINGS.advanced.folderStructure,
                "are" if numDatasets != 1 else "is", numDatasets,
                "datasets" if numDatasets != 1 else "dataset",
                event.settingsDialog.GetDataDirectory(),
@@ -663,8 +586,8 @@ def ProvideSettingsValidationResults(event):
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")
     try:
-        uploaderModel = UploaderModel(event.settingsModel)
-        event.settingsModel.uploaderModel = uploaderModel
+        uploaderModel = UploaderModel()
+        SETTINGS.uploaderModel = uploaderModel
 
         # Use the config path determined by appdirs, not the one
         # determined by a user dragging and dropping a config
@@ -674,14 +597,14 @@ def ProvideSettingsValidationResults(event):
             configPath = app.GetConfigPath()
         else:
             configPath = None
-        SaveFieldsFromDialog(event.settingsModel, event.settingsDialog,
-                             configPath=configPath, saveToDisk=True)
+        SaveFieldsFromDialog(
+            event.settingsDialog, configPath=configPath, saveToDisk=True)
         if wx.PyApp.IsMainLoopRunning():
             event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
         logger.debug("Closed Settings dialog.")
 
-        if event.settingsModel.schedule.scheduleType == "Manually":
+        if SETTINGS.schedule.scheduleType == "Manually":
             message = \
                  "MyData's schedule type is currently " \
                  "set to 'manual', so you will need to click " \
@@ -731,7 +654,7 @@ def StartDataUploadsForFolder(event):
         logger.debug("StartDataUploadsForFolderWorker")
         wx.CallAfter(BeginBusyCursorIfRequired)
         message = "Checking for data files on MyTardis and uploading " \
-            "if necessary for folder: %s" % event.folderModel.folder
+            "if necessary for folder: %s" % event.folderModel.folderName
         logger.info(message)
         app = wx.GetApp()
         if hasattr(app, "TestRunRunning") and app.TestRunRunning():

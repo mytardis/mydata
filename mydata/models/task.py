@@ -25,7 +25,6 @@ class TaskModel(object):
     A task can be a folder scan, datafile lookup and upload,
     or it could be a notification POSTed to MyTardis administrators.
     """
-    # pylint: disable=missing-docstring
     def __init__(self, dataViewId, jobFunc, jobArgs, jobDesc, startTime,
                  scheduleType="Once", intervalMinutes=None, days=None):
         self.dataViewId = dataViewId
@@ -39,42 +38,15 @@ class TaskModel(object):
         self.days = days
         self.callLater = None
 
-    def GetJobFunc(self):
-        return self.jobFunc
-
-    def GetJobArgs(self):
-        return self.jobArgs
-
-    def GetJobDesc(self):
-        return self.jobDesc
-
-    def GetStartTime(self):
-        return self.startTime
-
-    def GetScheduleType(self):
-        return self.scheduleType
-
-    def GetIntervalMinutes(self):
-        return self.intervalMinutes
-
-    def GetDays(self):
-        return self.days
-
-    def GetFinishTime(self):
-        return self.finishTime
-
-    def SetFinishTime(self, finishTime):
-        self.finishTime = finishTime
-
-    def GetCallLater(self):
-        return self.callLater
-
-    def SetCallLater(self, callLater):
-        self.callLater = callLater
-
     def Cancel(self):
+        """
+        Cancel the task
+        """
         if self.callLater:
             self.callLater.Stop()
 
     def GetValueForKey(self, key):
+        """
+        Used in the data view model to look up a value from a column key
+        """
         return self.__dict__[key]

@@ -5,12 +5,13 @@ from datetime import datetime
 from datetime import timedelta
 import os
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
+from .. import MyDataSettingsTester
 
 
 class OnceScheduleTester(MyDataSettingsTester):
@@ -27,32 +28,31 @@ class OnceScheduleTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        self.settingsModel.schedule.scheduleType = "Once"
-        self.settingsModel.schedule.scheduledDate = \
-            datetime.date(datetime.now())
-        self.settingsModel.schedule.scheduledTime = \
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.schedule.scheduleType = "Once"
+        SETTINGS.schedule.scheduledDate = datetime.date(datetime.now())
+        SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) -
                           timedelta(minutes=1))
-        SaveSettingsToDisk(self.settingsModel)
+        SaveSettingsToDisk()
 
     def test_once_schedule(self):
         """
         Test Once schedule type with invalid date/time.
         """
         with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings(self.settingsModel)
+            ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "scheduled_time")
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:

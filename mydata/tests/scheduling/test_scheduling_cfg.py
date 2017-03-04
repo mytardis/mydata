@@ -4,9 +4,10 @@ Test ability to read and validate scheduling config.
 from datetime import datetime
 import os
 
-from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
+from .. import MyDataTester
 
 
 class SchedulingConfigTester(MyDataTester):
@@ -26,22 +27,22 @@ class SchedulingConfigTester(MyDataTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataTimer.cfg")
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        self.assertEqual(settingsModel.schedule.scheduleType, "Timer")
-        self.assertEqual(settingsModel.schedule.timerMinutes, 15)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        self.assertEqual(SETTINGS.schedule.scheduleType, "Timer")
+        self.assertEqual(SETTINGS.schedule.timerMinutes, 15)
         timerFromTime = \
             datetime.time(datetime.strptime("00:00:00", "%H:%M:%S"))
-        self.assertEqual(settingsModel.schedule.timerFromTime, timerFromTime)
+        self.assertEqual(SETTINGS.schedule.timerFromTime, timerFromTime)
         timerToTime = \
             datetime.time(datetime.strptime("23:59:00", "%H:%M:%S"))
-        self.assertEqual(settingsModel.schedule.timerToTime, timerToTime)
-        ValidateSettings(settingsModel)
+        self.assertEqual(SETTINGS.schedule.timerToTime, timerToTime)
+        ValidateSettings()
 
     def test_read_weekly_cfg(self):
         """
@@ -51,14 +52,14 @@ class SchedulingConfigTester(MyDataTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataWeekly.cfg")
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        self.assertEqual(settingsModel.schedule.scheduleType, "Weekly")
-        self.assertEqual(settingsModel.schedule.mondayChecked, True)
-        self.assertEqual(settingsModel.schedule.tuesdayChecked, False)
-        ValidateSettings(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        self.assertEqual(SETTINGS.schedule.scheduleType, "Weekly")
+        self.assertEqual(SETTINGS.schedule.mondayChecked, True)
+        self.assertEqual(SETTINGS.schedule.tuesdayChecked, False)
+        ValidateSettings()

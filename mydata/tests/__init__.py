@@ -62,7 +62,6 @@ class MyDataSettingsTester(MyDataTester):
     """
     def __init__(self, *args, **kwargs):
         super(MyDataSettingsTester, self).__init__(*args, **kwargs)
-        self.settingsModel = None
         # Used for saving MyData.cfg:
         self.tempFilePath = None
 
@@ -75,3 +74,23 @@ class MyDataSettingsTester(MyDataTester):
         super(MyDataSettingsTester, self).tearDown()
         if os.path.exists(self.tempFilePath):
             os.remove(self.tempFilePath)
+
+class MyDataScanFoldersTester(MyDataTester):
+    """
+    Base class for inheriting from for tests requiring a fake MyTardis server
+
+    Includes callbacks used by ScanFolders.
+    """
+    @staticmethod
+    def IncrementProgressDialog():
+        """
+        Callback for ScanFolders.
+        """
+        pass
+
+    @staticmethod
+    def ShouldAbort():
+        """
+        Callback for ScanFolders.
+        """
+        return False

@@ -5,7 +5,7 @@ import unittest
 import wx
 
 from ...dataviewmodels.uploads import UploadsModel
-from ...views.uploads import UploadsView
+from ...views.dataview import MyDataDataView
 
 
 class UploadsViewTester(unittest.TestCase):
@@ -15,17 +15,13 @@ class UploadsViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='UploadsViewTester')
-        self.uploadsModel = UploadsModel()
-        self.foldersController = None
-        self.uploadsView = UploadsView(self.frame, self.uploadsModel, self.foldersController)
-        self.frame.Show()
 
     def test_uploads_view(self):
         """
         Test ability to open uploads view.
         """
-        # pylint: disable=no-self-use
-        pass
+        uploadsModel = UploadsModel()
+        MyDataDataView(self.frame, uploadsModel)
 
     def tearDown(self):
         self.frame.Hide()

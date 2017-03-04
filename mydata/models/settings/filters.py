@@ -9,6 +9,7 @@ class FiltersSettingsModel(object):
     Model class for the settings displayed in the Filters tab
     of the settings dialog and saved to disk in MyData.cfg
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self):
         # Saved in MyData.cfg:
         self.mydataConfig = dict()

@@ -4,6 +4,7 @@ Miscellaneous utility functions.
 """
 import unicodedata
 import sys
+import traceback
 
 import psutil
 import wx
@@ -175,3 +176,33 @@ def Compare(obj1, obj2):
     obj1 == obj2 and strictly positive if obj1 > obj2.
     """
     return (obj1 > obj2) - (obj1 < obj2)
+
+
+def HandleGenericErrorWithDialog(err):
+    """
+    Handle an exception where the user should be notified in a dialog.
+
+    Designed to be called from a worker thread, this method uses
+    wx.CallAfter to display the error message from the main thread.
+    """
+    logger.error(traceback.format_exc())
+    if type(err).__name__ == "WindowsError" and \
+            "The handle is invalid" in str(err):
+        message = "An error occurred, suggesting " \
+            "that you have launched MyData.exe from a " \
+            "Command Prompt window.  Please launch it " \
+            "from a shortcut or from a Windows Explorer " \
+            "window instead.\n" \
+            "\n" \
+            "See: https://bugs.python.org/issue3905"
+
+        def ShowErrorDialog(message):
+            """
+            Needs to run in the main thread.
+            """
+            dlg = wx.MessageDialog(None, message, "MyData",
+                                   wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+        wx.CallAfter(ShowErrorDialog, message)
+    else:
+        raise err

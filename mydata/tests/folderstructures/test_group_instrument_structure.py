@@ -3,16 +3,17 @@ Test ability to scan the User Group / Instrument / Full Name / Dataset folder st
 """
 import os
 
-from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...models.settings.validation import CheckStructureAndCountDatasets
 from ...dataviewmodels.folders import FoldersModel
 from ...dataviewmodels.users import UsersModel
 from ...dataviewmodels.groups import GroupsModel
+from .. import MyDataScanFoldersTester
 
 
-class ScanUserGroupInstrumentTester(MyDataTester):
+class ScanUserGroupInstrumentTester(MyDataScanFoldersTester):
     """
     Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
     """
@@ -25,43 +26,32 @@ class ScanUserGroupInstrumentTester(MyDataTester):
         """
         Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
         """
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataGroupInstrument.cfg")
+            "../testdata/testdataGroupInstrument.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataGroupInstrument")
+            "../testdata", "testdataGroupInstrument"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        datasetCount = CheckStructureAndCountDatasets(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        datasetCount = CheckStructureAndCountDatasets()
         self.assertEqual(datasetCount, 8)
-        ValidateSettings(settingsModel)
-        usersModel = UsersModel(settingsModel)
-        groupsModel = GroupsModel(settingsModel)
-        foldersModel = FoldersModel(usersModel, groupsModel, settingsModel)
-
-        def IncrementProgressDialog():
-            """
-            Callback for ScanFolders.
-            """
-            pass
-
-        def ShouldAbort():
-            """
-            Callback for ScanFolders.
-            """
-            return False
-
-        foldersModel.ScanFolders(IncrementProgressDialog, ShouldAbort)
+        ValidateSettings()
+        usersModel = UsersModel()
+        groupsModel = GroupsModel()
+        foldersModel = FoldersModel(usersModel, groupsModel)
+        foldersModel.ScanFolders(
+            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ShouldAbort)
         self.assertEqual(sorted(groupsModel.GetValuesForColname("Full Name")),
                          ["TestFacility-Group1", "TestFacility-Group2"])
 
         folders = []
         for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).folder)
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folders), [
             'Dataset 001', 'Dataset 002', 'Dataset 003', 'Dataset 004',
             'Dataset 005', 'Dataset 006', 'Dataset 007', 'Dataset 008'])

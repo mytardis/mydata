@@ -4,9 +4,6 @@ of the settings dialog and saved to disk in MyData.cfg
 """
 from ...logs import logger
 from ...utils.exceptions import DoesNotExist
-from ..user import UserModel
-from ..facility import FacilityModel
-from ..instrument import InstrumentModel
 
 
 class GeneralSettingsModel(object):
@@ -14,7 +11,8 @@ class GeneralSettingsModel(object):
     Model class for the settings displayed in the General tab
     of the settings dialog and saved to disk in MyData.cfg
     """
-    def __init__(self, settingsModel):
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self):
         # Saved in MyData.cfg:
         self.mydataConfig = dict()
         self.fields = [
@@ -27,7 +25,6 @@ class GeneralSettingsModel(object):
             'username',
             'api_key'
         ]
-        self._settingsModel = settingsModel
         self._defaultOwner = None
         self._instrument = None
         self._facility = None
@@ -52,17 +49,18 @@ class GeneralSettingsModel(object):
         """
         Return the InstrumentModel for the specified instrument name
         """
+        from ..instrument import InstrumentModel
         if self._instrument:
             return self._instrument
         try:
             self._instrument = InstrumentModel.GetInstrument(
-                self._settingsModel, self.facility, self.instrumentName)
+                self.facility, self.instrumentName)
         except DoesNotExist:
             logger.info("No instrument record with name \"%s\" was found "
                         "in facility \"%s\", so we will create one."
                         % (self.instrumentName, self.facilityName))
             self._instrument = InstrumentModel.CreateInstrument(
-                self._settingsModel, self.facility, self.instrumentName)
+                self.facility, self.instrumentName)
         return self._instrument
 
     @property
@@ -85,11 +83,12 @@ class GeneralSettingsModel(object):
         """
         Return the FacilityModel for the specified facility name
         """
+        from ..facility import FacilityModel
         if self._facility:
             return self._facility
-        facilities = FacilityModel.GetMyFacilities(self._settingsModel)
+        facilities = FacilityModel.GetMyFacilities()
         for facility in facilities:
-            if self.facilityName == facility.GetName():
+            if self.facilityName == facility.name:
                 self._facility = facility
         return self._facility
 
@@ -181,9 +180,9 @@ class GeneralSettingsModel(object):
         """
         Get user model for the specified MyTardis username
         """
+        from ..user import UserModel
         if not self._defaultOwner:
-            self._defaultOwner = \
-                UserModel.GetUserByUsername(self._settingsModel, self.username)
+            self._defaultOwner = UserModel.GetUserByUsername(self.username)
         return self._defaultOwner
 
     @defaultOwner.setter

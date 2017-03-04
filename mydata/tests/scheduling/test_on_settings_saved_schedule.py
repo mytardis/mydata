@@ -5,12 +5,14 @@ import os
 
 import wx
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
+from ...logs import logger
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings import LastSettingsUpdateTrigger
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
+from .. import MyDataSettingsTester
 
 
 class OnSettingsSavedScheduleTester(MyDataSettingsTester):
@@ -27,26 +29,26 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        self.settingsModel.schedule.scheduleType = "On Settings Saved"
-        self.settingsModel.lastSettingsUpdateTrigger = \
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.schedule.scheduleType = "On Settings Saved"
+        SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
-        SaveSettingsToDisk(self.settingsModel)
+        SaveSettingsToDisk()
 
     def test_on_settings_saved_schedule(self):
         """
         Test On Settings Saved schedule type.
         """
-        ValidateSettings(self.settingsModel)
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
+        ValidateSettings()
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.mydataApp.taskBarIcon.CreatePopupMenu()
         pyEvent = wx.PyEvent()
         self.mydataApp.scheduleController.ApplySchedule(pyEvent)
@@ -54,7 +56,10 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
         self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
-
+        self.assertIn(
+            ("CreateOnSettingsSavedTask - MainThread - DEBUG - "
+             "Schedule type is On Settings Saved"),
+            logger.loggerOutput.getvalue())
     def tearDown(self):
         super(OnSettingsSavedScheduleTester, self).tearDown()
         self.mydataApp.GetMainFrame().Hide()

@@ -3,6 +3,7 @@ Test ability to handle experiment-related exceptions.
 """
 import os
 
+from ...settings import SETTINGS
 from .. import MyDataTester
 from ...models.experiment import ExperimentModel
 from ...models.folder import FolderModel
@@ -30,20 +31,20 @@ class ExperimentExceptionsTester(MyDataTester):
         """
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg")
+            "../testdata/testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg")
+            "../testdata", "testdataExpDataset.cfg"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        ValidateSettings(settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        ValidateSettings()
 
-        owner = settingsModel.defaultOwner
+        owner = SETTINGS.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
@@ -56,12 +57,12 @@ class ExperimentExceptionsTester(MyDataTester):
         # Try to look up nonexistent experiment record with
         # experiment title set manually, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -75,28 +76,28 @@ class ExperimentExceptionsTester(MyDataTester):
         # Look up existing experiment record with
         # experiment title set manually, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
 
         # Look up one of many existing experiment records with
         # experiment title set manually, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Multiple Existing Experiments"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment1")
+        self.assertEqual(experimentModel.title, "Existing Experiment1")
 
         # Try to look up nonexistent experiment record with
         # experiment title set manually, and with a group folder
@@ -105,8 +106,8 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -124,21 +125,21 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
 
         # Try to look up nonexistent experiment record with
         # experiment title set manually, and with a user folder
         # name, and a group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -153,15 +154,15 @@ class ExperimentExceptionsTester(MyDataTester):
         # Look up existing experiment record with
         # experiment title set manually, and with a group folder
         # name, and a user folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
 
         # Try to look up nonexistent experiment record with
         # experiment title set manually, with neither a user folder
@@ -170,8 +171,8 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -189,18 +190,18 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
+                        userFolderName, groupFolderName, owner)
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
 
         # Try to look up experiment record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.general.apiKey
-        folderModel.settingsModel.general.apiKey = "invalid"
+        apiKey = SETTINGS.general.apiKey
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        folderModel.settingsModel.general.apiKey = apiKey
+        SETTINGS.general.apiKey = apiKey
 
         # Try to look up experiment record with a missing UserProfile
         # for the authorizing user, which can result in a 404 from the
@@ -235,12 +236,12 @@ class ExperimentExceptionsTester(MyDataTester):
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -252,31 +253,31 @@ class ExperimentExceptionsTester(MyDataTester):
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+                        userFolderName, groupFolderName, owner)
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
+        SETTINGS.miscellaneous.uuid = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
+        self.assertEqual(experimentModel.title, "Existing Experiment")
+        SETTINGS.miscellaneous.uuid = uploaderUuid
 
         # Look up one of many existing experiment records with
         # experiment title set automatically, and with a user folder
         # name, but no group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
-        folderModel.settingsModel.uploaderModel.SetUuid("Multiple Existing Experiments")
+                        userFolderName, groupFolderName, owner)
+        uploaderUuid = SETTINGS.miscellaneous.uuid
+        SETTINGS.miscellaneous.uuid = "Multiple Existing Experiments"
         with self.assertRaises(MultipleObjectsReturned) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
+        SETTINGS.miscellaneous.uuid = uploaderUuid
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, and with a group folder
@@ -285,8 +286,8 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -303,23 +304,23 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+                        userFolderName, groupFolderName, owner)
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
+        SETTINGS.miscellaneous.uuid = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
+        self.assertEqual(experimentModel.title, "Existing Experiment")
+        SETTINGS.miscellaneous.uuid = uploaderUuid
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, and with a user folder
         # name and a group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -332,17 +333,17 @@ class ExperimentExceptionsTester(MyDataTester):
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
         # name and a group folder name:
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = "Test Group1"
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+                        userFolderName, groupFolderName, owner)
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
+        SETTINGS.miscellaneous.uuid = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
+        self.assertEqual(experimentModel.title, "Existing Experiment")
+        SETTINGS.miscellaneous.uuid = uploaderUuid
 
         # Try to look up nonexistent experiment record with
         # experiment title set automatically, with neither a user folder
@@ -351,8 +352,8 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        instrument = settingsModel.instrument.GetName()
+                        userFolderName, groupFolderName, owner)
+        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -367,13 +368,13 @@ class ExperimentExceptionsTester(MyDataTester):
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
-        uploaderUuid = settingsModel.uploaderModel.GetUuid()
+                        userFolderName, groupFolderName, owner)
+        uploaderUuid = SETTINGS.miscellaneous.uuid
         # A trick to tell our Fake MyTardis server to return an existing experiment:
-        folderModel.settingsModel.uploaderModel.SetUuid("Existing Experiment")
+        SETTINGS.miscellaneous.uuid = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
-        folderModel.settingsModel.uploaderModel.SetUuid(uploaderUuid)
+        self.assertEqual(experimentModel.title, "Existing Experiment")
+        SETTINGS.miscellaneous.uuid = uploaderUuid
 
         # CREATING EXPERIMENTS
 
@@ -383,7 +384,7 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel.experimentTitle = expFolderName
         experimentModel = \
             ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
-        self.assertEqual(experimentModel.GetTitle(), expFolderName)
+        self.assertEqual(experimentModel.title, expFolderName)
 
         # Try to create an experiment with a title specified manually,
         # and with testRun activated:
@@ -400,26 +401,26 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = \
             ExperimentModel.GetOrCreateExperimentForFolder(folderModel, testRun)
-        self.assertEqual(experimentModel.GetTitle(), "Existing Experiment")
+        self.assertEqual(experimentModel.title, "Existing Experiment")
         folderModel.experimentTitle = expFolderName
         testRun = False
 
         # Try to create an experiment record with
         # an invalid API key, which should give 401 (Unauthorized)
-        apiKey = folderModel.settingsModel.general.apiKey
-        folderModel.settingsModel.general.apiKey = "invalid"
+        apiKey = SETTINGS.general.apiKey
+        SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
             _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
-        folderModel.settingsModel.general.apiKey = apiKey
+        SETTINGS.general.apiKey = apiKey
 
         # Now let's test experiment creation with the experiment's
         # title determined automatically (from the instrument's name
         # and user folder name or group folder name):
-        userFolderName = owner.GetUsername()
+        userFolderName = owner.username
         groupFolderName = None
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
-                        userFolderName, groupFolderName, owner, settingsModel)
+                        userFolderName, groupFolderName, owner)
 
         # Test case where MyTardis API returns a 404, e.g. because a
         # requested Experiment Schema can't be found.

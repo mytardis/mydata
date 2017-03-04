@@ -5,11 +5,13 @@ from datetime import datetime
 from datetime import timedelta
 import os
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
+from ...logs import logger
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
+from .. import MyDataSettingsTester
 
 
 class WeeklyScheduleTester(MyDataSettingsTester):
@@ -30,32 +32,32 @@ class WeeklyScheduleTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
-        self.settingsModel.general.dataDirectory = os.path.join(
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
-        self.settingsModel.schedule.scheduleType = "Weekly"
-        self.settingsModel.schedule.mondayChecked = True
-        self.settingsModel.schedule.tuesdayChecked = True
-        self.settingsModel.schedule.wednesdayChecked = True
-        self.settingsModel.schedule.thursdayChecked = False
-        self.settingsModel.schedule.fridayChecked = True
-        self.settingsModel.schedule.saturdayChecked = True
-        self.settingsModel.schedule.sundayChecked = True
-        self.settingsModel.schedule.scheduledTime = \
+        SETTINGS.schedule.scheduleType = "Weekly"
+        SETTINGS.schedule.mondayChecked = True
+        SETTINGS.schedule.tuesdayChecked = True
+        SETTINGS.schedule.wednesdayChecked = True
+        SETTINGS.schedule.thursdayChecked = False
+        SETTINGS.schedule.fridayChecked = True
+        SETTINGS.schedule.saturdayChecked = True
+        SETTINGS.schedule.sundayChecked = True
+        SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) +
                           timedelta(minutes=1))
-        SaveSettingsToDisk(self.settingsModel)
+        SaveSettingsToDisk()
 
     def test_weekly_schedule(self):
         """
         Test Weekly schedule type.
         """
-        ValidateSettings(self.settingsModel)
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
+        ValidateSettings()
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
@@ -66,6 +68,9 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         self.assertEqual(self.mydataApp.tasksModel.GetValueByRow(0, 4), "Weekly (MTW-FSS)")
         self.mydataApp.tasksModel.DeleteAllRows()
         self.assertEqual(self.mydataApp.tasksModel.GetRowCount(), 0)
+        self.assertIn(
+            "CreateWeeklyTask - MainThread - DEBUG - Schedule type is Weekly",
+            logger.loggerOutput.getvalue())
 
     def tearDown(self):
         super(WeeklyScheduleTester, self).tearDown()

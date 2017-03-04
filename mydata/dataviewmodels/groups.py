@@ -16,11 +16,8 @@ class GroupsModel(MyDataDataViewModel):
     and the tabular data displayed on that tab view.
     """
     # pylint: disable=arguments-differ
-    def __init__(self, settingsModel):
+    def __init__(self):
         super(GroupsModel, self).__init__()
-
-        self.settingsModel = settingsModel
-
         self.columnNames = ["Id", "Short Name", "Full Name"]
         self.columnKeys = ["dataViewId", "shortName", "name"]
         self.defaultColumnWidths = [40, 200, 400]

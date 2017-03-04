@@ -3,11 +3,12 @@ Test ability to create a MyData App instance and uploads files using POST.
 """
 import os
 
-from .. import MyDataSettingsTester
+from ...settings import SETTINGS
 from ...MyData import MyData
 from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
+from .. import MyDataSettingsTester
 
 
 class MyDataAppInstanceTester(MyDataSettingsTester):
@@ -24,24 +25,23 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = \
-            SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.settingsModel.configPath = self.tempFilePath
-        self.settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.general.dataDirectory = dataDirectory
-        SaveSettingsToDisk(self.settingsModel)
+        SETTINGS.general.dataDirectory = dataDirectory
+        SaveSettingsToDisk()
 
     def test_mydata_app_post_uploads(self):
         """
         Test ability to create MyData App instance and upload files using POST.
         """
-        ValidateSettings(self.settingsModel)
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
+        ValidateSettings()
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.mydataApp.taskBarIcon.CreatePopupMenu()
         # When running MyData without an event loop, this will block until complete:
         self.mydataApp.OnRefresh(event=None, needToValidateSettings=False)

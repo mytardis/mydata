@@ -3,10 +3,11 @@ Test ability to detect invalid email addresses in the Email / Dataset structure.
 """
 import os
 
-from .. import MyDataTester
+from ...settings import SETTINGS
 from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
+from .. import MyDataTester
 
 
 class ScanFoldersTester(MyDataTester):
@@ -22,16 +23,16 @@ class ScanFoldersTester(MyDataTester):
         """
         Test ability to detect invalid email addresses in the Email / Dataset structure.
         """
-        pathToTestConfig = os.path.join(
+        pathToTestConfig = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataInvalidEmailDataset.cfg")
+            "../testdata/testdataInvalidEmailDataset.cfg"))
         self.assertTrue(os.path.exists(pathToTestConfig))
-        settingsModel = SettingsModel(pathToTestConfig)
-        dataDirectory = os.path.join(
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        dataDirectory = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataInvalidEmailDataset")
+            "../testdata", "testdataInvalidEmailDataset"))
         self.assertTrue(os.path.exists(dataDirectory))
-        settingsModel.general.dataDirectory = dataDirectory
-        settingsModel.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         with self.assertRaises(InvalidSettings):
-            ValidateSettings(settingsModel)
+            ValidateSettings()
