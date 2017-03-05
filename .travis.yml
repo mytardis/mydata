@@ -12,8 +12,10 @@ before_install:
  - sudo apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" indicator-systemtray-unity
  - pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/linux/gtk2/ubuntu-14.04/ wxPython_Phoenix
 
-# command to install dependencies
-install: "pip install -r requirements.txt"
+# Commands to install dependencies:
+install:
+- pip install -r requirements.txt
+- pip install -r requirements-linux.txt
 
-# command to run tests
+# Command to run tests
 script: python setup.py nosetests
