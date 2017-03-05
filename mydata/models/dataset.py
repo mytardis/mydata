@@ -73,7 +73,7 @@ class DatasetModel(object):
                        SETTINGS.general.myTardisUrl,
                        experiment.viewUri if experiment else "experiment/?")
                 logger.testrun(message)
-                return existingDataset
+            return existingDataset
         except DoesNotExist:
             description = folderModel.folderName
             logger.debug("Creating dataset record for folder: " + description)
@@ -95,7 +95,7 @@ class DatasetModel(object):
                     message += "\n    In Experiment: %s/%s" \
                         % (SETTINGS.general.myTardisUrl, experiment.viewUri)
                 logger.testrun(message)
-                return
+                return None
             response = requests.post(headers=SETTINGS.defaultHeaders,
                                      url=url, data=data)
             if response.status_code == 201:
