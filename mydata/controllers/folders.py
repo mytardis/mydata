@@ -478,7 +478,7 @@ class FoldersController(object):
                     self.getOrCreateExpThreadingLock.release()
                 folderModel.experimentModel = experimentModel
                 try:
-                    datasetModel = DatasetModel\
+                    folderModel.datasetModel = DatasetModel\
                         .CreateDatasetIfNecessary(folderModel, self.testRun)
                 except Exception as err:
                     logger.error(traceback.format_exc())
@@ -488,7 +488,6 @@ class FoldersController(object):
                             message=str(err),
                             icon=wx.ICON_ERROR))
                     return
-                folderModel.datasetModel = datasetModel
                 self.VerifyDatafiles(folderModel)
             except requests.exceptions.ConnectionError as err:
                 logger.error(str(err))
