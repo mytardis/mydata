@@ -36,7 +36,7 @@ class GroupModel(object):
         Return value of field from the Group model
         to display in the Groups or Folders view
         """
-        return self.__dict__[key]
+        return getattr(self, key)
 
     @staticmethod
     def GetGroupByName(name):

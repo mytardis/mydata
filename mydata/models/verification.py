@@ -47,6 +47,7 @@ class VerificationModel(object):
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
         self.folderModelId = folderModel.dataViewId
+        self.folderName = folderModel.folderName
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.dataFileIndex = dataFileIndex
         self.filename = folderModel.GetDataFileName(dataFileIndex)
@@ -64,4 +65,4 @@ class VerificationModel(object):
         Return value of field from the VerificationModel
         to display in the Verifications view
         """
-        return self.__dict__[key]
+        return getattr(self, key)

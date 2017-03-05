@@ -49,4 +49,4 @@ class TaskModel(object):
         """
         Used in the data view model to look up a value from a column key
         """
-        return self.__dict__[key]
+        return getattr(self, key)

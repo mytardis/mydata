@@ -210,7 +210,7 @@ class FolderModel(object):
         elif key.startswith("group."):
             groupKey = key.split("group.")[1]
             return self.group.GetValueForKey(groupKey) if self.group else None
-        return self.__dict__[key]
+        return getattr(self, key)
 
     def SetCreatedDate(self):
         """

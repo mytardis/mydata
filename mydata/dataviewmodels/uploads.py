@@ -27,9 +27,9 @@ class UploadsModel(MyDataDataViewModel):
         self.columnNames = ["Id", "Folder", "Subdirectory", "Filename",
                             "File Size", "Status", "Progress", "Message",
                             "Speed"]
-        self.columnKeys = ["dataViewId", "folder", "subdirectory", "filename",
-                           "filesizeString", "status", "progress", "message",
-                           "speed"]
+        self.columnKeys = ["dataViewId", "folderName", "subdirectory",
+                           "filename", "filesizeString", "status", "progress",
+                           "message", "speed"]
         self.defaultColumnWidths = [40, 170, 170, 200, 75, 55, 100, 200, 100]
 
         self.completedCount = 0

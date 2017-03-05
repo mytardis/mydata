@@ -22,8 +22,8 @@ class VerificationsModel(MyDataDataViewModel):
         self.foldersModel = None
         self.columnNames = ["Id", "Folder", "Subdirectory", "Filename",
                             "Message"]
-        self.columnKeys = ["dataViewId", "folder", "subdirectory", "filename",
-                           "message"]
+        self.columnKeys = ["dataViewId", "folderName", "subdirectory",
+                           "filename", "message"]
         self.defaultColumnWidths = [40, 170, 170, 200, 500]
         self.completedCount = 0
         self.completedCountLock = threading.Lock()

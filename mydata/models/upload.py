@@ -39,6 +39,7 @@ class UploadModel(object):
         self.dataViewId = dataViewId
         self.dataFileIndex = dataFileIndex
         self.dataFileId = None
+        self.folderName = folderModel.folderName
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.filename = folderModel.GetDataFileName(dataFileIndex)
         # Human-readable string displayed in data view:
@@ -124,7 +125,7 @@ class UploadModel(object):
         Return value of field from the UploadModel
         to display in the Uploads view
         """
-        return self.__dict__[key]
+        return getattr(self, key)
 
     def GetRelativePathToUpload(self):
         """
