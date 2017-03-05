@@ -141,19 +141,22 @@ class UploaderModel(object):
                 netifaces.gateways()['default'][defaultInterfaceType][1]
             ifaddresses = netifaces.ifaddresses(self.ifconfig['interface'])
             if netifaces.AF_LINK in ifaddresses.keys():
-                self.ifconfig['macAddress'] = ifaddresses[netifaces.AF_LINK][0]['addr']
-            ipv4Addrs = ifaddresses[netifaces.AF_INET]
-            self.ifconfig['ipv4Address'] = ipv4Addrs[0]['addr']
-            self.ifconfig['subnetMask'] = ipv4Addrs[0]['netmask']
-            ipv6Addrs = \
-                netifaces.ifaddresses(self.ifconfig['interface'])[netifaces.AF_INET6]
-            if sys.platform.startswith("win"):
-                self.ifconfig['ipv6Address'] = ipv6Addrs[0]['addr']
-            else:
-                for addr in ipv6Addrs:
-                    match = re.match(r'(.+)%(.+)', addr['addr'])
-                    if match and match.group(2) == self.ifconfig['interface']:
-                        self.ifconfig['ipv6Address'] = match.group(1)
+                self.ifconfig['macAddress'] = \
+                    ifaddresses[netifaces.AF_LINK][0]['addr']
+            if netifaces.AF_INET in ifaddresses:
+                ipv4Addrs = ifaddresses[netifaces.AF_INET]
+                self.ifconfig['ipv4Address'] = ipv4Addrs[0]['addr']
+                self.ifconfig['subnetMask'] = ipv4Addrs[0]['netmask']
+            if netifaces.AF_INET6 in ifaddresses:
+                ipv6Addrs = ifaddresses[netifaces.AF_INET6]
+                if sys.platform.startswith("win"):
+                    self.ifconfig['ipv6Address'] = ipv6Addrs[0]['addr']
+                else:
+                    for addr in ipv6Addrs:
+                        match = re.match(r'(.+)%(.+)', addr['addr'])
+                        if match and \
+                                match.group(2) == self.ifconfig['interface']:
+                            self.ifconfig['ipv6Address'] = match.group(1)
             logger.debug("The active network interface is: %s"
                          % str(self.ifconfig['interface']))
         else:
