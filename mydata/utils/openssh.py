@@ -560,12 +560,11 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 time.sleep(SLEEP_FACTOR * maxThreads)
             stdout, stderr = scpUploadProcess.communicate()
             returncode = scpUploadProcess.returncode
+            if returncode != 0:
+                raise ScpException(stderr, scpCommandString, returncode)
 
     latestUpdateTime = datetime.now()
     uploadModel.SetLatestTime(latestUpdateTime)
-    if returncode != 0:
-        raise ScpException(stdout, scpCommandString,
-                           returncode)
     bytesUploaded = fileSize
     progressCallback(bytesUploaded, fileSize)
     return
