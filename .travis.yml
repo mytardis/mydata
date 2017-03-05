@@ -1,0 +1,16 @@
+language: python
+
+python:
+  - "2.7"
+
+before_install:
+ - sudo apt-add-repository ppa:fixnix/indicator-systemtray-unity
+ - sudo apt-get update
+ - sudo apt-get install indicator-systemtray-unity
+ - pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/linux/gtk2/ubuntu-14.04/ wxPython_Phoenix
+
+# command to install dependencies
+install: "pip install -r requirements.txt"
+
+# command to run tests
+script: python setup.py nosetests
