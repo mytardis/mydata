@@ -271,8 +271,10 @@ class FoldersController(object):
             dlg.ShowModal()
         else:
             sys.stderr.write("%s\n" % event.message)
+        app = wx.GetApp()
         if needToRestartBusyCursor and not self.IsShuttingDown() \
-                and wx.GetApp().PerformingLookupsAndUploads():
+                and hasattr(app, "PerformingLookupsAndUploads") \
+                and app.PerformingLookupsAndUploads():
             BeginBusyCursorIfRequired()
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(False)
