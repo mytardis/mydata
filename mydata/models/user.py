@@ -27,7 +27,6 @@ class UserModel(object):
         self._fullName = fullName
         self._email = email
         self.groups = []
-        self.userRecordJson = userRecordJson
         self.userNotFoundInMyTardis = userNotFoundInMyTardis
 
         if userRecordJson is not None:
