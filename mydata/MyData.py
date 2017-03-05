@@ -871,6 +871,10 @@ class MyData(wx.App):
         call to OnRefresh (e.g. the toolbar button, the task bar
         icon menu item, or a scheduled task).
         """
+        try:
+            syncNowMenuItemId = self.taskBarIcon.GetSyncNowMenuItem().GetId()
+        except (AttributeError, RuntimeError):
+            syncNowMenuItemId = None
         if jobId:
             logger.debug("OnRefresh called from job ID %d" % jobId)
         elif event is None:
@@ -882,9 +886,7 @@ class MyData(wx.App):
                          "which was launched from MyData's toolbar.")
         elif event.GetId() == self.uploadTool.GetId():
             logger.debug("OnRefresh triggered by Upload toolbar icon.")
-        elif self.taskBarIcon.GetSyncNowMenuItem() is not None and \
-                event.GetId() == \
-                self.taskBarIcon.GetSyncNowMenuItem().GetId():
+        elif syncNowMenuItemId and event.GetId() == syncNowMenuItemId:
             logger.debug("OnRefresh triggered by 'Sync Now' "
                          "task bar menu item.")
         elif event.GetEventType() == \
