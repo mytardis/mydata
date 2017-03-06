@@ -47,6 +47,7 @@ class ExperimentExceptionsTester(MyDataTester):
         SETTINGS.miscellaneous.uuid = "1234567890"
         ValidateSettings()
 
+        uploaderName = SETTINGS.uploaderModel.name
         owner = SETTINGS.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
@@ -65,7 +66,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -74,7 +74,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', %s, '%s'"
-            % (instrument, userFolderName, expFolderName))
+            % (uploaderName, userFolderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with a user folder
@@ -84,7 +84,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment")
@@ -97,7 +96,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Multiple Existing Experiments"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment1")
@@ -110,7 +108,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -119,7 +116,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', %s, '%s'"
-            % (instrument, groupFolderName, expFolderName))
+            % (uploaderName, groupFolderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with a group folder
@@ -129,7 +126,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment")
@@ -142,7 +138,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -151,7 +146,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', %s, '%s', '%s'"
-            % (instrument, userFolderName, expFolderName,
+            % (uploaderName, userFolderName, expFolderName,
                groupFolderName))
 
         # Look up existing experiment record with
@@ -162,7 +157,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment")
@@ -175,7 +169,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         folderModel.experimentTitle = expFolderName
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
@@ -184,7 +177,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', '%s'"
-            % (instrument, expFolderName))
+            % (uploaderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with neither a user folder
@@ -244,14 +237,13 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
         self.assertEqual(
             exception.message,
-            "Experiment not found for '%s', %s" % (instrument, userFolderName))
+            "Experiment not found for '%s', %s" % (uploaderName, userFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
@@ -290,7 +282,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -298,7 +289,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', %s"
-            % (instrument, groupFolderName))
+            % (uploaderName, groupFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a group folder
@@ -323,7 +314,6 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
@@ -331,7 +321,7 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertEqual(
             exception.message,
             "Experiment not found for '%s', %s, '%s'"
-            % (instrument, userFolderName, groupFolderName))
+            % (uploaderName, userFolderName, groupFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
@@ -356,13 +346,12 @@ class ExperimentExceptionsTester(MyDataTester):
         folderModel = \
             FolderModel(dataViewId, datasetFolderName, location,
                         userFolderName, groupFolderName, owner)
-        instrument = SETTINGS.instrument.name
         with self.assertRaises(DoesNotExist) as contextManager:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
         self.assertEqual(
-            exception.message, "Experiment not found for '%s'." % instrument)
+            exception.message, "Experiment not found for '%s'." % uploaderName)
 
         # Look up existing experiment record with
         # experiment title set automatically, and with neither a user folder
@@ -418,7 +407,8 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # Now let's test experiment creation with the experiment's
         # title determined automatically (from the instrument's name
-        # and user folder name or group folder name):
+        # which becomes the default uploader name) and the user folder
+        # name or group folder name):
         userFolderName = owner.username
         groupFolderName = None
         folderModel = \
