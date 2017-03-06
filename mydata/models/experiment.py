@@ -71,18 +71,18 @@ class ExperimentModel(object):
             expTitleEncoded = urllib.quote(experimentTitle.encode('utf-8'))
             folderStructureEncoded = \
                 urllib.quote(SETTINGS.advanced.folderStructure)
-            url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&title=" + expTitleEncoded + \
-                "&folder_structure=" + folderStructureEncoded
+            url = "%s/api/v1/mydata_experiment/?format=json" \
+                "&title=%s&folder_structure=%s" \
+                % (myTardisUrl, expTitleEncoded, folderStructureEncoded)
         else:
-            url = myTardisUrl + "/api/v1/mydata_experiment/?format=json" + \
-                "&uploader=" + uploaderUuid
+            url = "%s/api/v1/mydata_experiment/?format=json" \
+                "&uploader=%s" % (myTardisUrl, uploaderUuid)
         if userFolderName:
-            url += "&user_folder_name=" + \
-                urllib.quote(userFolderName.encode('utf-8'))
+            url += "&user_folder_name=%s" \
+                % urllib.quote(userFolderName.encode('utf-8'))
         if groupFolderName:
-            url += "&group_folder_name=" + \
-                urllib.quote(groupFolderName.encode('utf-8'))
+            url += "&group_folder_name=%s" \
+                % urllib.quote(groupFolderName.encode('utf-8'))
 
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code == 200:
@@ -171,13 +171,13 @@ class ExperimentModel(object):
             logger.debug(message)
             return ExperimentModel(experimentsJson['objects'][0])
         elif numExperimentsFound > 1:
-            message = "ERROR: Found multiple experiments matching " + \
+            message = "ERROR: Found multiple experiments matching " \
                 "Uploader UUID for user '%s'" % userFolderName
             if groupFolderName:
                 message += " and group '%s'" % groupFolderName
             logger.error(message)
             for expJson in experimentsJson['objects']:
-                logger.error("\t" + expJson['title'])
+                logger.error("\t%s" % expJson['title'])
             groupFolderString = ""
             if groupFolderName:
                 groupFolderString = ", and group folder \"%s\"" \
@@ -269,7 +269,7 @@ class ExperimentModel(object):
         if groupFolderName:
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
-        url = myTardisUrl + "/api/v1/mydata_experiment/"
+        url = "%s/api/v1/mydata_experiment/" % myTardisUrl
         logger.debug(url)
         response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=json.dumps(experimentJson))
