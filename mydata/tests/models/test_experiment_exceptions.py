@@ -42,6 +42,9 @@ class ExperimentExceptionsTester(MyDataTester):
         self.assertTrue(os.path.exists(dataDirectory))
         SETTINGS.general.dataDirectory = dataDirectory
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        # MyData has the concept of a "default experiment",
+        # which depends on the UUID of the MyData instance:
+        SETTINGS.miscellaneous.uuid = "1234567890"
         ValidateSettings()
 
         owner = SETTINGS.defaultOwner
