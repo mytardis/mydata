@@ -12,6 +12,7 @@ from SocketServer import ThreadingMixIn
 import requests
 
 from .fake_mytardis_server import FakeMyTardisHandler
+from ..logs import logger
 
 
 def GetEphemeralPort():
@@ -55,7 +56,7 @@ def WaitForFakeMyTardisServerToStart(url):
     """
     Wait for fake MyTardis server to start.
     """
-    sys.stderr.write("Waiting for fake MyTardis server to start...\n")
+    logger.debug("Waiting for fake MyTardis server to start...\n")
     attempts = 0
     while True:
         try:
