@@ -131,9 +131,10 @@ class MyData(wx.App):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv):
+    def __init__(self, argv, promptForMissingSettings=True):
         self.name = "MyData"
         self.argv = argv
+        self.promptForMissingSettings = promptForMissingSettings
 
         self.instance = None
 
@@ -331,10 +332,9 @@ class MyData(wx.App):
         self.SetTopWindow(self.frame)
 
         event = None
-        if SETTINGS.RequiredFieldIsBlank():
+        if self.promptForMissingSettings and SETTINGS.RequiredFieldIsBlank():
             self.frame.Show(True)
-            if wx.PyApp.IsMainLoopRunning():
-                self.OnSettings(event)
+            self.OnSettings(event)
         else:
             self.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
             if sys.platform.startswith("linux"):
