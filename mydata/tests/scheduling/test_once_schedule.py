@@ -55,8 +55,3 @@ class OnceScheduleTester(MyDataSettingsTester):
         self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
-
-    def tearDown(self):
-        super(OnceScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()

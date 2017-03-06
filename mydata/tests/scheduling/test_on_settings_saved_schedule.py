@@ -39,8 +39,6 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         self.assertTrue(os.path.exists(dataDirectory))
         SETTINGS.general.dataDirectory = dataDirectory
         SETTINGS.schedule.scheduleType = "On Settings Saved"
-        SETTINGS.lastSettingsUpdateTrigger = \
-            LastSettingsUpdateTrigger.UI_RESPONSE
         SaveSettingsToDisk()
 
     def test_on_settings_saved_schedule(self):
@@ -51,7 +49,18 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.mydataApp.taskBarIcon.CreatePopupMenu()
         pyEvent = wx.PyEvent()
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
+        # Having set SETTINGS.lastSettingsUpdateTrigger to
+        # LastSettingsUpdateTrigger.UI_RESPONSE, MyData's settings validation
+        # will assume that the settings came from MyData's interactive settings
+        # dialog, so it will check whether MyData is set to start
+        # automatically, but we can do this to save time:
+        SETTINGS.lastCheckedAutostartValue = \
+            SETTINGS.advanced.startAutomaticallyOnLogin
         self.mydataApp.scheduleController.ApplySchedule(pyEvent)
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
@@ -60,7 +69,3 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
             ("CreateOnSettingsSavedTask - MainThread - DEBUG - "
              "Schedule type is On Settings Saved"),
             logger.loggerOutput.getvalue())
-    def tearDown(self):
-        super(OnSettingsSavedScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()

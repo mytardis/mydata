@@ -39,8 +39,6 @@ class ManualScheduleTester(MyDataSettingsTester):
         self.assertTrue(os.path.exists(dataDirectory))
         SETTINGS.general.dataDirectory = dataDirectory
         SETTINGS.schedule.scheduleType = "Manually"
-        SETTINGS.lastSettingsUpdateTrigger = \
-            LastSettingsUpdateTrigger.UI_RESPONSE
         SaveSettingsToDisk()
 
     def test_manual_schedule(self):
@@ -49,8 +47,18 @@ class ManualScheduleTester(MyDataSettingsTester):
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
+        # If schedule type is "Manually", it will only run in response to a
+        # User Interface response, so we'll set
+        # SETTINGS.lastSettingsUpdateTrigger to simulate a UI trigger:
         SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
+        # Having set SETTINGS.lastSettingsUpdateTrigger to
+        # LastSettingsUpdateTrigger.UI_RESPONSE, MyData's settings validation
+        # will assume that the settings came from MyData's interactive settings
+        # dialog, so it will check whether MyData is set to start
+        # automatically, but we can do this to save time:
+        SETTINGS.lastCheckedAutostartValue = \
+            SETTINGS.advanced.startAutomaticallyOnLogin
         pyEvent = wx.PyEvent()
         self.mydataApp.scheduleController.ApplySchedule(pyEvent,
                                                         runManually=True)
@@ -61,8 +69,3 @@ class ManualScheduleTester(MyDataSettingsTester):
         self.assertIn(
             "ApplySchedule - MainThread - DEBUG - Schedule type is Manually",
             logger.loggerOutput.getvalue())
-
-    def tearDown(self):
-        super(ManualScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()

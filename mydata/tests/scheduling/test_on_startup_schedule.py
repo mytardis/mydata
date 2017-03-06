@@ -51,8 +51,3 @@ class OnStartupScheduleTester(MyDataSettingsTester):
         self.assertIn(
             "CreateOnStartupTask - MainThread - DEBUG - Schedule type is On Startup",
             logger.loggerOutput.getvalue())
-
-    def tearDown(self):
-        super(OnStartupScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()

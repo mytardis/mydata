@@ -57,8 +57,3 @@ class DailyScheduleTester(MyDataSettingsTester):
             logger.loggerOutput.getvalue())
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
-
-    def tearDown(self):
-        super(DailyScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()

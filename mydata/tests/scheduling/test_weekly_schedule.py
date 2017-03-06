@@ -71,8 +71,3 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         self.assertIn(
             "CreateWeeklyTask - MainThread - DEBUG - Schedule type is Weekly",
             logger.loggerOutput.getvalue())
-
-    def tearDown(self):
-        super(WeeklyScheduleTester, self).tearDown()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()
