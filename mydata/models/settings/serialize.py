@@ -57,8 +57,6 @@ def LoadSettings(settings, configPath=None, checkForUpdates=True):
         else:
             logger.debug("Settings were not updated from the server.")
 
-    settings.previousDict.update(settings.__dict__)
-
     settings.lastSettingsUpdateTrigger = \
         LastSettingsUpdateTrigger.READ_FROM_DISK
 
@@ -338,7 +336,8 @@ def SaveFieldsFromDialog(settingsDialog, configPath=None, saveToDisk=True):
     are valid, we call this again with saveToDisk=True.
     """
     from ...settings import SETTINGS
-    SETTINGS.previousDict.update(SETTINGS.__dict__)
+    SETTINGS.SavePrevious()
+
     if configPath is None:
         configPath = SETTINGS.configPath
 

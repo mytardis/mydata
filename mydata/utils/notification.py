@@ -48,7 +48,7 @@ class Notification(object):
         if hasattr(sys, "frozen"):
             path = "../MacOS"
         else:
-            path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
+            path = "resources/macOS/MyData Notifications.app/Contents/MacOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)

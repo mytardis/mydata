@@ -3,15 +3,12 @@ Ensure that MyData starts automatically when the user logs in if
 the "Start Automatically" checkbox is ticked in the Advanced tab
 of the Settings dialog.
 """
-import getpass
 import os
 import subprocess
 import shutil
 import sys
 import tempfile
 import traceback
-
-import psutil
 
 from ..logs import logger
 from ..settings import SETTINGS
@@ -181,52 +178,32 @@ def UpdateMacAutostartFile():
     logs in if the "Start Automatically" checkbox is ticked in the
     Advanced tab of the Settings dialog.
     """
-    # Update ~/Library/Preferences/com.apple.loginitems.plist
-    # cfprefsd can cause unwanted caching.
-    # It will automatically respawn when needed.
-    for proc in psutil.process_iter():
-        if proc.name() == "cfprefsd" and \
-                proc.username() == getpass.getuser():
-            proc.kill()
-    # For some reason, the "get the name of every login item" applescript
-    # below can be quite slow sometimes when run as a subprocess.
-    # It seems consistently fast when run from a Terminal.
-    applescript = \
-        'tell application "System Events" ' \
-        'to get the name of every login item'
-    cmdList = ["osascript", "-e", applescript]
-    loginItemsString = subprocess.check_output(cmdList)
-    loginItems = [item.strip() for item in loginItemsString.split(',')]
-    if 'MyData' in loginItems and SETTINGS.advanced.startAutomaticallyOnLogin:
+    appBundlePath = "/Applications/MyData.app"
+    if hasattr(sys, "frozen"):
+        objectivecDir = "../MacOS"
+    else:
+        objectivecDir = "resources/macOS/ObjectiveC/bin"
+    loginItemExistsBinary = os.path.join(objectivecDir, "loginitem-exists")
+    loginItemExistsCmdList = [loginItemExistsBinary, appBundlePath]
+    loginItemExists = (subprocess.call(loginItemExistsCmdList) == 0)
+    if loginItemExists and SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.debug("MyData is already set to start automatically on login.")
-    elif 'MyData' not in loginItems and \
-            SETTINGS.advanced.startAutomaticallyOnLogin:
+    elif not loginItemExists and SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.info("Adding MyData to login items.")
-        pathToMyDataApp = "/Applications/MyData.app"
-        if hasattr(sys, "frozen"):
-            # Working directory in py2app bundle is
-            # MyData.app/Contents/Resources/
-            pathToMyDataApp = os.path.realpath('../..')
-        applescript = \
-            'tell application "System Events" ' \
-            'to make login item at end with properties ' \
-            '{path:"%s", hidden:false, name:"MyData"}' % pathToMyDataApp
-        cmdList = ["osascript", "-e", applescript]
-        # We are not capturing the output in subprocess.call below, so it is
-        # normal to see "login item MyData" if running MyData from a Terminal.
-        exitCode = subprocess.call(cmdList)
+        addLoginItemBinary = os.path.join(objectivecDir, "add-loginitem")
+        addLoginItemCmdList = [addLoginItemBinary, appBundlePath]
+        exitCode = subprocess.call(addLoginItemCmdList)
         if exitCode != 0:
-            logger.error("Received exit code %d from %s" % (exitCode, cmdList))
-    elif 'MyData' in loginItems and \
-            not SETTINGS.advanced.startAutomaticallyOnLogin:
+            logger.error("Received exit code %d from %s"
+                         % (exitCode, addLoginItemCmdList))
+    elif loginItemExists and not SETTINGS.advanced.startAutomaticallyOnLogin:
         logger.info("Removing MyData from login items.")
-        applescript = \
-            'tell application "System Events" to ' \
-            'delete login item "MyData"'
-        cmdList = ["osascript", "-e", applescript]
-        exitCode = subprocess.call(cmdList)
+        deleteLoginItemBinary = os.path.join(objectivecDir, "delete-loginitem")
+        deleteLoginItemCmdList = [deleteLoginItemBinary, appBundlePath]
+        exitCode = subprocess.call(deleteLoginItemCmdList)
         if exitCode != 0:
-            logger.error("Received exit code %d from %s" % (exitCode, cmdList))
+            logger.error("Received exit code %d from %s"
+                         % (exitCode, deleteLoginItemCmdList))
 
 
 def UpdateLinuxAutostartFile():

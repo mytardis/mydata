@@ -4,6 +4,7 @@ Test ability to open settings dialog and save fields.
 from datetime import datetime
 from datetime import timedelta
 import os
+import sys
 
 import wx
 
@@ -219,13 +220,25 @@ class SettingsDialogTester(MyDataSettingsTester):
         self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(6)
         self.settingsDialog.SetIgnoreOldDatasetIntervalUnit("months")
         self.settingsDialog.SetValidateFolderStructure(True)
+        # Don't check / update autostart file here:
+        SETTINGS.lastCheckedAutostartValue = \
+            SETTINGS.advanced.startAutomaticallyOnLogin
         PostEvent(settingsDialogValidationEvent)
 
         # Test updating autostart file:
+        sys.stderr.write(
+            "Testing updating autostart file with "
+            "startAutomaticallyOnLogin = True...\n")
         SETTINGS.advanced.startAutomaticallyOnLogin = True
         UpdateAutostartFile()
+        sys.stderr.write(
+            "Testing updating autostart file with "
+            "startAutomaticallyOnLogin = False...\n")
         SETTINGS.advanced.startAutomaticallyOnLogin = False
         UpdateAutostartFile()
+        SETTINGS.lastCheckedAutostartValue = \
+            SETTINGS.advanced.startAutomaticallyOnLogin
+        sys.stderr.write("Finished testing updating autostart file\n")
 
         # Test renaming instrument to an available instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(

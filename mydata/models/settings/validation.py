@@ -14,11 +14,12 @@ from validate_email import validate_email
 import wx
 
 from ...logs import logger
-from ..facility import FacilityModel
 from ...utils.autostart import UpdateAutostartFile
 from ...utils.exceptions import InvalidSettings
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import UserAbortedSettingsValidation
+from ..facility import FacilityModel
+from .miscellaneous import LastSettingsUpdateTrigger
 
 DEFAULT_TIMEOUT = 5
 
@@ -58,7 +59,9 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         CheckIfShouldAbort(setStatusMessage)
         CheckContactEmailAndEmailFolders(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
-        CheckAutostart(setStatusMessage)
+        if SETTINGS.lastSettingsUpdateTrigger == \
+                LastSettingsUpdateTrigger.UI_RESPONSE:
+            CheckAutostart(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
         CheckScheduledTime()
         message = "Settings validation - succeeded!"
@@ -438,10 +441,14 @@ def CheckContactEmailAndEmailFolders(setStatusMessage):
 def CheckAutostart(setStatusMessage):
     """
     Check if MyData is configured to start automatically
+
+    If SETTINGS.advanced.startAutomaticallyOnLogin hasn't changed since the
+    last check in this MyData session, then we don't update the autostart file,
+    because doing so can be time-consuming.
+    See: mydata.utils.autostart.UpdateMacAutostartFile
     """
     from ...settings import SETTINGS
-    if 'start_automatically_on_login' in SETTINGS.previousDict and \
-            SETTINGS.previousDict['start_automatically_on_login'] != \
+    if SETTINGS.lastCheckedAutostartValue != \
             SETTINGS.advanced.startAutomaticallyOnLogin:
         message = "Settings validation - " \
             "checking if MyData is set to start automatically..."
