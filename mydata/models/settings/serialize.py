@@ -206,11 +206,12 @@ def LoadMiscellaneousSettings(settings, configParser):
     configFileSection = "MyData"
     fields = ["locked", "uuid", "cipher", "use_none_cipher",
               "max_verification_threads", "verification_delay",
-              "fake_md5_sum", "progress_poll_interval"]
+              "fake_md5_sum", "progress_poll_interval", "immutable_datasets"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
-    booleanFields = ["fake_md5_sum", "use_none_cipher", "locked"]
+    booleanFields = [
+        "fake_md5_sum", "use_none_cipher", "locked", "immutable_datasets"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getboolean(configFileSection, field)
@@ -252,7 +253,7 @@ def CheckForUpdatedSettingsOnServer(settings):
                     "wednesday_checked", "thursday_checked",
                     "friday_checked", "saturday_checked",
                     "sunday_checked", "use_includes_file",
-                    "use_excludes_file"):
+                    "use_excludes_file", "immutable_datasets"):
                 settings[setting['key']] = (setting['value'] == "True")
             if setting['key'] in (
                     "timer_minutes", "ignore_interval_number",
@@ -310,7 +311,7 @@ def SaveSettingsToDisk(configPath=None):
                   "validate_folder_structure", "fake_md5_sum",
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
-                  "start_automatically_on_login",
+                  "start_automatically_on_login", "immutable_datasets",
                   "upload_invalid_user_folders"]
         settingsList = []
         for field in fields:

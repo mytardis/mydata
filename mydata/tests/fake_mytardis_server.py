@@ -1196,7 +1196,7 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
                     "/api/v1/experiment/%s/" % experimentId
                 ],
                 "id": 4457,
-                "immutable": False,
+                "immutable": postData['immutable'],
                 "instrument": {
                     "facility": {
                         "id": 2,

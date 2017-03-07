@@ -38,6 +38,13 @@ class DatasetModel(object):
         return self.json['description']
 
     @property
+    def immutable(self):
+        """
+        Return True if the dataset is immutable
+        """
+        return self.json['immutable']
+
+    @property
     def resourceUri(self):
         """
         Return the dataset's MyTardis API resource URI,
@@ -79,12 +86,11 @@ class DatasetModel(object):
             logger.debug("Creating dataset record for folder: " + description)
             myTardisUrl = SETTINGS.general.myTardisUrl
             experimentUri = experiment.resourceUri if experiment else None
-            immutable = False  # TO DO: should be configurable
             datasetJson = {
                 "instrument": SETTINGS.instrument.resourceUri,
                 "description": description,
                 "experiments": [experimentUri],
-                "immutable": immutable}
+                "immutable": SETTINGS.miscellaneous.immutableDatasets}
             data = json.dumps(datasetJson)
             url = "%s/api/v1/dataset/" % myTardisUrl
             if testRun:

@@ -49,7 +49,8 @@ class MiscellaneousSettingsModel(object):
             'fake_md5_sum',
             'cipher',
             'use_none_cipher',
-            'progress_poll_interval'
+            'progress_poll_interval',
+            'immutable_datasets'
         ]
 
     @property
@@ -130,7 +131,7 @@ class MiscellaneousSettingsModel(object):
     @property
     def useNoneCipher(self):
         """
-        If True, self.mydataConfig['cipher is ignored.
+        If True, self.mydataConfig['cipher'] is ignored.
         """
         return self.mydataConfig['use_none_cipher']
 
@@ -148,6 +149,22 @@ class MiscellaneousSettingsModel(object):
         as a float in threading.Timer(...)
         """
         return float(self.mydataConfig['progress_poll_interval'])
+
+    @property
+    def immutableDatasets(self):
+        """
+        Returns True if MyData will set immutable to True
+        for newly created datasets
+        """
+        return self.mydataConfig['immutable_datasets']
+
+    @immutableDatasets.setter
+    def immutableDatasets(self, immutableDatasets):
+        """
+        If True, MyData will set immutable to True
+        for newly created datasets
+        """
+        self.mydataConfig['immutable_datasets'] = immutableDatasets
 
     def SetDefaults(self):
         """
@@ -180,3 +197,6 @@ class MiscellaneousSettingsModel(object):
 
         # Interval in seconds between RESTful progress queries:
         self.mydataConfig['progress_poll_interval'] = 1
+
+        # Whether datasets created by MyData should be read-only:
+        self.mydataConfig['immutable_datasets'] = False
