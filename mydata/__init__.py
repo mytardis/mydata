@@ -6,7 +6,7 @@ for the About dialog in frozen platform-specific bundles.
 """
 import sys
 
-__version__ = "0.7.0-beta5"
+__version__ = "0.7.0-beta6"
 
 
 try:
