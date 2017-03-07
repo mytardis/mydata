@@ -1,18 +1,17 @@
+#!/usr/bin/env python
 """
 This file, used by MyData, lives in
 /var/www/cgi-bin/mydata_log_drop.py
 on cvl.massive.org.au
 """
-
 # pylint: disable=invalid-name
-
-#!/usr/bin/env python
 
 
 import cgi
 import cgitb
 import tempfile
 import subprocess
+import sys
 
 cgitb.enable()
 
@@ -53,6 +52,7 @@ def free_space():
     return int(stdout.split('\n')[0].split('MB')[0]) < \
         MAX_LOG_DIRECTORY_SIZE
 
+
 form = cgi.FieldStorage()
 out = None
 
@@ -81,10 +81,10 @@ if 'logfile' in form:
                 out.write(blob)
         out.close()
 
-print "Content-Type: text/html\r\n\r\n"
+sys.stdout.write("Content-Type: text/html\r\n\r\n")
 
-print """
+sys.stdout.write("""
 <html><body>
 <p>%s</p>
 </body></html>
-""" % ('Hello from mydata_log_drop.py',)
+""" % 'Hello from mydata_log_drop.py')

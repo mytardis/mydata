@@ -6,27 +6,29 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import io
 import json
 import urllib
+# Only used for poster which will be replaced by requests-toolbelt:
 import urllib2
 
 import requests
+# poster will soon be replaced by requests-toolbelt:
 import poster
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import MultipleObjectsReturned
-from mydata.utils import UnderscoreToCamelcase
+from ..settings import SETTINGS
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
+from ..utils.exceptions import MultipleObjectsReturned
+from ..utils import UnderscoreToCamelcase
 from .replica import ReplicaModel
 from . import HandleHttpError
 
 
-# pylint: disable=too-many-instance-attributes
 class DataFileModel(object):
     """
     Model class for MyTardis API v1's DataFileResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel, dataset, dataFileJson):
-        self.settingsModel = settingsModel
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self, dataset, dataFileJson):
         self.json = dataFileJson
         self.datafileId = None
         self.filename = None
@@ -56,52 +58,21 @@ class DataFileModel(object):
         # so we get the full dataset model, not just the API resource string:
         self.dataset = dataset
 
-    def GetId(self):
-        """
-        Returns datafile ID.
-        """
-        return self.datafileId
-
-    def GetReplicas(self):
-        """
-        Get replicas.
-        """
-        return self.replicas
-
-    def GetJson(self):
-        """
-        Return JSON representation.
-        """
-        return self.json
-
-    def GetSize(self):
-        """
-        Returns size.
-        """
-        return self.size
-
-    def GetMd5Sum(self):
-        """
-        Returns MD5 sum.
-        """
-        return self.md5sum
-
     @staticmethod
-    def GetDataFile(settingsModel, dataset, filename, directory):
+    def GetDataFile(dataset, filename, directory):
         """
         Lookup datafile by dataset, filename and directory.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
-            "&dataset__id=" + str(dataset.GetId()) + \
+            "&dataset__id=" + str(dataset.datasetId) + \
             "&filename=" + urllib.quote(filename.encode('utf-8')) + \
             "&directory=" + urllib.quote(directory.encode('utf-8'))
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             logger.debug("Failed to look up datafile \"%s\" "
                          "in dataset \"%s\"."
-                         % (filename, dataset.GetDescription()))
+                         % (filename, dataset.description))
             HandleHttpError(response)
         dataFilesJson = response.json()
         numDataFilesFound = dataFilesJson['meta']['total_count']
@@ -116,20 +87,17 @@ class DataFileModel(object):
                 response=response)
         else:
             return DataFileModel(
-                settingsModel=settingsModel,
-                dataset=dataset,
-                dataFileJson=dataFilesJson['objects'][0])
+                dataset=dataset, dataFileJson=dataFilesJson['objects'][0])
 
     @staticmethod
-    def GetDataFileFromId(settingsModel, dataFileId):
+    def GetDataFileFromId(dataFileId):
         """
         Lookup datafile by ID.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = SETTINGS.general.myTardisUrl
         url = "%s/api/v1/mydata_dataset_file/%s/?format=json" \
             % (myTardisUrl, dataFileId)
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code == 404:
             raise DoesNotExist(
                 message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
@@ -138,20 +106,16 @@ class DataFileModel(object):
             logger.debug("Failed to look up datafile ID \"%s\"." % dataFileId)
             HandleHttpError(response)
         dataFileJson = response.json()
-        return DataFileModel(
-            settingsModel=settingsModel,
-            dataset=None,
-            dataFileJson=dataFileJson)
+        return DataFileModel(dataset=None, dataFileJson=dataFileJson)
 
     @staticmethod
-    def Verify(settingsModel, datafileId):
+    def Verify(datafileId):
         """
         Verify a datafile via the MyTardis API.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/dataset_file/%s/verify/" % datafileId
-        response = requests.get(url=url,
-                                headers=settingsModel.GetDefaultHeaders())
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             logger.warning("Failed to verify datafile id \"%s\" " % datafileId)
             logger.warning(response.text)
@@ -163,35 +127,34 @@ class DataFileModel(object):
         return True
 
     @staticmethod
-    def CreateDataFileForStagingUpload(settingsModel, dataFileDict):
+    def CreateDataFileForStagingUpload(dataFileDict):
         """
         Create a DataFile record and return a temporary URL to upload
         to (e.g. by SCP).
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/"
         dataFileJson = json.dumps(dataFileDict)
-        response = requests.post(headers=settingsModel.GetDefaultHeaders(),
+        response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=dataFileJson)
         return response
 
     @staticmethod
-    def UploadDataFileWithPost(settingsModel, dataFilePath, dataFileDict,
+    def UploadDataFileWithPost(dataFilePath, dataFileDict,
                                uploadsModel, uploadModel, posterCallback):
         """
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
         """
-        # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
-        myTardisUsername = settingsModel.GetUsername()
-        myTardisApiKey = settingsModel.GetApiKey()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
+        myTardisUsername = SETTINGS.general.username
+        myTardisApiKey = SETTINGS.general.apiKey
+        myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/dataset_file/"
         message = "Initializing buffered reader..."
         uploadsModel.SetMessage(uploadModel, message)
         datafileBufferedReader = io.open(dataFilePath, 'rb')
-        uploadModel.SetBufferedReader(datafileBufferedReader)
+        uploadModel.bufferedReader = datafileBufferedReader
 
         datagen, headers = poster.encode.multipart_encode(
             {"json_data": json.dumps(dataFileDict),

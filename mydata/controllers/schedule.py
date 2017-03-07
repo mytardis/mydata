@@ -11,9 +11,11 @@ import time
 
 import wx
 
-from mydata.models.task import TaskModel
-from mydata.models.settings import LastSettingsUpdateTrigger
-from mydata.logs import logger
+from ..settings import SETTINGS
+from ..models.task import TaskModel
+from ..models.settings import LastSettingsUpdateTrigger
+from ..logs import logger
+
 
 def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
     """
@@ -41,12 +43,12 @@ def HandleValueError(err):
     else:
         logger.error(str(err))
 
+
 class ScheduleController(object):
     """
     Functionality for scheduling tasks.
     """
-    def __init__(self, settingsModel, tasksModel):
-        self.settingsModel = settingsModel
+    def __init__(self, tasksModel):
         self.tasksModel = tasksModel
 
     def ApplySchedule(self, event, runManually=False,
@@ -56,14 +58,14 @@ class ScheduleController(object):
         the Schedule tab of the Settings dialog.
         """
         logger.debug("runManually: %s" % str(runManually))
-        scheduleType = self.settingsModel.GetScheduleType()
+        scheduleType = SETTINGS.schedule.scheduleType
         logger.debug("Schedule Type: %s" % scheduleType)
         if scheduleType == "On Startup" and \
-                self.settingsModel.GetLastSettingsUpdateTrigger() == \
+                SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
             self.CreateOnStartupTask(event, needToValidateSettings)
         elif scheduleType == "On Settings Saved" and \
-                self.settingsModel.GetLastSettingsUpdateTrigger() == \
+                SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE:
             self.CreateOnSettingsSavedTask(event)
         elif scheduleType == "Manually":
@@ -109,7 +111,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateOnSettingsSavedTask(self, event):
@@ -137,7 +139,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateManualTask(self, event, needToValidateSettings=True,
@@ -166,7 +168,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateOnceTask(self, event, needToValidateSettings):
@@ -178,8 +180,8 @@ class ScheduleController(object):
         logger.debug("Schedule type is Once.")
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
-            datetime.combine(self.settingsModel.GetScheduledDate(),
-                             self.settingsModel.GetScheduledTime())
+            datetime.combine(SETTINGS.schedule.scheduledDate,
+                             SETTINGS.schedule.scheduledTime)
         if startTime < datetime.now():
             delta = datetime.now() - startTime
             if delta.total_seconds() < 10:
@@ -187,7 +189,7 @@ class ScheduleController(object):
             else:
                 message = "Scheduled time is in the past."
                 logger.error(message)
-                if self.settingsModel.GetLastSettingsUpdateTrigger() != \
+                if SETTINGS.lastSettingsUpdateTrigger != \
                         LastSettingsUpdateTrigger.READ_FROM_DISK:
                     if wx.PyApp.IsMainLoopRunning():
                         wx.MessageBox(message, "MyData", wx.ICON_ERROR)
@@ -207,7 +209,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateDailyTask(self, event, needToValidateSettings):
@@ -220,7 +222,7 @@ class ScheduleController(object):
         jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
-                             self.settingsModel.GetScheduledTime())
+                             SETTINGS.schedule.scheduledTime)
         if startTime < datetime.now():
             startTime = startTime + timedelta(days=1)
         timeString = startTime.strftime("%I:%M %p")
@@ -239,7 +241,7 @@ class ScheduleController(object):
                          startTime, scheduleType=scheduleType)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateWeeklyTask(self, event, needToValidateSettings):
@@ -250,19 +252,19 @@ class ScheduleController(object):
         scheduleType = "Weekly"
         logger.debug("Schedule type is Weekly.")
         jobDesc = "Scan folders and upload datafiles"
-        days = [self.settingsModel.IsMondayChecked(),
-                self.settingsModel.IsTuesdayChecked(),
-                self.settingsModel.IsWednesdayChecked(),
-                self.settingsModel.IsThursdayChecked(),
-                self.settingsModel.IsFridayChecked(),
-                self.settingsModel.IsSaturdayChecked(),
-                self.settingsModel.IsSundayChecked()]
+        days = [SETTINGS.schedule.mondayChecked,
+                SETTINGS.schedule.tuesdayChecked,
+                SETTINGS.schedule.wednesdayChecked,
+                SETTINGS.schedule.thursdayChecked,
+                SETTINGS.schedule.fridayChecked,
+                SETTINGS.schedule.saturdayChecked,
+                SETTINGS.schedule.sundayChecked]
         if not max(days):
             logger.warning("No days selected for weekly schedule.")
             return
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
-                             self.settingsModel.GetScheduledTime())
+                             SETTINGS.schedule.scheduledTime)
         while not days[startTime.weekday()]:
             startTime = startTime + timedelta(days=1)
         timeString = startTime.strftime("%I:%M %p")
@@ -282,7 +284,7 @@ class ScheduleController(object):
                          days=days)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)
 
     def CreateTimerTask(self, event, needToValidateSettings):
@@ -293,8 +295,8 @@ class ScheduleController(object):
         scheduleType = "Timer"
         logger.debug("Schedule type is Timer.")
         jobDesc = "Scan folders and upload datafiles"
-        intervalMinutes = self.settingsModel.GetTimerMinutes()
-        if self.settingsModel.GetLastSettingsUpdateTrigger() == \
+        intervalMinutes = SETTINGS.schedule.timerMinutes
+        if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
             startTime = datetime.now() + timedelta(seconds=5)
         else:
@@ -317,5 +319,5 @@ class ScheduleController(object):
                          intervalMinutes=intervalMinutes)
         try:
             self.tasksModel.AddRow(task)
-        except ValueError, err:
+        except ValueError as err:
             HandleValueError(err)

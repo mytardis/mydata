@@ -391,3 +391,39 @@ different configurations.  It is expected that the MyData settings for each
 individual instrument PC will remain constant once the initial configuration
 is done.
 
+
+Settings only configurable in MyData.cfg
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The following settings do not appear in the Settings Dialog, but can be
+configured directly in MyData.cfg, which is typically found at a location
+like:
+"C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+"/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
+
+You should exit MyData before modifying MyData.cfg, and then restart it after
+saving your changes to MyData.cfg.
+
+The "verification" in "max_verification_threads" below refers to the DataFile
+lookups performed by MyData to determine whether each local file has been
+previously uploaded to and verified on the MyTardis server, whereas the
+"verification" in "verification_delay" refers to MyData's request for MyTardis
+to verify that a newly uploaded file has the correct size and checksum.
+
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | Setting                  | Default value                     | Description                                            |
+    +==========================+===================================+========================================================+
+    | max_verification_threads | 5                                 | Maximum number of concurrent DataFile lookups          |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | verification_delay       | 3                                 | Upon a successful upload, MyData will request          |
+    |                          |                                   | verification after a short delay (e.g. 3 seconds)      |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | immutable_datasets       | False                             | Whether datasets created by MyData should be read-only |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | progress_poll_interval   | 1                                 | Interval in seconds between RESTful progress queries   |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | cipher                   | aes128-gcm@openssh.com,aes128-ctr | Encryption cipher for SCP uploads                      |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | use_none_cipher          | False                             | Use None cipher (only applicable for HPN-SSH)          |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+
+    | fake_md5_sum             | False                             | Skip MD5 calculation, and just send a string of zeroes |
+    +--------------------------+-----------------------------------+--------------------------------------------------------+

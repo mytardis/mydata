@@ -4,7 +4,7 @@ the results of a dry run.
 """
 import wx
 
-from mydata.logs import logger
+from ..logs import logger
 
 
 class TestRunFrame(wx.Frame):
@@ -21,7 +21,7 @@ class TestRunFrame(wx.Frame):
         panel = wx.Panel(self, wx.ID_ANY)
         self.textCtrl = \
             wx.TextCtrl(panel, wx.ID_ANY,
-                        style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+                        style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
 
         sizer = wx.FlexGridSizer(rows=2, cols=1, vgap=0, hgap=0)
         sizer.AddGrowableRow(0)

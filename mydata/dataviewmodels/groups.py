@@ -2,62 +2,42 @@
 Represents the Groups tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=missing-docstring
-
 import threading
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
-else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+
+from ..utils import Compare
+from .dataview import MyDataDataViewModel
 
 
-class GroupsModel(DataViewIndexListModel):
+class GroupsModel(MyDataDataViewModel):
     """
     Represents the Groups tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-many-public-methods
-    # pylint: disable=too-many-instance-attributes
-    def __init__(self, settingsModel):
-        self.settingsModel = settingsModel
-        self.foldersModel = None
-
-        self.groupsData = list()
-
-        DataViewIndexListModel.__init__(self, len(self.groupsData))
-
-        self.unfilteredGroupsData = self.groupsData
-        self.filteredGroupsData = list()
-        self.filtered = False
-        self.searchString = ""
-
-        self.columnNames = ("Id", "Short Name", "Full Name")
-        self.columnKeys = ("dataViewId", "shortName", "name")
-        self.defaultColumnWidths = (40, 200, 400)
-
-        # This is the largest ID value which has been used in this model.
-        # It may no longer exist, i.e. if we delete the row with the
-        # largest ID, we don't decrement the maximum ID.
-        self.maxDataViewId = 0
-
-    def SetFoldersModel(self, foldersModel):
-        self.foldersModel = foldersModel
+    # pylint: disable=arguments-differ
+    def __init__(self):
+        super(GroupsModel, self).__init__()
+        self.columnNames = ["Id", "Short Name", "Full Name"]
+        self.columnKeys = ["dataViewId", "shortName", "name"]
+        self.defaultColumnWidths = [40, 200, 400]
 
     def Filter(self, searchString):
+        """
+        Only show groups matching the query string, typed in the search box
+        in the upper-right corner of the main window.
+        """
         # pylint: disable=too-many-branches
         self.searchString = searchString
         query = self.searchString.lower()
         if not self.filtered:
             # This only does a shallow copy:
-            self.unfilteredGroupsData = list(self.groupsData)
+            self.unfilteredData = list(self.rowsData)
 
         for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.groupsData[row].GetName().lower():
-                self.filteredGroupsData.append(self.groupsData[row])
-                del self.groupsData[row]
+            if query not in self.rowsData[row].name.lower():
+                self.filteredData.append(self.rowsData[row])
+                del self.rowsData[row]
                 # notify the view(s) using this model that it has been removed
                 if threading.current_thread().name == "MainThread":
                     self.RowDeleted(row)
@@ -66,8 +46,8 @@ class GroupsModel(DataViewIndexListModel):
                 self.filtered = True
 
         for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fgd = self.filteredGroupsData[filteredRow]
-            if query in fgd.GetName().lower():
+            fgd = self.filteredData[filteredRow]
+            if query in fgd.name.lower():
                 # Model doesn't care about currently sorted column.
                 # Always use ID.
                 row = 0
@@ -75,108 +55,27 @@ class GroupsModel(DataViewIndexListModel):
                 # Need to get current sort direction
                 ascending = True
                 while row < self.GetRowCount() and \
-                        self.Compare(self.groupsData[row],
+                        self.Compare(self.rowsData[row],
                                      fgd, col, ascending) < 0:
                     row += 1
 
                 if row == self.GetRowCount():
-                    self.groupsData.append(fgd)
+                    self.rowsData.append(fgd)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowAppended()
                     else:
                         wx.CallAfter(self.RowAppended)
                 else:
-                    self.groupsData.insert(row, fgd)
+                    self.rowsData.insert(row, fgd)
                     # Notify the view using this model that it has been added
                     if threading.current_thread().name == "MainThread":
                         self.RowInserted(row)
                     else:
                         wx.CallAfter(self.RowInserted, row)
-                del self.filteredGroupsData[filteredRow]
+                del self.filteredData[filteredRow]
                 if self.GetFilteredRowCount() == 0:
                     self.filtered = False
-
-    def GetColumnType(self, col):
-        """
-        All of our columns are strings.  If the model or the renderers
-        in the view are other types then that should be reflected here.
-        """
-        # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        return "string"
-
-    def GetValueByRow(self, row, col):
-        """
-        This method is called to provide the groupsData object
-        for a particular row, col
-        """
-        # pylint: disable=arguments-differ
-        columnKey = self.GetColumnKeyName(col)
-        return str(self.groupsData[row].GetValueForKey(columnKey))
-
-    def GetValuesForColname(self, colname):
-        values = []
-        col = -1
-        for col in range(0, self.GetColumnCount()):
-            if self.GetColumnName(col) == colname:
-                break
-        if col == self.GetColumnCount():
-            return None
-
-        for row in range(0, self.GetRowCount()):
-            values.append(self.GetValueByRow(row, col))
-        return values
-
-    def GetColumnName(self, col):
-        return self.columnNames[col]
-
-    def GetColumnKeyName(self, col):
-        return self.columnKeys[col]
-
-    def GetDefaultColumnWidth(self, col):
-        return self.defaultColumnWidths[col]
-
-    def GetRowCount(self):
-        """
-        Report how many rows this model provides data for.
-        """
-        return len(self.groupsData)
-
-    def GetUnfilteredRowCount(self):
-        return len(self.unfilteredGroupsData)
-
-    def GetFilteredRowCount(self):
-        """
-        Report how many rows this model provides data for.
-        """
-        # pylint: disable=arguments-differ
-        return len(self.filteredGroupsData)
-
-    def GetColumnCount(self):
-        """
-        Report how many columns this model provides data for.
-        """
-        # pylint: disable=arguments-differ
-        return len(self.columnNames)
-
-    def GetCount(self):
-        """
-        Report the number of rows in the model
-        """
-        # pylint: disable=arguments-differ
-        return len(self.groupsData)
-
-    def GetAttrByRow(self, row, col, attr):
-        """
-        Called to check if non-standard attributes should be
-        used in the cell at (row, col)
-        """
-        # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        return False
 
     def Compare(self, groupRecord1, groupRecord2, col, ascending):
         """
@@ -185,12 +84,11 @@ class GroupsModel(DataViewIndexListModel):
         need to convert them to row numbers with the GetRow method.
         Then it's just a matter of fetching the right values from our
         data set and comparing them.  The return value is -1, 0, or 1,
-        just like Python's cmp() function.
+        just like Python 2's cmp() function.
         """
-        # pylint: disable=arguments-differ
         try:
-            groupRecord1 = self.groupsData[self.GetRow(groupRecord1)]
-            groupRecord2 = self.groupsData[self.GetRow(groupRecord2)]
+            groupRecord1 = self.rowsData[self.GetRow(groupRecord1)]
+            groupRecord2 = self.rowsData[self.GetRow(groupRecord2)]
         except TypeError:
             # Compare is also called by Filter in which case we
             # don't need to convert from DataViewItem to GroupModel.
@@ -198,51 +96,8 @@ class GroupsModel(DataViewIndexListModel):
         if not ascending:
             groupRecord2, groupRecord1 = groupRecord1, groupRecord2
         if col == 0 or col == 3:
-            return cmp(int(groupRecord1.GetDataViewId()),
-                       int(groupRecord2.GetDataViewId()))
+            return Compare(int(groupRecord1.dataViewId),
+                           int(groupRecord2.dataViewId))
         else:
-            return cmp(groupRecord1.GetValueForKey(self.columnKeys[col]),
-                       groupRecord2.GetValueForKey(self.columnKeys[col]))
-
-    def DeleteAllRows(self):
-        rowsDeleted = []
-        for row in reversed(range(0, self.GetCount())):
-            del self.groupsData[row]
-            rowsDeleted.append(row)
-
-        # notify the view(s) using this model that it has been removed
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rowsDeleted)
-        else:
-            wx.CallAfter(self.RowsDeleted, rowsDeleted)
-
-        self.unfilteredGroupsData = list()
-        self.filteredGroupsData = list()
-        self.filtered = False
-        self.searchString = ""
-        self.maxDataViewId = 0
-
-    def GetMaxDataViewIdFromExistingRows(self):
-        maxDataViewId = 0
-        for row in range(0, self.GetCount()):
-            if self.groupsData[row].GetDataViewId() > maxDataViewId:
-                maxDataViewId = self.groupsData[row].GetDataViewId()
-        return maxDataViewId
-
-    def GetMaxDataViewId(self):
-        if self.GetMaxDataViewIdFromExistingRows() > self.maxDataViewId:
-            self.maxDataViewId = self.GetMaxDataViewIdFromExistingRows()
-        return self.maxDataViewId
-
-    def AddRow(self, value):
-        self.Filter("")
-        self.groupsData.append(value)
-        # Notify views
-        if threading.current_thread().name == "MainThread":
-            self.RowAppended()
-        else:
-            wx.CallAfter(self.RowAppended)
-
-        self.unfilteredGroupsData = self.groupsData
-        self.filteredGroupsData = list()
-        self.Filter(self.searchString)
+            return Compare(groupRecord1.GetValueForKey(self.columnKeys[col]),
+                           groupRecord2.GetValueForKey(self.columnKeys[col]))

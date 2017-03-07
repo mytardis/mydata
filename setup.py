@@ -117,12 +117,19 @@ else:
 
 class CustomBuildCommand(build):
     """
+    Custom "python setup.py build" command
+
     On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
-    On Mac OS X, create dist/MyData.app/*
+    On macOS, create dist/MyData.app/*
     """
     # pylint: disable=too-many-branches
     def run(self):
-        # build.run(self)
+        """
+        Custom "python setup.py build" command
+
+        On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
+        On macOS, create dist/MyData.app/*
+        """
         if sys.platform.startswith("win"):
             # The forward slashes and backslashes below should work in
             # both a DOS environment and a Unix-like environment (e.g. MSYS)
@@ -175,9 +182,9 @@ class CustomBuildCommand(build):
                 subdirpath = os.path.join(cygwin64HomeDir, subdir)
                 if os.path.isdir(subdirpath):
                     shutil.rmtree(subdirpath)
-            distutils.dir_util\
-                .copy_tree("resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
-                           "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
+            distutils.dir_util.copy_tree(
+                "resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
+                "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
             cygwin32HomeDir = \
                 "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1/home"
             for subdir in os.listdir(cygwin32HomeDir):
@@ -211,10 +218,18 @@ class CustomBuildCommand(build):
 
 class CustomBdistCommand(bdist):
     r"""
+    Custom "python setup.py bdist" command
+
     On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
-    On Mac OS X, create dist/MyData_vX.Y.Z.dmg
+    On macOS, create dist/MyData_vX.Y.Z.dmg
     """
     def run(self):
+        r"""
+        Custom "python setup.py bdist" command
+
+        On Windows, create dist\MyData_vX.Y.Z.exe (installation wizard)
+        On macOS, create dist/MyData_vX.Y.Z.dmg
+        """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -238,7 +253,6 @@ UninstallDisplayIcon={app}\{#MyDataAppExeName}
 Compression=lzma2
 SolidCompression=yes
 OutputDir=.
-PrivilegesRequired=lowest
 
 [Files]
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
@@ -299,10 +313,11 @@ Name: "{group}\{cm:UninstallProgram,{#MyDataAppName}}"; Filename: "{uninstallexe
 
             # Digitally sign application:
             if whether_to_sign:
-                cmd = "codesign --force -i org.mytardis.MyData " \
-                    "--sign \"%s\" " \
-                    "--verbose=4 dist/MyData.app/Contents/Frameworks/*.dylib*" \
-                    % certificateName
+                cmd = ("codesign --force -i org.mytardis.MyData "
+                       "--sign \"%s\" "
+                       "--verbose=4 "
+                       "dist/MyData.app/Contents/Frameworks/*.dylib*"
+                       % certificateName)
                 print cmd
                 os.system(cmd)
                 cmd = "codesign --force -i org.mytardis.MyData " \
@@ -508,11 +523,20 @@ tell application "Finder"
 
 class CustomInstallCommand(install):
     """
+    Custom "python setup.py install" command
+
     On Windows open InnoSetup-generated installation wizard for MyData
-    On Mac OS X, open DMG which prompts user to copy MyData.app into
+    On macOS, open DMG which prompts user to copy MyData.app into
     /Applications/
     """
     def run(self):
+        """
+        Custom "python setup.py install" command
+
+        On Windows open InnoSetup-generated installation wizard for MyData
+        On macOS, open DMG which prompts user to copy MyData.app into
+        /Applications/
+        """
         # install.run(self)
         self.run_command("bdist")
         if sys.platform.startswith("win"):
@@ -566,16 +590,28 @@ if sys.platform.startswith("darwin"):
 
     class CustomPy2appCommand(py2app):
         """
-        On Mac OS X, copy "MyData Notifications" tool into MyData.app bundle.
+        On macOS, copy "MyData Notifications", add-loginitem, delete-loginitem,
+        and loginitem-exists binaries into MyData.app bundle.
         """
         def run(self):
+            """
+            On macOS, copy "MyData Notifications", add-loginitem, delete-loginitem,
+            and loginitem-exists binaries into MyData.app bundle.
+            """
             py2app.run(self)
-            shutil.copy("resources/macosx/MyData Notifications.app/Contents/MacOS"
-                        "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
+            shutil.copy(
+                "resources/macOS/MyData Notifications.app/Contents/MacOS"
+                "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
             distutils.dir_util\
-                .copy_tree("resources/macosx/MyData Notifications.app/Contents"
+                .copy_tree("resources/macOS/MyData Notifications.app/Contents"
                            "/Resources/en.lproj",
                            "dist/MyData.app/Contents/Resources/en.lproj")
+            shutil.copy("resources/macOS/ObjectiveC/bin/add-loginitem",
+                        "dist/MyData.app/Contents/MacOS/")
+            shutil.copy("resources/macOS/ObjectiveC/bin/delete-loginitem",
+                        "dist/MyData.app/Contents/MacOS/")
+            shutil.copy("resources/macOS/ObjectiveC/bin/loginitem-exists",
+                        "dist/MyData.app/Contents/MacOS/")
 
     setup_args['app'] = ["run.py"]  # Used by py2app
     setup_args['cmdclass']['py2app'] = CustomPy2appCommand

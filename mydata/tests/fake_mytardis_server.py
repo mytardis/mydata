@@ -9,9 +9,11 @@ responses and hard-coded below.  In some cases, unnecessary
 fields have been removed from the JSON responses.
 """
 # pylint: disable=too-many-lines
+import copy
 import datetime
 import sys
-import BaseHTTPServer
+# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
+from BaseHTTPServer import BaseHTTPRequestHandler
 import re
 import json
 import tempfile
@@ -20,23 +22,38 @@ import urllib
 import cgi
 import logging
 
-from mydata.utils.openssh import GetCygwinPath
+from ..utils.openssh import GetCygwinPath
 
+# Set this to True to log URL requests:
 DEBUG = False
 
 logger = logging.getLogger(__name__)
 
-handle = tempfile.NamedTemporaryFile()  # pylint: disable=invalid-name
-handle.close()
-STAGING_PATH = handle.name
+with tempfile.NamedTemporaryFile() as tempFile:
+    STAGING_PATH = tempFile.name
 os.makedirs(STAGING_PATH)
 logger.info("Created temporary staging directory: %s",
             STAGING_PATH)
 if sys.platform.startswith("win"):
     STAGING_PATH = GetCygwinPath(STAGING_PATH)
 
+EMPTY_API_LIST = {
+    "meta": {
+        "limit": 20,
+        "next": None,
+        "offset": 0,
+        "previous": None,
+        "total_count": 0
+    },
+    "objects": []
+}
 
-class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+TASTYPIE_CANNED_ERROR = {
+    "error_message":
+    "Sorry, this request could not be processed. Please try again later."
+}
+
+class FakeMyTardisHandler(BaseHTTPRequestHandler):
     """
     This class is used to handle the HTTP requests that arrive at the server.
 
@@ -47,9 +64,10 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     stored in instance variables of the handler. Subclasses should not need
     to override or extend the __init__() method.
     """
+    # pylint: disable=invalid-name
     datafileIdAutoIncrement = 0
 
-    def do_HEAD(self):  # pylint: disable=invalid-name
+    def do_HEAD(self):
         """
         Respond to a HEAD request
         """
@@ -61,7 +79,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
         self.end_headers()
 
-    def do_GET(self):  # pylint: disable=invalid-name
+    def do_GET(self):
         """
         Respond to a GET request.
         """
@@ -74,6 +92,10 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.do_HEAD()
             return
 
+        if self.path.startswith("/request/connectionerror/"):
+            self.server.server_close()
+            return
+
         if self.path.startswith("/request/http/code/"):
             match = re.match(r"^/request/http/code/(\d+)/.*$", self.path)
             if match:
@@ -83,8 +105,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
             return
 
         if self.path.startswith("/api/v1/"):
@@ -94,8 +115,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                fakeJson = "{}"
-                self.wfile.write(json.dumps(fakeJson))
+                self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
                 return
             authorized = False
             authorization = self.headers.getheader("Authorization", "")
@@ -120,154 +140,108 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            facilitiesJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
+            facilitiesJson = copy.deepcopy(EMPTY_API_LIST)
+            facilitiesJson['meta']['total_count'] = 1
+            facilitiesJson['objects'] = [
+                {
+                    "id": 2,
+                    "manager_group":
                     {
                         "id": 2,
-                        "manager_group":
-                        {
-                            "id": 2,
-                            "name": "test_facility_managers",
-                            "resource_uri": "/api/v1/group/2/"
-                        },
-                        "name": "Test Facility",
-                        "resource_uri": "/api/v1/facility/2/"
-                    }
-                ]
-            }
+                        "name": "test_facility_managers",
+                        "resource_uri": "/api/v1/group/2/"
+                    },
+                    "name": "Test Facility",
+                    "resource_uri": "/api/v1/facility/2/"
+                }
+            ]
             self.wfile.write(json.dumps(facilitiesJson))
         elif self.path == \
                 "/api/v1/instrument/?format=json&facility__id=2&name=New%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 0
-                },
-                "objects": []
-            }
-            self.wfile.write(json.dumps(instrumentsJson))
+            self.wfile.write(json.dumps(EMPTY_API_LIST))
         elif self.path == \
                 "/api/v1/instrument/?format=json&facility__id=2&name=Renamed%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 0
-                },
-                "objects": []
-            }
-            self.wfile.write(json.dumps(instrumentsJson))
+            self.wfile.write(json.dumps(EMPTY_API_LIST))
         elif self.path == \
                 "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "facility": {
+            instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
+            instrumentsJson['meta']['total_count'] = 1
+            instrumentsJson['objects'] = [
+                {
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
                             "id": 2,
-                            "manager_group": {
-                                "id": 2,
-                                "name": "test_facility_managers",
-                                "resource_uri": "/api/v1/group/2/"
-                            },
-                            "name": "Test Facility",
-                            "resource_uri": "/api/v1/facility/2/"
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
                         },
-                        "id": 17,
-                        "name": "Test Instrument",
-                        "resource_uri": "/api/v1/instrument/17/"
-                    }
-                ]
-            }
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "id": 17,
+                    "name": "Test Instrument",
+                    "resource_uri": "/api/v1/instrument/17/"
+                }
+            ]
             self.wfile.write(json.dumps(instrumentsJson))
         elif self.path == \
                 "/api/v1/instrument/?format=json&facility__id=2&name=Test%20Instrument2":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "facility": {
+            instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
+            instrumentsJson['meta']['total_count'] = 1
+            instrumentsJson['objects'] = [
+                {
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
                             "id": 2,
-                            "manager_group": {
-                                "id": 2,
-                                "name": "test_facility_managers",
-                                "resource_uri": "/api/v1/group/2/"
-                            },
-                            "name": "Test Facility",
-                            "resource_uri": "/api/v1/facility/2/"
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
                         },
-                        "id": 18,
-                        "name": "Test Instrument2",
-                        "resource_uri": "/api/v1/instrument/18/"
-                    }
-                ]
-            }
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "id": 18,
+                    "name": "Test Instrument2",
+                    "resource_uri": "/api/v1/instrument/18/"
+                }
+            ]
             self.wfile.write(json.dumps(instrumentsJson))
-        elif self.path == "/api/v1/user/?format=json&username=testfacility":
+        elif self.path == "/api/v1/user/?format=json&username=testfacility" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=testfacility%40example.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            usersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "username": "testfacility",
-                        "email": "testfacility@example.com",
-                        "first_name": "Test",
-                        "last_name": "Facility",
-                        "groups": [
-                            {
-                                "id": 2,
-                                "name": "test_facility_managers",
-                                "resource_uri": "/api/v1/group/2/"}
-                        ],
-                        "id": 7,
-                        "resource_uri": "/api/v1/user/7/"
-                    }
-                ]
-            }
+            usersJson = copy.deepcopy(EMPTY_API_LIST)
+            usersJson['meta']['total_count'] = 1
+            usersJson['objects'] = [
+                {
+                    "username": "testfacility",
+                    "email": "testfacility@example.com",
+                    "first_name": "Test",
+                    "last_name": "Facility",
+                    "groups": [
+                        {
+                            "id": 2,
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"}
+                    ],
+                    "id": 7,
+                    "resource_uri": "/api/v1/user/7/"
+                }
+            ]
             self.wfile.write(json.dumps(usersJson))
         elif self.path == "/api/v1/user/?format=json&username=testuser1" or \
                 self.path == ("/api/v1/user/?format=json"
@@ -275,26 +249,19 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            usersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "username": "testuser1",
-                        "first_name": "Test",
-                        "last_name": "User1",
-                        "email": "testuser1@example.com",
-                        "groups": [],
-                        "id": 148,
-                        "resource_uri": "/api/v1/user/148/"
-                    }
-                ]
-            }
+            usersJson = copy.deepcopy(EMPTY_API_LIST)
+            usersJson['meta']['total_count'] = 1
+            usersJson['objects'] = [
+                {
+                    "username": "testuser1",
+                    "first_name": "Test",
+                    "last_name": "User1",
+                    "email": "testuser1@example.com",
+                    "groups": [],
+                    "id": 148,
+                    "resource_uri": "/api/v1/user/148/"
+                }
+            ]
             self.wfile.write(json.dumps(usersJson))
         elif self.path == "/api/v1/user/?format=json&username=testuser2" or \
                 self.path == ("/api/v1/user/?format=json"
@@ -302,141 +269,102 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            usersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "username": "testuser2",
-                        "first_name": "Test",
-                        "last_name": "User2",
-                        "email": "testuser2@example.com",
-                        "groups": [],
-                        "id": 149,
-                        "resource_uri": "/api/v1/user/149/"
-                    }
-                ]
-            }
+            usersJson = copy.deepcopy(EMPTY_API_LIST)
+            usersJson['meta']['total_count'] = 1
+            usersJson['objects'] = [
+                {
+                    "username": "testuser2",
+                    "first_name": "Test",
+                    "last_name": "User2",
+                    "email": "testuser2@example.com",
+                    "groups": [],
+                    "id": 149,
+                    "resource_uri": "/api/v1/user/149/"
+                }
+            ]
             self.wfile.write(json.dumps(usersJson))
-        elif self.path == "/api/v1/user/?format=json&username=INVALID_USER":
+        elif self.path == "/api/v1/user/?format=json&username=INVALID_USER" or \
+                self.path == ("/api/v1/user/?format=json"
+                              "&email__iexact=invalid%40email.com"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            usersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 0
-                },
-                "objects": [
-                ]
-            }
-            self.wfile.write(json.dumps(usersJson))
+            self.wfile.write(json.dumps(EMPTY_API_LIST))
         elif self.path == "/api/v1/user/?format=json&username=userwithoutprofile":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            usersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "username": "userwithoutprofile",
-                        "first_name": "User",
-                        "last_name": "Without Profile",
-                        "email": "userwithoutprofile@example.com",
-                        "groups": [],
-                        "id": 1148,
-                        "resource_uri": "/api/v1/user/1148/"
-                    }
-                ]
-            }
+            usersJson = copy.deepcopy(EMPTY_API_LIST)
+            usersJson['meta']['total_count'] = 1
+            usersJson['objects'] = [
+                {
+                    "username": "userwithoutprofile",
+                    "first_name": "User",
+                    "last_name": "Without Profile",
+                    "email": "userwithoutprofile@example.com",
+                    "groups": [],
+                    "id": 1148,
+                    "resource_uri": "/api/v1/user/1148/"
+                }
+            ]
             self.wfile.write(json.dumps(usersJson))
         elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group1":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            groupsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": "101",
-                        "name": "TestFacility-Group1",
-                        "resource_uri": "/api/v1/group/1/"
-                    }
-                ]
-            }
+            groupsJson = copy.deepcopy(EMPTY_API_LIST)
+            groupsJson['meta']['total_count'] = 1
+            groupsJson['objects'] = [
+                {
+                    "id": "101",
+                    "name": "TestFacility-Group1",
+                    "resource_uri": "/api/v1/group/1/"
+                }
+            ]
             self.wfile.write(json.dumps(groupsJson))
         elif self.path == "/api/v1/group/?format=json&name=TestFacility-Group2":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            groupsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": "102",
-                        "name": "TestFacility-Group2",
-                        "resource_uri": "/api/v1/user/2/"
-                    }
-                ]
-            }
+            groupsJson = copy.deepcopy(EMPTY_API_LIST)
+            groupsJson['meta']['total_count'] = 1
+            groupsJson['objects'] = [
+                {
+                    "id": "102",
+                    "name": "TestFacility-Group2",
+                    "resource_uri": "/api/v1/user/2/"
+                }
+            ]
             self.wfile.write(json.dumps(groupsJson))
+        elif self.path == "/api/v1/group/?format=json&name=INVALID_GROUP":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(EMPTY_API_LIST))
         elif self.path.startswith("/api/v1/instrument/?format=json"
                                   "&facility__id=2&name=Instrument1"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": 1,
-                        "name": "Instrument1",
-                        "facility": {
+            instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
+            instrumentsJson['meta']['total_count'] = 1
+            instrumentsJson['objects'] = [
+                {
+                    "id": 1,
+                    "name": "Instrument1",
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
                             "id": 2,
-                            "manager_group": {
-                                "id": 2,
-                                "name": "test_facility_managers",
-                                "resource_uri": "/api/v1/group/2/"
-                            },
-                            "name": "Test Facility",
-                            "resource_uri": "/api/v1/facility/2/"
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
                         },
-                        "resource_uri": "/api/v1/instrument/1/"
-                    }
-                ]
-            }
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "resource_uri": "/api/v1/instrument/1/"
+                }
+            ]
             self.wfile.write(json.dumps(instrumentsJson))
         elif self.path.startswith("/api/v1/mydata_uploader/?format=json&uuid="):
             match = re.match(r"^.*uuid=(\S+)$", self.path)
@@ -452,63 +380,56 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            uploadersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": 1,
-                        "name": "Test Instrument",
-                        "uuid": uuid,
-                        "instruments": [
-                            {
-                                "id": 31,
-                                "name": "Test Instrument",
-                                "facility": {
+            uploadersJson = copy.deepcopy(EMPTY_API_LIST)
+            uploadersJson['meta']['total_count'] = 1
+            uploadersJson['objects'] = [
+                {
+                    "id": 1,
+                    "name": "Test Instrument",
+                    "uuid": uuid,
+                    "instruments": [
+                        {
+                            "id": 31,
+                            "name": "Test Instrument",
+                            "facility": {
+                                "id": 2,
+                                "manager_group": {
                                     "id": 2,
-                                    "manager_group": {
-                                        "id": 2,
-                                        "name": "test_facility_managers",
-                                        "resource_uri": "/api/v1/group/2/"
-                                    },
-                                    "name": "Test Facility",
-                                    "resource_uri": "/api/v1/facility/2/"
+                                    "name": "test_facility_managers",
+                                    "resource_uri": "/api/v1/group/2/"
                                 },
-                                "resource_uri": "/api/v1/instrument/31/"
-                            }
-                        ],
-                        "resource_uri": "/api/v1/mydata_uploader/25/",
-                        "settings_updated": datetime.datetime.now().isoformat(),
-                        "settings": [
-                            {
-                                "key": "contact_name",
-                                "value": "Someone Else"
+                                "name": "Test Facility",
+                                "resource_uri": "/api/v1/facility/2/"
                             },
-                            {
-                                "key": "validate_folder_structure",
-                                "value": False
-                            },
-                            {
-                                "key": "max_verification_threads",
-                                "value": 2
-                            },
-                            {
-                                "key": "scheduled_date",
-                                "value": "2020-01-01"
-                            },
-                            {
-                                "key": "scheduled_time",
-                                "value": "09:00:00"
-                            }
-                        ]
-                    }
-                ]
-            }
+                            "resource_uri": "/api/v1/instrument/31/"
+                        }
+                    ],
+                    "resource_uri": "/api/v1/mydata_uploader/25/",
+                    "settings_updated": datetime.datetime.now().isoformat(),
+                    "settings": [
+                        {
+                            "key": "contact_name",
+                            "value": "Someone Else"
+                        },
+                        {
+                            "key": "validate_folder_structure",
+                            "value": False
+                        },
+                        {
+                            "key": "max_verification_threads",
+                            "value": 2
+                        },
+                        {
+                            "key": "scheduled_date",
+                            "value": "2020-01-01"
+                        },
+                        {
+                            "key": "scheduled_time",
+                            "value": "09:00:00"
+                        }
+                    ]
+                }
+            ]
             self.wfile.write(json.dumps(uploadersJson))
         elif self.path.startswith("/api/v1/mydata_uploaderregistrationrequest"
                                   "/?format=json&uploader__uuid="):
@@ -516,7 +437,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                              r"&requester_key_fingerprint=(\S+)$", self.path)
             if match:
                 uuid = urllib.unquote(match.groups()[0])
-                approved = (uuid == "1234567890")
+                existingApprovedRequest = (uuid == "1234567890")
+                missingStorageBoxAttribute = (uuid == "1234567891")
                 fingerprint = urllib.unquote(match.groups()[1])
             else:
                 self.send_response(400)
@@ -529,18 +451,14 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            uploadersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
+            if existingApprovedRequest or missingStorageBoxAttribute:
+                uploaderRegRequestsJson = copy.deepcopy(EMPTY_API_LIST)
+                uploaderRegRequestsJson['meta']['total_count'] = 1
+                uploaderRegRequestsJson['objects'] = [
                     {
                         "id": 25,
-                        "approved": approved,
+                        "name": "Fake UploaderName",
+                        "approved": True,
                         "approved_storage_box": {
                             "id": 10,
                             "name": "test-staging",
@@ -596,8 +514,20 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         "uploader": "/api/v1/mydata_uploader/25/"
                     }
                 ]
-            }
-            self.wfile.write(json.dumps(uploadersJson))
+                if missingStorageBoxAttribute:
+                    uploaderRegRequest = uploaderRegRequestsJson['objects'][0]
+                    attrs = \
+                        uploaderRegRequest['approved_storage_box']['attributes']
+                    attrNum = -1
+                    for attr in attrs:
+                        if attr['key'] == 'scp_username':
+                            attrNum = attrs.index(attr)
+                            break
+                    if attrNum != -1:
+                        attrs.pop(attrNum)
+            else:
+                uploaderRegRequestsJson = EMPTY_API_LIST
+            self.wfile.write(json.dumps(uploaderRegRequestsJson))
         elif self.path.startswith("/api/v1/mydata_experiment/?format=json&title="):
             # e.g. /api/v1/mydata_experiment/?format=json
             #      &title=Test%20Instrument%20-%20Test%20User1
@@ -654,69 +584,45 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.send_response(404)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                errorJson = {}
+                errorJson = TASTYPIE_CANNED_ERROR
                 self.wfile.write(json.dumps(errorJson))
                 return
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             if title == "Existing Experiment":
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "description": "",
-                            "id": 2552,
-                            "institution_name": "Monash University",
-                            "resource_uri": "/api/v1/mydata_experiment/2552/",
-                            "title": "Existing Experiment",
-                        }
-                    ]
-                }
+                experimentsJson = copy.deepcopy(EMPTY_API_LIST)
+                experimentsJson['meta']['total_count'] = 1
+                experimentsJson['objects'] = [
+                    {
+                        "description": "",
+                        "id": 2552,
+                        "institution_name": "Monash University",
+                        "resource_uri": "/api/v1/mydata_experiment/2552/",
+                        "title": "Existing Experiment",
+                    }
+                ]
             elif title == "Multiple Existing Experiments":
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 2
+                experimentsJson = copy.deepcopy(EMPTY_API_LIST)
+                experimentsJson['meta']['total_count'] = 2
+                experimentsJson['objects'] = [
+                    {
+                        "description": "",
+                        "id": 2552,
+                        "institution_name": "Monash University",
+                        "resource_uri": "/api/v1/mydata_experiment/2552/",
+                        "title": "Existing Experiment1",
                     },
-                    "objects": [
-                        {
-                            "description": "",
-                            "id": 2552,
-                            "institution_name": "Monash University",
-                            "resource_uri": "/api/v1/mydata_experiment/2552/",
-                            "title": "Existing Experiment1",
-                        },
-                        {
-                            "description": "",
-                            "id": 2553,
-                            "institution_name": "Monash University",
-                            "resource_uri": "/api/v1/mydata_experiment/2553/",
-                            "title": "Existing Experiment2",
-                        }
-                    ]
-                }
+                    {
+                        "description": "",
+                        "id": 2553,
+                        "institution_name": "Monash University",
+                        "resource_uri": "/api/v1/mydata_experiment/2553/",
+                        "title": "Existing Experiment2",
+                    }
+                ]
             else:
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 0
-                    },
-                    "objects": [
-                    ]
-                }
+                experimentsJson = EMPTY_API_LIST
             self.wfile.write(json.dumps(experimentsJson))
         elif self.path.startswith("/api/v1/mydata_experiment/?format=json&uploader="):
             # e.g. /api/v1/mydata_experiment/?format=json
@@ -737,6 +643,8 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     match = re.match(r"^.*&uploader=(\S+)$", self.path)
                     if match:
                         uploaderUuid = urllib.unquote(match.groups()[0])  # uploader uuid
+                    else:
+                        uploaderUuid = None
             if not match:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
@@ -752,59 +660,35 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             if uploaderUuid == "Existing Experiment":
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "description": "",
-                            "id": 2552,
-                            "resource_uri": "/api/v1/mydata_experiment/2552/",
-                            "title": "Existing Experiment",
-                        }
-                    ]
-                }
+                experimentsJson = copy.deepcopy(EMPTY_API_LIST)
+                experimentsJson['meta']['total_count'] = 1
+                experimentsJson['objects'] = [
+                    {
+                        "description": "",
+                        "id": 2552,
+                        "resource_uri": "/api/v1/mydata_experiment/2552/",
+                        "title": "Existing Experiment",
+                    }
+                ]
             elif uploaderUuid == "Multiple Existing Experiments":
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 2
+                experimentsJson = copy.deepcopy(EMPTY_API_LIST)
+                experimentsJson['meta']['total_count'] = 2
+                experimentsJson['objects'] = [
+                    {
+                        "description": "",
+                        "id": 2552,
+                        "resource_uri": "/api/v1/mydata_experiment/2552/",
+                        "title": "Existing Experiment1",
                     },
-                    "objects": [
-                        {
-                            "description": "",
-                            "id": 2552,
-                            "resource_uri": "/api/v1/mydata_experiment/2552/",
-                            "title": "Existing Experiment1",
-                        },
-                        {
-                            "description": "",
-                            "id": 2553,
-                            "resource_uri": "/api/v1/mydata_experiment/2553/",
-                            "title": "Existing Experiment2",
-                        }
-                    ]
-                }
+                    {
+                        "description": "",
+                        "id": 2553,
+                        "resource_uri": "/api/v1/mydata_experiment/2553/",
+                        "title": "Existing Experiment2",
+                    }
+                ]
             else:
-                experimentsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 0
-                    },
-                    "objects": [
-                    ]
-                }
+                experimentsJson = EMPTY_API_LIST
             self.wfile.write(json.dumps(experimentsJson))
         elif self.path.startswith("/api/v1/dataset/?format=json&experiments__id="):
             # e.g. /api/v1/dataset/?format=json&experiments__id=2551&description=Flowers
@@ -826,35 +710,18 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             if description == "Existing Dataset":
-                datasetsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "id": "1001",
-                            "description": description,
-                            "instrument": "/api/v1/instrument/17/",
-                            "experiments": ["/api/v1/experiment/2552/"]
-                        }
-                    ]
-                }
+                datasetsJson = copy.deepcopy(EMPTY_API_LIST)
+                datasetsJson['meta']['total_count'] = 1
+                datasetsJson['objects'] = [
+                    {
+                        "id": "1001",
+                        "description": description,
+                        "instrument": "/api/v1/instrument/17/",
+                        "experiments": ["/api/v1/experiment/2552/"]
+                    }
+                ]
             else:
-                datasetsJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 0
-                    },
-                    "objects": [
-                    ]
-                }
+                datasetsJson = EMPTY_API_LIST
             self.wfile.write(json.dumps(datasetsJson))
         elif self.path.startswith("/api/v1/mydata_dataset_file/?format=json&dataset__id="):
             # e.g. /api/v1/mydata_dataset_file/?format=json
@@ -881,180 +748,143 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             if filename == "existing_unverified_incomplete_file.txt":
-                datafilesJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "id": 290385,
-                            "created_time": "2015-06-25T00:26:21",
-                            "datafile": None,
-                            "dataset": "/api/v1/dataset/%s/" % datasetId,
-                            "deleted": False,
-                            "deleted_time": None,
-                            "directory": directory,
-                            "filename": filename,
-                            "md5sum": "c033080e8b2ec59e37fb1a9dc341c813",
-                            "mimetype": "image/jpeg",
-                            "modification_time": None,
-                            "parameter_sets": [],
-                            "replicas": [
-                                {
-                                    "created_time": "2015-10-06T10:21:48.910470",
-                                    "datafile": "/api/v1/dataset_file/290385/",
-                                    "id": 444891,
-                                    "last_verified_time": "2015-10-06T10:21:53.952521",
-                                    "resource_uri": "/api/v1/replica/444891/",
-                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
-                                    "verified": False
-                                }
-                            ],
-                            "resource_uri": "/api/v1/mydata_dataset_file/290385/",
-                            "sha512sum": "",
-                            "size": "36",
-                            "version": 1
-                        }
-                    ]
-                }
+                datafilesJson = copy.deepcopy(EMPTY_API_LIST)
+                datafilesJson['meta']['total_count'] = 1
+                datafilesJson['objects'] = [
+                    {
+                        "id": 290385,
+                        "created_time": "2015-06-25T00:26:21",
+                        "datafile": None,
+                        "dataset": "/api/v1/dataset/%s/" % datasetId,
+                        "deleted": False,
+                        "deleted_time": None,
+                        "directory": directory,
+                        "filename": filename,
+                        "md5sum": "c033080e8b2ec59e37fb1a9dc341c813",
+                        "mimetype": "image/jpeg",
+                        "modification_time": None,
+                        "parameter_sets": [],
+                        "replicas": [
+                            {
+                                "created_time": "2015-10-06T10:21:48.910470",
+                                "datafile": "/api/v1/dataset_file/290385/",
+                                "id": 444891,
+                                "last_verified_time": "2015-10-06T10:21:53.952521",
+                                "resource_uri": "/api/v1/replica/444891/",
+                                "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                "verified": False
+                            }
+                        ],
+                        "resource_uri": "/api/v1/mydata_dataset_file/290385/",
+                        "sha512sum": "",
+                        "size": "36",
+                        "version": 1
+                    }
+                ]
             elif filename == "existing_unverified_full_size_file.txt":
-                datafilesJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "id": 290385,
-                            "created_time": "2015-06-25T00:26:21",
-                            "datafile": None,
-                            "dataset": "/api/v1/dataset/%s/" % datasetId,
-                            "deleted": False,
-                            "deleted_time": None,
-                            "directory": directory,
-                            "filename": filename,
-                            "md5sum": "e71c538337dce5b7fd36ae8db8160756",
-                            "mimetype": "image/jpeg",
-                            "modification_time": None,
-                            "parameter_sets": [],
-                            "replicas": [
-                                {
-                                    "created_time": "2015-10-06T10:21:48.910470",
-                                    "datafile": "/api/v1/dataset_file/290385/",
-                                    "id": 444892,
-                                    "last_verified_time": "2015-10-06T10:21:53.952521",
-                                    "resource_uri": "/api/v1/replica/444892/",
-                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
-                                    "verified": False
-                                }
-                            ],
-                            "resource_uri": "/api/v1/mydata_dataset_file/290385/",
-                            "sha512sum": "",
-                            "size": "35",
-                            "version": 1
-                        }
-                    ]
-                }
+                datafilesJson = copy.deepcopy(EMPTY_API_LIST)
+                datafilesJson['meta']['total_count'] = 1
+                datafilesJson['objects'] = [
+                    {
+                        "id": 290385,
+                        "created_time": "2015-06-25T00:26:21",
+                        "datafile": None,
+                        "dataset": "/api/v1/dataset/%s/" % datasetId,
+                        "deleted": False,
+                        "deleted_time": None,
+                        "directory": directory,
+                        "filename": filename,
+                        "md5sum": "e71c538337dce5b7fd36ae8db8160756",
+                        "mimetype": "image/jpeg",
+                        "modification_time": None,
+                        "parameter_sets": [],
+                        "replicas": [
+                            {
+                                "created_time": "2015-10-06T10:21:48.910470",
+                                "datafile": "/api/v1/dataset_file/290385/",
+                                "id": 444892,
+                                "last_verified_time": "2015-10-06T10:21:53.952521",
+                                "resource_uri": "/api/v1/replica/444892/",
+                                "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                "verified": False
+                            }
+                        ],
+                        "resource_uri": "/api/v1/mydata_dataset_file/290385/",
+                        "sha512sum": "",
+                        "size": "35",
+                        "version": 1
+                    }
+                ]
             elif filename == "existing_verified_file.txt":
-                datafilesJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "id": 290386,
-                            "created_time": "2015-06-25T00:26:21",
-                            "datafile": None,
-                            "dataset": "/api/v1/dataset/%s/" % datasetId,
-                            "deleted": False,
-                            "deleted_time": None,
-                            "directory": directory,
-                            "filename": filename,
-                            "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
-                            "mimetype": "image/jpeg",
-                            "modification_time": None,
-                            "parameter_sets": [],
-                            "replicas": [
-                                {
-                                    "created_time": "2015-10-06T10:21:48.910470",
-                                    "datafile": "/api/v1/dataset_file/290386/",
-                                    "id": 444893,
-                                    "last_verified_time": "2015-10-06T10:21:53.952521",
-                                    "resource_uri": "/api/v1/replica/444893/",
-                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
-                                    "verified": True
-                                }
-                            ],
-                            "resource_uri": "/api/v1/mydata_dataset_file/290386/",
-                            "sha512sum": "",
-                            "size": "23",
-                            "version": 1
-                        }
-                    ]
-                }
+                datafilesJson = copy.deepcopy(EMPTY_API_LIST)
+                datafilesJson['meta']['total_count'] = 1
+                datafilesJson['objects'] = [
+                    {
+                        "id": 290386,
+                        "created_time": "2015-06-25T00:26:21",
+                        "datafile": None,
+                        "dataset": "/api/v1/dataset/%s/" % datasetId,
+                        "deleted": False,
+                        "deleted_time": None,
+                        "directory": directory,
+                        "filename": filename,
+                        "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
+                        "mimetype": "image/jpeg",
+                        "modification_time": None,
+                        "parameter_sets": [],
+                        "replicas": [
+                            {
+                                "created_time": "2015-10-06T10:21:48.910470",
+                                "datafile": "/api/v1/dataset_file/290386/",
+                                "id": 444893,
+                                "last_verified_time": "2015-10-06T10:21:53.952521",
+                                "resource_uri": "/api/v1/replica/444893/",
+                                "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                "verified": True
+                            }
+                        ],
+                        "resource_uri": "/api/v1/mydata_dataset_file/290386/",
+                        "sha512sum": "",
+                        "size": "23",
+                        "version": 1
+                    }
+                ]
             elif filename == "missing_mydata_replica_api_endpoint.txt":
-                datafilesJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 1
-                    },
-                    "objects": [
-                        {
-                            "id": 290387,
-                            "created_time": "2015-06-25T00:26:21",
-                            "datafile": None,
-                            "dataset": "/api/v1/dataset/%s/" % datasetId,
-                            "deleted": False,
-                            "deleted_time": None,
-                            "directory": directory,
-                            "filename": filename,
-                            "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
-                            "mimetype": "image/jpeg",
-                            "modification_time": None,
-                            "parameter_sets": [],
-                            "replicas": [
-                                {
-                                    "created_time": "2015-10-06T10:21:48.910470",
-                                    "datafile": "/api/v1/dataset_file/290387/",
-                                    "id": 444894,
-                                    "last_verified_time": "2015-10-06T10:21:53.952521",
-                                    "resource_uri": "/api/v1/replica/444894/",
-                                    "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
-                                    "verified": True
-                                }
-                            ],
-                            "resource_uri": "/api/v1/mydata_dataset_file/290387/",
-                            "sha512sum": "",
-                            "size": "23",
-                            "version": 1
-                        }
-                    ]
-                }
+                datafilesJson = copy.deepcopy(EMPTY_API_LIST)
+                datafilesJson['meta']['total_count'] = 1
+                datafilesJson['objects'] = [
+                    {
+                        "id": 290387,
+                        "created_time": "2015-06-25T00:26:21",
+                        "datafile": None,
+                        "dataset": "/api/v1/dataset/%s/" % datasetId,
+                        "deleted": False,
+                        "deleted_time": None,
+                        "directory": directory,
+                        "filename": filename,
+                        "md5sum": "0d2a8fb0a57bf4a9aabce5f7e69b36e9",
+                        "mimetype": "image/jpeg",
+                        "modification_time": None,
+                        "parameter_sets": [],
+                        "replicas": [
+                            {
+                                "created_time": "2015-10-06T10:21:48.910470",
+                                "datafile": "/api/v1/dataset_file/290387/",
+                                "id": 444894,
+                                "last_verified_time": "2015-10-06T10:21:53.952521",
+                                "resource_uri": "/api/v1/replica/444894/",
+                                "uri": "DatasetDescription-%s/%s" % (datasetId, filename),
+                                "verified": True
+                            }
+                        ],
+                        "resource_uri": "/api/v1/mydata_dataset_file/290387/",
+                        "sha512sum": "",
+                        "size": "23",
+                        "version": 1
+                    }
+                ]
             else:
-                datafilesJson = {
-                    "meta": {
-                        "limit": 20,
-                        "next": None,
-                        "offset": 0,
-                        "previous": None,
-                        "total_count": 0
-                    },
-                    "objects": []
-                }
+                datafilesJson = EMPTY_API_LIST
             self.wfile.write(json.dumps(datafilesJson))
         elif self.path.startswith("/api/v1/mydata_dataset_file/") and \
                 self.path.endswith("/?format=json"):
@@ -1160,7 +990,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to GET: %s" % self.path)
 
-    def do_POST(self):  # pylint: disable=invalid-name
+    def do_POST(self):
         """
         Respond to a POST request
         """
@@ -1177,8 +1007,11 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+            return
+
+        if self.path.startswith("/request/connectionerror/"):
+            self.server.server_close()
             return
 
         if self.path.startswith("/api/v1/"):
@@ -1201,17 +1034,24 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.wfile.write("</body></html>")
                 return
 
-        length = int(self.headers['Content-Length'])
-        ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
-        if ctype == 'multipart/form-data':
-            form = \
-                cgi.FieldStorage(
-                    fp=self.rfile, headers=self.headers,
-                    environ={'REQUEST_METHOD': 'POST',
-                             'CONTENT_TYPE': self.headers['Content-Type']})
-            postData = form['json_data']
-        else:
-            postData = json.loads(self.rfile.read(length))
+        try:
+            length = int(self.headers['Content-Length'])
+            ctype, _ = cgi.parse_header(self.headers.getheader('content-type'))
+            if ctype == 'multipart/form-data':
+                form = \
+                    cgi.FieldStorage(
+                        fp=self.rfile, headers=self.headers,
+                        environ={'REQUEST_METHOD': 'POST',
+                                 'CONTENT_TYPE': self.headers['Content-Type']})
+                postData = form['json_data']
+            else:
+                postData = json.loads(self.rfile.read(length))
+        except KeyError:
+            self.send_response(500)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+            return
 
         if self.path == "/api/v1/mydata_dataset_file/" or \
                 self.path == "/api/v1/dataset_file/":
@@ -1247,7 +1087,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.send_response(404)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                errorJson = {}
+                errorJson = TASTYPIE_CANNED_ERROR
                 self.wfile.write(json.dumps(errorJson))
                 return
             self.send_response(201)
@@ -1356,7 +1196,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     "/api/v1/experiment/%s/" % experimentId
                 ],
                 "id": 4457,
-                "immutable": False,
+                "immutable": postData['immutable'],
                 "instrument": {
                     "facility": {
                         "id": 2,
@@ -1397,11 +1237,26 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 "resource_uri": "/api/v1/instrument/32/"
             }
             self.wfile.write(json.dumps(instrumentJson))
+        elif self.path == "/api/v1/mydata_uploaderregistrationrequest/":
+            self.send_response(201)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            uploaderResourceUri = postData['uploader']
+            fingerprint = postData['requester_key_fingerprint']
+            uploaderRegistrationRequestJson = {
+                "id": 25,
+                "approved": False,
+                "approved_storage_box": None,
+                "requester_key_fingerprint": fingerprint,
+                "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
+                "uploader": uploaderResourceUri
+            }
+            self.wfile.write(json.dumps(uploaderRegistrationRequestJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to POST: %s" % self.path)
 
-    def do_PUT(self):  # pylint: disable=invalid-name
+    def do_PUT(self):
         """
         Respond to a PUT request
         """
@@ -1414,8 +1269,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(httpCode)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            fakeJson = "{}"
-            self.wfile.write(json.dumps(fakeJson))
+            self.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
             return
 
         if self.path.startswith("/api/v1/mydata_uploader/"):
@@ -1432,56 +1286,13 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            uploadersJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
-                    {
-                        "id": uploaderId,
-                        "name": "Test Instrument",
-                        "instruments": [
-                            {
-                                "id": 31,
-                                "name": "Test Instrument",
-                                "facility": {
-                                    "id": 2,
-                                    "manager_group": {
-                                        "id": 2,
-                                        "name": "test_facility_managers",
-                                        "resource_uri": "/api/v1/group/2/"
-                                    },
-                                    "name": "Test Facility",
-                                    "resource_uri": "/api/v1/facility/2/"
-                                },
-                                "resource_uri": "/api/v1/instrument/31/"
-                            }
-                        ],
-                        "resource_uri": "/api/v1/mydata_uploader/25/",
-                    }
-                ]
-            }
-            self.wfile.write(json.dumps(uploadersJson))
-        elif self.path.startswith("/api/v1/instrument/17/"):
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            instrumentsJson = {
-                "meta": {
-                    "limit": 20,
-                    "next": None,
-                    "offset": 0,
-                    "previous": None,
-                    "total_count": 1
-                },
-                "objects": [
+            uploaderJson = {
+                "id": uploaderId,
+                "name": "Test Instrument",
+                "instruments": [
                     {
                         "id": 31,
-                        "name": "Renamed Instrument",
+                        "name": "Test Instrument",
                         "facility": {
                             "id": 2,
                             "manager_group": {
@@ -1492,16 +1303,41 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                             "name": "Test Facility",
                             "resource_uri": "/api/v1/facility/2/"
                         },
-                        "resource_uri": "/api/v1/instrument/17/"
+                        "resource_uri": "/api/v1/instrument/31/"
                     }
-                ]
+                ],
+                "resource_uri": "/api/v1/mydata_uploader/25/",
             }
+            self.wfile.write(json.dumps(uploaderJson))
+        elif self.path.startswith("/api/v1/instrument/17/"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
+            instrumentsJson['meta']['total_count'] = 1
+            instrumentsJson['objects'] = [
+                {
+                    "id": 31,
+                    "name": "Renamed Instrument",
+                    "facility": {
+                        "id": 2,
+                        "manager_group": {
+                            "id": 2,
+                            "name": "test_facility_managers",
+                            "resource_uri": "/api/v1/group/2/"
+                        },
+                        "name": "Test Facility",
+                        "resource_uri": "/api/v1/facility/2/"
+                    },
+                    "resource_uri": "/api/v1/instrument/17/"
+                }
+            ]
             self.wfile.write(json.dumps(instrumentsJson))
         else:
             raise Exception("FakeMyTardis Server doesn't know how to respond "
                             "to PUT: %s" % self.path)
 
-    def do_PATCH(self):  # pylint: disable=invalid-name
+    def do_PATCH(self):
         """
         Respond to a PATCH request
         """
@@ -1514,7 +1350,7 @@ class FakeMyTardisHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Supressing logging of HTTP requests to STDERR.
         """
         if DEBUG:
-            return BaseHTTPServer.BaseHTTPRequestHandler.log_message(
+            return BaseHTTPRequestHandler.log_message(
                 self, format, *args)
         else:
             return

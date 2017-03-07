@@ -3,7 +3,8 @@ fake_submit_debug_log_server.py
 
 A simple HTTP server to use for unit testing in MyData.
 """
-import BaseHTTPServer
+# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
+from BaseHTTPServer import BaseHTTPRequestHandler
 import logging
 
 DEBUG = False
@@ -11,7 +12,7 @@ DEBUG = False
 logger = logging.getLogger(__name__)
 
 
-class FakeSubmitDebugLogHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class FakeSubmitDebugLogHandler(BaseHTTPRequestHandler):
     """
     This class is used to handle the HTTP requests that arrive at the server.
 
@@ -22,7 +23,8 @@ class FakeSubmitDebugLogHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     stored in instance variables of the handler. Subclasses should not need
     to override or extend the __init__() method.
     """
-    def do_HEAD(self):  # pylint: disable=invalid-name
+    # pylint: disable=invalid-name
+    def do_HEAD(self):
         """
         Respond to a HEAD request
         """
@@ -30,7 +32,7 @@ class FakeSubmitDebugLogHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header("Content-type", "text/html")
         self.end_headers()
 
-    def do_POST(self):  # pylint: disable=invalid-name
+    def do_POST(self):
         """
         Respond to a POST request
         """
@@ -50,7 +52,7 @@ class FakeSubmitDebugLogHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Supressing logging of HTTP requests to STDERR.
         """
         if DEBUG:
-            return BaseHTTPServer.BaseHTTPRequestHandler.log_message(
+            return BaseHTTPRequestHandler.log_message(
                 self, format, *args)
         else:
             return

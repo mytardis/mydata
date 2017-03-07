@@ -3,24 +3,24 @@ Custom logging for MyData allows logging to the Log view of MyData's
 main window, and to ~/.MyData_debug_log.txt.  Logs can be submitted
 via HTTP POST for analysis by developers / sys admins.
 """
-
-# pylint: disable=missing-docstring
-# pylint: disable=fixme
-
+# We want logger singleton to be lowercase, and we want logger.info,
+# logger.warning etc. methods to be lowercase:
+# pylint: disable=invalid-name
 import threading
 import logging
-from StringIO import StringIO
 import os
 import sys
 import inspect
 import pkgutil
+# For Python 3, this will change to "from io import StringIO":
+from StringIO import StringIO
 
 import requests
 import wx
 
-from mydata.logs.SubmitDebugReportDialog import SubmitDebugReportDialog
-from mydata.logs.wxloghandler import WxLogHandler
-from mydata.logs.wxloghandler import EVT_WX_LOG_EVENT
+from .SubmitDebugReportDialog import SubmitDebugReportDialog
+from .wxloghandler import WxLogHandler
+from .wxloghandler import EVT_WX_LOG_EVENT
 
 TIMEOUT = 3
 
@@ -34,10 +34,10 @@ class Logger(object):
     def __init__(self, name):
         self.name = name
         self.loggerObject = logging.getLogger(self.name)
-        self.logFormatString = ""
+        self.formatString = ""
+        self.streamHandler = None
         self.loggerOutput = None
-        self.loggerFileHandler = None
-        self.myDataConfigPath = None
+        self.fileHandler = None
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
@@ -49,36 +49,39 @@ class Logger(object):
         self.contactEmail = ""
         self.comments = ""
 
-    def SetMyDataConfigPath(self, myDataConfigPath):
-        self.myDataConfigPath = myDataConfigPath
-
     def SendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
+        """
+        Send log messages to debug window text control
+        """
         self.logTextCtrl = logTextCtrl
         logWindowHandler = WxLogHandler(self.logTextCtrl)
         logWindowHandler.setLevel(self.level)
-        logFormatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
+        formatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
-        logWindowHandler.setFormatter(logging.Formatter(logFormatString))
+        logWindowHandler.setFormatter(logging.Formatter(formatString))
         self.loggerObject.addHandler(logWindowHandler)
 
         self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):
+        """
+        Configure logger object
+        """
         self.loggerObject = logging.getLogger(self.name)
         self.loggerObject.setLevel(self.level)
 
-        self.logFormatString = \
+        self.formatString = \
             "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
-        stringHandler = logging.StreamHandler(stream=self.loggerOutput)
-        stringHandler.setLevel(self.level)
-        stringHandler.setFormatter(logging.Formatter(self.logFormatString))
-        self.loggerObject.addHandler(stringHandler)
+        self.streamHandler = logging.StreamHandler(stream=self.loggerOutput)
+        self.streamHandler.setLevel(self.level)
+        self.streamHandler.setFormatter(logging.Formatter(self.formatString))
+        self.loggerObject.addHandler(self.streamHandler)
 
         # Finally, send all log messages to a log file.
         if 'MYDATA_DEBUG_LOG_PATH' in os.environ:
@@ -89,11 +92,10 @@ class Logger(object):
         else:
             logFilePath = os.path.join(os.path.expanduser("~"),
                                        ".MyData_debug_log.txt")
-        self.loggerFileHandler = logging.FileHandler(logFilePath)
-        self.loggerFileHandler.setLevel(self.level)
-        self.loggerFileHandler\
-            .setFormatter(logging.Formatter(self.logFormatString))
-        self.loggerObject.addHandler(self.loggerFileHandler)
+        self.fileHandler = logging.FileHandler(logFilePath)
+        self.fileHandler.setLevel(self.level)
+        self.fileHandler.setFormatter(logging.Formatter(self.formatString))
+        self.loggerObject.addHandler(self.fileHandler)
 
     def GetLevel(self):
         """
@@ -111,7 +113,9 @@ class Logger(object):
             handler.setLevel(self.level)
 
     def debug(self, message):
-        # pylint: disable=invalid-name
+        """
+        Log a message with level logging.DEBUG
+        """
         if self.level > logging.DEBUG:
             return
         frame = inspect.currentframe()
@@ -133,7 +137,9 @@ class Logger(object):
             wx.CallAfter(self.loggerObject.debug, message, extra=extra)
 
     def error(self, message):
-        # pylint: disable=invalid-name
+        """
+        Log a message with level logging.ERROR
+        """
         frame = inspect.currentframe()
         outerFrames = inspect.getouterframes(frame)[1]
         if hasattr(sys, "frozen"):
@@ -153,7 +159,9 @@ class Logger(object):
             wx.CallAfter(self.loggerObject.error, message, extra=extra)
 
     def warning(self, message):
-        # pylint: disable=invalid-name
+        """
+        Log a message with level logging.WARNING
+        """
         if self.level > logging.WARNING:
             return
         frame = inspect.currentframe()
@@ -175,7 +183,9 @@ class Logger(object):
             wx.CallAfter(self.loggerObject.warning, message, extra=extra)
 
     def info(self, message):
-        # pylint: disable=invalid-name
+        """
+        Log a message with level logging.INFO
+        """
         if self.level > logging.INFO:
             return
         frame = inspect.currentframe()
@@ -197,9 +207,10 @@ class Logger(object):
             wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
     def testrun(self, message):
-        # pylint: disable=invalid-name
         # pylint: disable=no-self-use
         """
+        Log to the test run window
+
         Always use wx.CallAfter, even when called from the MainThread,
         to ensure that log messages appear in a deterministic order.
         """
@@ -208,16 +219,17 @@ class Logger(object):
         else:
             sys.stderr.write("%s\n" % message)
 
-    def GenerateDebugLogContent(self, settingsModel):
+    def GenerateDebugLogContent(self, settings):
+        """
+        Generate content for submiting a debug log
+        """
         logger.debug("Logger.GenerateDebugLogContent: Flushing "
                      "self.loggerObject.handlers[0], which is of class: " +
                      self.loggerObject.handlers[0].__class__.__name__)
         self.loggerObject.handlers[0].flush()
 
         debugLog = "\n"
-        if settingsModel is not None:
-            debugLog += "Username: " + \
-                settingsModel.GetUsername() + "\n"
+        debugLog += "Username: " + settings.general.username + "\n"
         debugLog += "Name: %s\n" % self.contactName
         debugLog += "Email: %s\n" % self.contactEmail
         debugLog += "Contact me? "
@@ -253,16 +265,19 @@ class Logger(object):
             debugLog += "".join(logLines[-4000:])
         return debugLog
 
-    def SubmitLog(self, myDataMainFrame, settingsModel,
+    def SubmitLog(self, myDataMainFrame, settings,
                   url="https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"):
+        """
+        Open the SubmitDebugReportDialog and submit a debug report if the user
+        clicks OK
+        """
         # pylint: disable=too-many-branches
-        self.contactName = settingsModel.GetContactName()
-        self.contactEmail = settingsModel.GetContactEmail()
+        self.contactName = settings.general.contactName
+        self.contactEmail = settings.general.contactEmail
 
-        dlg = SubmitDebugReportDialog(myDataMainFrame,
-                                      "MyData - Submit Debug Log",
-                                      self.loggerOutput.getvalue(),
-                                      settingsModel)
+        dlg = SubmitDebugReportDialog(
+            myDataMainFrame, "MyData - Submit Debug Log",
+            self.loggerOutput.getvalue(), settings)
         try:
             if wx.PyApp.IsMainLoopRunning():
                 if wx.IsBusy():
@@ -280,8 +295,8 @@ class Logger(object):
                 dlg.Hide()
                 submitDebugLogOK = True
             if submitDebugLogOK:
-                self.contactName = dlg.GetName()
-                self.contactEmail = dlg.GetEmail()
+                self.contactName = dlg.GetContactName()
+                self.contactEmail = dlg.GetContactEmail()
                 self.comments = dlg.GetComments()
                 self.pleaseContactMe = dlg.GetPleaseContactMe()
         finally:
@@ -289,7 +304,7 @@ class Logger(object):
 
         if submitDebugLogOK:
             self.debug("About to send debug log")
-            fileInfo = {"logfile": self.GenerateDebugLogContent(settingsModel)}
+            fileInfo = {"logfile": self.GenerateDebugLogContent(settings)}
             # If we are running in an installation then we have to use
             # our packaged cacert.pem file:
             if os.path.exists('cacert.pem'):
@@ -305,8 +320,12 @@ class Logger(object):
                 logger.error(response.text)
 
     def OnWxLogEvent(self, event):
+        """
+        Append log message to the Log View's text control
+        """
         msg = event.message.strip("\r") + "\n"
         self.logTextCtrl.AppendText(msg)
         event.Skip()
 
-logger = Logger("MyData")  # pylint: disable=invalid-name
+
+logger = Logger("MyData")

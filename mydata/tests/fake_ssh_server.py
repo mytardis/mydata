@@ -16,9 +16,8 @@ scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
 /cygdrive/C/Users/jsmith/Desktop/hello.txt \
 mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
 """
-
 # pylint: disable=invalid-name
-# pylint: disable=missing-docstring
+# pylint: disable=unused-argument
 
 import SocketServer
 import sys
@@ -27,7 +26,10 @@ import subprocess
 import time
 import re
 import logging
-from cStringIO import StringIO
+import socket
+import select
+# For Python 3, this will change to "from io import StringIO":
+from StringIO import StringIO
 
 import paramiko
 from paramiko.py3compat import decodebytes
@@ -42,7 +44,8 @@ logger.setLevel(logging.INFO)
 
 handler = logging.StreamHandler(sys.stderr)
 handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -63,43 +66,58 @@ class SshServerInterface(paramiko.ServerInterface):
         self.command = None
         keyPair = OpenSSH.FindKeyPair("MyDataTest")
         # Remove "ssh-rsa " and "MyDataTest key":
-        data = bytes(keyPair.GetPublicKey().split(" ")[1])
+        data = bytes(keyPair.publicKey.split(" ")[1])
         self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def check_channel_request(self, kind, chanid):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         if kind == 'session':
             return paramiko.OPEN_SUCCEEDED
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):
         """
-        Returns:
-        True if this channel is now hooked up to the stdin, stdout, and stderr
-        of the executing command; False if the command will not be executed.
+        See http://docs.paramiko.org/en/1.15/api/server.html
         """
         self.command = command
         return True
 
     def check_auth_password(self, username, password):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         logger.warning("JUST FOR TESTING - IGNORING password.")
         if username == 'mydata':
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
     def check_auth_publickey(self, username, key):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         if (username == 'mydata') and (key == self.mydata_pub_key):
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return 'publickey,password'
 
     def check_channel_shell_request(self, channel):
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return False
 
     def check_channel_pty_request(self, channel, term, width, height,
                                   pixelwidth, pixelheight, modes):
-        # pylint: disable=too-many-arguments
+        """
+        See http://docs.paramiko.org/en/1.15/api/server.html
+        """
         return True
 
 
@@ -135,15 +153,24 @@ DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
     "-----END RSA PRIVATE KEY-----\n"
 ))
 
+
 class SshRequestHandler(SocketServer.BaseRequestHandler):
     """
     Handles a client address and creates a paramiko
     Transport object.
     """
     # pylint: disable=too-many-instance-attributes
+
+    NEED_TO_ABORT = False
+
     def __init__(self, request, client_address, server):
-        SocketServer.BaseRequestHandler.__init__(self, request, client_address,
-                                                 server)
+        try:
+            SocketServer.BaseRequestHandler.__init__(
+                self, request, client_address, server)
+        except (socket.error, select.error, EOFError) as err:
+            logger.error(
+                "Couldn't create SshRequestHandler instance: %s\n", str(err))
+            return
         self.timeout = 60
         self.auth_timeout = 60
 
@@ -182,12 +209,20 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-return-statements
+        if SshRequestHandler.NEED_TO_ABORT:
+            return
 
         try:
             self.server_instance = SshServerInterface()
             self.transport.start_server(server=self.server_instance)
         except paramiko.SSHException:
             logger.error('*** SSH negotiation failed.')
+            return
+        except (socket.error, select.error, EOFError) as err:
+            logger.error(
+                "SshRequestHandler aborted with error: %s\n", str(err))
+            self.close_transport(success=False)
             return
 
         logger.debug('Got a connection!')
@@ -197,10 +232,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
             self.chan = self.transport.accept(20)
             if self.chan is None:
                 logger.error('*** No channel.')
-                try:
-                    self.transport.close()
-                except:
-                    logger.error(traceback.format_exc())
+                self.close_transport(success=False)
                 return
             logger.info('Authenticated!')
 
@@ -208,6 +240,8 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
             # (to be run locally when running a test server on 127.0.0.1).
             count = 0
             while not self.server_instance.command:
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 time.sleep(0.01)
                 count += 1
                 if count > 100:
@@ -217,30 +251,23 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     self.chan.send_stderr(message)
                     self.chan.send_exit_status(1)
                     self.chan.close()
-                    try:
-                        self.transport.close()
-                    except:
-                        logger.error(traceback.format_exc())
+                    self.close_transport(success=False)
                     return
 
             if sys.platform.startswith("win"):
                 # Use bundled Cygwin binaries for these commands:
-                if self.server_instance.command.startswith("/bin/rm -f"):
-                    self.server_instance.command = \
-                        self.server_instance.command.replace("/bin/rm",
-                                                             OpenSSH.OPENSSH.rm)
                 if self.server_instance.command.startswith("mkdir"):
                     self.server_instance.command = \
-                        self.server_instance.command.replace("mkdir",
-                                                             OpenSSH.OPENSSH.mkdir)
+                        self.server_instance.command.replace(
+                            "mkdir", OpenSSH.OPENSSH.mkdir)
                 if self.server_instance.command.startswith("cat"):
                     self.server_instance.command = \
-                        self.server_instance.command.replace("cat",
-                                                             OpenSSH.OPENSSH.cat)
+                        self.server_instance.command.replace(
+                            "cat", OpenSSH.OPENSSH.cat)
                 if self.server_instance.command.startswith("scp"):
                     self.server_instance.command = \
-                        self.server_instance.command.replace("scp",
-                                                             OpenSSH.OPENSSH.scp)
+                        self.server_instance.command.replace(
+                            "scp", OpenSSH.OPENSSH.scp)
 
             if "scp" not in self.server_instance.command:
                 # Execute a "remote" command other than scp.
@@ -291,10 +318,14 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     """
                     # pylint: disable=too-many-statements
                     while not self.chan.recv_ready():
+                        if SshRequestHandler.NEED_TO_ABORT:
+                            return
                         time.sleep(0.01)
                     try:
                         buf = ""
                         while self.chan.recv_ready():
+                            if SshRequestHandler.NEED_TO_ABORT:
+                                return
                             char = self.chan.recv(1)
                             proc.stdin.write(char)
                             proc.stdin.flush()
@@ -311,6 +342,8 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             self.accessed = match1.group(2)
                             buf = ""
                             while self.chan.recv_ready():
+                                if SshRequestHandler.NEED_TO_ABORT:
+                                    return
                                 char = self.chan.recv(1)
                                 proc.stdin.write(char)
                                 proc.stdin.flush()
@@ -338,10 +371,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     except:
                         logger.error("read_protocol_messages error.")
                         logger.error(traceback.format_exc())
-                        try:
-                            self.transport.close()
-                        except:
-                            logger.error(traceback.format_exc())
+                        self.close_transport(success=False)
                         return
 
                 def adjust_window_size():
@@ -364,34 +394,40 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     # pylint: disable=protected-access
                     self.transport._send_user_message(m)
 
-
                 def read_file_content():
+                    """
+                    Read the file content from the SSH channel,
+                    and write it into the "scp -t" subprocess
+                    """
                     try:
                         while not self.chan.recv_ready():
+                            if SshRequestHandler.NEED_TO_ABORT:
+                                return
                             time.sleep(0.01)
 
-                        # Read the file content from the SSH channel,
-                        # and write it into the "scp -t" subprocess:
                         chunk_size = 1024
                         # pylint: disable=unsubscriptable-object
                         previous_chunk = None
                         while True:
+                            if SshRequestHandler.NEED_TO_ABORT:
+                                return
                             chunk = self.chan.recv(chunk_size)
                             proc.stdin.write(chunk)
                             proc.stdin.flush()
                             if len(chunk) < chunk_size:
                                 if len(chunk) > 0 and chunk[-1] != '\0':
-                                    # We just read the final chunk, but it didn't
-                                    # end with a null character ('\0'), so we'll
-                                    # add one.
+                                    # We just read the final chunk, but it
+                                    # didn't end with a null character ('\0'),
+                                    # so we'll add one.
                                     proc.stdin.write('\0')
                                     proc.stdin.flush()
                                 elif len(chunk) == 0 and \
                                         (not previous_chunk or
                                          previous_chunk[-1] != '\0'):
-                                    # We just read an empty chunk, so the previous
-                                    # chunk must have been the final chunk.  Let's
-                                    # ensure that it ends with a '\0'.
+                                    # We just read an empty chunk, so the
+                                    # previous chunk must have been the final
+                                    # chunk.  Let's ensure that it ends with
+                                    # a '\0'.
                                     proc.stdin.write('\0')
                                     proc.stdin.flush()
                                 break
@@ -399,58 +435,85 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     except:
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
-                        try:
-                            self.transport.close()
-                        except:
-                            logger.error(traceback.format_exc())
+                        self.close_transport(success=False)
                         return
 
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 logger.info("Reading protocol messages...")
                 read_protocol_messages()
                 logger.info("Finished reading protocol messages.")
 
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 logger.info("Adjusting window size...")
                 adjust_window_size()
                 logger.info("Finished adjusting window size.")
 
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 logger.info("Reading file content and writing to scp -t...")
                 read_file_content()
                 logger.info(
                     "Finished reading file content and writing to scp -t.")
 
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 logger.info("Waiting for 'scp -t' to acknowledge that it "
                             "has received all of the file content.")
                 response = proc.stdout.read(1)
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 assert response == '\0'
                 self.chan.send(response)
 
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 # Tell the SCP client that the progress meter has been stopped,
                 # so it can report the output to the user.
                 self.chan.send("\n")
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
 
                 if not proc.returncode:
-                    logger.info("Waiting for 'scp -t' process to finish running.")
+                    logger.info(
+                        "Waiting for 'scp -t' process to finish running.")
                     stdout, _ = proc.communicate()
                 logger.info("scp -t exit code = %s", str(proc.returncode))
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 # 'E' means 'end' in the SCP protocol:
                 self.chan.send('E\n\0')
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 self.chan.send_exit_status(proc.returncode)
+                if SshRequestHandler.NEED_TO_ABORT:
+                    return
                 self.chan.close()
                 logger.info("")
-                try:
-                    self.transport.close()
-                except:
-                    logger.error(traceback.format_exc())
+                self.close_transport(success=True)
         except Exception as e:
-            logger.error('*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
-            logger.error(traceback.format_exc())
-            try:
-                self.transport.close()
-            except:
+            logger.error(
+                '*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
+            if not isinstance(e, socket.error) and not isinstance(e, select.error):
                 logger.error(traceback.format_exc())
+            self.close_transport(success=False)
             return
 
+    def close_transport(self, success):
+        """
+        Close the transport and log any errors
+        """
+        try:
+            SshRequestHandler.NEED_TO_ABORT = not success
+            self.transport.close()
+        except:
+            logger.error(traceback.format_exc())
+
     def handle_timeout(self):
+        """
+        Close SSH transport in the event of a timeout.
+        """
         try:
             self.transport.close()
         finally:
@@ -482,9 +545,24 @@ class ThreadedSshServer(ThreadedTCPServer):
         SocketServer.TCPServer.__init__(self, address, SshRequestHandler)
 
     def shutdown_request(self, request):
-        # Prevent TCPServer from closing the connection prematurely
+        """
+        Called to shutdown and close an individual request.
+
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l466
+
+        We don't call automatically call
+        SocketServer.TCPServer.shutdown_request() to prevent
+        TCPServer from closing the connection prematurely
+        """
         return
 
     def close_request(self, request):
-        # Prevent TCPServer from closing the connection prematurely
+        """
+        Called to clean up an individual request.
+
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l476
+
+        We don't call SocketServer.TCPServer.close_request() to prevent
+        TCPServer from closing the connection prematurely
+        """
         return

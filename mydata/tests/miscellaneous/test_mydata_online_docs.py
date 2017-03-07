@@ -5,7 +5,7 @@ import unittest
 
 import wx
 
-from mydata.MyData import MyData
+from ...MyData import MyData
 
 
 class MyDataOnlineDocsTester(unittest.TestCase):
@@ -20,7 +20,8 @@ class MyDataOnlineDocsTester(unittest.TestCase):
         """
         Test ability to access MyData's online documentation.
         """
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
+                                promptForMissingSettings=False)
         pyEvent = wx.PyEvent()
         self.mydataApp.OnHelp(pyEvent)
         self.mydataApp.OnWalkthrough(pyEvent)

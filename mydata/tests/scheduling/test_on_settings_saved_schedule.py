@@ -2,123 +2,70 @@
 Test On Settings Saved schedule type.
 """
 import os
-import sys
-import time
-import tempfile
-import threading
-import unittest
-from BaseHTTPServer import HTTPServer
-from SocketServer import ThreadingMixIn
 
-import requests
 import wx
 
-from mydata.MyData import MyData
-from mydata.models.settings import SettingsModel
-from mydata.models.settings import LastSettingsUpdateTrigger
-from mydata.tests.fake_mytardis_server import FakeMyTardisHandler
-from mydata.tests.utils import GetEphemeralPort
-if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
+from ...settings import SETTINGS
+from ...logs import logger
+from ...MyData import MyData
+from ...models.settings import SettingsModel
+from ...models.settings import LastSettingsUpdateTrigger
+from ...models.settings.serialize import SaveSettingsToDisk
+from ...models.settings.validation import ValidateSettings
+from .. import MyDataSettingsTester
 
 
-class OnSettingsSavedScheduleTester(unittest.TestCase):
+class OnSettingsSavedScheduleTester(MyDataSettingsTester):
     """
     Test On Settings Saved schedule type.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(OnSettingsSavedScheduleTester, self).__init__(*args, **kwargs)
-        self.httpd = None
-        self.fakeMyTardisHost = "127.0.0.1"
-        self.fakeMyTardisPort = None
-        self.fakeMyTardisServerThread = None
-        self.fakeMyTardisUrl = None
         self.mydataApp = None
 
     def setUp(self):
+        super(OnSettingsSavedScheduleTester, self).setUp()
         configPath = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata/testdataUsernameDataset_POST.cfg")
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
-        self.tempConfig = tempfile.NamedTemporaryFile()
-        self.tempFilePath = self.tempConfig.name
-        self.tempConfig.close()
-        self.settingsModel.SetConfigPath(self.tempFilePath)
-        self.StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        self.settingsModel.SetMyTardisUrl(self.fakeMyTardisUrl)
+        SETTINGS.Update(
+            SettingsModel(configPath=configPath, checkForUpdates=False))
+        SETTINGS.configPath = self.tempFilePath
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         dataDirectory = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "../testdata", "testdataUsernameDataset")
         self.assertTrue(os.path.exists(dataDirectory))
-        self.settingsModel.SetDataDirectory(dataDirectory)
-        self.settingsModel.SetScheduleType("On Settings Saved")
-        self.settingsModel.SetLastSettingsUpdateTrigger(LastSettingsUpdateTrigger.UI_RESPONSE)
-        self.settingsModel.SaveToDisk()
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.schedule.scheduleType = "On Settings Saved"
+        SaveSettingsToDisk()
 
     def test_on_settings_saved_schedule(self):
         """
         Test On Settings Saved schedule type.
         """
-        self.WaitForFakeMyTardisServerToStart()
-        settingsValidation = self.settingsModel.Validate()
-        self.assertTrue(settingsValidation.IsValid())
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                settingsModel=self.settingsModel)
+        ValidateSettings()
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.mydataApp.taskBarIcon.CreatePopupMenu()
         pyEvent = wx.PyEvent()
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
+        # Having set SETTINGS.lastSettingsUpdateTrigger to
+        # LastSettingsUpdateTrigger.UI_RESPONSE, MyData's settings validation
+        # will assume that the settings came from MyData's interactive settings
+        # dialog, so it will check whether MyData is set to start
+        # automatically, but we can do this to save time:
+        SETTINGS.lastCheckedAutostartValue = \
+            SETTINGS.advanced.startAutomaticallyOnLogin
         self.mydataApp.scheduleController.ApplySchedule(pyEvent)
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.READ_FROM_DISK
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
         self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
-
-    def tearDown(self):
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()
-        self.httpd.shutdown()
-        self.fakeMyTardisServerThread.join()
-        if os.path.exists(self.tempFilePath):
-            os.remove(self.tempFilePath)
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()
-
-    def StartFakeMyTardisServer(self):
-        """
-        Start fake MyTardis server.
-        """
-        self.fakeMyTardisPort = GetEphemeralPort()
-        self.httpd = ThreadedHTTPServer((self.fakeMyTardisHost, self.fakeMyTardisPort),
-                                        FakeMyTardisHandler)
-
-        def FakeMyTardisServer():
-            """ Run fake MyTardis server """
-            self.httpd.serve_forever()
-        self.fakeMyTardisServerThread = \
-            threading.Thread(target=FakeMyTardisServer,
-                             name="FakeMyTardisServerThread")
-        self.fakeMyTardisServerThread.start()
-
-    def WaitForFakeMyTardisServerToStart(self):
-        """
-        Wait for fake MyTardis server to start.
-        """
-        sys.stderr.write("Waiting for fake MyTardis server to start...\n")
-        attempts = 0
-        while True:
-            try:
-                attempts += 1
-                requests.get(self.fakeMyTardisUrl +
-                             "/api/v1/?format=json", timeout=1)
-                break
-            except requests.exceptions.ConnectionError, err:
-                time.sleep(0.25)
-                if attempts > 10:
-                    raise Exception("Couldn't connect to %s: %s"
-                                    % (self.fakeMyTardisUrl, str(err)))
+        self.assertIn(
+            ("CreateOnSettingsSavedTask - MainThread - DEBUG - "
+             "Schedule type is On Settings Saved"),
+            logger.loggerOutput.getvalue())

@@ -7,8 +7,8 @@ import sys
 import os
 import wx
 
-from mydata.logs import logger
-from mydata.media import MYDATA_ICONS
+from ..logs import logger
+from ..media import MYDATA_ICONS
 
 
 class Notification(object):
@@ -48,7 +48,7 @@ class Notification(object):
         if hasattr(sys, "frozen"):
             path = "../MacOS"
         else:
-            path = "resources/macosx/MyData Notifications.app/Contents/MacOS"
+            path = "resources/macOS/MyData Notifications.app/Contents/MacOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)

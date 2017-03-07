@@ -4,8 +4,8 @@ Test ability to open connectivity view.
 import unittest
 import wx
 
-from mydata.utils.exceptions import NoActiveNetworkInterface
-from mydata.views.connectivity import ReportNoActiveInterfaces
+from ...utils.exceptions import NoActiveNetworkInterface
+from ...views.connectivity import ReportNoActiveInterfaces
 
 
 class ConnectivityViewTester(unittest.TestCase):

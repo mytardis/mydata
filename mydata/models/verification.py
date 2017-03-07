@@ -3,7 +3,6 @@ Model for datafile verification / lookup.
 """
 
 
-# pylint: disable=invalid-name
 class VerificationStatus(object):
     """
     Enumerated data type for verification states.
@@ -18,34 +17,37 @@ class VerificationStatus(object):
     # Found on MyTardis (and verified), no need to upload this file:
     FOUND_VERIFIED = 3
 
+    # Found unverified DataFile record, but we're using POST, not staged
+    # uploads, so we can't retry without triggering a Duplicate Key error:
+    FOUND_UNVERIFIED_UNSTAGED = 4
+
     # Finished uploading to staging, waiting
     # for MyTardis to verify (don't re-upload):
-    FOUND_UNVERIFIED_FULL_SIZE = 4
+    FOUND_UNVERIFIED_FULL_SIZE = 5
 
     # Partially uploaded to staging, need to resume upload or re-upload:
-    FOUND_UNVERIFIED_NOT_FULL_SIZE = 5
+    FOUND_UNVERIFIED_NOT_FULL_SIZE = 6
 
     # Missing datafile objects (replicas) on server:
-    FOUND_UNVERIFIED_NO_DFOS = 6
+    FOUND_UNVERIFIED_NO_DFOS = 7
 
     # An unverified DFO (replica) was created previously, but the file
     # can't be found on the staging server:
-    NOT_FOUND_ON_STAGING = 7
+    NOT_FOUND_ON_STAGING = 8
 
     # Verification failed, should upload file, unless the failure
     # was so serious (e.g. no network) that we need to abort everything.
-    FAILED = 8
+    FAILED = 9
 
 
-# pylint: disable=too-many-instance-attributes
 class VerificationModel(object):
     """
     Model for datafile verification / lookup.
     """
     def __init__(self, dataViewId, folderModel, dataFileIndex):
         self.dataViewId = dataViewId
-        self.folderModelId = folderModel.GetDataViewId()
-        self.folder = folderModel.GetFolder()
+        self.folderModelId = folderModel.dataViewId
+        self.folderName = folderModel.folderName
         self.subdirectory = folderModel.GetDataFileDirectory(dataFileIndex)
         self.dataFileIndex = dataFileIndex
         self.filename = folderModel.GetDataFileName(dataFileIndex)
@@ -53,96 +55,14 @@ class VerificationModel(object):
         self.status = VerificationStatus.NOT_STARTED
         self.complete = False
 
+        # If during verification, it has been determined that an
+        # unverified DataFile exists on the server for this file,
+        # its DataFileModel object will be recorded:
         self.existingUnverifiedDatafile = None
-
-    def GetDataViewId(self):
-        """
-        Returns data view ID.
-        """
-        return self.dataViewId
-
-    def GetFilename(self):
-        """
-        Returns filename.
-        """
-        return self.filename
-
-    def GetSubdirectory(self):
-        """
-        Returns subdirectory.
-        """
-        return self.subdirectory
-
-    def GetStatus(self):
-        """
-        Returns status.
-        """
-        return self.status
-
-    def SetComplete(self, complete=True):
-        """
-        Set this to True when complete.
-        """
-        self.complete = complete
-
-    def GetComplete(self):
-        """
-        Returns True if complete.
-        """
-        return self.complete
-
-    def SetStatus(self, status):
-        """
-        Used to set status.
-        """
-        self.status = status
-
-    def GetMessage(self):
-        """
-        Get message.
-        """
-        return self.message
-
-    def SetMessage(self, message):
-        """
-        Set message.
-        """
-        self.message = message
 
     def GetValueForKey(self, key):
         """
-        Get value for key.
+        Return value of field from the VerificationModel
+        to display in the Verifications view
         """
-        return self.__dict__[key]
-
-    def GetFolderModelId(self):
-        """
-        Get folder model ID.
-        """
-        return self.folderModelId
-
-    def GetFolder(self):
-        """
-        Get folder.
-        """
-        return self.folder
-
-    def GetDataFileIndex(self):
-        """
-        Get datafile index.
-        """
-        return self.dataFileIndex
-
-    def GetExistingUnverifiedDatafile(self):
-        """
-        If during verification, it has been determined that an
-        unverified DataFile exists on the server for this file,
-        a DataFileModel object will be returned, otherwise None.
-        """
-        return self.existingUnverifiedDatafile
-
-    def SetExistingUnverifiedDatafile(self, existingUnverifiedDatafile):
-        """
-        Set DataFileModel object for existing unverified datafile.
-        """
-        self.existingUnverifiedDatafile = existingUnverifiedDatafile
+        return getattr(self, key)

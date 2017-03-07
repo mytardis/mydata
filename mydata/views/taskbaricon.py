@@ -20,8 +20,8 @@ else:
     from wx import EmptyIcon
     from wx import TaskBarIcon
 
-from mydata.media import MYDATA_ICONS
-from mydata.logs import logger
+from ..media import MYDATA_ICONS
+from ..logs import logger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
@@ -31,11 +31,10 @@ class MyDataTaskBarIcon(TaskBarIcon):
     """
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, frame, settingsModel):
+    def __init__(self, frame):
         """Constructor"""
         TaskBarIcon.__init__(self)
         self.frame = frame
-        self.settingsModel = settingsModel
 
         bmp = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
         self.icon = EmptyIcon()

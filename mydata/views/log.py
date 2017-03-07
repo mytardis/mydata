@@ -6,7 +6,8 @@ import sys
 import logging
 import wx
 
-from mydata.logs import logger
+from ..settings import SETTINGS
+from ..logs import logger
 
 
 class LogView(wx.Panel):
@@ -14,11 +15,10 @@ class LogView(wx.Panel):
     Represents the Log tab of MyData's main window,
     and the log text displayed within that tab view.
     """
-    def __init__(self, parent, settingsModel):
+    def __init__(self, parent):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         self.parent = parent
-        self.settingsModel = settingsModel
         self.logTextCtrl = wx.TextCtrl(self, wx.ID_ANY,
                                        style=wx.TE_MULTILINE | wx.TE_READONLY)
 
@@ -60,15 +60,15 @@ class LogView(wx.Panel):
         (currently hard-coded to be a server managed by the MyData core
         developers - https://cvl.massive.org.au).
         """
-        logger.SubmitLog(self.parent, self.settingsModel)
+        logger.SubmitLog(self.parent, SETTINGS)
         event.Skip()
 
     def OnDebugLogging(self, event):
         """
         Turn debug-level logging on or off.
         """
-        # pylint: disable=no-self-use
-        if event.IsChecked():
+        if self.debugCheckBox.IsChecked():
             logger.SetLevel(logging.DEBUG)
         else:
             logger.SetLevel(logging.INFO)
+        event.Skip()

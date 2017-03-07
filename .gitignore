@@ -8,3 +8,4 @@ rpmbuild/
 commitdef.py
 *.egg
 *~
+resources/macOS/ObjectiveC/obj/

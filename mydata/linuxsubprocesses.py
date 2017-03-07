@@ -16,12 +16,14 @@ ERRAND_BOY_NUM_WORKERS = 10
 ERRAND_BOY_MAX_ACCEPTS = 5000000
 ERRAND_BOY_MAX_CHILD_TASKS = 100
 
+
 def StartErrandBoy():
     """
     Start errand boy.
     """
     if not ERRAND_BOY_TRANSPORT:
         globals()['ERRAND_BOY_TRANSPORT'] = UNIXSocketTransport()
+
     def RunErrandBoyServer():
         """
         Run the errand boy server.
@@ -35,12 +37,14 @@ def StartErrandBoy():
         multiprocessing.Process(target=RunErrandBoyServer)
     ERRAND_BOY_PROCESS.start()
 
+
 def StopErrandBoy():
     """
     Stop errand boy.
     """
     if ERRAND_BOY_PROCESS:
         ERRAND_BOY_PROCESS.terminate()
+
 
 def GetErrandBoyTransport():
     """
@@ -60,6 +64,7 @@ def GetErrandBoyTransport():
             except IOError:
                 pass
     return ERRAND_BOY_TRANSPORT
+
 
 def RestartErrandBoy():
     """

@@ -5,10 +5,10 @@ import unittest
 
 import requests
 
-from mydata.controllers.uploads import UploadDatafileRunnable
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
-from mydata.utils.exceptions import InternalServerError
+from ...controllers.uploads import UploadDatafileRunnable
+from ...utils.exceptions import Unauthorized
+from ...utils.exceptions import DoesNotExist
+from ...utils.exceptions import InternalServerError
 
 
 class FailedDataFileCreationTester(unittest.TestCase):

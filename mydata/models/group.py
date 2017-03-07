@@ -2,14 +2,13 @@
 Model class for MyTardis API v1's GroupResource.
 See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-
-# pylint: disable=missing-docstring
-
 import urllib
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import DoesNotExist
+from ..settings import SETTINGS
+from ..logs import logger
+from ..utils.exceptions import DoesNotExist
+from . import HandleHttpError
 
 
 class GroupModel(object):
@@ -17,8 +16,7 @@ class GroupModel(object):
     Model class for MyTardis API v1's GroupResource.
     See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
-    def __init__(self, settingsModel=None, name=None, groupJson=None):
-        self.settingsModel = settingsModel
+    def __init__(self, name=None, groupJson=None):
         self.groupId = None
         self.name = name
         self.groupJson = groupJson
@@ -30,40 +28,27 @@ class GroupModel(object):
                 self.name = groupJson['name']
 
         self.shortName = name
-        if settingsModel is not None:
-            length = len(settingsModel.GetGroupPrefix())
-            self.shortName = self.name[length:]
-
-    def GetId(self):
-        return self.groupId
-
-    def GetDataViewId(self):
-        return self.dataViewId
-
-    def SetDataViewId(self, dataViewId):
-        self.dataViewId = dataViewId
-
-    def GetName(self):
-        return self.name
-
-    def GetShortName(self):
-        return self.shortName
+        length = len(SETTINGS.advanced.groupPrefix)
+        self.shortName = self.name[length:]
 
     def GetValueForKey(self, key):
-        return self.__dict__[key]
+        """
+        Return value of field from the Group model
+        to display in the Groups or Folders view
+        """
+        return getattr(self, key)
 
     @staticmethod
-    def GetGroupByName(settingsModel, name):
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        url = myTardisUrl + "/api/v1/group/?format=json&name=" + \
-            urllib.quote(name.encode('utf-8'))
-        headers = settingsModel.GetDefaultHeaders()
-        response = requests.get(url=url, headers=headers)
+    def GetGroupByName(name):
+        """
+        Return the group record matching the supplied name
+        """
+        url = "%s/api/v1/group/?format=json&name=%s" \
+            % (SETTINGS.general.myTardisUrl,
+               urllib.quote(name.encode('utf-8')))
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code != 200:
-            logger.debug("Failed to look up group record for name \"" +
-                         name + "\".")
-            logger.debug(response.text)
-            raise Exception(response.text)
+            HandleHttpError(response)
         groupsJson = response.json()
         numGroupsFound = groupsJson['meta']['total_count']
 
@@ -73,5 +58,4 @@ class GroupModel(object):
                 response=response)
         else:
             logger.debug("Found group record for name '" + name + "'.")
-            return GroupModel(settingsModel=settingsModel, name=name,
-                              groupJson=groupsJson['objects'][0])
+            return GroupModel(name=name, groupJson=groupsJson['objects'][0])

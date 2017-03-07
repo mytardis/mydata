@@ -11,10 +11,11 @@ from BaseHTTPServer import HTTPServer
 import requests
 import wx
 
-from mydata.models.settings import SettingsModel
-from mydata.tests.fake_submit_debug_log_server import FakeSubmitDebugLogHandler
-from mydata.tests.utils import GetEphemeralPort
-from mydata.logs import logger
+from ...settings import SETTINGS
+from ...models.settings import SettingsModel
+from ..fake_submit_debug_log_server import FakeSubmitDebugLogHandler
+from ..utils import GetEphemeralPort
+from ...logs import logger
 
 
 class SubmitDebugLogTester(unittest.TestCase):
@@ -27,7 +28,6 @@ class SubmitDebugLogTester(unittest.TestCase):
         self.httpd = None
         self.app = None
         self.frame = None
-        self.settingsModel = None
         self.submitDebugReportDialog = None
         self.fakeSubmitDebugLogServerHost = "127.0.0.1"
         self.fakeSubmitDebugLogServerPort = None
@@ -43,11 +43,12 @@ class SubmitDebugLogTester(unittest.TestCase):
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title="Submit Debug Log Dialog test")
         self.frame.Show()
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
+            "../testdata/testdataUsernameDataset_POST.cfg"))
         self.assertTrue(os.path.exists(configPath))
-        self.settingsModel = SettingsModel(configPath=configPath, checkForUpdates=False)
+        SETTINGS.Update(SettingsModel(configPath=configPath,
+                                      checkForUpdates=False))
         self.StartFakeSubmitDebugLogServer()
 
     def tearDown(self):
@@ -72,7 +73,7 @@ class SubmitDebugLogTester(unittest.TestCase):
                 attempts += 1
                 requests.head(url, timeout=1)
                 break
-            except requests.exceptions.ConnectionError, err:
+            except requests.exceptions.ConnectionError as err:
                 time.sleep(0.25)
                 if attempts > 10:
                     raise Exception("Couldn't connect to %s: %s"
@@ -81,8 +82,8 @@ class SubmitDebugLogTester(unittest.TestCase):
         for i in range(5050):
             logContent += "ERROR %s\n" % i
         logger.error(logContent)
-        _ = logger.GenerateDebugLogContent(self.settingsModel)
-        logger.SubmitLog(self.frame, self.settingsModel,
+        _ = logger.GenerateDebugLogContent(SETTINGS)
+        logger.SubmitLog(self.frame, SETTINGS,
                          url="http://%s:%s"
                          % (self.fakeSubmitDebugLogServerHost,
                             self.fakeSubmitDebugLogServerPort))

@@ -26,11 +26,14 @@ else:
     from wx.aui import AuiNotebook  # pylint: disable=no-name-in-module
     from wx.aui import AUI_NB_TOP  # pylint: disable=no-name-in-module
 
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.logs import logger
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
+from ..settings import SETTINGS
+from ..models.settings.serialize import LoadSettings
+from ..models.settings.serialize import SaveFieldsFromDialog
+from ..utils import BeginBusyCursorIfRequired
+from ..utils import EndBusyCursorIfRequired
+from ..logs import logger
+from ..events import MYDATA_EVENTS
+from ..events import PostEvent
 
 
 class SettingsDropTarget(wx.FileDropTarget):
@@ -60,13 +63,11 @@ class SettingsDialog(wx.Dialog):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
     def __init__(self, parent,
-                 settingsModel,
                  size=wx.DefaultSize,
                  pos=wx.DefaultPosition,
                  style=wx.DEFAULT_DIALOG_STYLE,
                  validationMessage=None):
         # pylint: disable=too-many-statements
-        # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title="Settings",
@@ -75,7 +76,6 @@ class SettingsDialog(wx.Dialog):
         self.CenterOnParent()
 
         self.parent = parent
-        self.settingsModel = settingsModel
 
         self.SetDropTarget(SettingsDropTarget(self))
 
@@ -584,7 +584,7 @@ class SettingsDialog(wx.Dialog):
                                        flag=wx.EXPAND | wx.ALL, border=5)
         self.showingSingularMinutes = True
         self.ignoreFilesIntervalUnitLabel = \
-           wx.StaticText(self.ignoreFilesIntervalPanel, wx.ID_ANY, "minute")
+            wx.StaticText(self.ignoreFilesIntervalPanel, wx.ID_ANY, "minute")
         self.ignoreFilesPanelSizer.Add(self.ignoreFilesIntervalUnitLabel,
                                        flag=wx.EXPAND | wx.ALL, border=5)
 
@@ -848,7 +848,7 @@ class SettingsDialog(wx.Dialog):
         self.SetSizer(sizer)
         self.Fit()
 
-        self.UpdateFieldsFromModel(self.settingsModel)
+        self.UpdateDialogFieldsFromSettings()
 
         folderStructure = self.folderStructureComboBox.GetValue()
         if not folderStructure.startswith("User Group"):
@@ -1226,23 +1226,20 @@ class SettingsDialog(wx.Dialog):
 
     def OnOK(self, event):  # pylint: disable=invalid-name
         if self.GetInstrumentName() != \
-                self.settingsModel.GetInstrumentName() and \
-                self.settingsModel.GetInstrumentName() != "":
+                SETTINGS.general.instrumentName and \
+                SETTINGS.general.instrumentName != "":
             instrumentNameMismatchEvent = \
                 MYDATA_EVENTS.InstrumentNameMismatchEvent(
                     settingsDialog=self,
-                    settingsModel=self.settingsModel,
                     facilityName=self.GetFacilityName(),
-                    oldInstrumentName=self.settingsModel.GetInstrumentName(),
+                    oldInstrumentName=SETTINGS.general.instrumentName,
                     newInstrumentName=self.GetInstrumentName())
             PostEvent(instrumentNameMismatchEvent)
             return
 
         settingsDialogValidationEvent = \
             MYDATA_EVENTS.SettingsDialogValidationEvent(
-                settingsDialog=self,
-                settingsModel=self.settingsModel,
-                okEvent=event)
+                settingsDialog=self, okEvent=event)
         PostEvent(settingsDialogValidationEvent)
 
     def OnBrowse(self, event):
@@ -1328,43 +1325,43 @@ class SettingsDialog(wx.Dialog):
         if event:
             event.Skip()
 
-    def UpdateFieldsFromModel(self, settingsModel):
+    def UpdateDialogFieldsFromSettings(self):
         # General tab
-        self.SetInstrumentName(settingsModel.GetInstrumentName())
-        self.SetFacilityName(settingsModel.GetFacilityName())
-        self.SetContactName(settingsModel.GetContactName())
-        self.SetContactEmail(settingsModel.GetContactEmail())
-        self.SetMyTardisUrl(settingsModel.GetMyTardisUrl())
-        self.SetDataDirectory(settingsModel.GetDataDirectory())
-        self.SetUsername(settingsModel.GetUsername())
-        self.SetApiKey(settingsModel.GetApiKey())
+        self.SetInstrumentName(SETTINGS.general.instrumentName)
+        self.SetFacilityName(SETTINGS.general.facilityName)
+        self.SetContactName(SETTINGS.general.contactName)
+        self.SetContactEmail(SETTINGS.general.contactEmail)
+        self.SetMyTardisUrl(SETTINGS.general.myTardisUrl)
+        self.SetDataDirectory(SETTINGS.general.dataDirectory)
+        self.SetUsername(SETTINGS.general.username)
+        self.SetApiKey(SETTINGS.general.apiKey)
 
         # Schedule tab
-        self.SetScheduleType(settingsModel.GetScheduleType())
-        self.SetMondayChecked(settingsModel.IsMondayChecked())
-        self.SetTuesdayChecked(settingsModel.IsTuesdayChecked())
-        self.SetWednesdayChecked(settingsModel.IsWednesdayChecked())
-        self.SetThursdayChecked(settingsModel.IsThursdayChecked())
-        self.SetFridayChecked(settingsModel.IsFridayChecked())
-        self.SetSaturdayChecked(settingsModel.IsSaturdayChecked())
-        self.SetSundayChecked(settingsModel.IsSundayChecked())
-        self.SetScheduledDate(settingsModel.GetScheduledDate())
-        self.SetScheduledTime(settingsModel.GetScheduledTime())
-        self.SetTimerMinutes(settingsModel.GetTimerMinutes())
-        self.SetTimerFromTime(settingsModel.GetTimerFromTime())
-        self.SetTimerToTime(settingsModel.GetTimerToTime())
+        self.SetScheduleType(SETTINGS.schedule.scheduleType)
+        self.SetMondayChecked(SETTINGS.schedule.mondayChecked)
+        self.SetTuesdayChecked(SETTINGS.schedule.tuesdayChecked)
+        self.SetWednesdayChecked(SETTINGS.schedule.wednesdayChecked)
+        self.SetThursdayChecked(SETTINGS.schedule.thursdayChecked)
+        self.SetFridayChecked(SETTINGS.schedule.fridayChecked)
+        self.SetSaturdayChecked(SETTINGS.schedule.saturdayChecked)
+        self.SetSundayChecked(SETTINGS.schedule.sundayChecked)
+        self.SetScheduledDate(SETTINGS.schedule.scheduledDate)
+        self.SetScheduledTime(SETTINGS.schedule.scheduledTime)
+        self.SetTimerMinutes(SETTINGS.schedule.timerMinutes)
+        self.SetTimerFromTime(SETTINGS.schedule.timerFromTime)
+        self.SetTimerToTime(SETTINGS.schedule.timerToTime)
 
         # Filters tab
-        self.SetUserFilter(settingsModel.GetUserFilter())
-        self.SetDatasetFilter(settingsModel.GetDatasetFilter())
-        self.SetExperimentFilter(settingsModel.GetExperimentFilter())
-        self.SetIgnoreOldDatasets(settingsModel.IgnoreOldDatasets())
+        self.SetUserFilter(SETTINGS.filters.userFilter)
+        self.SetDatasetFilter(SETTINGS.filters.datasetFilter)
+        self.SetExperimentFilter(SETTINGS.filters.experimentFilter)
+        self.SetIgnoreOldDatasets(SETTINGS.filters.ignoreOldDatasets)
         self.SetIgnoreOldDatasetIntervalNumber(
-            settingsModel.GetIgnoreOldDatasetIntervalNumber())
-        if settingsModel.IgnoreOldDatasets():
+            SETTINGS.filters.ignoreOldDatasetIntervalNumber)
+        if SETTINGS.filters.ignoreOldDatasets:
             self.ignoreDatasetsOlderThanSpinCtrl.Enable(True)
             self.intervalUnitsComboBox.Enable(True)
-        ignoreIntervalUnit = settingsModel.GetIgnoreOldDatasetIntervalUnit()
+        ignoreIntervalUnit = SETTINGS.filters.ignoreOldDatasetIntervalUnit
         if ignoreIntervalUnit in self.intervalUnitsPlural and \
                 self.showingSingularUnits:
             self.intervalUnitsComboBox.Clear()
@@ -1376,30 +1373,30 @@ class SettingsDialog(wx.Dialog):
             self.intervalUnitsComboBox.AppendItems(self.intervalUnitsSingular)
             self.showingSingularUnits = True
         self.SetIgnoreOldDatasetIntervalUnit(
-            settingsModel.GetIgnoreOldDatasetIntervalUnit())
-        self.SetIgnoreNewFiles(settingsModel.IgnoreNewFiles())
-        self.SetIgnoreNewFilesMinutes(settingsModel.GetIgnoreNewFilesMinutes())
-        if settingsModel.IgnoreNewFiles():
+            SETTINGS.filters.ignoreOldDatasetIntervalUnit)
+        self.SetIgnoreNewFiles(SETTINGS.filters.ignoreNewFiles)
+        self.SetIgnoreNewFilesMinutes(SETTINGS.filters.ignoreNewFilesMinutes)
+        if SETTINGS.filters.ignoreNewFiles:
             self.ignoreFilesNewerThanSpinCtrl.Enable(True)
-        if int(settingsModel.GetIgnoreNewFilesMinutes()) == 1:
+        if int(SETTINGS.filters.ignoreNewFilesMinutes) == 1:
             self.showingSingularMinutes = True
             self.ignoreFilesIntervalUnitLabel.SetLabel("minute")
         else:
             self.showingSingularMinutes = False
             self.ignoreFilesIntervalUnitLabel.SetLabel("minutes")
-        self.SetUseIncludesFile(settingsModel.UseIncludesFile())
-        if settingsModel.UseIncludesFile():
+        self.SetUseIncludesFile(SETTINGS.filters.useIncludesFile)
+        if SETTINGS.filters.useIncludesFile:
             self.includesFileField.Enable(True)
-            self.includesFileField.SetValue(settingsModel.GetIncludesFile())
+            self.includesFileField.SetValue(SETTINGS.filters.includesFile)
             self.browseIncludesFileButton.Enable(True)
         else:
             self.includesFileField.Enable(False)
             self.includesFileField.SetValue("")
             self.browseIncludesFileButton.Enable(False)
-        self.SetUseExcludesFile(settingsModel.UseExcludesFile())
-        if settingsModel.UseExcludesFile():
+        self.SetUseExcludesFile(SETTINGS.filters.useExcludesFile)
+        if SETTINGS.filters.useExcludesFile:
             self.excludesFileField.Enable(True)
-            self.excludesFileField.SetValue(settingsModel.GetExcludesFile())
+            self.excludesFileField.SetValue(SETTINGS.filters.excludesFile)
             self.browseExcludesFileButton.Enable(True)
         else:
             self.excludesFileField.Enable(False)
@@ -1407,22 +1404,22 @@ class SettingsDialog(wx.Dialog):
             self.browseExcludesFileButton.Enable(False)
 
         # Advanced tab
-        self.SetFolderStructure(settingsModel.GetFolderStructure())
-        self.SetDatasetGrouping(settingsModel.GetDatasetGrouping())
-        self.SetGroupPrefix(settingsModel.GetGroupPrefix())
-        self.SetMaxUploadThreads(settingsModel.GetMaxUploadThreads())
-        self.SetMaxUploadRetries(settingsModel.GetMaxUploadRetries())
+        self.SetFolderStructure(SETTINGS.advanced.folderStructure)
+        self.SetDatasetGrouping(SETTINGS.advanced.datasetGrouping)
+        self.SetGroupPrefix(SETTINGS.advanced.groupPrefix)
+        self.SetMaxUploadThreads(SETTINGS.advanced.maxUploadThreads)
+        self.SetMaxUploadRetries(SETTINGS.advanced.maxUploadRetries)
         self.SetValidateFolderStructure(
-            settingsModel.ValidateFolderStructure())
+            SETTINGS.advanced.validateFolderStructure)
         self.SetStartAutomaticallyOnLogin(
-            settingsModel.StartAutomaticallyOnLogin())
+            SETTINGS.advanced.startAutomaticallyOnLogin)
         self.SetUploadInvalidUserOrGroupFolders(
-            settingsModel.UploadInvalidUserOrGroupFolders())
+            SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from
         # the SettingsModel in the lines of code above.
-        self.SetLocked(settingsModel.Locked())
+        self.SetLocked(SETTINGS.miscellaneous.locked)
 
     def EnablePasteInPasswordField(self):
         """
@@ -1465,7 +1462,7 @@ class SettingsDialog(wx.Dialog):
 
     def OnSave(self, event):
         # pylint: disable=unused-argument
-        mydataConfigPath = self.settingsModel.GetConfigPath()
+        mydataConfigPath = SETTINGS.configPath
         if mydataConfigPath is not None:
             dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
                                 "Save MyData configuration as...", "",
@@ -1473,11 +1470,9 @@ class SettingsDialog(wx.Dialog):
                                 wx.SAVE | wx.OVERWRITE_PROMPT)
             if dlg.ShowModal() == wx.ID_OK:
                 configPath = dlg.GetPath()
-                self.settingsModel\
-                    .SaveFieldsFromDialog(self,
-                                          configPath=configPath)
+                SaveFieldsFromDialog(self, configPath=configPath)
                 if configPath != wx.GetApp().GetConfigPath():
-                    self.settingsModel.SaveFieldsFromDialog(
+                    SaveFieldsFromDialog(
                         self, configPath=wx.GetApp().GetConfigPath())
         # event.Skip()
 
@@ -1653,8 +1648,7 @@ class SettingsDialog(wx.Dialog):
 
     def OnDropFiles(self, filePaths):
         """
-        Handles drag and drop of a MyData.cfg file
-        onto the settings dialog.
+        Handles drag and drop of a MyData.cfg file onto the settings dialog.
         """
         # pylint: disable=too-many-branches
         if self.Locked():
@@ -1665,9 +1659,8 @@ class SettingsDialog(wx.Dialog):
                                    wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             return False
-        self.settingsModel.LoadSettings(configPath=filePaths[0],
-                                        checkForUpdates=False)
-        self.UpdateFieldsFromModel(self.settingsModel)
+        LoadSettings(SETTINGS, configPath=filePaths[0], checkForUpdates=False)
+        self.UpdateDialogFieldsFromSettings()
 
         folderStructure = self.folderStructureComboBox.GetValue()
         if folderStructure == \

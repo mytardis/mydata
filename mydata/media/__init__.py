@@ -48,7 +48,6 @@ class Icons(object):
 
         self.iconsCache = {}
 
-    # pylint: disable=too-many-arguments
     def GetIconPath(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
                     size=None, extension=None):
         """
@@ -74,7 +73,6 @@ class Icons(object):
                 extension = "ico"
             return os.path.join(self.mediaPath, "%s.%s" % (name, extension))
 
-    # pylint: disable=too-many-arguments
     def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
                 size=None, extension=None):
         """
@@ -93,5 +91,6 @@ class Icons(object):
                 self.iconsCache[cacheKey] = \
                     wx.Image(iconPath, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         return self.iconsCache[cacheKey]
+
 
 MYDATA_ICONS = Icons()

@@ -15,12 +15,11 @@ import os
 import traceback
 import threading
 import argparse
-from datetime import datetime
 import logging
 import subprocess
 import webbrowser
 
-import appdirs  # pylint: disable=import-error
+import appdirs
 import requests
 
 import wx
@@ -42,41 +41,40 @@ else:
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
-from mydata import __version__ as VERSION
-from mydata import LATEST_COMMIT
-from mydata.views.folders import FoldersView
-from mydata.dataviewmodels.folders import FoldersModel
-from mydata.controllers.folders import FoldersController
-from mydata.views.users import UsersView
-from mydata.dataviewmodels.users import UsersModel
-from mydata.views.groups import GroupsView
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.views.verifications import VerificationsView
-from mydata.dataviewmodels.verifications import VerificationsModel
-from mydata.views.uploads import UploadsView
-from mydata.dataviewmodels.uploads import UploadsModel
-from mydata.views.tasks import TasksView
-from mydata.dataviewmodels.tasks import TasksModel
-from mydata.models.uploader import UploaderModel
-from mydata.views.log import LogView
-from mydata.models.settings import SettingsModel
-from mydata.views.settings import SettingsDialog
-from mydata.utils.exceptions import InvalidFolderStructure
-from mydata.logs import logger
-from mydata.views.taskbaricon import MyDataTaskBarIcon
-from mydata.events import MYDATA_EVENTS
-from mydata.events import PostEvent
-from mydata.media import MYDATA_ICONS
-from mydata.media import IconStyle
-from mydata.utils.notification import Notification
-from mydata.models.settings import LastSettingsUpdateTrigger
-from mydata.controllers.schedule import ScheduleController
-from mydata.views.testrun import TestRunFrame
-from mydata.utils import BeginBusyCursorIfRequired
-from mydata.utils import EndBusyCursorIfRequired
-from mydata.views.connectivity import ReportNoActiveInterfaces
+from . import __version__ as VERSION
+from . import LATEST_COMMIT
+from .settings import SETTINGS
+from .dataviewmodels.folders import FoldersModel
+from .controllers.folders import FoldersController
+from .views.dataview import MyDataDataView
+from .dataviewmodels.users import UsersModel
+from .dataviewmodels.groups import GroupsModel
+from .dataviewmodels.verifications import VerificationsModel
+from .dataviewmodels.uploads import UploadsModel
+from .dataviewmodels.tasks import TasksModel
+from .views.log import LogView
+from .models.settings.serialize import LoadSettings
+from .models.settings.validation import ValidateSettings
+from .views.settings import SettingsDialog
+from .utils.exceptions import InvalidFolderStructure
+from .utils.exceptions import InvalidSettings
+from .logs import logger
+from .views.taskbaricon import MyDataTaskBarIcon
+from .events import MYDATA_EVENTS
+from .events import PostEvent
+from .media import MYDATA_ICONS
+from .media import IconStyle
+from .utils.notification import Notification
+from .models.settings import LastSettingsUpdateTrigger
+from .controllers.schedule import ScheduleController
+from .views.testrun import TestRunFrame
+from .utils import BeginBusyCursorIfRequired
+from .utils import EndBusyCursorIfRequired
+from .utils import HandleGenericErrorWithDialog
+from .utils.connectivity import Connectivity
+from .views.connectivity import ReportNoActiveInterfaces
 if sys.platform.startswith("linux"):
-    from mydata.linuxsubprocesses import StopErrandBoy
+    from .linuxsubprocesses import StopErrandBoy
 
 
 class NotebookTabs(object):
@@ -96,9 +94,8 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
-    def __init__(self, title, style, settingsModel):
+    def __init__(self, title, style):
         wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
-        self.settingsModel = settingsModel
         self.SetSize(wx.Size(1000, 600))
         self.statusbar = wx.StatusBar(self)
         if sys.platform.startswith("win"):
@@ -134,9 +131,10 @@ class MyData(wx.App):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv, settingsModel=None):
+    def __init__(self, argv, promptForMissingSettings=True):
         self.name = "MyData"
         self.argv = argv
+        self.promptForMissingSettings = promptForMissingSettings
 
         self.instance = None
 
@@ -145,7 +143,7 @@ class MyData(wx.App):
         self.frame = None
         self.testRunFrame = None
         self.panel = None
-        self.foldersUsersNotebook = None
+        self.tabbedView = None
 
         self.menuBar = None
         self.editMenu = None
@@ -172,12 +170,8 @@ class MyData(wx.App):
         self.scanningFoldersThreadingLock = threading.Lock()
         self.numUserFoldersScanned = 0
 
-        self.activeNetworkInterface = None
-        self.lastConnectivityCheckSuccess = False
-        self.lastConnectivityCheckTime = datetime.fromtimestamp(0)
+        self.connectivity = Connectivity()
 
-        self.settingsModel = settingsModel
-        self.settingsValidation = None
         self.foldersModel = None
         self.foldersView = None
         self.foldersController = None
@@ -227,7 +221,7 @@ class MyData(wx.App):
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
         args, _ = parser.parse_known_args(self.argv[1:])
         if args.version:
-            print "MyData %s (%s)" % (VERSION, LATEST_COMMIT)
+            sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
             sys.exit(0)
         if args.loglevel:
             if args.loglevel == "DEBUG":
@@ -239,14 +233,13 @@ class MyData(wx.App):
             elif args.loglevel == "ERROR":
                 logger.SetLevel(logging.ERROR)
 
-        if not self.settingsModel:
-            # MyData.cfg stores settings in INI format, readable by ConfigParser
-            self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
-            logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
-            self.settingsModel = SettingsModel(self.GetConfigPath())
-        self.frame = MyDataFrame(self.name,
-                                 style=wx.DEFAULT_FRAME_STYLE,
-                                 settingsModel=self.settingsModel)
+        # MyData.cfg stores settings in INI format, readable by ConfigParser
+        self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
+        logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
+        if not SETTINGS.configPath:
+            SETTINGS.configPath = self.GetConfigPath()
+            LoadSettings(SETTINGS, self.GetConfigPath())
+        self.frame = MyDataFrame(self.name, style=wx.DEFAULT_FRAME_STYLE)
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
@@ -258,16 +251,15 @@ class MyData(wx.App):
         if sys.platform.startswith("darwin"):
             self.CreateMacMenu()
 
-        self.usersModel = UsersModel(self.settingsModel)
-        self.groupsModel = GroupsModel(self.settingsModel)
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel,
-                                         self.settingsModel)
-        self.usersModel.SetFoldersModel(self.foldersModel)
+        self.usersModel = UsersModel()
+        self.groupsModel = GroupsModel()
+        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
+        self.usersModel.foldersModel = self.foldersModel
         self.verificationsModel = VerificationsModel()
         self.uploadsModel = UploadsModel()
-        self.tasksModel = TasksModel(self.settingsModel)
+        self.tasksModel = TasksModel()
 
-        self.taskBarIcon = MyDataTaskBarIcon(self.frame, self.settingsModel)
+        self.taskBarIcon = MyDataTaskBarIcon(self.frame)
         if sys.platform.startswith("linux"):
             self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
         else:
@@ -286,84 +278,65 @@ class MyData(wx.App):
         self.panel = wx.Panel(self.frame)
 
         if wx.version().startswith("3.0.3.dev"):
-            self.foldersUsersNotebook = \
-                AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
+            self.tabbedView = AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
         else:
-            self.foldersUsersNotebook = \
-                AuiNotebook(self.panel, style=AUI_NB_TOP)
+            self.tabbedView = AuiNotebook(self.panel, style=AUI_NB_TOP)
         # Without the following line, the tab font looks
         # too small on Mac OS X:
-        self.foldersUsersNotebook.SetFont(self.panel.GetFont())
+        self.tabbedView.SetFont(self.panel.GetFont())
         self.frame.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
-                        self.OnNotebookPageChanging, self.foldersUsersNotebook)
+                        self.OnNotebookPageChanging, self.tabbedView)
 
-        self.foldersView = FoldersView(self.foldersUsersNotebook,
-                                       foldersModel=self.foldersModel)
+        self.foldersView = MyDataDataView(self.tabbedView, self.foldersModel)
 
-        self.foldersUsersNotebook.AddPage(self.foldersView, "Folders")
-        self.foldersController = \
-            FoldersController(self.frame,
-                              self.foldersModel,
-                              self.foldersView,
-                              self.usersModel,
-                              self.verificationsModel,
-                              self.uploadsModel,
-                              self.settingsModel)
+        self.tabbedView.AddPage(self.foldersView, "Folders")
+        self.foldersController = FoldersController(
+            self.frame, self.foldersModel, self.foldersView, self.usersModel,
+            self.verificationsModel, self.uploadsModel)
 
-        self.scheduleController = \
-            ScheduleController(self.settingsModel, self.tasksModel)
+        self.scheduleController = ScheduleController(self.tasksModel)
 
-        self.usersView = UsersView(self.foldersUsersNotebook,
-                                   usersModel=self.usersModel)
-        self.foldersUsersNotebook.AddPage(self.usersView, "Users")
+        self.usersView = MyDataDataView(self.tabbedView, self.usersModel)
+        self.tabbedView.AddPage(self.usersView, "Users")
 
-        self.groupsView = GroupsView(self.foldersUsersNotebook,
-                                     groupsModel=self.groupsModel)
-        self.foldersUsersNotebook.AddPage(self.groupsView, "Groups")
+        self.groupsView = MyDataDataView(self.tabbedView, self.groupsModel)
+        self.tabbedView.AddPage(self.groupsView, "Groups")
 
-        self.verificationsView = \
-            VerificationsView(self.foldersUsersNotebook,
-                              verificationsModel=self.verificationsModel)
-        self.foldersUsersNotebook.AddPage(self.verificationsView,
-                                          "Verifications")
+        self.verificationsView = MyDataDataView(
+            self.tabbedView, self.verificationsModel)
+        self.tabbedView.AddPage(self.verificationsView, "Verifications")
 
-        self.uploadsView = \
-            UploadsView(self.foldersUsersNotebook,
-                        uploadsModel=self.uploadsModel,
-                        foldersController=self.foldersController)
-        self.foldersUsersNotebook.AddPage(self.uploadsView, "Uploads")
+        self.uploadsView = MyDataDataView(self.tabbedView, self.uploadsModel)
+        self.tabbedView.AddPage(self.uploadsView, "Uploads")
 
-        self.tasksView = TasksView(self.foldersUsersNotebook,
-                                   tasksModel=self.tasksModel)
-        self.foldersUsersNotebook.AddPage(self.tasksView, "Tasks")
+        self.tasksView = MyDataDataView(self.tabbedView, self.tasksModel)
+        self.tabbedView.AddPage(self.tasksView, "Tasks")
 
-        self.logView = LogView(self.foldersUsersNotebook, self.settingsModel)
-        self.foldersUsersNotebook.AddPage(self.logView, "Log")
+        self.logView = LogView(self.tabbedView)
+        self.tabbedView.AddPage(self.logView, "Log")
 
         self.CreateToolbar()
 
         sizer = wx.BoxSizer()
-        sizer.Add(self.foldersUsersNotebook, 1, flag=wx.EXPAND)
+        sizer.Add(self.tabbedView, 1, flag=wx.EXPAND)
         self.panel.SetSizer(sizer)
 
         sizer = wx.BoxSizer()
         sizer.Add(self.panel, 1, flag=wx.EXPAND)
         self.frame.SetSizer(sizer)
 
-        self.foldersUsersNotebook.SendSizeEvent()
+        self.tabbedView.SendSizeEvent()
 
         self.panel.SetFocus()
 
         self.SetTopWindow(self.frame)
 
         event = None
-        if self.settingsModel.RequiredFieldIsBlank():
+        if self.promptForMissingSettings and SETTINGS.RequiredFieldIsBlank():
             self.frame.Show(True)
-            if wx.PyApp.IsMainLoopRunning():
-                self.OnSettings(event)
+            self.OnSettings(event)
         else:
-            self.frame.SetTitle("MyData - " +
-                                self.settingsModel.GetInstrumentName())
+            self.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
             if sys.platform.startswith("linux"):
                 if os.getenv('DESKTOP_SESSION', '') == 'ubuntu':
                     proc = subprocess.Popen(['dpkg', '-s',
@@ -391,7 +364,6 @@ class MyData(wx.App):
             self.scheduleController.ApplySchedule(event)
 
         return True
-
 
     def CheckIfAlreadyRunning(self, appdirPath):
         """
@@ -498,7 +470,6 @@ class MyData(wx.App):
             # sys.exit can raise exceptions if the wx.App
             # is shutting down:
             os._exit(0)  # pylint: disable=protected-access
-
 
     def OnMinimizeFrame(self, event):
         """
@@ -616,11 +587,11 @@ class MyData(wx.App):
         Triggered by user typing into search field in upper-right corner
         or main window.
         """
-        if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
+        if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.USERS:
+        elif self.tabbedView.GetSelection() == NotebookTabs.USERS:
             self.usersModel.Filter(event.GetString())
-        elif self.foldersUsersNotebook.GetSelection() == NotebookTabs.GROUPS:
+        elif self.tabbedView.GetSelection() == NotebookTabs.GROUPS:
             self.groupsModel.Filter(event.GetString())
 
     def OnScanAndUploadFromToolbar(self, event):
@@ -634,9 +605,9 @@ class MyData(wx.App):
         """
         Scan folders and upload datafiles if necessary.
         """
-        self.settingsModel.SetScheduleType("Manually")
-        self.settingsModel.SetLastSettingsUpdateTrigger(
-            LastSettingsUpdateTrigger.UI_RESPONSE)
+        SETTINGS.schedule.scheduleType = "Manually"
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
         self.SetShouldAbort(False)
         self.scheduleController.ApplySchedule(event, runManually=True)
 
@@ -646,9 +617,9 @@ class MyData(wx.App):
         """
         logger.debug("OnTestRunFromToolbar")
         self.SetTestRunRunning(True)
-        self.settingsModel.SetScheduleType("Manually")
-        self.settingsModel.SetLastSettingsUpdateTrigger(
-            LastSettingsUpdateTrigger.UI_RESPONSE)
+        SETTINGS.schedule.scheduleType = "Manually"
+        SETTINGS.lastSettingsUpdateTrigger = \
+            LastSettingsUpdateTrigger.UI_RESPONSE
         self.DisableTestAndUploadToolbarButtons()
         self.testRunFrame.saveButton.Disable()
         self.SetShouldAbort(False)
@@ -670,9 +641,9 @@ class MyData(wx.App):
         """
         self.LogOnRefreshCaller(event, jobId)
         shutdownForRefreshComplete = event and \
-            event.GetEventType() in \
-                (MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
-                 MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE)
+            event.GetEventType() in (
+                MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
+                MYDATA_EVENTS.EVT_SETTINGS_VALIDATION_COMPLETE)
         if hasattr(event, "needToValidateSettings") and \
                 not event.needToValidateSettings:
             needToValidateSettings = False
@@ -710,7 +681,7 @@ class MyData(wx.App):
                 MYDATA_EVENTS.ValidateSettingsForRefreshEvent(
                     needToValidateSettings=needToValidateSettings,
                     testRun=testRun)
-            if self.CheckConnectivityForRefresh(
+            if self.connectivity.CheckForRefresh(
                     nextEvent=validateSettingsForRefreshEvent):
                 # Wait for the event to be handled, which will result
                 # in OnRefresh being called again.
@@ -722,9 +693,8 @@ class MyData(wx.App):
             logger.info(message)
             if testRun:
                 logger.testrun(message)
-            self.settingsValidation = None
 
-            def ValidateSettings():
+            def ValidateSettingsWorker():
                 """
                 Validate settings.
                 """
@@ -735,74 +705,41 @@ class MyData(wx.App):
                     wx.CallAfter(BeginBusyCursorIfRequired)
                     try:
                         activeNetworkInterfaces = \
-                            UploaderModel.GetActiveNetworkInterfaces()
-                    except Exception, err:
-                        logger.error(traceback.format_exc())
-                        if type(err).__name__ == "WindowsError" and \
-                                "The handle is invalid" in str(err):
-                            message = "An error occurred, suggesting " \
-                                "that you have launched MyData.exe from a " \
-                                "Command Prompt window.  Please launch it " \
-                                "from a shortcut or from a Windows Explorer " \
-                                "window instead.\n" \
-                                "\n" \
-                                "See: https://bugs.python.org/issue3905"
-
-                            def ShowErrorDialog(message):
-                                """
-                                Needs to run in the main thread.
-                                """
-                                dlg = wx.MessageDialog(None, message, "MyData",
-                                                       wx.OK | wx.ICON_ERROR)
-                                dlg.ShowModal()
-                            wx.CallAfter(ShowErrorDialog, message)
+                            Connectivity.GetActiveNetworkInterfaces()
+                    except Exception as err:
+                        HandleGenericErrorWithDialog(err)
                     if len(activeNetworkInterfaces) == 0:
                         ReportNoActiveInterfaces()
                         return
 
-                    self.settingsValidation = \
-                        self.settingsModel.Validate(testRun=testRun)
-
-                    if self.ShouldAbort():
+                    try:
+                        ValidateSettings(testRun=testRun)
+                        event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
+                            testRun=testRun)
+                        PostEvent(event)
                         wx.CallAfter(EndBusyCursorIfRequired)
-                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
-                        self.SetScanningFolders(False)
-                        logger.debug("Just set ScanningFolders to False")
-                        message = "Data scans and uploads were canceled."
-                        if testRun:
-                            logger.testrun(message)
-                            self.SetTestRunRunning(False)
-                        self.frame.SetStatusMessage(message)
-                        return
-
-                    # If settings validation is run automatically shortly after
-                    # a scheduled task begins, ignore complaints from settings
-                    # validation about the "scheduled_time" being in the past.
-                    # Any other settings validation failure will be reported.
-                    field = self.settingsValidation.GetField()
-                    if needToValidateSettings and not \
-                            self.settingsValidation.IsValid() and \
-                            field != "scheduled_time":
-                        logger.debug(
-                            "Displaying result from settings validation.")
-                        message = self.settingsValidation.message
-                        logger.error(message)
-                        wx.CallAfter(EndBusyCursorIfRequired)
-                        wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
-                        self.SetScanningFolders(False)
-                        self.frame.SetStatusMessage(
-                            "Settings validation failed.")
-                        if testRun:
-                            wx.CallAfter(self.GetTestRunFrame().Hide)
-                        wx.CallAfter(self.OnSettings, None,
-                                     validationMessage=message)
-                        return
-
-                    event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
-                        needToValidateSettings=False,
-                        testRun=testRun)
-                    PostEvent(event)
-                    wx.CallAfter(EndBusyCursorIfRequired)
+                    except InvalidSettings as invalidSettings:
+                        # If settings validation is run automatically shortly
+                        # after a scheduled task begins, ignore complaints from
+                        # settings validation about the "scheduled_time" being
+                        # in the past.  Any other settings validation failure
+                        # will be reported.
+                        field = invalidSettings.field
+                        if field != "scheduled_time":
+                            logger.debug(
+                                "Displaying result from settings validation.")
+                            message = invalidSettings.message
+                            logger.error(message)
+                            wx.CallAfter(EndBusyCursorIfRequired)
+                            wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                            self.SetScanningFolders(False)
+                            self.frame.SetStatusMessage(
+                                "Settings validation failed.")
+                            if testRun:
+                                wx.CallAfter(self.GetTestRunFrame().Hide)
+                            wx.CallAfter(self.OnSettings, None,
+                                         validationMessage=message)
+                            return
                 except:
                     logger.error(traceback.format_exc())
                     return
@@ -810,16 +747,16 @@ class MyData(wx.App):
                              % threading.current_thread().name)
 
             if wx.PyApp.IsMainLoopRunning():
-                thread = threading.Thread(target=ValidateSettings,
+                thread = threading.Thread(target=ValidateSettingsWorker,
                                           name="OnRefreshValidateSettingsThread")
                 logger.debug("Starting thread %s" % thread.name)
                 thread.start()
                 logger.debug("Started thread %s" % thread.name)
             else:
-                ValidateSettings()
+                ValidateSettingsWorker()
             return
 
-        if "Group" in self.settingsModel.GetFolderStructure():
+        if "Group" in SETTINGS.advanced.folderStructure:
             userOrGroup = "user group"
         else:
             userOrGroup = "user"
@@ -834,11 +771,11 @@ class MyData(wx.App):
             self.numUserFoldersScanned += 1
             message = "Scanned %d of %d %s folders" % (
                 self.numUserFoldersScanned,
-                self.usersModel.GetNumUserOrGroupFolders(),
+                UsersModel.GetNumUserOrGroupFolders(),
                 userOrGroup)
             self.frame.SetStatusMessage(message)
             if self.numUserFoldersScanned == \
-                    self.usersModel.GetNumUserOrGroupFolders():
+                    UsersModel.GetNumUserOrGroupFolders():
                 logger.info(message)
                 if testRun:
                     logger.testrun(message)
@@ -856,7 +793,7 @@ class MyData(wx.App):
             message = "Scanning data folders..."
             wx.CallAfter(self.frame.SetStatusMessage, message)
             message = "Scanning data folders in %s..." \
-                % self.settingsModel.GetDataDirectory()
+                % SETTINGS.general.dataDirectory
             logger.info(message)
             if testRun:
                 logger.testrun(message)
@@ -871,7 +808,7 @@ class MyData(wx.App):
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
                 logger.debug("Just set ScanningFolders to False")
-            except InvalidFolderStructure, ifs:
+            except InvalidFolderStructure as ifs:
                 def ShowMessageDialog():
                     """
                     Needs to run in the main thread.
@@ -893,16 +830,16 @@ class MyData(wx.App):
                     self.SetTestRunRunning(False)
                 return
 
-            folderStructure = self.settingsModel.GetFolderStructure()
+            folderStructure = SETTINGS.advanced.folderStructure
             # pylint: disable=too-many-boolean-expressions
-            if self.usersModel.GetNumUserOrGroupFolders() == 0 or \
+            if UsersModel.GetNumUserOrGroupFolders() == 0 or \
                     (folderStructure.startswith("Username") and
                      self.usersModel.GetCount() == 0) or \
                     (folderStructure.startswith("Email") and
                      self.usersModel.GetCount() == 0) or \
                     (folderStructure.startswith("User Group") and
                      self.groupsModel.GetCount() == 0):
-                if self.usersModel.GetNumUserOrGroupFolders() == 0:
+                if UsersModel.GetNumUserOrGroupFolders() == 0:
                     message = "No folders were found to upload from."
                 else:
                     message = "No valid folders were found to upload from."
@@ -934,6 +871,10 @@ class MyData(wx.App):
         call to OnRefresh (e.g. the toolbar button, the task bar
         icon menu item, or a scheduled task).
         """
+        try:
+            syncNowMenuItemId = self.taskBarIcon.GetSyncNowMenuItem().GetId()
+        except (AttributeError, RuntimeError):
+            syncNowMenuItemId = None
         if jobId:
             logger.debug("OnRefresh called from job ID %d" % jobId)
         elif event is None:
@@ -945,9 +886,7 @@ class MyData(wx.App):
                          "which was launched from MyData's toolbar.")
         elif event.GetId() == self.uploadTool.GetId():
             logger.debug("OnRefresh triggered by Upload toolbar icon.")
-        elif self.taskBarIcon.GetSyncNowMenuItem() is not None and \
-                event.GetId() == \
-                self.taskBarIcon.GetSyncNowMenuItem().GetId():
+        elif syncNowMenuItemId and event.GetId() == syncNowMenuItemId:
             logger.debug("OnRefresh triggered by 'Sync Now' "
                          "task bar menu item.")
         elif event.GetEventType() == \
@@ -969,28 +908,6 @@ class MyData(wx.App):
         else:
             logger.debug("OnRefresh: event.GetEventType() = %s"
                          % event.GetEventType())
-
-    def CheckConnectivityForRefresh(self, nextEvent=None):
-        """
-        Called from OnRefresh (the main method for scanning data folders
-        and uploading data).
-        This method determines if a network connectivity check is due,
-        and if so, posts a check connectivity event, and returns True
-        to indicate that the event has been posted.
-        """
-        intervalSinceLastCheck = \
-            datetime.now() - self.lastConnectivityCheckTime
-        checkInterval = self.settingsModel.GetConnectivityCheckInterval()
-        if intervalSinceLastCheck.total_seconds() >= checkInterval or \
-                not self.lastConnectivityCheckSuccess:
-            logger.debug("Checking network connectivity...")
-            checkConnectivityEvent = \
-                MYDATA_EVENTS.CheckConnectivityEvent(
-                    settingsModel=self.settingsModel,
-                    nextEvent=nextEvent)
-            PostEvent(checkConnectivityEvent)
-            return True
-        return False
 
     def OnStop(self, event):
         """
@@ -1024,7 +941,7 @@ class MyData(wx.App):
         Open the selected data folder in Windows Explorer (Windows) or
         in Finder (Mac OS X).
         """
-        if self.foldersUsersNotebook.GetSelection() == NotebookTabs.FOLDERS:
+        if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersController.OnOpenFolder(event)
 
     def OnNotebookPageChanging(self, event):
@@ -1045,14 +962,12 @@ class MyData(wx.App):
         self.SetShouldAbort(False)
         self.frame.SetStatusMessage("")
         settingsDialog = SettingsDialog(self.frame,
-                                        self.settingsModel,
                                         size=wx.Size(400, 400),
                                         style=wx.DEFAULT_DIALOG_STYLE,
                                         validationMessage=validationMessage)
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
-            self.frame.SetTitle("MyData - " +
-                                self.settingsModel.GetInstrumentName())
+            self.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
             self.tasksModel.DeleteAllRows()
             self.scheduleController.ApplySchedule(event)
 
@@ -1066,13 +981,13 @@ class MyData(wx.App):
             rows = [self.foldersModel.GetRow(item) for item in items]
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
-                if folderRecord.GetDatasetModel() is not None:
-                    self.OpenUrl(self.settingsModel.GetMyTardisUrl() + "/" +
-                                 folderRecord.GetDatasetModel().GetViewUri())
+                if folderRecord.datasetModel is not None:
+                    self.OpenUrl(SETTINGS.general.myTardisUrl + "/" +
+                                 folderRecord.datasetModel.viewUri)
                 else:
-                    self.OpenUrl(self.settingsModel.GetMyTardisUrl())
+                    self.OpenUrl(SETTINGS.general.myTardisUrl)
             else:
-                self.OpenUrl(self.settingsModel.GetMyTardisUrl())
+                self.OpenUrl(SETTINGS.general.myTardisUrl)
         except:
             logger.error(traceback.format_exc())
 
@@ -1147,50 +1062,6 @@ class MyData(wx.App):
         Returns MyData's schedule controller.
         """
         return self.scheduleController
-
-    def GetLastConnectivityCheckTime(self):
-        """
-        Returns the last time when MyData checked
-        for network connectivity.
-        """
-        return self.lastConnectivityCheckTime
-
-    def SetLastConnectivityCheckTime(self, lastConnectivityCheckTime):
-        """
-        Sets the last time when MyData checked
-        for network connectivity.
-        """
-        self.lastConnectivityCheckTime = lastConnectivityCheckTime
-
-    def GetLastConnectivityCheckSuccess(self):
-        """
-        Returns the success or failure from the MyData's
-        most recent check for network connectivity.
-        """
-        return self.lastConnectivityCheckSuccess
-
-    def SetLastConnectivityCheckSuccess(self, success):
-        """
-        Sets the success or failure for the MyData's
-        most recent check for network connectivity.
-        """
-        self.lastConnectivityCheckSuccess = success
-
-    def GetActiveNetworkInterface(self):
-        """
-        Returns the active network interface found
-        during the most recent check for network
-        connectivity.
-        """
-        return self.activeNetworkInterface
-
-    def SetActiveNetworkInterface(self, activeNetworkInterface):
-        """
-        Sets the active network interface found
-        during the most recent check for network
-        connectivity.
-        """
-        self.activeNetworkInterface = activeNetworkInterface
 
     def GetConfigPath(self):
         """
@@ -1299,5 +1170,7 @@ def Run(argv):
     app = MyData(argv)
     app.MainLoop()
 
+
 if __name__ == "__main__":
-    print "Please use run.py in MyData.py's parent directory instead."
+    sys.stderr.write(
+        "Please use run.py in MyData.py's parent directory instead.\n")

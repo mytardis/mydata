@@ -5,9 +5,6 @@ to a server.  The user can add their name, email and a comment.
 The dialog is launched from the "Submit debug log" button at
 the bottom of the Log tab within MyData's main window.
 """
-
-# pylint: disable=missing-docstring
-
 import os
 import sys
 import wx
@@ -25,11 +22,11 @@ class SubmitDebugReportDialog(wx.Dialog):
     the bottom of the Log tab within MyData's main window.
     """
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, parent, title, debugLog, settingsModel):
+    def __init__(self, parent, title, debugLog, settings):
         # pylint: disable=too-many-statements
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title, wx.DefaultPosition)
 
-        self.settingsModel = settingsModel
+        self.settings = settings
 
         self.dialogSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=0, hgap=0)
         self.SetSizer(self.dialogSizer)
@@ -80,7 +77,7 @@ class SubmitDebugReportDialog(wx.Dialog):
                                        wx.ID_ANY, "Name:")
         self.innerContactDetailsPanelSizer.Add(self.nameLabel)
 
-        contactName = self.settingsModel.GetContactName()
+        contactName = self.settings.general.contactName
 
         self.nameField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.nameField.SetValue(contactName)
@@ -99,7 +96,7 @@ class SubmitDebugReportDialog(wx.Dialog):
                                         wx.ID_ANY, "Email address:")
         self.innerContactDetailsPanelSizer.Add(self.emailLabel)
 
-        contactEmail = self.settingsModel.GetContactEmail()
+        contactEmail = self.settings.general.contactEmail
 
         self.emailField = wx.TextCtrl(self.innerContactDetailsPanel, wx.ID_ANY)
         self.emailField.SetValue(contactEmail)
@@ -237,22 +234,40 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.CenterOnParent()
 
     def OnCancel(self, event):
+        """
+        Close the Submit Debug Report dialog without submitting the report
+        """
         self.EndModal(wx.ID_CANCEL)
         event.Skip()
 
     def OnSubmit(self, event):
+        """
+        Close the Submit Debug Report dialog and submit the report
+        """
         self.EndModal(wx.ID_OK)
         event.Skip()
 
-    def GetName(self):
-        # pylint: disable=arguments-differ
+    def GetContactName(self):
+        """
+        Get the contact name to include in the header of the report
+        """
         return self.nameField.GetValue().strip()
 
-    def GetEmail(self):
+    def GetContactEmail(self):
+        """
+        Get the contact email to include in the header of the report
+        """
         return self.emailField.GetValue().strip()
 
     def GetComments(self):
+        """
+        Get the comments to include in the header of the report
+        """
         return self.commentsField.GetValue().strip()
 
     def GetPleaseContactMe(self):
+        """
+        Get the "Please Contact Me" checkbox state to include in
+        the header of the report
+        """
         return self.pleaseContactMeCheckBox.GetValue()

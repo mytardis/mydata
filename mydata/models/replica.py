@@ -5,20 +5,19 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 import requests
 
-from mydata.utils import UnderscoreToCamelcase
-from mydata.utils.exceptions import MissingMyDataReplicaApiEndpoint
+from ..settings import SETTINGS
+from ..utils import UnderscoreToCamelcase
+from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
+from . import HandleHttpError
 
 
-# pylint: disable=too-many-instance-attributes
 class ReplicaModel(object):
     """
     The Replica model has been removed from MyTardis and replaced by
     the DataFileObject model.  But MyTardis's API still returns
     JSON labeled as "replicas" within each DataFileResource.
     """
-    def __init__(self, settingsModel=None, replicaJson=None):
-        self.settingsModel = settingsModel
-
+    def __init__(self, replicaJson=None):
         self.replicaId = None
         self.uri = None
         self.datafileResourceUri = None
@@ -37,44 +36,37 @@ class ReplicaModel(object):
             self.datafileResourceUri = replicaJson['datafile']
 
     @staticmethod
-    def CountBytesUploadedToStaging(settingsModel, dfoId):
+    def CountBytesUploadedToStaging(dfoId):
         """
         Count bytes uploaded to staging.
         """
-        myTardisUrl = settingsModel.GetMyTardisUrl()
         url = "%s/api/v1/mydata_replica/%s/?format=json" \
-            % (myTardisUrl, dfoId)
-        headers = settingsModel.GetDefaultHeaders()
-        response = requests.get(url=url, headers=headers)
+            % (SETTINGS.general.myTardisUrl, dfoId)
+        response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
             if response.status_code == 404:
                 message = "Please ask your MyTardis administrator to " \
                     "upgrade mytardis-app-mydata.  The " \
-                    "/api/v1/mydata_replica/ endpoint is missing."
+                    "/api/v1/mydata_replica/ endpoint may be missing."
                 raise MissingMyDataReplicaApiEndpoint(message)
             else:
-                message = "Failed to look up DFO ID \"%s\".\n" % dfoId
-                message += "HTTP status: %s" % response.status_code
-                raise Exception(message)
+                HandleHttpError(response)
         dfoJson = response.json()
         return dfoJson['size']
 
-    def GetId(self):
+    @property
+    def dfoId(self):
         """
-        Returns primary key
+        Returns primary key of the DataFileObject (DFO),
+        (also known as a Replica in the MyTardis API).
         """
         return self.replicaId
 
-    def GetUri(self):
+    @dfoId.setter
+    def dfoId(self, dfoId):
         """
-        Returns the URI field of the DataFileObject represented by
-        the ReplicaResource.
-        """
-        return self.uri
+        Sets DFO ID, a.k.a. replica ID.
 
-    def IsVerified(self):
+        Only used in tests.
         """
-        Returns True if the DataFileObject represented by the
-        ReplicaResource is verified.
-        """
-        return self.verified
+        self.replicaId = dfoId

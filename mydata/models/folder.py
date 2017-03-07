@@ -2,9 +2,6 @@
 Model class representing a data folder which may or may not
 have a corresponding dataset record in MyTardis.
 """
-
-# pylint: disable=missing-docstring
-
 import os
 import time
 from datetime import datetime
@@ -12,7 +9,8 @@ import hashlib
 import traceback
 from fnmatch import fnmatch
 
-from mydata.logs import logger
+from ..settings import SETTINGS
+from ..logs import logger
 
 
 class FolderModel(object):
@@ -24,41 +22,40 @@ class FolderModel(object):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def __init__(self, dataViewId, folder, location,
-                 userFolderName, groupFolderName, owner,
-                 settingsModel, isExperimentFilesFolder=False):
-        # pylint: disable=too-many-arguments
+    def __init__(self, dataViewId, folderName, location, userFolderName,
+                 groupFolderName, owner, isExperimentFilesFolder=False):
         # pylint: disable=too-many-locals
-        self.settingsModel = settingsModel
         self.dataViewId = dataViewId
-        self.folder = folder
+        # The folder name, e.g. "Dataset1":
+        self.folderName = folderName
+        # The folder's location, e.g. "C:\Data\testuser1":
         self.location = location
         self.isExperimentFilesFolder = isExperimentFilesFolder
         if self.isExperimentFilesFolder:
             absoluteFolderPath = location
         else:
-            absoluteFolderPath = os.path.join(location, folder)
+            absoluteFolderPath = os.path.join(location, folderName)
         self.dataFilePaths = []
         self.dataFileDirectories = []
         self.numFiles = 0
         for dirname, _, files in os.walk(absoluteFolderPath):
             for filename in sorted(files):
-                if settingsModel.UseIncludesFile() and \
-                        not settingsModel.UseExcludesFile():
-                    if not self.MatchesIncludes(filename):
+                if SETTINGS.filters.useIncludesFile and \
+                        not SETTINGS.filters.useExcludesFile:
+                    if not FolderModel.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, not matching includes."
                                      % filename)
                         continue
-                elif not settingsModel.UseIncludesFile() and \
-                        settingsModel.UseExcludesFile():
-                    if self.MatchesExcludes(filename):
+                elif not SETTINGS.filters.useIncludesFile and \
+                        SETTINGS.filters.useExcludesFile:
+                    if FolderModel.MatchesExcludes(filename):
                         logger.debug("Ignoring %s, matching excludes."
                                      % filename)
                         continue
-                elif settingsModel.UseIncludesFile() and \
-                        settingsModel.UseExcludesFile():
-                    if self.MatchesExcludes(filename) and \
-                            not self.MatchesIncludes(filename):
+                elif SETTINGS.filters.useIncludesFile and \
+                        SETTINGS.filters.useExcludesFile:
+                    if FolderModel.MatchesExcludes(filename) and \
+                            not FolderModel.MatchesIncludes(filename):
                         logger.debug("Ignoring %s, matching excludes "
                                      "and not matching includes."
                                      % filename)
@@ -75,7 +72,7 @@ class FolderModel(object):
             self.dataFileDirectories[i] = \
                 self.dataFileDirectories[i].replace("\\", "/")
         self.created = ""
-        self.experimentTitle = ""
+        self._experimentTitle = ""
         self.group = None
         self.experimentTitleSetManually = False
         self.status = "0 of %d files uploaded" % (self.numFiles,)
@@ -98,37 +95,70 @@ class FolderModel(object):
         self.numFilesVerified = 0
 
     def __hash__(self):
+        """
+        Required to be able to use folderModel as a dictionary key
+        in FoldersController
+        """
         return hash(self.dataViewId)
 
     def __eq__(self, other):
+        """
+        Required to be able to use folderModel as a dictionary key
+        in FoldersController
+        """
         return self.dataViewId == other.dataViewId
 
     def SetDataFileUploaded(self, dataFileIndex, uploaded):
+        """
+        Set a DataFile's upload status
+
+        Used to update the number of files uploaded per folder
+        displayed in the Status column of the Folders view.
+        """
         self.dataFileUploaded[dataFileIndex] = uploaded
         self.numFilesUploaded = sum(self.dataFileUploaded)
         self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
                                                    self.numFiles)
 
-    def GetDatasetModel(self):
-        return self.datasetModel
-
     def GetDataFilePath(self, dataFileIndex):
+        """
+        Get the absolute path to a file within this folder's root directory
+        which is os.path.join(self.location, self.folderName)
+        """
         return self.dataFilePaths[dataFileIndex]
 
     def GetDataFileRelPath(self, dataFileIndex):
+        """
+        Get the path to a file relative to the folder's root directory
+        which is os.path.join(self.location, self.folderName)
+        """
         return os.path.relpath(self.GetDataFilePath(dataFileIndex),
-                               self.settingsModel.GetDataDirectory())
+                               SETTINGS.general.dataDirectory)
 
     def GetDataFileDirectory(self, dataFileIndex):
+        """
+        Get the relative path to a file's subdirectory relative to the
+        folder's root directory which is
+        os.path.join(self.location, self.folderName)
+        """
         return self.dataFileDirectories[dataFileIndex]
 
     def GetDataFileName(self, dataFileIndex):
+        """
+        Return a file's filename
+        """
         return os.path.basename(self.dataFilePaths[dataFileIndex])
 
     def GetDataFileSize(self, dataFileIndex):
+        """
+        Return a file's size on disk
+        """
         return os.stat(self.GetDataFilePath(dataFileIndex)).st_size
 
     def GetDataFileCreatedTime(self, dataFileIndex):
+        """
+        Return a file's created time on disk
+        """
         absoluteFilePath = self.GetDataFilePath(dataFileIndex)
         try:
             createdTimeIsoString = datetime.fromtimestamp(
@@ -139,6 +169,9 @@ class FolderModel(object):
             return None
 
     def GetDataFileModifiedTime(self, dataFileIndex):
+        """
+        Return a file's modified time on disk
+        """
         absoluteFilePath = self.GetDataFilePath(dataFileIndex)
         try:
             modifiedTimeIsoString = datetime.fromtimestamp(
@@ -148,99 +181,72 @@ class FolderModel(object):
             logger.error(traceback.format_exc())
             return None
 
-    def SetExperiment(self, experimentModel):
-        self.experimentModel = experimentModel
-
-    def GetExperiment(self):
-        return self.experimentModel
-
-    def SetDatasetModel(self, datasetModel):
-        self.datasetModel = datasetModel
-
-    def GetDataViewId(self):
-        return self.dataViewId
-
-    def GetFolder(self):
-        return self.folder
-
-    def GetLocation(self):
-        return self.location
-
     def GetRelPath(self):
+        """
+        Return the relative path of the folder, relative to the root
+        data directory configured in MyData's settings
+        """
         if self.isExperimentFilesFolder:
             return os.path.relpath(self.location,
-                                   self.settingsModel.GetDataDirectory())
+                                   SETTINGS.general.dataDirectory)
         else:
             return os.path.join(
-                os.path.relpath(self.location,
-                                self.settingsModel.GetDataDirectory()),
-                self.folder)
+                os.path.relpath(self.location, SETTINGS.general.dataDirectory),
+                self.folderName)
 
     def GetNumFiles(self):
+        """
+        Return total number of files in this folder
+        """
         return self.numFiles
 
-    def GetCreated(self):
-        return self.created
-
-    def GetStatus(self):
-        return self.status
-
-    def GetUserFolderName(self):
-        return self.userFolderName
-
-    def GetGroupFolderName(self):
-        return self.groupFolderName
-
-    def GetOwnerId(self):
-        return self.owner.GetId()
-
-    def GetOwner(self):
-        return self.owner
-
     def GetValueForKey(self, key):
+        """
+        Used in the data view model to look up a value from a column key
+        """
         if key.startswith("owner."):
             ownerKey = key.split("owner.")[1]
             return self.owner.GetValueForKey(ownerKey) if self.owner else None
         elif key.startswith("group."):
             groupKey = key.split("group.")[1]
             return self.group.GetValueForKey(groupKey) if self.group else None
-        return self.__dict__[key]
-
-    def GetSettingsModel(self):
-        return self.settingsModel
+        return getattr(self, key)
 
     def SetCreatedDate(self):
+        """
+        Set created date
+        """
         if self.isExperimentFilesFolder:
             absoluteFolderPath = self.location
         else:
-            absoluteFolderPath = os.path.join(self.location, self.folder)
+            absoluteFolderPath = os.path.join(self.location, self.folderName)
         self.created = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
 
-    def GetExperimentTitle(self):
-        return self.experimentTitle
+    @property
+    def experimentTitle(self):
+        """
+        Get MyTardis experiment title associated with this folder
+        """
+        return self._experimentTitle
 
-    def SetExperimentTitle(self, title):
-        self.experimentTitle = title
+    @experimentTitle.setter
+    def experimentTitle(self, title):
+        """
+        Set MyTardis experiment title associated with this folder
+        """
+        self._experimentTitle = title
         self.experimentTitleSetManually = True
 
-    def ExperimentTitleSetManually(self):
-        return self.experimentTitleSetManually
-
-    def GetGroup(self):
-        return self.group
-
-    def SetGroup(self, group):
-        self.group = group
-
-    def MatchesIncludes(self, filename):
+    @staticmethod
+    def MatchesIncludes(filename):
         """
         Return True if file matches at least one pattern in the includes
         file.
         """
         match = False
-        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
+        with open(SETTINGS.filters.includesFile, 'r') as includesFile:
             for glob in includesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
@@ -252,14 +258,15 @@ class FolderModel(object):
                 match = match or fnmatch(filename, glob)
         return match
 
-    def MatchesExcludes(self, filename):
+    @staticmethod
+    def MatchesExcludes(filename):
         """
         Return True if file matches at least one pattern in the excludes
         file.
         """
         match = False
-        with open(self.settingsModel.GetIncludesFile(), 'r') as includesFile:
-            for glob in includesFile.readlines():
+        with open(SETTINGS.filters.excludesFile, 'r') as excludesFile:
+            for glob in excludesFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
                     continue
@@ -276,10 +283,10 @@ class FolderModel(object):
         modified too recently and might require further local modifications
         before its upload.
         """
-        if self.settingsModel.IgnoreNewFiles():
+        if SETTINGS.filters.ignoreNewFiles:
             absoluteFilePath = self.GetDataFilePath(dataFileIndex)
             return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
-                (self.settingsModel.GetIgnoreNewFilesMinutes() * 60)
+                (SETTINGS.filters.ignoreNewFilesMinutes * 60)
         else:
             return False
 

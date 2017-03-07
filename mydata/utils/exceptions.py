@@ -164,7 +164,7 @@ class StorageBoxAttributeNotFound(Exception):
     """
     def __init__(self, storageBox, key):
         message = "Key '%s' not found in attributes for storage box '%s'" \
-            % (key, storageBox.GetName())
+            % (key, storageBox.name)
         super(StorageBoxAttributeNotFound, self).__init__(message)
 
 
@@ -174,5 +174,28 @@ class StorageBoxOptionNotFound(Exception):
     """
     def __init__(self, storageBox, key):
         message = "Key '%s' not found in options for storage box '%s'" \
-            % (key, storageBox.GetName())
+            % (key, storageBox.name)
         super(StorageBoxOptionNotFound, self).__init__(message)
+
+
+class UserAbortedSettingsValidation(Exception):
+    """
+    User aborted settings validation by pressing the Stop button
+    on the main window's toolbar.
+    """
+    def __init__(self, setStatusMessage):
+        message = "Settings validation aborted."
+        if setStatusMessage:
+            setStatusMessage(message)
+        super(UserAbortedSettingsValidation, self).__init__(message)
+
+
+class InvalidSettings(Exception):
+    """
+    Invalid settings were found by
+    mydata.models.settings.validation.ValidateSettings
+    """
+    def __init__(self, message, field="", suggestion=None):
+        self.field = field
+        self.suggestion = suggestion
+        super(InvalidSettings, self).__init__(message)

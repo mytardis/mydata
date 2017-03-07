@@ -5,9 +5,9 @@ import unittest
 
 import wx
 
-from mydata.dataviewmodels.groups import GroupsModel
-from mydata.models.group import GroupModel
-from mydata.views.groups import GroupsView
+from ...dataviewmodels.groups import GroupsModel
+from ...models.group import GroupModel
+from ...views.dataview import MyDataDataView
 
 
 class GroupsViewTester(unittest.TestCase):
@@ -17,9 +17,8 @@ class GroupsViewTester(unittest.TestCase):
     def setUp(self):
         self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
         self.frame = wx.Frame(None, title='GroupsViewTester')
-        self.settingsModel = None
-        self.groupsModel = GroupsModel(self.settingsModel)
-        self.groupsView = GroupsView(self.frame, groupsModel=self.groupsModel)
+        self.groupsModel = GroupsModel()
+        self.groupsView = MyDataDataView(self.frame, self.groupsModel)
         self.frame.Show()
 
     def test_groups_view(self):
@@ -30,11 +29,11 @@ class GroupsViewTester(unittest.TestCase):
 
         dataViewId = self.groupsModel.GetMaxDataViewId() + 1
         testgroup1 = GroupModel(name="Test Group 1")
-        testgroup1.SetDataViewId(dataViewId)
+        testgroup1.dataViewId = dataViewId
         self.groupsModel.AddRow(testgroup1)
         dataViewId = self.groupsModel.GetMaxDataViewId() + 1
         testgroup2 = GroupModel(name="Test Group 2")
-        testgroup2.SetDataViewId(dataViewId)
+        testgroup2.dataViewId = dataViewId
         self.groupsModel.AddRow(testgroup2)
 
         self.groupsModel.Compare(testgroup1, testgroup2, col=1, ascending=True)

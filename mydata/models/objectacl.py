@@ -6,9 +6,10 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import json
 import requests
 
-from mydata.logs import logger
-from mydata.utils.exceptions import Unauthorized
-from mydata.utils.exceptions import DoesNotExist
+from ..settings import SETTINGS
+from ..logs import logger
+from ..utils.exceptions import Unauthorized
+from ..utils.exceptions import DoesNotExist
 from .user import UserProfileModel
 
 
@@ -23,19 +24,17 @@ class ObjectAclModel(object):
         Grants full ownership of experiment to user.
         """
         logger.debug("\nSharing via ObjectACL with username \"" +
-                     user.GetUsername() + "\"...\n")
+                     user.username + "\"...\n")
 
-        settingsModel = experiment.GetSettingsModel()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisDefaultUsername = SETTINGS.general.username
 
         objectAclJson = {
             "pluginId": "django_user",
-            "entityId": str(user.GetId()),
-            "content_object": experiment.GetResourceUri().replace("mydata_",
-                                                                  ""),
+            "entityId": str(user.userId),
+            "content_object": experiment.resourceUri.replace("mydata_", ""),
             "content_type": "experiment",
-            "object_id": experiment.GetId(),
+            "object_id": experiment.experimentId,
             "aclOwnershipType": 1,
             "isOwner": True,
             "canRead": True,
@@ -44,13 +43,11 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
-        response = requests.post(headers=headers, url=url,
+        response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
                                  data=json.dumps(objectAclJson))
         if response.status_code == 201:
-            logger.debug("Shared experiment with user " +
-                         user.GetUsername() + ".")
+            logger.debug("Shared experiment with user " + user.username + ".")
         else:
             logger.debug(url)
             logger.debug(response.text)
@@ -58,7 +55,7 @@ class ObjectAclModel(object):
                          str(response.status_code))
             if response.status_code == 401:
                 message = "Couldn't create ObjectACL for " \
-                          "experiment \"%s\"." % experiment.GetTitle()
+                          "experiment \"%s\"." % experiment.title
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator " \
                            "to check the permissions of the \"%s\" " \
@@ -66,7 +63,7 @@ class ObjectAclModel(object):
                 raise Unauthorized(message)
             elif response.status_code == 404:
                 message = "Couldn't create ObjectACL for " \
-                          "experiment \"%s\"." % experiment.GetTitle()
+                          "experiment \"%s\"." % experiment.title
                 message += "\n\n"
                 message += "A 404 (Not Found) error occurred while " \
                            "attempting to create the ObjectACL.\n\n" \
@@ -82,19 +79,17 @@ class ObjectAclModel(object):
         Grants read access to experiment to group.
         """
         logger.debug("\nSharing via ObjectACL with group \"" +
-                     group.GetName() + "\"...\n")
+                     group.name + "\"...\n")
 
-        settingsModel = experiment.GetSettingsModel()
-        myTardisUrl = settingsModel.GetMyTardisUrl()
-        myTardisDefaultUsername = settingsModel.GetUsername()
+        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisDefaultUsername = SETTINGS.general.username
 
         objectAclJson = {
             "pluginId": "django_group",
-            "entityId": str(group.GetId()),
-            "content_object": experiment.GetResourceUri().replace("mydata_",
-                                                                  ""),
+            "entityId": str(group.groupId),
+            "content_object": experiment.resourceUri.replace("mydata_", ""),
             "content_type": "experiment",
-            "object_id": experiment.GetId(),
+            "object_id": experiment.experimentId,
             "aclOwnershipType": 1,
             "isOwner": True,
             "canRead": True,
@@ -103,13 +98,12 @@ class ObjectAclModel(object):
             "effectiveDate": None,
             "expiryDate": None}
 
-        headers = settingsModel.GetDefaultHeaders()
         url = myTardisUrl + "/api/v1/objectacl/"
-        response = requests.post(headers=headers, url=url,
+        response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
                                  data=json.dumps(objectAclJson))
         if response.status_code == 201:
             logger.debug("Shared experiment with group " +
-                         group.GetName() + ".")
+                         group.name + ".")
         else:
             logger.debug(url)
             logger.debug(response.text)
@@ -117,7 +111,7 @@ class ObjectAclModel(object):
                          str(response.status_code))
             if response.status_code == 401:
                 message = "Couldn't create ObjectACL for " \
-                          "experiment \"%s\"." % experiment.GetTitle()
+                          "experiment \"%s\"." % experiment.title
                 message += "\n\n"
                 message += "Please ask your MyTardis administrator " \
                            "to check the permissions of the \"%s\" " \
@@ -125,7 +119,7 @@ class ObjectAclModel(object):
                 raise Unauthorized(message)
             elif response.status_code == 404:
                 message = "Couldn't create ObjectACL for " \
-                          "experiment \"%s\"." % experiment.GetTitle()
+                          "experiment \"%s\"." % experiment.title
                 message += "\n\n"
                 message += "A 404 (Not Found) error occurred while " \
                            "attempting to create the ObjectACL.\n\n" \
