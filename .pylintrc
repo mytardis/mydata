@@ -170,10 +170,10 @@ module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 
 # Regular expression matching correct method names
-method-rgx=((([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
+method-rgx=(_*(([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
 
 # Naming hint for method names
-method-name-hint=((([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
+method-name-hint=(_*(([A-Z][a-z0-9]+)+)|(__.*__)|(test_.*)){1,30}$
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
