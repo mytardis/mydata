@@ -2,10 +2,6 @@
 Represents the Groups tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-import threading
-
-import wx
-
 from ..utils import Compare
 from .dataview import MyDataDataViewModel
 
@@ -21,61 +17,7 @@ class GroupsModel(MyDataDataViewModel):
         self.columnNames = ["Id", "Short Name", "Full Name"]
         self.columnKeys = ["dataViewId", "shortName", "name"]
         self.defaultColumnWidths = [40, 200, 400]
-
-    def Filter(self, searchString):
-        """
-        Only show groups matching the query string, typed in the search box
-        in the upper-right corner of the main window.
-        """
-        # pylint: disable=too-many-branches
-        self.searchString = searchString
-        query = self.searchString.lower()
-        if not self.filtered:
-            # This only does a shallow copy:
-            self.unfilteredData = list(self.rowsData)
-
-        for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.rowsData[row].name.lower():
-                self.filteredData.append(self.rowsData[row])
-                del self.rowsData[row]
-                # notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                self.filtered = True
-
-        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            fgd = self.filteredData[filteredRow]
-            if query in fgd.name.lower():
-                # Model doesn't care about currently sorted column.
-                # Always use ID.
-                row = 0
-                col = 0
-                # Need to get current sort direction
-                ascending = True
-                while row < self.GetRowCount() and \
-                        self.Compare(self.rowsData[row],
-                                     fgd, col, ascending) < 0:
-                    row += 1
-
-                if row == self.GetRowCount():
-                    self.rowsData.append(fgd)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowAppended()
-                    else:
-                        wx.CallAfter(self.RowAppended)
-                else:
-                    self.rowsData.insert(row, fgd)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowInserted(row)
-                    else:
-                        wx.CallAfter(self.RowInserted, row)
-                del self.filteredData[filteredRow]
-                if self.GetFilteredRowCount() == 0:
-                    self.filtered = False
+        self.filterFields = ["name"]
 
     def Compare(self, groupRecord1, groupRecord2, col, ascending):
         """
