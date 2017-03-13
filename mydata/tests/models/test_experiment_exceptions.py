@@ -8,7 +8,6 @@ from .. import MyDataTester
 from ...models.experiment import ExperimentModel
 from ...models.folder import FolderModel
 from ...models.schema import SchemaModel
-from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...models.user import UserProfileModel
 from ...utils.exceptions import DoesNotExist
@@ -31,17 +30,7 @@ class ExperimentExceptionsTester(MyDataTester):
         """
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        pathToTestConfig = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(pathToTestConfig))
-        SETTINGS.Update(SettingsModel(pathToTestConfig))
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        self.UpdateSettingsFromCfg("testdataExpDataset")
         # MyData has the concept of a "default experiment",
         # which depends on the UUID of the MyData instance:
         SETTINGS.miscellaneous.uuid = "1234567890"
@@ -52,7 +41,7 @@ class ExperimentExceptionsTester(MyDataTester):
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
-        location = os.path.join(dataDirectory, expFolderName)
+        location = os.path.join(SETTINGS.general.dataDirectory, expFolderName)
 
         # LOOKING UP EXPERIMENTS
 

@@ -1,7 +1,6 @@
 """
 Test scanning the Username / Dataset structure and upload using POST.
 """
-import os
 import sys
 import threading
 import time
@@ -10,11 +9,7 @@ import wx
 
 from ...logs import logger
 from ...settings import SETTINGS
-from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
-from ...dataviewmodels.folders import FoldersModel
-from ...dataviewmodels.users import UsersModel
-from ...dataviewmodels.groups import GroupsModel
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...views.dataview import MyDataDataView
@@ -38,46 +33,40 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         Test scanning the Username / Dataset structure and upload using POST.
         """
         # pylint: disable=too-many-locals
-        pathToTestConfig = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        SETTINGS.Update(SettingsModel(pathToTestConfig))
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        SETTINGS.general.dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset"))
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         ValidateSettings()
-        usersModel = UsersModel()
-        groupsModel = GroupsModel()
-        foldersModel = FoldersModel(usersModel, groupsModel)
+        self.InitializeModels()
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
-        foldersModel.ScanFolders(
+        self.foldersModel.ScanFolders(
             MyDataScanFoldersTester.IncrementProgressDialog,
             MyDataScanFoldersTester.ShouldAbort)
-        self.assertEqual(sorted(usersModel.GetValuesForColname("Username")),
-                         ['INVALID_USER', 'testuser1', 'testuser2'])
+        self.assertEqual(
+            sorted(self.usersModel.GetValuesForColname("Username")),
+            ['INVALID_USER', 'testuser1', 'testuser2'])
 
         folders = []
-        for row in range(foldersModel.GetRowCount()):
-            folders.append(foldersModel.GetFolderRecord(row).folderName)
+        for row in range(self.foldersModel.GetRowCount()):
+            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(
             sorted(folders), ['Birds', 'Flowers', 'InvalidUserDataset1'])
 
         numFiles = 0
-        for row in range(foldersModel.GetRowCount()):
-            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(self.foldersModel.GetRowCount()):
+            numFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 11)
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
-        foldersView = MyDataDataView(self.frame, foldersModel)
+        foldersView = MyDataDataView(self.frame, self.foldersModel)
         foldersController = FoldersController(
-            self.frame, foldersModel, foldersView, usersModel,
+            self.frame, self.foldersModel, foldersView, self.usersModel,
             verificationsModel, uploadsModel)
 
         foldersController.InitForUploads()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
+        for row in range(self.foldersModel.GetRowCount()):
+            folderModel = self.foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
 
@@ -101,8 +90,8 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             Start Uploads worker
             """
             foldersController.InitForUploads()
-            for row in range(foldersModel.GetRowCount()):
-                folderModel = foldersModel.GetFolderRecord(row)
+            for row in range(self.foldersModel.GetRowCount()):
+                folderModel = self.foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
             foldersController.FinishedScanningForDatasetFolders()
 
@@ -127,7 +116,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
         event = wx.PyEvent()
-        event.folderModel = foldersModel.GetFolderRecord(0)
+        event.folderModel = self.foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)

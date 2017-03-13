@@ -30,6 +30,12 @@ import unittest
 import wx
 
 from ..events import MYDATA_EVENTS
+from ..settings import SETTINGS
+from ..models.settings import SettingsModel
+from ..models.settings.validation import ValidateSettings
+from ..dataviewmodels.folders import FoldersModel
+from ..dataviewmodels.users import UsersModel
+from ..dataviewmodels.groups import GroupsModel
 from .utils import StartFakeMyTardisServer
 from .utils import WaitForFakeMyTardisServerToStart
 if sys.platform.startswith("linux"):
@@ -49,6 +55,9 @@ class MyDataTester(unittest.TestCase):
         self.fakeMyTardisPort = None
         self.fakeMyTardisServerThread = None
         self.fakeMyTardisUrl = None
+        self.usersModel = None
+        self.groupsModel = None
+        self.foldersModel = None
 
     def setUp(self):
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
@@ -76,6 +85,69 @@ class MyDataTester(unittest.TestCase):
         if sys.platform.startswith("linux"):
             StopErrandBoy()
 
+    def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
+        """
+        Update the global settings instance from a test MyData.cfg file and
+        update the dataDirectory and myTardisUrl for the test environment.
+        """
+        pathToTestConfig = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "testdata/%s.cfg" % configName)
+        try:
+            self.assertTrue(os.path.exists(pathToTestConfig))
+        except AssertionError:
+            sys.stderr.write("Config path: %s\n" % pathToTestConfig)
+            raise
+        SETTINGS.Update(SettingsModel(pathToTestConfig))
+        if not dataFolderName:
+            dataFolderName = configName
+        dataDirectory = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "testdata", dataFolderName)
+        try:
+            self.assertTrue(os.path.exists(dataDirectory))
+        except AssertionError:
+            sys.stderr.write("Data directory: %s\n" % dataDirectory)
+            raise
+        SETTINGS.general.dataDirectory = dataDirectory
+        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+
+    def InitializeModels(self):
+        """
+        Initialize dataview models.
+
+        Should be called after loading valid settings.
+        """
+        self.usersModel = UsersModel()
+        self.groupsModel = GroupsModel()
+        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
+
+    def AssertUsers(self, users):
+        """
+        Check the users in self.usersModel
+        """
+        self.assertEqual(
+            sorted(self.usersModel.GetValuesForColname("Username")), users)
+
+    def AssertFolders(self, folders):
+        """
+        Check the folders in self.foldersModel
+        """
+        folderNames = []
+        for row in range(self.foldersModel.GetRowCount()):
+            folderNames.append(
+                self.foldersModel.GetFolderRecord(row).folderName)
+        self.assertEqual(sorted(folderNames), folders)
+
+    def AssertNumFiles(self, numFiles):
+        """
+        Check the number of files found in self.foldersModel
+        """
+        totalFiles = 0
+        for row in range(self.foldersModel.GetRowCount()):
+            totalFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        self.assertEqual(totalFiles, numFiles)
+
 
 class MyDataSettingsTester(MyDataTester):
     """
@@ -96,6 +168,16 @@ class MyDataSettingsTester(MyDataTester):
         if os.path.exists(self.tempFilePath):
             os.remove(self.tempFilePath)
 
+    def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
+        """
+        Update the global settings instance from a test MyData.cfg file and
+        update the dataDirectory and myTardisUrl for the test environment.
+        """
+        super(MyDataSettingsTester, self).UpdateSettingsFromCfg(
+            configName, dataFolderName)
+        SETTINGS.configPath = self.tempFilePath
+
+
 class MyDataScanFoldersTester(MyDataTester):
     """
     Base class for inheriting from for tests requiring a fake MyTardis server
@@ -115,3 +197,13 @@ class MyDataScanFoldersTester(MyDataTester):
         Callback for ScanFolders.
         """
         return False
+
+    def ScanFolders(self):
+        """
+        Collecting some common code needed by multiple "scan folders" tests
+        """
+        ValidateSettings()
+        self.InitializeModels()
+        self.foldersModel.ScanFolders(
+            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ShouldAbort)

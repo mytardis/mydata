@@ -3,12 +3,10 @@ Test Daily schedule type.
 """
 from datetime import datetime
 from datetime import timedelta
-import os
 
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -24,19 +22,9 @@ class DailyScheduleTester(MyDataSettingsTester):
 
     def setUp(self):
         super(DailyScheduleTester, self).setUp()
-        configPath = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(
-            SettingsModel(configPath=configPath, checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SETTINGS.schedule.scheduleType = "Daily"
         SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) +

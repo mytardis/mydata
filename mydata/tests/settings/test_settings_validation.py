@@ -7,7 +7,6 @@ import tempfile
 
 import mydata.models.settings.validation
 from ...settings import SETTINGS
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
@@ -27,19 +26,9 @@ class SettingsValidationTester(MyDataSettingsTester):
         will only be called once, so only one app will be created.
         """
         super(SettingsValidationTester, self).setUp()
-        configPath = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(SettingsModel(configPath=configPath,
-                                      checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
 
     def test_settings_validation(self):

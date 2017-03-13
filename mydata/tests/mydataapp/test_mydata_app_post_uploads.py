@@ -1,11 +1,7 @@
 """
 Test ability to create a MyData App instance and uploads files using POST.
 """
-import os
-
-from ...settings import SETTINGS
 from ...MyData import MyData
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -21,19 +17,9 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
 
     def setUp(self):
         super(MyDataAppInstanceTester, self).setUp()
-        configPath = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(
-            SettingsModel(configPath=configPath, checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset")
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
 
     def test_mydata_app_post_uploads(self):

@@ -1,10 +1,7 @@
 """
 Test ability to update settings from server.
 """
-import os
-
 from ...settings import SETTINGS
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import LoadSettings
 from ...models.settings.serialize import SaveSettingsToDisk
 from .. import MyDataSettingsTester
@@ -19,19 +16,9 @@ class UpdatedSettingsTester(MyDataSettingsTester):
         Set up for test.
         """
         super(UpdatedSettingsTester, self).setUp()
-        configPath = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(SettingsModel(configPath=configPath,
-                                      checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
 
     def test_update_settings_from_server(self):

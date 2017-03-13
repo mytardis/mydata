@@ -3,12 +3,10 @@ Test Weekly schedule type.
 """
 from datetime import datetime
 from datetime import timedelta
-import os
 
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -28,17 +26,9 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         We'll create a MyData app instance instead.
         """
         super(WeeklyScheduleTester, self).setUp()
-        configPath = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(
-            SettingsModel(configPath=configPath, checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        SETTINGS.general.dataDirectory = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset")
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SETTINGS.schedule.scheduleType = "Weekly"
         SETTINGS.schedule.mondayChecked = True
         SETTINGS.schedule.tuesdayChecked = True

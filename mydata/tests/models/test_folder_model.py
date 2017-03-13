@@ -1,7 +1,6 @@
 """
 Test folder model
 """
-import unittest
 import os
 import sys
 import tempfile
@@ -11,25 +10,19 @@ import wx
 from ...settings import SETTINGS
 from ...models.folder import FolderModel
 from ...models.user import UserModel
-from ...models.settings import SettingsModel
+from .. import MyDataTester
 
 
-class FolderModelTester(unittest.TestCase):
+class FolderModelTester(MyDataTester):
     """
     Test folder model
     """
     def setUp(self):
         self.app = wx.App()
         self.frame = wx.Frame(None, title='FolderModelTester')
-        configPath = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(SettingsModel(configPath=configPath,
-                                      checkForUpdates=False))
-        SETTINGS.general.dataDirectory = os.path.realpath(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                         "../testdata", "testdataUsernameDataset"))
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         with tempfile.NamedTemporaryFile() as tempFile:
             self.includesFilePath = tempFile.name
         with tempfile.NamedTemporaryFile() as tempFile:
