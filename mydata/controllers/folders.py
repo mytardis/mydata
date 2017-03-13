@@ -29,7 +29,7 @@ from .uploads import UploadDatafileRunnable
 from .verifications import VerifyDatafileRunnable
 
 if sys.platform.startswith("linux"):
-    from ..linuxsubprocesses import RestartErrandBoy
+    from ..linuxsubprocesses import StartErrandBoy
 
 
 class FoldersController(object):
@@ -364,7 +364,7 @@ class FoldersController(object):
         self.getOrCreateExpThreadingLock = threading.Lock()
 
         if sys.platform.startswith("linux"):
-            RestartErrandBoy()
+            StartErrandBoy()
 
         try:
             SETTINGS.uploaderModel.RequestStagingAccess()

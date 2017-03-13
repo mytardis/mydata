@@ -48,7 +48,7 @@ from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 if sys.platform.startswith("linux"):
-    from ..linuxsubprocesses import GetErrandBoyTransport
+    from ..linuxsubprocesses import ERRAND_BOY_TRANSPORT
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
@@ -495,7 +495,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stdout, mkdirProcess.returncode)
         else:
             stdout, stderr, returncode = \
-                GetErrandBoyTransport().run_cmd(mkdirCmdString)
+                ERRAND_BOY_TRANSPORT.run_cmd(mkdirCmdString)
             if returncode != 0:
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
@@ -543,7 +543,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         if returncode != 0:
             raise ScpException(stdout, scpCommandString, returncode)
     else:
-        with GetErrandBoyTransport().get_session() as session:
+        with ERRAND_BOY_TRANSPORT.get_session() as session:
             ebSubprocess = session.subprocess
             if sys.platform.startswith("linux"):
                 preexecFunction = os.setpgrp
