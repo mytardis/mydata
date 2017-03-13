@@ -13,8 +13,6 @@ import webbrowser
 import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
-    # pylint: disable=import-error
-    # pylint: disable=no-name-in-module
     from wx.adv import TaskBarIcon
 else:
     from wx import EmptyIcon
@@ -77,7 +75,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
             self.menu.Append(self.syncNowMenuItem)
         else:
             self.menu.AppendItem(self.syncNowMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnSyncNow,
+        self.Bind(wx.EVT_MENU, MyDataTaskBarIcon.OnSyncNow,
                   self.syncNowMenuItem, self.syncNowMenuItem.GetId())
 
         self.menu.AppendSeparator()
@@ -108,7 +106,8 @@ class MyDataTaskBarIcon(TaskBarIcon):
             self.menu.Append(self.myTardisHelpMenuItem)
         else:
             self.menu.AppendItem(self.myTardisHelpMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnMyDataHelp, self.myTardisHelpMenuItem)
+        self.Bind(wx.EVT_MENU, MyDataTaskBarIcon.OnMyDataHelp,
+                  self.myTardisHelpMenuItem)
 
         self.menu.AppendSeparator()
 
@@ -150,8 +149,8 @@ class MyDataTaskBarIcon(TaskBarIcon):
         wx.GetApp().OnSettings(event)
         event.Skip()
 
-    # pylint: disable=no-self-use
-    def OnSyncNow(self, event):
+    @staticmethod
+    def OnSyncNow(event):
         """
         Called when the "Sync Now" menu item is
         selected from MyData's system tray / menu bar icon menu.
@@ -159,8 +158,8 @@ class MyDataTaskBarIcon(TaskBarIcon):
         logger.debug("Sync Now called from task bar menu item.")
         wx.GetApp().ScanFoldersAndUpload(event)
 
-    # pylint: disable=no-self-use
-    def OnMyDataHelp(self, event):
+    @staticmethod
+    def OnMyDataHelp(event):
         """
         Called when the "MyData Help" menu item is
         selected from MyData's system tray / menu bar icon menu.

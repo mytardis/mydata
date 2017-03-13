@@ -33,7 +33,7 @@ import psutil
 import requests
 
 if sys.platform.startswith("win"):
-    import win32process  # pylint: disable=import-error
+    import win32process
 
 from ..settings import SETTINGS
 from ..logs import logger
@@ -68,7 +68,6 @@ class OpenSSH(object):
     running remote commands over SSH via subprocesses.
     """
     # pylint: disable=too-many-instance-attributes
-    # pylint: disable=no-self-use
     def __init__(self):
         """
         Locate the SSH binaries on various systems. On Windows we bundle a
@@ -110,13 +109,15 @@ class OpenSSH(object):
         self.mkdir = os.path.join(binBaseDir, "mkdir" + binarySuffix)
         self.cat = os.path.join(binBaseDir, "cat" + binarySuffix)
 
-    def DoubleQuote(self, string):
+    @staticmethod
+    def DoubleQuote(string):
         """
         Return double-quoted string
         """
         return '"' + string.replace('"', r'\"') + '"'
 
-    def DoubleQuoteRemotePath(self, string):
+    @staticmethod
+    def DoubleQuoteRemotePath(string):
         """
         Return double-quoted remote path, escaping double quotes,
         backticks and dollar signs
@@ -126,7 +127,8 @@ class OpenSSH(object):
         path = path.replace('$', r'\\$')
         return '"%s"' % path
 
-    def DefaultSshOptions(self):
+    @staticmethod
+    def DefaultSshOptions():
         """
         Returns default SSH options
         """
@@ -222,13 +224,13 @@ class KeyPair(object):
 
         if sys.platform.startswith('win'):
             quotedPrivateKeyFilePath = \
-                OPENSSH.DoubleQuote(GetCygwinPath(self.privateKeyFilePath))
-            cmdList = [OPENSSH.DoubleQuote(OPENSSH.sshKeyGen), "-E", "md5",
+                OpenSSH.DoubleQuote(GetCygwinPath(self.privateKeyFilePath))
+            cmdList = [OpenSSH.DoubleQuote(OPENSSH.sshKeyGen), "-E", "md5",
                        "-yl", "-f", quotedPrivateKeyFilePath]
         else:
             quotedPrivateKeyFilePath = \
-                OPENSSH.DoubleQuote(self.privateKeyFilePath)
-            cmdList = [OPENSSH.DoubleQuote(OPENSSH.sshKeyGen),
+                OpenSSH.DoubleQuote(self.privateKeyFilePath)
+            cmdList = [OpenSSH.DoubleQuote(OPENSSH.sshKeyGen),
                        "-yl", "-f", quotedPrivateKeyFilePath]
         cmd = " ".join(cmdList)
         logger.debug(cmd)
@@ -305,14 +307,14 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
 
     if sys.platform.startswith('win'):
         quotedPrivateKeyFilePath = \
-            OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath))
+            OpenSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath))
     else:
-        quotedPrivateKeyFilePath = OPENSSH.DoubleQuote(privateKeyFilePath)
+        quotedPrivateKeyFilePath = OpenSSH.DoubleQuote(privateKeyFilePath)
     cmdList = \
-        [OPENSSH.DoubleQuote(OPENSSH.sshKeyGen),
+        [OpenSSH.DoubleQuote(OPENSSH.sshKeyGen),
          "-f", quotedPrivateKeyFilePath,
          "-N", '""',
-         "-C", OPENSSH.DoubleQuote(keyComment)]
+         "-C", OpenSSH.DoubleQuote(keyComment)]
     cmd = " ".join(cmdList)
     logger.debug(cmd)
     proc = subprocess.Popen(cmd,
@@ -343,20 +345,20 @@ def SshServerIsReady(username, privateKeyFilePath,
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
 
     if sys.platform.startswith("win"):
-        cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
+        cmdAndArgs = [OpenSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
-                      "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+                      "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
                       "-l", username,
                       host,
-                      OPENSSH.DoubleQuote("echo Ready")]
+                      OpenSSH.DoubleQuote("echo Ready")]
     else:
-        cmdAndArgs = [OPENSSH.DoubleQuote(OPENSSH.ssh),
+        cmdAndArgs = [OpenSSH.DoubleQuote(OPENSSH.ssh),
                       "-p", str(port),
-                      "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+                      "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
                       "-l", username,
                       host,
-                      OPENSSH.DoubleQuote("echo Ready")]
-    cmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
+                      OpenSSH.DoubleQuote("echo Ready")]
+    cmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
     cmdString = " ".join(cmdAndArgs)
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
@@ -466,18 +468,18 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     MonitorProgress(foldersController, progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
         mkdirCmdAndArgs = \
-            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+            [OpenSSH.DoubleQuote(OPENSSH.ssh),
              "-p", port,
              "-n",
              "-c", cipher,
-             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
              "-l", username,
              host,
-             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-        mkdirCmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
+             OpenSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
         mkdirCmdString = " ".join(mkdirCmdAndArgs)
         logger.debug(mkdirCmdString)
         if not sys.platform.startswith("linux"):
@@ -511,12 +513,12 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         cipherString = "-c %s" % cipher
     scpCommandString = \
         '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s\\""' \
-        % (OPENSSH.DoubleQuote(OPENSSH.scp),
-           " ".join(OPENSSH.DefaultSshOptions()),
+        % (OpenSSH.DoubleQuote(OPENSSH.scp),
+           " ".join(OpenSSH.DefaultSshOptions()),
            port,
            privateKeyFilePath,
            cipherString,
-           OPENSSH.DoubleQuote(filePath),
+           OpenSSH.DoubleQuote(filePath),
            username, host,
            remoteDir
            .replace('`', r'\\`')
@@ -589,18 +591,18 @@ def UploadFileFromWindows(filePath, fileSize, username,
                     fileSize, monitoringProgress, progressCallback)
     cipher = SETTINGS.miscellaneous.cipher
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OPENSSH.DoubleQuoteRemotePath(remoteDir)
+    quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
     if remoteDir not in REMOTE_DIRS_CREATED:
         mkdirCmdAndArgs = \
-            [OPENSSH.DoubleQuote(OPENSSH.ssh),
+            [OpenSSH.DoubleQuote(OPENSSH.ssh),
              "-p", port,
              "-n",
              "-c", cipher,
-             "-i", OPENSSH.DoubleQuote(privateKeyFilePath),
+             "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
              "-l", username,
              host,
-             OPENSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-        mkdirCmdAndArgs[1:1] = OPENSSH.DefaultSshOptions()
+             OpenSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+        mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
         mkdirCmdString = " ".join(mkdirCmdAndArgs)
         logger.debug(mkdirCmdString)
         mkdirProcess = \
@@ -627,12 +629,12 @@ def UploadFileFromWindows(filePath, fileSize, username,
         cipherString = "-c %s" % cipher
     scpCommandString = \
         '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s/\\""' \
-        % (OPENSSH.DoubleQuote(OPENSSH.scp),
-           " ".join(OPENSSH.DefaultSshOptions()),
+        % (OpenSSH.DoubleQuote(OPENSSH.scp),
+           " ".join(OpenSSH.DefaultSshOptions()),
            port,
-           OPENSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
+           OpenSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
            cipherString,
-           OPENSSH.DoubleQuote(GetCygwinPath(filePath)),
+           OpenSSH.DoubleQuote(GetCygwinPath(filePath)),
            username, host,
            remoteDir
            .replace('`', r'\\`')

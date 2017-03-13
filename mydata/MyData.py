@@ -25,7 +25,6 @@ import requests
 import wx
 if wx.version().startswith("3.0.3.dev"):
     from wx import Icon as EmptyIcon
-    # pylint: disable=import-error
     from wx.adv import EVT_TASKBAR_LEFT_UP
     from wx.adv import EVT_TASKBAR_LEFT_DOWN
     from wx.lib.agw.aui import AuiNotebook
@@ -35,8 +34,6 @@ else:
     from wx import EmptyIcon
     from wx import EVT_TASKBAR_LEFT_UP
     from wx import EVT_TASKBAR_LEFT_DOWN
-    # pylint: disable=import-error
-    # pylint: disable=no-name-in-module
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
@@ -404,16 +401,16 @@ class MyData(wx.App):
 
         helpMenuItemID = wx.NewId()
         self.helpMenu.Append(helpMenuItemID, "&MyData Help")
-        self.frame.Bind(wx.EVT_MENU, self.OnHelp, id=helpMenuItemID)
+        self.frame.Bind(wx.EVT_MENU, MyData.OnHelp, id=helpMenuItemID)
 
         walkthroughMenuItemID = wx.NewId()
         self.helpMenu.Append(
             walkthroughMenuItemID, "Mac OS X &Walkthrough")
-        self.frame.Bind(wx.EVT_MENU, self.OnWalkthrough,
+        self.frame.Bind(wx.EVT_MENU, MyData.OnWalkthrough,
                         id=walkthroughMenuItemID)
 
         self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
-        self.frame.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+        self.frame.Bind(wx.EVT_MENU, MyData.OnAbout, id=wx.ID_ABOUT)
         self.menuBar.Append(self.helpMenu, "&Help")
         self.frame.SetMenuBar(self.menuBar)
 
@@ -550,7 +547,7 @@ class MyData(wx.App):
                                          style=IconStyle.HOT)
         self.aboutTool = addToolMethod(wx.ID_ANY, "About MyData",
                                        aboutIcon, shortHelp="About MyData")
-        self.frame.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
+        self.frame.Bind(wx.EVT_TOOL, MyData.OnAbout, self.aboutTool)
 
         self.toolbar.AddSeparator()
 
@@ -558,7 +555,7 @@ class MyData(wx.App):
                                         style=IconStyle.HOT)
         self.helpTool = addToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")
-        self.frame.Bind(wx.EVT_TOOL, self.OnHelp, self.helpTool)
+        self.frame.Bind(wx.EVT_TOOL, MyData.OnHelp, self.helpTool)
 
         self.toolbar.AddStretchableSpace()
         self.searchCtrl = wx.SearchCtrl(self.toolbar, size=wx.Size(200, -1),
@@ -982,25 +979,27 @@ class MyData(wx.App):
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
                 if folderRecord.datasetModel is not None:
-                    self.OpenUrl(SETTINGS.general.myTardisUrl + "/" +
-                                 folderRecord.datasetModel.viewUri)
+                    MyData.OpenUrl(SETTINGS.general.myTardisUrl + "/" +
+                                   folderRecord.datasetModel.viewUri)
                 else:
-                    self.OpenUrl(SETTINGS.general.myTardisUrl)
+                    MyData.OpenUrl(SETTINGS.general.myTardisUrl)
             else:
-                self.OpenUrl(SETTINGS.general.myTardisUrl)
+                MyData.OpenUrl(SETTINGS.general.myTardisUrl)
         except:
             logger.error(traceback.format_exc())
 
-    def OnHelp(self, event):
+    @staticmethod
+    def OnHelp(event):
         """
         Called when the user clicks the Help icon on the
         main toolbar.
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
-        self.OpenUrl(url, new=new)
+        MyData.OpenUrl(url, new=new)
 
-    def OnWalkthrough(self, event):
+    @staticmethod
+    def OnWalkthrough(event):
         """
         Mac OS X Only.
         Called when the user clicks the Mac OS X Walkthrough
@@ -1008,14 +1007,14 @@ class MyData(wx.App):
         """
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        self.OpenUrl(url, new=new)
+        MyData.OpenUrl(url, new=new)
 
-    def OnAbout(self, event):
+    @staticmethod
+    def OnAbout(event):
         """
         Called when the user clicks the Info icon on the
         main toolbar.
         """
-        # pylint: disable=no-self-use
         msg = "MyData is a desktop application" \
               " for uploading data to MyTardis " \
               "(https://github.com/mytardis/mytardis).\n\n" \
@@ -1032,11 +1031,11 @@ class MyData(wx.App):
         else:
             sys.stderr.write("\n%s\n" % msg)
 
-    def OpenUrl(self, url, new=0, autoraise=True):
+    @staticmethod
+    def OpenUrl(url, new=0, autoraise=True):
         """
         Open URL in web browser or just check URL is accessible if running tests.
         """
-        # pylint: disable=no-self-use
         if wx.PyApp.IsMainLoopRunning():
             webbrowser.open(url, new, autoraise)
         else:

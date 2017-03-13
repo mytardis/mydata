@@ -7,7 +7,7 @@ import traceback
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
+    from wx.dataview import DataViewIndexListModel
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 

@@ -23,8 +23,8 @@ if wx.version().startswith("3.0.3.dev"):
     from wx.lib.agw.aui import AUI_NB_TOP
 else:
     import wx.lib.masked
-    from wx.aui import AuiNotebook  # pylint: disable=no-name-in-module
-    from wx.aui import AUI_NB_TOP  # pylint: disable=no-name-in-module
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
 
 from ..settings import SETTINGS
 from ..models.settings.serialize import LoadSettings
@@ -67,7 +67,6 @@ class SettingsDialog(wx.Dialog):
                  pos=wx.DefaultPosition,
                  style=wx.DEFAULT_DIALOG_STYLE,
                  validationMessage=None):
-        # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title="Settings",
@@ -842,7 +841,7 @@ class SettingsDialog(wx.Dialog):
         self.okButton.SetId(wx.NewId())
         self.Bind(wx.EVT_BUTTON, self.OnOK, self.okButton)
         self.helpButton.SetId(wx.NewId())
-        self.Bind(wx.EVT_BUTTON, self.OnHelp, self.helpButton)
+        self.Bind(wx.EVT_BUTTON, SettingsDialog.OnHelp, self.helpButton)
 
         sizer.Add(buttonSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer)
@@ -1554,8 +1553,8 @@ class SettingsDialog(wx.Dialog):
                 self.showingSingularMinutes = False
         event.Skip()
 
-    # pylint: disable=no-self-use
-    def OnHelp(self, event):
+    @staticmethod
+    def OnHelp(event):
         """
         Open MyData documentation in the default web browser.
         """
@@ -1723,8 +1722,6 @@ class SettingsDialog(wx.Dialog):
             logger.debug("Requesting privilege elevation and "
                          "unlocking settings.")
             if sys.platform.startswith("win"):
-                # pylint: disable=import-error
-                # pylint: disable=no-name-in-module
                 import win32com.shell.shell as shell
                 import win32con
                 from win32com.shell import shellcon
