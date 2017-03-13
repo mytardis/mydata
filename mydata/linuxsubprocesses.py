@@ -1,6 +1,6 @@
 """
 On Linux, running subprocess the usual way can be inefficient, due to
-its use of os.fork.  So on Linux, we can use errand_boy to run our
+its use of os.fork().  So on Linux, we can use errand_boy to run our
 subprocesses for us.
 """
 import multiprocessing
