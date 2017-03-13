@@ -35,6 +35,8 @@ import requests
 if sys.platform.startswith("win"):
     import win32process
 
+if sys.platform.startswith("linux"):
+    import mydata.linuxsubprocesses as linuxsubprocesses
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.datafile import DataFileModel
@@ -46,9 +48,6 @@ from ..utils.exceptions import PrivateKeyDoesNotExist
 from ..utils.exceptions import DoesNotExist
 
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
-
-if sys.platform.startswith("linux"):
-    from ..linuxsubprocesses import ERRAND_BOY_TRANSPORT
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
@@ -495,7 +494,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stdout, mkdirProcess.returncode)
         else:
             stdout, stderr, returncode = \
-                ERRAND_BOY_TRANSPORT.run_cmd(mkdirCmdString)
+                linuxsubprocesses.ERRAND_BOY_TRANSPORT.run_cmd(mkdirCmdString)
             if returncode != 0:
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
@@ -543,7 +542,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         if returncode != 0:
             raise ScpException(stdout, scpCommandString, returncode)
     else:
-        with ERRAND_BOY_TRANSPORT.get_session() as session:
+        with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
             ebSubprocess = session.subprocess
             if sys.platform.startswith("linux"):
                 preexecFunction = os.setpgrp
