@@ -242,7 +242,8 @@ def ShutdownForRefresh(event):
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
-            wx.CallAfter(ShowDialog)
+            if wx.GetApp().okToShowModalDialogs:
+                wx.CallAfter(ShowDialog)
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
 
@@ -367,7 +368,7 @@ def RenameInstrument(event):
                        event.facilityName)
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
-                if wx.PyApp.IsMainLoopRunning():
+                if wx.GetApp().okToShowModalDialogs:
                     dlg.ShowModal()
                 event.settingsDialog.instrumentNameField.SetFocus()
                 event.settingsDialog.instrumentNameField.SelectAll()
@@ -499,7 +500,7 @@ def ProvideSettingsValidationResults(event):
                     % invalidSettings.suggestion
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.CANCEL | wx.ICON_ERROR)
-            if wx.PyApp.IsMainLoopRunning():
+            if wx.GetApp().okToShowModalDialogs:
                 okToUseSuggestion = dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -515,7 +516,7 @@ def ProvideSettingsValidationResults(event):
         else:
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
-            if wx.PyApp.IsMainLoopRunning():
+            if wx.GetApp().okToShowModalDialogs:
                 dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -573,10 +574,10 @@ def ProvideSettingsValidationResults(event):
                "datasets" if numDatasets != 1 else "dataset",
                event.settingsDialog.GetDataDirectory(),
                intervalIfUsed)
-        if wx.PyApp.IsMainLoopRunning():
-            confirmationDialog = \
-                wx.MessageDialog(None, message, "MyData",
-                                 wx.YES | wx.NO | wx.ICON_QUESTION)
+        confirmationDialog = \
+            wx.MessageDialog(None, message, "MyData",
+                             wx.YES | wx.NO | wx.ICON_QUESTION)
+        if wx.GetApp().okToShowModalDialogs:
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
@@ -610,10 +611,10 @@ def ProvideSettingsValidationResults(event):
                  "set to 'manual', so you will need to click " \
                  "the Upload toolbar icon or the Sync Now " \
                  "menu item to begin the data scans and uploads."
-            if wx.PyApp.IsMainLoopRunning():
-                title = "Manual Schedule"
-                dlg = wx.MessageDialog(None, message, title,
-                                       wx.OK | wx.ICON_WARNING)
+            title = "Manual Schedule"
+            dlg = wx.MessageDialog(None, message, title,
+                                   wx.OK | wx.ICON_WARNING)
+            if wx.GetApp().okToShowModalDialogs:
                 dlg.ShowModal()
             else:
                 logger.warning(message)

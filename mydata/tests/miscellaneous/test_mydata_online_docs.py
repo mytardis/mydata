@@ -21,7 +21,7 @@ class MyDataOnlineDocsTester(unittest.TestCase):
         Test ability to access MyData's online documentation.
         """
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                promptForMissingSettings=False)
+                                okToShowModalDialogs=False)
         pyEvent = wx.PyEvent()
         self.mydataApp.OnHelp(pyEvent)
         self.mydataApp.OnWalkthrough(pyEvent)
