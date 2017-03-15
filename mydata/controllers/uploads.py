@@ -294,9 +294,7 @@ class UploadDatafileRunnable(object):
             logger.error(traceback.format_exc())
             errorResponse = err.read()
             logger.error(errorResponse)
-            PostEvent(
-                self.foldersController.ShutdownUploadsEvent(
-                    failed=True))
+            PostEvent(self.foldersController.ShutdownUploadsEvent(failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
             try:
@@ -306,6 +304,11 @@ class UploadDatafileRunnable(object):
                     % json.loads(errorResponse)['error_message']
             except:
                 message += SafeStr(err)
+            if err.code == 409:
+                message += \
+                    "\n\nA Duplicate Key error occurred, suggesting that " \
+                    "multiple MyData instances could be trying to create " \
+                    "the same DataFile records concurrently."
             PostEvent(
                 self.foldersController.ShowMessageDialogEvent(
                     title="MyData", message=message, icon=wx.ICON_ERROR))
@@ -391,8 +394,8 @@ class UploadDatafileRunnable(object):
                     continue
                 else:
                     logger.error(traceback.format_exc())
-                    self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
-                    # break
+                    self.FinalizeUpload(
+                        uploadSuccess=False, message=SafeStr(err))
                     return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
