@@ -206,8 +206,8 @@ class UploadsModel(MyDataDataViewModel):
         Return the renderer to be used for the specified dataview column
         """
         if col == 5:
-            return ColumnRenderer.BITMAP,
+            return ColumnRenderer.BITMAP
         elif col == 6:
-            return ColumnRenderer.PROGRESS,
+            return ColumnRenderer.PROGRESS
         else:
             return ColumnRenderer.TEXT
