@@ -264,7 +264,7 @@ Name: "{app}\win64\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
 Name: "{app}\win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1\home"; Permissions: "users-modify"
 
 [Tasks]
-Name: startup; Description: "{cm:AutoStartProgram,{#MyDataAppName}}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: startup; Description: "{cm:AutoStartProgram,{#MyDataAppName}}"; GroupDescription: "Start Automatically On Login:"
 
 [Icons]
 Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks: startup
