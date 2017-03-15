@@ -145,7 +145,7 @@ class DataFileModel(object):
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
         """
-        url = "%s/api/v1/dataset_file/" % SETTINGS.general.myTardisUrl
+        url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         message = "Initializing buffered reader..."
         uploadsModel.SetMessage(uploadModel, message)
         datafileBufferedReader = io.open(dataFilePath, 'rb')
