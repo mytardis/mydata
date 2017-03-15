@@ -72,6 +72,7 @@ class MyDataTester(unittest.TestCase):
         Initialize generic wxPython app and main frame
         """
         self.app = wx.App()
+        self.app.okToShowModalDialogs = False
         self.frame = wx.Frame(parent=None, title=title)
 
     def tearDown(self):

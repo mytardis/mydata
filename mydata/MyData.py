@@ -128,10 +128,10 @@ class MyData(wx.App):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv, promptForMissingSettings=True):
+    def __init__(self, argv, okToShowModalDialogs=True):
         self.name = "MyData"
         self.argv = argv
-        self.promptForMissingSettings = promptForMissingSettings
+        self.okToShowModalDialogs = okToShowModalDialogs
 
         self.instance = None
 
@@ -329,7 +329,7 @@ class MyData(wx.App):
         self.SetTopWindow(self.frame)
 
         event = None
-        if self.promptForMissingSettings and SETTINGS.RequiredFieldIsBlank():
+        if self.okToShowModalDialogs and SETTINGS.RequiredFieldIsBlank():
             self.frame.Show(True)
             self.OnSettings(event)
         else:
