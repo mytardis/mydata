@@ -327,7 +327,7 @@ class UploadDatafileRunnable(object):
                 DataFileModel.CreateDataFileForStagingUpload(dataFileDict)
             if response.status_code != 201:
                 dataFileName = os.path.basename(dataFilePath)
-                folderName = self.folderModel.folder
+                folderName = self.folderModel.folderName
                 myTardisUsername = SETTINGS.general.username
                 UploadDatafileRunnable.HandleFailedCreateDataFile(
                     response, dataFileName, folderName, myTardisUsername)
