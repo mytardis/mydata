@@ -241,6 +241,7 @@ class CustomBdistCommand(bdist):
 ;MyData InnoSetup script
 ;Change OutputDir to suit your build environment
 
+#define Organization "Monash University"
 #define MyDataAppName "MyData"
 #define MyDataAppExeName "MyData.exe"
 
@@ -258,8 +259,15 @@ OutputDir=.
 Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Dirs]
+Name: "{commonappdata}\{#Organization}\{#MyDataAppName}"; Permissions: "everyone-modify"
 Name: "{app}\win64\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
 Name: "{app}\win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1\home"; Permissions: "users-modify"
+
+[Tasks]
+Name: startup; Description: "{cm:AutoStartProgram,{#MyDataAppName}}"; GroupDescription: "{cm:AdditionalIcons}"
+
+[Icons]
+Name: "{commonstartup}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"; Tasks: startup
 
 [Icons]
 Name: "{group}\{#MyDataAppName}"; Filename: "{app}\{#MyDataAppExeName}"

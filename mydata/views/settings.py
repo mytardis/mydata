@@ -31,6 +31,7 @@ from ..models.settings.serialize import LoadSettings
 from ..models.settings.serialize import SaveFieldsFromDialog
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..utils.autostart import IsMyDataShortcutInWinStartupItems
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
@@ -774,6 +775,10 @@ class SettingsDialog(wx.Dialog):
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.startAutomaticallyCheckBox = \
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        if sys.platform.startswith("win"):
+            startAutomatically = IsMyDataShortcutInWinStartupItems()
+            self.startAutomaticallyCheckBox.SetValue(startAutomatically)
+            self.startAutomaticallyCheckBox.Enable(False)
         self.advancedPanelSizer\
             .Add(self.startAutomaticallyCheckBox,
                  flag=wx.EXPAND | wx.ALL, border=5)
@@ -1410,8 +1415,11 @@ class SettingsDialog(wx.Dialog):
         self.SetMaxUploadRetries(SETTINGS.advanced.maxUploadRetries)
         self.SetValidateFolderStructure(
             SETTINGS.advanced.validateFolderStructure)
-        self.SetStartAutomaticallyOnLogin(
-            SETTINGS.advanced.startAutomaticallyOnLogin)
+        if sys.platform.startswith("win"):
+            startAutomatically = IsMyDataShortcutInWinStartupItems()
+        else:
+            startAutomatically = SETTINGS.advanced.startAutomaticallyOnLogin
+        self.SetStartAutomaticallyOnLogin(startAutomatically)
         self.SetUploadInvalidUserOrGroupFolders(
             SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
 
@@ -1825,7 +1833,8 @@ class SettingsDialog(wx.Dialog):
         self.validateFolderStructureCheckBox.Enable(enabled)
         self.maxUploadThreadsSpinCtrl.Enable(enabled)
         self.maxUploadRetriesSpinCtrl.Enable(enabled)
-        self.startAutomaticallyCheckBox.Enable(enabled)
+        if not sys.platform.startswith("win"):
+            self.startAutomaticallyCheckBox.Enable(enabled)
         self.uploadInvalidUserFoldersCheckBox.Enable(enabled)
         self.Update()
 

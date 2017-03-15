@@ -6,6 +6,7 @@ circular dependencies.
 """
 import traceback
 import os
+import sys
 from glob import glob
 from datetime import datetime
 
@@ -60,7 +61,8 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         CheckContactEmailAndEmailFolders(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
         if SETTINGS.lastSettingsUpdateTrigger == \
-                LastSettingsUpdateTrigger.UI_RESPONSE:
+                LastSettingsUpdateTrigger.UI_RESPONSE \
+                and not sys.platform.startswith("win"):
             CheckAutostart(setStatusMessage)
         CheckIfShouldAbort(setStatusMessage)
         CheckScheduledTime()
@@ -441,6 +443,12 @@ def CheckContactEmailAndEmailFolders(setStatusMessage):
 def CheckAutostart(setStatusMessage):
     """
     Check if MyData is configured to start automatically
+
+    On Windows, this is done at install time by the setup wizard.
+
+    On macOS and Linux, this is done within the individual user's
+    home directory, so it needs to be done the first time MyData
+    runs, and after the start automatically checkbox value changes.
 
     If SETTINGS.advanced.startAutomaticallyOnLogin hasn't changed since the
     last check in this MyData session, then we don't update the autostart file,

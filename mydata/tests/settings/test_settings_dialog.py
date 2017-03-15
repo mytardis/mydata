@@ -213,20 +213,21 @@ class SettingsDialogTester(MyDataSettingsTester):
             SETTINGS.advanced.startAutomaticallyOnLogin
         PostEvent(settingsDialogValidationEvent)
 
-        # Test updating autostart file:
-        sys.stderr.write(
-            "Testing updating autostart file with "
-            "startAutomaticallyOnLogin = True...\n")
-        SETTINGS.advanced.startAutomaticallyOnLogin = True
-        UpdateAutostartFile()
-        sys.stderr.write(
-            "Testing updating autostart file with "
-            "startAutomaticallyOnLogin = False...\n")
-        SETTINGS.advanced.startAutomaticallyOnLogin = False
-        UpdateAutostartFile()
-        SETTINGS.lastCheckedAutostartValue = \
-            SETTINGS.advanced.startAutomaticallyOnLogin
-        sys.stderr.write("Finished testing updating autostart file\n")
+        if not sys.platform.startswith("win"):
+            # Test updating autostart file:
+            sys.stderr.write(
+                "Testing updating autostart file with "
+                "startAutomaticallyOnLogin = True...\n")
+            SETTINGS.advanced.startAutomaticallyOnLogin = True
+            UpdateAutostartFile()
+            sys.stderr.write(
+                "Testing updating autostart file with "
+                "startAutomaticallyOnLogin = False...\n")
+            SETTINGS.advanced.startAutomaticallyOnLogin = False
+            UpdateAutostartFile()
+            SETTINGS.lastCheckedAutostartValue = \
+                SETTINGS.advanced.startAutomaticallyOnLogin
+            sys.stderr.write("Finished testing updating autostart file\n")
 
         # Test renaming instrument to an available instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
@@ -249,8 +250,8 @@ class SettingsDialogTester(MyDataSettingsTester):
         SaveFieldsFromDialog(
             self.settingsDialog, configPath=self.tempFilePath, saveToDisk=True)
         # Test dragging and dropping a MyData.cfg onto settings dialog:
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdataUsernameDataset.cfg")
+            "../testdata/testdataUsernameDataset.cfg"))
         self.settingsDialog.SetLocked(False)
         self.settingsDialog.OnDropFiles([configPath])

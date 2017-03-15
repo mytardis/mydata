@@ -7,7 +7,6 @@ import tempfile
 
 import mydata.models.settings.validation
 from ...settings import SETTINGS
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
 from ..utils import StartFakeMyTardisServer
@@ -29,7 +28,6 @@ class SettingsValidationTester(MyDataSettingsTester):
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
-        SaveSettingsToDisk()
 
     def test_settings_validation(self):
         """

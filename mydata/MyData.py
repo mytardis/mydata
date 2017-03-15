@@ -199,7 +199,16 @@ class MyData(wx.App):
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
-        appdirPath = appdirs.user_data_dir(appname, "Monash University")
+        if sys.platform.startswith("win"):
+            # We use a setup wizard on Windows which runs with admin
+            # privileges, so we can ensure that the appdirPath below,
+            # i.e. C:\ProgramData\Monash University\MyData\ is
+            # writeable by all users.
+            appdirPath = appdirs.site_config_dir(appname, "Monash University")
+        else:
+            # On Mac, we currently use a DMG drag-and-drop installation, so
+            # we can't create a system-wide MyData.cfg writeable by all users.
+            appdirPath = appdirs.user_data_dir(appname, "Monash University")
         logger.debug("appdirPath: " + appdirPath)
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
@@ -1065,7 +1074,7 @@ class MyData(wx.App):
     def GetConfigPath(self):
         """
         Returns the location on disk of MyData.cfg
-        e.g. "C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
         "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
         """
         return self.configPath
@@ -1073,7 +1082,7 @@ class MyData(wx.App):
     def SetConfigPath(self, configPath):
         """
         Sets the location on disk of MyData.cfg
-        e.g. "C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
         "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
         """
         self.configPath = configPath

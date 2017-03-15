@@ -307,12 +307,22 @@ Advanced
   fails, e.g. due to a connection timeout error.
 
 **Start automatically on login**
-    On Windows, a shortcut to MyData will be placed in the current user's Startup
-    folder.  The exact location varies, but on my machine it is
-    "C:\\Users\\wettenhj\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup".
+    As of v0.7.0-beta6, this checkbox is now disabled (read only) on Windows,
+    because MyData is configured to start automatically for all users (if using
+    MyData's setup wizard's default options) when it is first installed. Then
+    it is up to the system administrator to decide whether to leave the MyData
+    shortcut in
+    C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\
+
+    On Mac and Linux, MyData configures itself to start automatically on login
+    only for the current user, based on the value of this checkbox.
+
     On Mac OS X, a login item will be created in the user's
     ~/Library/Preferences/com.apple.loginitems.plist which can be accessed from
     System Preferences, Users & Groups, Login Items.
+
+    On Linux, MyData.desktop will be copied to ~/.config/autostart/ if this
+    checkbox is ticked.
 
 **Upload invalid user folders**
     If MyData finds a user (or group) folder which doesn't match a user (or group) on
@@ -351,9 +361,8 @@ MyData's settings again.
 N.B. This is NOT a security mechanism - it is a mechanism for preventing the
 accidental modification of settings in a production workflow.  It does not
 prevent advanced users from determining where MyData saves its last used
-configuration to disk (e.g.
-C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg) and
-updating the settings outside of MyData.
+configuration to disk (e.g. C:\\ProgramData\\Monash University\\MyData\\MyData.cfg)
+and updating the settings outside of MyData.
 
 
 .. _settings-saving-loading:
@@ -362,8 +371,7 @@ Saving and Loading Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Each time you click OK on the Settings Dialog, your settings are validated, and
 then saved automatically to a location within your user home folder, which is
-OS-dependent, e.g.
-"C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+OS-dependent, e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
 "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
 
 The settings file is in plain-text file whose format is described here:
@@ -397,7 +405,7 @@ Settings only configurable in MyData.cfg
 The following settings do not appear in the Settings Dialog, but can be
 configured directly in MyData.cfg, which is typically found at a location
 like:
-"C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg" or
+"C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
 "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
 
 You should exit MyData before modifying MyData.cfg, and then restart it after

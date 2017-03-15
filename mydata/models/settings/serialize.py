@@ -12,14 +12,24 @@ circular dependency, so we pass the settings as an argument instead.
 """
 import traceback
 import os
+import sys
 # For Python 3, this will change to "from configparser import ConfigParser":
 from ConfigParser import ConfigParser
 from datetime import datetime
 
+import appdirs
 import requests
 
 from ...logs import logger
 from .miscellaneous import LastSettingsUpdateTrigger
+
+OLD_DEFAULT_CONFIG_PATH = os.path.join(
+    appdirs.user_data_dir("MyData", "Monash University"), "MyData.cfg")
+if sys.platform.startswith("win"):
+    NEW_DEFAULT_CONFIG_PATH = os.path.join(
+        appdirs.site_config_dir("MyData", "Monash University"), "MyData.cfg")
+else:
+    NEW_DEFAULT_CONFIG_PATH = OLD_DEFAULT_CONFIG_PATH
 
 
 def LoadSettings(settings, configPath=None, checkForUpdates=True):
@@ -29,14 +39,20 @@ def LoadSettings(settings, configPath=None, checkForUpdates=True):
     :param checkForUpdates: Whether to look for updated settings in the
                             UploaderSettings model on the MyTardis server.
 
-    Sets some default values for settings fields, then loads a settings
-    file,
-    e.g. C:\\Users\\jsmith\\AppData\\Local\\Monash University\\MyData\\MyData.cfg
+    Sets some default values for settings fields, then loads a settings file,
+    e.g. C:\\ProgramData\\Monash University\\MyData\\MyData.cfg
+    or /Users/jsmith/Library/Application Support/MyData/MyData.cfg
     """
     settings.SetDefaultConfig()
 
     if configPath is None:
         configPath = settings.configPath
+
+    if sys.platform.startswith("win") and \
+            configPath == NEW_DEFAULT_CONFIG_PATH and \
+            not os.path.exists(configPath):
+        if os.path.exists(OLD_DEFAULT_CONFIG_PATH):
+            configPath = OLD_DEFAULT_CONFIG_PATH
 
     if configPath is not None and os.path.exists(configPath):
         logger.info("Reading settings from: " + configPath)
