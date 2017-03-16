@@ -1,11 +1,8 @@
 """
 Test ability to handle user-related exceptions.
 """
-import os
-
 from ...settings import SETTINGS
 from ...models.user import UserModel
-from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import DoesNotExist
@@ -25,17 +22,7 @@ class UserExceptionsTester(MyDataTester):
         """
         Test ability to handle user-related exceptions.
         """
-        pathToTestConfig = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(pathToTestConfig))
-        SETTINGS.Update(SettingsModel(pathToTestConfig))
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
 
         # Test retrieving default owner's user record (using UserModel's

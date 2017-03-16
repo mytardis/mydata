@@ -9,7 +9,6 @@ import sys
 import wx
 
 from ...settings import SETTINGS
-from ...models.settings import SettingsModel
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.serialize import SaveFieldsFromDialog
 from ...utils.autostart import UpdateAutostartFile
@@ -38,19 +37,9 @@ class SettingsDialogTester(MyDataSettingsTester):
         super(SettingsDialogTester, self).setUp()
         super(SettingsDialogTester, self).InitializeAppAndFrame(
             "Settings Dialog test")
-        configPath = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(
-            SettingsModel(configPath=configPath, checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
         self.settingsDialog = SettingsDialog(self.frame)
 
@@ -63,7 +52,6 @@ class SettingsDialogTester(MyDataSettingsTester):
         Test ability to open settings dialog and save fields.
         """
         # pylint: disable=too-many-statements
-        # pylint: disable=too-many-locals
 
         self.settingsDialog.Show()
 
@@ -225,20 +213,21 @@ class SettingsDialogTester(MyDataSettingsTester):
             SETTINGS.advanced.startAutomaticallyOnLogin
         PostEvent(settingsDialogValidationEvent)
 
-        # Test updating autostart file:
-        sys.stderr.write(
-            "Testing updating autostart file with "
-            "startAutomaticallyOnLogin = True...\n")
-        SETTINGS.advanced.startAutomaticallyOnLogin = True
-        UpdateAutostartFile()
-        sys.stderr.write(
-            "Testing updating autostart file with "
-            "startAutomaticallyOnLogin = False...\n")
-        SETTINGS.advanced.startAutomaticallyOnLogin = False
-        UpdateAutostartFile()
-        SETTINGS.lastCheckedAutostartValue = \
-            SETTINGS.advanced.startAutomaticallyOnLogin
-        sys.stderr.write("Finished testing updating autostart file\n")
+        if not sys.platform.startswith("win"):
+            # Test updating autostart file:
+            sys.stderr.write(
+                "Testing updating autostart file with "
+                "startAutomaticallyOnLogin = True...\n")
+            SETTINGS.advanced.startAutomaticallyOnLogin = True
+            UpdateAutostartFile()
+            sys.stderr.write(
+                "Testing updating autostart file with "
+                "startAutomaticallyOnLogin = False...\n")
+            SETTINGS.advanced.startAutomaticallyOnLogin = False
+            UpdateAutostartFile()
+            SETTINGS.lastCheckedAutostartValue = \
+                SETTINGS.advanced.startAutomaticallyOnLogin
+            sys.stderr.write("Finished testing updating autostart file\n")
 
         # Test renaming instrument to an available instrument name:
         renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
@@ -261,8 +250,8 @@ class SettingsDialogTester(MyDataSettingsTester):
         SaveFieldsFromDialog(
             self.settingsDialog, configPath=self.tempFilePath, saveToDisk=True)
         # Test dragging and dropping a MyData.cfg onto settings dialog:
-        configPath = os.path.join(
+        configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "testdata/testdataUsernameDataset.cfg")
+            "../testdata/testdataUsernameDataset.cfg"))
         self.settingsDialog.SetLocked(False)
         self.settingsDialog.OnDropFiles([configPath])

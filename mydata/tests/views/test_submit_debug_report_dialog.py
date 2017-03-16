@@ -1,8 +1,6 @@
 """
 Test ability to open submit debug report dialog.
 """
-import unittest
-import os
 import sys
 import time
 import threading
@@ -12,17 +10,16 @@ import requests
 import wx
 
 from ...settings import SETTINGS
-from ...models.settings import SettingsModel
+from ...logs import logger
 from ..fake_submit_debug_log_server import FakeSubmitDebugLogHandler
 from ..utils import GetEphemeralPort
-from ...logs import logger
+from .. import MyDataTester
 
 
-class SubmitDebugLogTester(unittest.TestCase):
+class SubmitDebugLogTester(MyDataTester):
     """
     Test ability to open submit debug report dialog.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         super(SubmitDebugLogTester, self).__init__(*args, **kwargs)
         self.httpd = None
@@ -43,12 +40,9 @@ class SubmitDebugLogTester(unittest.TestCase):
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title="Submit Debug Log Dialog test")
         self.frame.Show()
-        configPath = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg"))
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(SettingsModel(configPath=configPath,
-                                      checkForUpdates=False))
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         self.StartFakeSubmitDebugLogServer()
 
     def tearDown(self):

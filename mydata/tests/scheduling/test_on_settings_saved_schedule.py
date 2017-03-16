@@ -1,14 +1,11 @@
 """
 Test On Settings Saved schedule type.
 """
-import os
-
 import wx
 
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
-from ...models.settings import SettingsModel
 from ...models.settings import LastSettingsUpdateTrigger
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
@@ -25,19 +22,9 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
 
     def setUp(self):
         super(OnSettingsSavedScheduleTester, self).setUp()
-        configPath = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataUsernameDataset_POST.cfg")
-        self.assertTrue(os.path.exists(configPath))
-        SETTINGS.Update(
-            SettingsModel(configPath=configPath, checkForUpdates=False))
-        SETTINGS.configPath = self.tempFilePath
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        dataDirectory = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataUsernameDataset")
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         SETTINGS.schedule.scheduleType = "On Settings Saved"
         SaveSettingsToDisk()
 

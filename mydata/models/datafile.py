@@ -132,8 +132,7 @@ class DataFileModel(object):
         Create a DataFile record and return a temporary URL to upload
         to (e.g. by SCP).
         """
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        url = myTardisUrl + "/api/v1/mydata_dataset_file/"
+        url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         dataFileJson = json.dumps(dataFileDict)
         response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=dataFileJson)
@@ -146,11 +145,7 @@ class DataFileModel(object):
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
         """
-        # pylint: disable=too-many-locals
-        myTardisUsername = SETTINGS.general.username
-        myTardisApiKey = SETTINGS.general.apiKey
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        url = myTardisUrl + "/api/v1/dataset_file/"
+        url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         message = "Initializing buffered reader..."
         uploadsModel.SetMessage(uploadModel, message)
         datafileBufferedReader = io.open(dataFilePath, 'rb')
@@ -161,11 +156,7 @@ class DataFileModel(object):
              "attached_file": datafileBufferedReader},
             cb=posterCallback)
         opener = poster.streaminghttp.register_openers()
-        opener.addheaders = [("Authorization", "ApiKey " +
-                              myTardisUsername +
-                              ":" + myTardisApiKey),
-                             ("Content-Type", "application/json"),
-                             ("Accept", "application/json")]
+        opener.addheaders = SETTINGS.defaultHeaders.items()
         request = urllib2.Request(url, datagen, headers)
         response = urllib2.urlopen(request)
         return response

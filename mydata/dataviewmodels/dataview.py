@@ -7,7 +7,7 @@ import traceback
 
 import wx
 if wx.version().startswith("3.0.3.dev"):
-    from wx.dataview import DataViewIndexListModel  # pylint: disable=no-name-in-module
+    from wx.dataview import DataViewIndexListModel
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
@@ -41,8 +41,8 @@ class MyDataDataViewModel(DataViewIndexListModel):
 
         self.unfilteredData = list()
         self.filteredData = list()
-        self.filtered = False
         self.searchString = ""
+        self.filterFields = []
 
         # This is the largest ID value which has been used in this model.
         # It may no longer exist, i.e. if we delete the row with the
@@ -152,7 +152,80 @@ class MyDataDataViewModel(DataViewIndexListModel):
         Only show rows matching the query string, typed in the search box
         in the upper-right corner of the main window.
         """
-        pass
+        if len(self.filterFields) == 0:
+            return
+        self.searchString = searchString
+        query = self.searchString.lower()
+        if self.GetFilteredRowCount() == 0:
+            # This only does a shallow copy:
+            self.unfilteredData = list(self.rowsData)
+
+        for row in reversed(range(0, self.GetRowCount())):
+            rowData = self.rowsData[row]
+            if all([query not in rowData.GetValueForKey(field).lower()
+                    for field in self.filterFields]):
+                self.filteredData.append(rowData)
+                del self.rowsData[row]
+                self._RowDeleted(row)
+
+        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
+            rowData = self.filteredData[filteredRow]
+            if any([query in rowData.GetValueForKey(field).lower()
+                    for field in self.filterFields]):
+                # Model doesn't care about currently sorted column.
+                # Always use ID.
+                row = 0
+                col = 0
+                ascending = True  # Need to get current sort direction
+                while row < self.GetRowCount() and \
+                        self.Compare(self.rowsData[row],
+                                     self.filteredData[filteredRow],
+                                     col, ascending) < 0:
+                    row += 1
+
+                if row == self.GetRowCount():
+                    self.rowsData.append(self.filteredData[filteredRow])
+                    self._RowAppended()
+                else:
+                    self.rowsData.insert(row, self.filteredData[filteredRow])
+                    self._RowInserted(row)
+                del self.filteredData[filteredRow]
+
+    def _RowAppended(self):
+        """
+        Notify the view(s) using this model that a row has been added
+        """
+        if threading.current_thread().name == "MainThread":
+            super(MyDataDataViewModel, self).RowAppended()
+        else:
+            wx.CallAfter(super(MyDataDataViewModel, self).RowAppended)
+
+    def _RowInserted(self, row):
+        """
+        Notify the view(s) using this model that a row has been inserted
+        """
+        if threading.current_thread().name == "MainThread":
+            super(MyDataDataViewModel, self).RowInserted(row)
+        else:
+            wx.CallAfter(super(MyDataDataViewModel, self).RowInserted, row)
+
+    def _RowDeleted(self, row):
+        """
+        Notify the view(s) using this model that a row has been deleted
+        """
+        if threading.current_thread().name == "MainThread":
+            super(MyDataDataViewModel, self).RowDeleted(row)
+        else:
+            wx.CallAfter(super(MyDataDataViewModel, self).RowDeleted, row)
+
+    def _RowsDeleted(self, rows):
+        """
+        Notify the view(s) using this model that rows have been deleted
+        """
+        if threading.current_thread().name == "MainThread":
+            super(MyDataDataViewModel, self).RowsDeleted(rows)
+        else:
+            wx.CallAfter(super(MyDataDataViewModel, self).RowsDeleted, rows)
 
     def AddRow(self, value):
         """
@@ -160,11 +233,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
         """
         self.Filter("")
         self.rowsData.append(value)
-        # Notify views
-        if threading.current_thread().name == "MainThread":
-            self.RowAppended()
-        else:
-            wx.CallAfter(self.RowAppended)
+        self._RowAppended()
 
         self.unfilteredData = self.rowsData
         self.filteredData = list()
@@ -183,14 +252,10 @@ class MyDataDataViewModel(DataViewIndexListModel):
             del self.rowsData[row]
             rowsDeleted.append(row)
 
-        if threading.current_thread().name == "MainThread":
-            self.RowsDeleted(rowsDeleted)
-        else:
-            wx.CallAfter(self.RowsDeleted, rowsDeleted)
+        self._RowsDeleted(rowsDeleted)
 
         self.unfilteredData = list()
         self.filteredData = list()
-        self.filtered = False
         self.searchString = ""
         self.maxDataViewId = 0
 

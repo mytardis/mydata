@@ -3,9 +3,6 @@ Represents the Users tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
 import os
-import threading
-
-import wx
 
 from ..settings import SETTINGS
 from ..utils import Compare
@@ -23,65 +20,7 @@ class UsersModel(MyDataDataViewModel):
         self.columnNames = ["Id", "Username", "Name", "Email"]
         self.columnKeys = ["dataViewId", "username", "fullName", "email"]
         self.defaultColumnWidths = [40, 100, 200, 260]
-
-    def Filter(self, searchString):
-        """
-        Only show users matching the query string, typed in the search box
-        in the upper-right corner of the main window.
-        """
-        # pylint: disable=too-many-branches
-        self.searchString = searchString
-        query = self.searchString.lower()
-        if not self.filtered:
-            # This only does a shallow copy:
-            self.unfilteredData = list(self.rowsData)
-
-        for row in reversed(range(0, self.GetRowCount())):
-            if query not in self.rowsData[row].username.lower() and \
-                    query not in self.rowsData[row].fullName.lower() and \
-                    query not in self.rowsData[row].email.lower():
-                self.filteredData.append(self.rowsData[row])
-                del self.rowsData[row]
-                # notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                self.filtered = True
-
-        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            userModel = self.filteredData[filteredRow]
-            if query in userModel.fullName.lower() or \
-                    query in userModel.username.lower() or \
-                    query in userModel.email.lower():
-                # Model doesn't care about currently sorted column.
-                # Always use ID.
-                row = 0
-                col = 0
-                # Need to get current sort direction
-                ascending = True
-                while row < self.GetRowCount() and \
-                        self.Compare(self.rowsData[row],
-                                     userModel, col, ascending) < 0:
-                    row += 1
-
-                if row == self.GetRowCount():
-                    self.rowsData.append(userModel)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowAppended()
-                    else:
-                        wx.CallAfter(self.RowAppended)
-                else:
-                    self.rowsData.insert(row, userModel)
-                    # Notify the view using this model that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowInserted(row)
-                    else:
-                        wx.CallAfter(self.RowInserted, row)
-                del self.filteredData[filteredRow]
-                if self.GetFilteredRowCount() == 0:
-                    self.filtered = False
+        self.filterFields = ["username", "fullName", "email"]
 
     def Compare(self, userRecord1, userRecord2, col, ascending):
         """

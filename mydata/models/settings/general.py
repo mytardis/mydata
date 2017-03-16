@@ -153,7 +153,8 @@ class GeneralSettingsModel(object):
         """
         Set MyTardis API URL
         """
-        self.mydataConfig['mytardis_url'] = myTardisUrl.rstrip('/')
+        self.mydataConfig['mytardis_url'] = \
+            myTardisUrl.rstrip('/') if myTardisUrl else myTardisUrl
         self._defaultOwner = None
         self._instrument = None
         self._facility = None

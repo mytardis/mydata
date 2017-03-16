@@ -25,8 +25,6 @@ class GroupsViewTester(unittest.TestCase):
         """
         Test ability to open groups view.
         """
-        # pylint: disable=no-self-use
-
         dataViewId = self.groupsModel.GetMaxDataViewId() + 1
         testgroup1 = GroupModel(name="Test Group 1")
         testgroup1.dataViewId = dataViewId

@@ -1,12 +1,9 @@
 """
 Test ability to handle group-related exceptions.
 """
-import os
-
 from .. import MyDataTester
 from ...settings import SETTINGS
 from ...models.group import GroupModel
-from ...models.settings import SettingsModel
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import DoesNotExist
@@ -25,17 +22,7 @@ class GroupExceptionsTester(MyDataTester):
         """
         Test ability to handle group-related exceptions.
         """
-        pathToTestConfig = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata/testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(pathToTestConfig))
-        SETTINGS.Update(SettingsModel(pathToTestConfig))
-        dataDirectory = os.path.realpath(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../testdata", "testdataExpDataset.cfg"))
-        self.assertTrue(os.path.exists(dataDirectory))
-        SETTINGS.general.dataDirectory = dataDirectory
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
 
         # Test retrieving a valid group record (using GroupModel's

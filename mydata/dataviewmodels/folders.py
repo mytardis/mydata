@@ -58,76 +58,14 @@ class FoldersModel(MyDataDataViewModel):
         self.ignoreIntervalNumber = 0
         self.ignoreIntervalUnit = "months"
 
+        self.filterFields = \
+            ["folderName", "location", "owner.username", "experimentTitle"]
+
     def GetFolderRecord(self, row):
         """
         Return the folder model at a given row number (starting with row 0).
         """
         return self.rowsData[row]
-
-    def Filter(self, searchString):
-        """
-        Only show folders matching the query string, typed in the search box
-        in the upper-right corner of the main window.
-        """
-        self.searchString = searchString
-        query = self.searchString.lower()
-        if not self.filtered:
-            # This only does a shallow copy:
-            self.unfilteredData = list(self.rowsData)
-
-        for row in reversed(range(0, self.GetRowCount())):
-            folderModel = self.rowsData[row]
-            if query not in folderModel.folderName.lower() and \
-                    query not in folderModel.location.lower() and \
-                    query not in folderModel.owner.username.lower() and \
-                    query not in folderModel.experimentTitle:
-                self.filteredData.append(folderModel)
-                del self.rowsData[row]
-                # Notify the view(s) using this model that it has been removed
-                if threading.current_thread().name == "MainThread":
-                    self.RowDeleted(row)
-                else:
-                    wx.CallAfter(self.RowDeleted, row)
-                self.filtered = True
-
-        for filteredRow in reversed(range(0, self.GetFilteredRowCount())):
-            folderModel = self.filteredData[filteredRow]
-            if query in folderModel.folderName.lower() or \
-                    query in folderModel.location.lower() or \
-                    query in folderModel.owner.username.lower() or \
-                    query in folderModel.experimentTitle:
-                # Model doesn't care about currently sorted column.
-                # Always use ID.
-                row = 0
-                col = 0
-                ascending = True  # Need to get current sort direction
-                while row < self.GetRowCount() and \
-                        self.Compare(self.rowsData[row],
-                                     self.filteredData[filteredRow],
-                                     col, ascending) < 0:
-                    row += 1
-
-                if row == self.GetRowCount():
-                    self.rowsData\
-                        .append(self.filteredData[filteredRow])
-                    # Notify the view(s) using this model
-                    # that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowAppended()
-                    else:
-                        wx.CallAfter(self.RowAppended)
-                else:
-                    self.rowsData.insert(
-                        row, self.filteredData[filteredRow])
-                    # Notify the view(s) using this model
-                    # that it has been added
-                    if threading.current_thread().name == "MainThread":
-                        self.RowInserted(row)
-                    else:
-                        wx.CallAfter(self.RowInserted)
-                del self.filteredData[filteredRow]
-                if self.GetFilteredRowCount() == 0:
-                    self.filtered = False
 
     def GetValueByRow(self, row, col):
         """
