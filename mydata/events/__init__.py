@@ -565,11 +565,18 @@ def ProvideSettingsValidationResults(event):
     else:
         intervalIfUsed = ""
     numDatasets = getattr(event, "datasetCount", None)
-    if numDatasets and numDatasets != -1:
-        message = "Assuming a folder structure of '%s', " \
+    if numDatasets is not None and numDatasets != -1:
+        filtersSummary = ""
+        if SETTINGS.filters.userFilter or \
+                SETTINGS.filters.datasetFilter or \
+                SETTINGS.filters.experimentFilter:
+            filtersSummary = "and applying the specified filters, "
+
+        message = "Assuming a folder structure of '%s', %s" \
             "there %s %d %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
             % (SETTINGS.advanced.folderStructure,
+               filtersSummary,
                "are" if numDatasets != 1 else "is", numDatasets,
                "datasets" if numDatasets != 1 else "dataset",
                event.settingsDialog.GetDataDirectory(),
