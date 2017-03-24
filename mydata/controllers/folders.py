@@ -642,15 +642,26 @@ class FoldersController(object):
         # pylint: disable=too-many-branches
         if self.IsShuttingDown():
             return
-        if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
-            if not wx.GetApp().PerformingLookupsAndUploads():
-                EndBusyCursorIfRequired()
-                return
+        app = wx.GetApp()
+        if hasattr(app, "PerformingLookupsAndUploads") and \
+                not app.PerformingLookupsAndUploads():
+            # This means StartUploadsForFolder was never called
+            EndBusyCursorIfRequired()
+            if hasattr(app, "toolbar"):
+                app.EnableTestAndUploadToolbarButtons()
+                app.SetShouldAbort(False)
+                if self.testRun:
+                    app.testRunFrame.saveButton.Enable()
+            message = "No files were found to upload."
+            logger.info(message)
+            if hasattr(app, "GetMainFrame"):
+                app.GetMainFrame().SetStatusMessage(message)
+            return
         self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
         logger.info(message)
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if hasattr(app, "GetMainFrame"):
+            app.GetMainFrame().SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
             self.failed = True
             self.uploadsModel.CancelRemaining()
@@ -734,12 +745,11 @@ class FoldersController(object):
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
         logger.info(message)
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if hasattr(app, "GetMainFrame"):
+            app.GetMainFrame().SetStatusMessage(message)
         if self.testRun:
             logger.testrun(message)
 
-        app = wx.GetApp()
         if hasattr(app, "toolbar"):
             app.EnableTestAndUploadToolbarButtons()
             app.SetShouldAbort(False)
