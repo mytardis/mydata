@@ -362,6 +362,8 @@ class FoldersController(object):
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
         self.getOrCreateExpThreadingLock = threading.Lock()
+        self.lastErrorMessage = None
+        self.SetShowingErrorDialog(False)
 
         if sys.platform.startswith("linux"):
             StartErrandBoy()
