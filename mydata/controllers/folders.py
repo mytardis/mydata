@@ -642,9 +642,11 @@ class FoldersController(object):
         Shut down upload threads
         """
         # pylint: disable=too-many-branches
-        if self.IsShuttingDown():
+        if self.IsShuttingDown() or self.completed or self.canceled:
             return
+        self.SetShuttingDown(True)
         app = wx.GetApp()
+        SETTINGS.CloseVerifiedDatafilesCache()
         if hasattr(app, "PerformingLookupsAndUploads") and \
                 not app.PerformingLookupsAndUploads():
             # This means StartUploadsForFolder was never called
@@ -654,12 +656,13 @@ class FoldersController(object):
                 app.SetShouldAbort(False)
                 if self.testRun:
                     app.testRunFrame.saveButton.Enable()
-            message = "No files were found to upload."
+            message = "No folders were found to upload from."
             logger.info(message)
             if hasattr(app, "GetMainFrame"):
                 app.GetMainFrame().SetStatusMessage(message)
+            self.completed = True
+            self.SetShuttingDown(False)
             return
-        self.SetShuttingDown(True)
         message = "Shutting down upload threads..."
         logger.info(message)
         if hasattr(app, "GetMainFrame"):
@@ -678,8 +681,8 @@ class FoldersController(object):
         if self.uploadMethod == UploadMethod.VIA_STAGING:
             # SCP can leave orphaned SSH processes which need to be
             # cleaned up.
-            # Give each UploadModel instance's Cancel() method a change to terminate
-            # its SCP process first:
+            # Give each UploadModel instance's Cancel() method a chance to
+            # terminate its SCP process first:
             time.sleep(0.1)
             CleanUpScpAndSshProcesses()
         for thread in self.uploadWorkerThreads:
@@ -695,31 +698,7 @@ class FoldersController(object):
         self.uploadDatafileRunnable = {}
 
         if self.testRun:
-            numVerificationsCompleted = \
-                self.verificationsModel.GetCompletedCount()
-            numVerifiedUploads = \
-                self.verificationsModel.GetFoundVerifiedCount()
-            numFilesNotFoundOnServer = \
-                self.verificationsModel.GetNotFoundCount()
-            numFullSizeUnverifiedUploads = \
-                self.verificationsModel.GetFoundUnverifiedFullSizeCount()
-            numIncompleteUploads = \
-                self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
-            numFailedLookups = self.verificationsModel.GetFailedCount()
-            logger.testrun("")
-            logger.testrun("SUMMARY")
-            logger.testrun("")
-            logger.testrun("Files looked up on server: %s"
-                           % numVerificationsCompleted)
-            logger.testrun("Files verified on server: %s" % numVerifiedUploads)
-            logger.testrun("Files not found on server: %s"
-                           % numFilesNotFoundOnServer)
-            logger.testrun("Files unverified (but full size) on server: %s"
-                           % numFullSizeUnverifiedUploads)
-            logger.testrun("Files unverified (and incomplete) on server: %s"
-                           % numIncompleteUploads)
-            logger.testrun("Failed lookups: %s" % numFailedLookups)
-            logger.testrun("")
+            self.LogTestRunSummary()
 
         if self.failed:
             message = "Data scans and uploads failed."
@@ -730,8 +709,8 @@ class FoldersController(object):
                 "Data scans and uploads completed with " \
                 "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.completed:
-            message = "Data scans and uploads completed successfully."
             if self.uploadsModel.GetCompletedCount() > 0:
+                message = "Data scans and uploads completed successfully."
                 elapsedTime = self.uploadsModel.GetElapsedTime()
                 if elapsedTime and not self.testRun:
                     averageSpeedMBs = \
@@ -743,6 +722,8 @@ class FoldersController(object):
                         averageSpeed = \
                             "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
                     message += "  Average speed: %s" % averageSpeed
+            else:
+                message = "No new files were found to upload."
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
@@ -766,6 +747,36 @@ class FoldersController(object):
         EndBusyCursorIfRequired()
 
         logger.debug("")
+
+    def LogTestRunSummary(self):
+        """
+        Log summary of test run to display in Test Run frame
+        """
+        numVerificationsCompleted = \
+            self.verificationsModel.GetCompletedCount()
+        numVerifiedUploads = \
+            self.verificationsModel.GetFoundVerifiedCount()
+        numFilesNotFoundOnServer = \
+            self.verificationsModel.GetNotFoundCount()
+        numFullSizeUnverifiedUploads = \
+            self.verificationsModel.GetFoundUnverifiedFullSizeCount()
+        numIncompleteUploads = \
+            self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
+        numFailedLookups = self.verificationsModel.GetFailedCount()
+        logger.testrun("")
+        logger.testrun("SUMMARY")
+        logger.testrun("")
+        logger.testrun("Files looked up on server: %s"
+                       % numVerificationsCompleted)
+        logger.testrun("Files verified on server: %s" % numVerifiedUploads)
+        logger.testrun("Files not found on server: %s"
+                       % numFilesNotFoundOnServer)
+        logger.testrun("Files unverified (but full size) on server: %s"
+                       % numFullSizeUnverifiedUploads)
+        logger.testrun("Files unverified (and incomplete) on server: %s"
+                       % numIncompleteUploads)
+        logger.testrun("Failed lookups: %s" % numFailedLookups)
+        logger.testrun("")
 
     def VerifyDatafiles(self, folderModel):
         """

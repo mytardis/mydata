@@ -2,8 +2,11 @@
 Model class for the settings displayed in the settings dialog
 and saved to disk in MyData.cfg
 """
+import os
+import pickle
 import traceback
 import threading
+import urlparse
 
 from ...logs import logger
 from .general import GeneralSettingsModel
@@ -34,6 +37,11 @@ class SettingsModel(object):
             lastSettingsUpdateTrigger=None)
 
         self.configPath = configPath
+        self._verifiedDatafilesCache = None
+        self._verifiedDatafilesCachePath = None
+        self.initializeCacheLock = threading.Lock()
+        self.updateCacheLock = threading.Lock()
+        self.closeCacheLock = threading.Lock()
 
         self._uploaderModel = None
         self.uploadToStagingRequest = None
@@ -165,7 +173,6 @@ class SettingsModel(object):
             settings.miscellaneous.mydataConfig)
         self.lastSettingsUpdateTrigger = settings.lastSettingsUpdateTrigger
 
-
     def SavePrevious(self):
         """
         Save current settings to self.previous so we can roll back if necessary
@@ -254,3 +261,46 @@ class SettingsModel(object):
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
+
+    @property
+    def verifiedDatafilesCache(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        if not self._verifiedDatafilesCache:
+            with self.initializeCacheLock:
+                try:
+                    myTardisUrl = self.general.myTardisUrl
+                    parsed = urlparse.urlparse(myTardisUrl)
+                    self._verifiedDatafilesCachePath = os.path.join(
+                        os.path.dirname(self.configPath),
+                        "verified-files-%s-%s" %
+                        (parsed.scheme, parsed.netloc))
+                    if os.path.exists(self._verifiedDatafilesCachePath):
+                        with open(self._verifiedDatafilesCachePath,
+                                  'rb') as cacheFile:
+                            self._verifiedDatafilesCache = \
+                                pickle.load(cacheFile)
+                    else:
+                        self._verifiedDatafilesCache = dict()
+                except:
+                    self._verifiedDatafilesCache = dict()
+                    logger.warning(traceback.format_exc())
+        return self._verifiedDatafilesCache
+
+    def CloseVerifiedDatafilesCache(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        if self._verifiedDatafilesCache:
+            with self.closeCacheLock:
+                try:
+                    with open(self._verifiedDatafilesCachePath,
+                              'wb') as cacheFile:
+                        pickle.dump(self._verifiedDatafilesCache, cacheFile)
+                    self._verifiedDatafilesCache = None
+                except:
+                    logger.warning("Couldn't save verified datafiles cache.")
+                    logger.warning(traceback.format_exc())

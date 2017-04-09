@@ -17,7 +17,6 @@ class VerifyDatafileRunnable(object):
         HandleUnverifiedUnstagedUpload:  # No staged file to check size of
           Post FoundUnverifiedUnstagedEvent
 """
-
 import os
 import threading
 import traceback
@@ -93,6 +92,16 @@ class VerifyDatafileRunnable(object):
             dataset = self.folderModel.datasetModel
             if not dataset:  # test runs don't create required datasets
                 raise DoesNotExist("Dataset doesn't exist.")
+            cacheKey = \
+                "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+            if cacheKey in SETTINGS.verifiedDatafilesCache:
+                self.verificationModel.message = \
+                    "Found datafile in verified-files cache."
+                self.verificationModel.status = \
+                    VerificationStatus.FOUND_VERIFIED
+                self.verificationsModel.MessageUpdated(self.verificationModel)
+                self.HandleExistingVerifiedDatafile()
+                return
             existingDatafile = DataFileModel.GetDataFile(
                 dataset=dataset, filename=dataFileName,
                 directory=dataFileDirectory)
@@ -286,6 +295,10 @@ class VerifyDatafileRunnable(object):
         Found existing verified file on server.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
+        cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
+                              dataFilePath.encode('utf8'))
+        with SETTINGS.updateCacheLock:
+            SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)
