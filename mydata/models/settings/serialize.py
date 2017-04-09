@@ -222,12 +222,14 @@ def LoadMiscellaneousSettings(settings, configParser):
     configFileSection = "MyData"
     fields = ["locked", "uuid", "cipher", "use_none_cipher",
               "max_verification_threads", "verification_delay",
-              "fake_md5_sum", "progress_poll_interval", "immutable_datasets"]
+              "fake_md5_sum", "progress_poll_interval", "immutable_datasets",
+              "cache_datafile_lookups"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
     booleanFields = [
-        "fake_md5_sum", "use_none_cipher", "locked", "immutable_datasets"]
+        "fake_md5_sum", "use_none_cipher", "locked", "immutable_datasets",
+        "cache_datafile_lookups"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getboolean(configFileSection, field)
@@ -270,7 +272,8 @@ def CheckForUpdatedSettingsOnServer(settings):
                         "wednesday_checked", "thursday_checked",
                         "friday_checked", "saturday_checked",
                         "sunday_checked", "use_includes_file",
-                        "use_excludes_file", "immutable_datasets"):
+                        "use_excludes_file", "immutable_datasets",
+                        "cache_datafile_lookups"):
                     settings[setting['key']] = (setting['value'] == "True")
                 if setting['key'] in (
                         "timer_minutes", "ignore_interval_number",
@@ -333,7 +336,7 @@ def SaveSettingsToDisk(configPath=None):
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
                   "start_automatically_on_login", "immutable_datasets",
-                  "upload_invalid_user_folders"]
+                  "cache_datafile_lookups", "upload_invalid_user_folders"]
         settingsList = []
         for field in fields:
             value = SETTINGS[field]

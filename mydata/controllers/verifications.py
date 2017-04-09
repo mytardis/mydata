@@ -94,7 +94,8 @@ class VerifyDatafileRunnable(object):
                 raise DoesNotExist("Dataset doesn't exist.")
             cacheKey = \
                 "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
-            if cacheKey in SETTINGS.verifiedDatafilesCache:
+            if SETTINGS.miscellaneous.cacheDataFileLookups and \
+                    cacheKey in SETTINGS.verifiedDatafilesCache:
                 self.verificationModel.message = \
                     "Found datafile in verified-files cache."
                 self.verificationModel.status = \
@@ -297,8 +298,9 @@ class VerifyDatafileRunnable(object):
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
                               dataFilePath.encode('utf8'))
-        with SETTINGS.updateCacheLock:
-            SETTINGS.verifiedDatafilesCache[cacheKey] = True
+        if SETTINGS.miscellaneous.cacheDataFileLookups:
+            with SETTINGS.updateCacheLock:
+                SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)

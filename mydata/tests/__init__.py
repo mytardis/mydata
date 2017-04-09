@@ -85,9 +85,6 @@ class MyDataTester(unittest.TestCase):
             self.fakeMyTardisServerThread.join()
         if sys.platform.startswith("linux"):
             StopErrandBoy()
-        if SETTINGS.verifiedDatafilesCachePath and \
-                os.path.exists(SETTINGS.verifiedDatafilesCachePath):
-            os.remove(SETTINGS.verifiedDatafilesCachePath)
 
     def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
         """
@@ -115,6 +112,7 @@ class MyDataTester(unittest.TestCase):
             raise
         SETTINGS.general.dataDirectory = dataDirectory
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
+        SETTINGS.miscellaneous.cacheDataFileLookups = False
 
     def InitializeModels(self):
         """

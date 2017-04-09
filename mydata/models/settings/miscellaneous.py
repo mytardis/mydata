@@ -50,7 +50,8 @@ class MiscellaneousSettingsModel(object):
             'cipher',
             'use_none_cipher',
             'progress_poll_interval',
-            'immutable_datasets'
+            'immutable_datasets',
+            'cache_datafile_lookups'
         ]
 
     @property
@@ -166,6 +167,22 @@ class MiscellaneousSettingsModel(object):
         """
         self.mydataConfig['immutable_datasets'] = immutableDatasets
 
+    @property
+    def cacheDataFileLookups(self):
+        """
+        Returns True if MyData will cache local paths and dataset IDs of
+        datafiles which have been previously found to be verified on MyTardis.
+        """
+        return self.mydataConfig['cache_datafile_lookups']
+
+    @cacheDataFileLookups.setter
+    def cacheDataFileLookups(self, cacheDataFileLookups):
+        """
+        Set this to True if MyData should cache local paths and dataset IDs of
+        datafiles which have been previously found to be verified on MyTardis.
+        """
+        self.mydataConfig['cache_datafile_lookups'] = cacheDataFileLookups
+
     def SetDefaults(self):
         """
         Set default values for configuration parameters that will appear in
@@ -200,3 +217,6 @@ class MiscellaneousSettingsModel(object):
 
         # Whether datasets created by MyData should be read-only:
         self.mydataConfig['immutable_datasets'] = False
+
+        # Whether MyData should cache results of successful datafile lookups:
+        self.mydataConfig['cache_datafile_lookups'] = True
