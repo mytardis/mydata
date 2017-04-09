@@ -265,11 +265,12 @@ class Logger(object):
             debugLog += "".join(logLines[-4000:])
         return debugLog
 
-    def Flush(self):
+    def GetValue(self):
         """
-        Ensure self.loggerOutput is up-to-date
+        Return all logs sent to StringIO handler
         """
         self.streamHandler.flush()
+        return self.loggerOutput.getvalue()
 
     def SubmitLog(self, myDataMainFrame, settings,
                   url="https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"):

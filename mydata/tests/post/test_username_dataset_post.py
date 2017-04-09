@@ -84,7 +84,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
 
         # Now let's test canceling the uploads:
 
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         def StartUploads():
             """
             Start Uploads worker
@@ -106,26 +106,25 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         sys.stderr.write("\nCanceling uploads...\n")
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
-        logger.Flush()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 
         # Simulate ConnectionError while trying to access MyTardis URL:
         sys.stderr.write(
             "\nAsking fake MyTardis server to shut down abruptly...\n")
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
         event = wx.PyEvent()
         event.folderModel = self.foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
-        logger.Flush()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         # We should see some sort of connection error in the log, but we don't
         # know which one it will be.
         # Errno 10053 is a Winsock error: "Software caused connection abort"
         self.assertTrue(
             "urlopen error [Errno 32] Broken pipe" in newLogs or
+            "[Errno 54] Connection reset by peer" in newLogs or
             "BadStatusLine" in newLogs or
             "urlopen error [Errno 10053]" in newLogs)
