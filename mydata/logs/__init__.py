@@ -265,6 +265,12 @@ class Logger(object):
             debugLog += "".join(logLines[-4000:])
         return debugLog
 
+    def Flush(self):
+        """
+        Ensure self.loggerOutput is up-to-date
+        """
+        self.streamHandler.flush()
+
     def SubmitLog(self, myDataMainFrame, settings,
                   url="https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"):
         """

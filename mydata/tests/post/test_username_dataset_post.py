@@ -106,6 +106,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         sys.stderr.write("\nCanceling uploads...\n")
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
+        logger.Flush()
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 
@@ -119,6 +120,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         event.folderModel = self.foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
+        logger.Flush()
         newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
         # We should see some sort of connection error in the log, but we don't
         # know which one it will be.
