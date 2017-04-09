@@ -38,7 +38,7 @@ class SettingsModel(object):
 
         self.configPath = configPath
         self._verifiedDatafilesCache = None
-        self._verifiedDatafilesCachePath = None
+        self.verifiedDatafilesCachePath = None
         self.initializeCacheLock = threading.Lock()
         self.updateCacheLock = threading.Lock()
         self.closeCacheLock = threading.Lock()
@@ -273,12 +273,12 @@ class SettingsModel(object):
                 try:
                     myTardisUrl = self.general.myTardisUrl
                     parsed = urlparse.urlparse(myTardisUrl)
-                    self._verifiedDatafilesCachePath = os.path.join(
+                    self.verifiedDatafilesCachePath = os.path.join(
                         os.path.dirname(self.configPath),
                         "verified-files-%s-%s" %
                         (parsed.scheme, parsed.netloc))
-                    if os.path.exists(self._verifiedDatafilesCachePath):
-                        with open(self._verifiedDatafilesCachePath,
+                    if os.path.exists(self.verifiedDatafilesCachePath):
+                        with open(self.verifiedDatafilesCachePath,
                                   'rb') as cacheFile:
                             self._verifiedDatafilesCache = \
                                 pickle.load(cacheFile)
@@ -297,7 +297,7 @@ class SettingsModel(object):
         if self._verifiedDatafilesCache:
             with self.closeCacheLock:
                 try:
-                    with open(self._verifiedDatafilesCachePath,
+                    with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
                         pickle.dump(self._verifiedDatafilesCache, cacheFile)
                     self._verifiedDatafilesCache = None

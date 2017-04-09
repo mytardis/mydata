@@ -85,6 +85,9 @@ class MyDataTester(unittest.TestCase):
             self.fakeMyTardisServerThread.join()
         if sys.platform.startswith("linux"):
             StopErrandBoy()
+        if SETTINGS.verifiedDatafilesCachePath and \
+                os.path.exists(SETTINGS.verifiedDatafilesCachePath):
+            os.remove(SETTINGS.verifiedDatafilesCachePath)
 
     def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
         """
