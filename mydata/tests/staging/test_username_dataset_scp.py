@@ -199,6 +199,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
+        # Do this synchronously to ensure that the completed flag is reset:
+        foldersController.InitializeStatusFlags()
         startUploadsThread.start()
         sys.stderr.write("Waiting for uploads to start...\n")
         # We don't need to have an active SCP process during the Cancel for

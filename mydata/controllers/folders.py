@@ -332,15 +332,7 @@ class FoldersController(object):
         Initialize folders controller in preparation for uploads
         """
         # pylint: disable=too-many-branches
-        app = wx.GetApp()
-        if hasattr(app, "TestRunRunning"):
-            self.testRun = app.TestRunRunning()
-        else:
-            self.testRun = False
-        self.started = True
-        self.canceled = False
-        self.failed = False
-        self.completed = False
+        self.InitializeStatusFlags()
         self.verificationsModel.DeleteAllRows()
         self.uploadsModel.DeleteAllRows()
         self.uploadsModel.SetStartTime(datetime.datetime.now())
@@ -426,6 +418,27 @@ class FoldersController(object):
         self.finishedScanningForDatasetFolders = threading.Event()
         self.numVerificationsToBePerformed = 0
         self.finishedCountingVerifications = dict()
+
+    def InitializeStatusFlags(self):
+        """
+        Initialize flags which indicate the status of the scans and uploads
+        (started, canceled, completed etc.)  Except for self.testRun, these
+        assignments use the FoldersController class's property setter methods
+        to update the status of threading.Event() objects.
+
+        This method is called by InitForUploads, but it may also be called
+        earlier in tests where we want to ensure that the status flags are
+        set (or reset) before we test canceling the scans and uploads.
+        """
+        app = wx.GetApp()
+        if hasattr(app, "TestRunRunning"):
+            self.testRun = app.TestRunRunning()
+        else:
+            self.testRun = False
+        self.started = True
+        self.canceled = False
+        self.failed = False
+        self.completed = False
 
     def FinishedScanningForDatasetFolders(self):
         """
@@ -646,7 +659,8 @@ class FoldersController(object):
             return
         self.SetShuttingDown(True)
         app = wx.GetApp()
-        SETTINGS.CloseVerifiedDatafilesCache()
+        if SETTINGS.miscellaneous.cacheDataFileLookups:
+            SETTINGS.CloseVerifiedDatafilesCache()
         if hasattr(app, "PerformingLookupsAndUploads") and \
                 not app.PerformingLookupsAndUploads():
             # This means StartUploadsForFolder was never called
