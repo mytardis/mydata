@@ -128,10 +128,11 @@ class MyData(wx.App):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv, okToShowModalDialogs=True):
+    def __init__(self, argv, okToShowModalDialogs=True, okToRunSchedule=True):
         self.name = "MyData"
         self.argv = argv
         self.okToShowModalDialogs = okToShowModalDialogs
+        self.okToRunSchedule = okToRunSchedule
 
         self.instance = None
 
@@ -367,7 +368,15 @@ class MyData(wx.App):
                 message = \
                     "Click the MyData system tray icon to access its menu."
             Notification.Notify(message, title=title)
-            self.scheduleController.ApplySchedule(event)
+            if 'MYDATA_TESTING' in os.environ:
+                if self.okToRunSchedule:
+                    self.scheduleController.ApplySchedule(event)
+            else:
+                # wx.CallAfter is used to wait until the main loop has started
+                # and then become idle before applying the schedule, otherwise
+                # the GUI can appear frozen while the "On Startup" task is
+                # beginning.
+                wx.CallAfter(self.scheduleController.ApplySchedule, event)
 
         return True
 

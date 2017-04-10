@@ -42,6 +42,18 @@ if sys.platform.startswith("linux"):
     from ..linuxsubprocesses import StopErrandBoy
 
 
+class MyDataMinimalTester(unittest.TestCase):
+    """
+    Lightweight class to derive from for tests requiring the
+    MYDATA_TESTING environment variable to be set.
+    """
+    def setUp(self):
+        os.environ['MYDATA_TESTING'] = 'True'
+
+    def tearDown(self):
+        del os.environ['MYDATA_TESTING']
+
+
 class MyDataTester(unittest.TestCase):
     """
     Base class for inheriting from for tests requiring a fake MyTardis server
@@ -60,6 +72,7 @@ class MyDataTester(unittest.TestCase):
         self.foldersModel = None
 
     def setUp(self):
+        os.environ['MYDATA_TESTING'] = 'True'
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
@@ -76,6 +89,7 @@ class MyDataTester(unittest.TestCase):
         self.frame = wx.Frame(parent=None, title=title)
 
     def tearDown(self):
+        del os.environ['MYDATA_TESTING']
         if self.frame:
             self.frame.Hide()
             self.frame.Destroy()

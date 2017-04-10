@@ -1,17 +1,16 @@
 """
 Test ability to respond to failed DataFile creation.
 """
-import unittest
-
 import requests
 
 from ...controllers.uploads import UploadDatafileRunnable
 from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import DoesNotExist
 from ...utils.exceptions import InternalServerError
+from .. import MyDataMinimalTester
 
 
-class FailedDataFileCreationTester(unittest.TestCase):
+class FailedDataFileCreationTester(MyDataMinimalTester):
     """
     Test ability to respond to failed DataFile creation.
     """

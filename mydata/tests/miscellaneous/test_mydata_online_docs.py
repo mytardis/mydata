@@ -1,14 +1,13 @@
 """
 Test ability to access MyData's online documentation.
 """
-import unittest
-
 import wx
 
 from ...MyData import MyData
+from .. import MyDataMinimalTester
 
 
-class MyDataOnlineDocsTester(unittest.TestCase):
+class MyDataOnlineDocsTester(MyDataMinimalTester):
     """
     Test ability to access MyData's online documentation.
     """
@@ -20,8 +19,9 @@ class MyDataOnlineDocsTester(unittest.TestCase):
         """
         Test ability to access MyData's online documentation.
         """
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                okToShowModalDialogs=False)
+        self.mydataApp = MyData(
+            argv=['MyData', '--loglevel', 'DEBUG'],
+            okToShowModalDialogs=False, okToRunSchedule=False)
         pyEvent = wx.PyEvent()
         self.mydataApp.OnHelp(pyEvent)
         self.mydataApp.OnWalkthrough(pyEvent)
