@@ -739,9 +739,11 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
+        # Upper limit of max upload threads is set to 10, based on the default
+        # value of MaxSessions (10) in a typical SCP server's sshd_config.
         self.maxUploadThreadsSpinCtrl = \
             wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
-                        "5", min=1, max=99)
+                        "4", min=1, max=10)
         self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl,
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
