@@ -3,7 +3,7 @@
  *
  * Deletes application from ~/Library/Preferences/com.apple.loginitems.plist
  *
- * Usage: delete-loginitem /Application/MyApplication.app
+ * Usage: delete-loginitem /Applications/MyApplication.app
  *
  * Exit code: 0 if the application was successfully deleted from login items
  *            1 if an error occurred
@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 {
   NSArray *args = [[NSProcessInfo processInfo] arguments];
   if ([args count] != 2) {
-    fprintf(stderr, "Usage: delete-loginitem /Application/MyApplication.app\n");
+    fprintf(stderr, "Usage: delete-loginitem /Applications/MyApplication.app\n");
     exit(1);
   }
   NSString *appBundlePath = [args objectAtIndex:1];

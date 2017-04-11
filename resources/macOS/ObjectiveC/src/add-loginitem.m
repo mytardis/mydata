@@ -3,7 +3,7 @@
  *
  * Adds application to ~/Library/Preferences/com.apple.loginitems.plist
  *
- * Usage: add-loginitem /Application/MyApplication.app
+ * Usage: add-loginitem /Applications/MyApplication.app
  *
  * Exit code: 0 if the application was successfully added to login items
  *            1 if an error occurred
@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 {
   NSArray *args = [[NSProcessInfo processInfo] arguments];
   if ([args count] != 2) {
-    fprintf(stderr, "Usage: add-loginitem /Application/MyApplication.app\n");
+    fprintf(stderr, "Usage: add-loginitem /Applications/MyApplication.app\n");
     exit(1);
   }
   NSString *appBundlePath = [args objectAtIndex:1];
