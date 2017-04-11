@@ -231,13 +231,13 @@ class MyData(wx.App):
             sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
             sys.exit(0)
         if args.loglevel:
-            if args.loglevel == "DEBUG":
+            if args.loglevel.upper() == "DEBUG":
                 logger.SetLevel(logging.DEBUG)
-            elif args.loglevel == "INFO":
+            elif args.loglevel.upper() == "INFO":
                 logger.SetLevel(logging.INFO)
-            elif args.loglevel == "WARN":
+            elif args.loglevel.upper() == "WARN":
                 logger.SetLevel(logging.WARN)
-            elif args.loglevel == "ERROR":
+            elif args.loglevel.upper() == "ERROR":
                 logger.SetLevel(logging.ERROR)
 
         # MyData.cfg stores settings in INI format, readable by ConfigParser
