@@ -183,10 +183,10 @@ class CustomBuildCommand(build):
                 if os.path.isdir(subdirpath):
                     shutil.rmtree(subdirpath)
             distutils.dir_util.copy_tree(
-                "resources/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1",
-                "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1")
+                "resources/win32/openssh-7.3p1-cygwin-2.8.0",
+                "dist/MyData/win32/openssh-7.3p1-cygwin-2.8.0")
             cygwin32HomeDir = \
-                "dist/MyData/win32/openssh-7.1p1-hpn-14.9-cygwin-2.2.1/home"
+                "dist/MyData/win32/openssh-7.3p1-cygwin-2.8.0/home"
             for subdir in os.listdir(cygwin32HomeDir):
                 subdirpath = os.path.join(cygwin32HomeDir, subdir)
                 if os.path.isdir(subdirpath):
@@ -261,7 +261,7 @@ Source: "MyData\*.*"; DestDir: "{app}"; Flags: recursesubdirs
 [Dirs]
 Name: "{commonappdata}\{#Organization}\{#MyDataAppName}"; Permissions: "everyone-modify"
 Name: "{app}\win64\openssh-7.3p1-cygwin-2.6.0\home"; Permissions: "users-modify"
-Name: "{app}\win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1\home"; Permissions: "users-modify"
+Name: "{app}\win32\openssh-7.3p1-cygwin-2.8.0\home"; Permissions: "users-modify"
 
 [Tasks]
 Name: startup; Description: "{cm:AutoStartProgram,{#MyDataAppName}}"; GroupDescription: "Start Automatically On Login:"

@@ -80,7 +80,7 @@ class OpenSSH(object):
         if sixtyFourBitOperatingSystem:
             winOpensshDir = r"win64\openssh-7.3p1-cygwin-2.6.0"
         else:
-            winOpensshDir = r"win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1"
+            winOpensshDir = r"win32\openssh-7.3p1-cygwin-2.8.0"
         if hasattr(sys, "frozen"):
             baseDir = os.path.dirname(sys.executable)
         else:

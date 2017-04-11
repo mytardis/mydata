@@ -1,10 +1,10 @@
---- ../tmp/openssh-7.1p1/authfile.c	2015-08-21 14:49:03.000000000 +1000
-+++ authfile.c	2015-12-10 11:29:33.553800000 +1100
-@@ -177,9 +177,13 @@
+--- authfile.c.orig	2017-04-12 07:47:11.064400000 +1000
++++ authfile.c	2017-04-07 20:42:50.778000000 +1000
+@@ -178,9 +178,13 @@
  	 * permissions of the file. if the key owned by a different user,
  	 * then we don't care.
  	 */
-+        /*
++         /*
  #ifdef HAVE_CYGWIN
  	if (check_ntsec(filename))
  #endif
@@ -14,7 +14,7 @@
  	if ((st.st_uid == getuid()) && (st.st_mode & 077) != 0) {
  		error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
  		error("@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @");
-@@ -190,6 +194,7 @@
+@@ -191,6 +195,7 @@
  		error("This private key will be ignored.");
  		return SSH_ERR_KEY_BAD_PERMISSIONS;
  	}
