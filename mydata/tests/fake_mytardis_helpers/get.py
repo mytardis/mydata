@@ -12,6 +12,9 @@ import urllib
 from . import EMPTY_API_LIST, STAGING_PATH, TEST_FACILITY, TEST_INSTRUMENT
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
 
+# This storage box attribute can be overwritten by an ephemeral port:
+SCP_PORT = 2200
+
 
 def FakeMyTardisGet(mytardis):
     """
@@ -381,7 +384,7 @@ def RespondToUploaderRegRequest(mytardis):
                             "key": "scp_port",
                             "resource_uri": "/api/v1/storageboxattribute/13/",
                             "storage_box": "/api/v1/storagebox/10/",
-                            "value": "2200",
+                            "value": str(SCP_PORT),
                         },
                     ],
                     "options": [

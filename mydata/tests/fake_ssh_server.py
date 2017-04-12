@@ -3,18 +3,33 @@ fake_ssh_server.py
 
 Local SSH/SCP server for testing.
 
-It listens on port 2200, so you can connect to it as follows:
+A test SSH/SCP server can be created with:
 
-ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyDataTest \
+    self.sshd = ThreadedSshServer(("127.0.0.1", 2200))
+
+or an ephemeral port can be used (instead of 2200).
+
+The unit test can spawn a worker thread which calls:
+
+    self.sshd.serve_forever()
+
+The unit test's tearDown method can then call:
+
+    self.sshd.shutdown()
+
+SSH client processes can then connect to it as follows:
+
+    ssh -oNoHostAuthenticationForLocalhost=yes -i ~/.ssh/MyDataTest \
         -p 2200 mydata@localhost wc -c setup.py
 
 It can also be used to test SCP, for example, copying the file "hello"
 using a Cygwin build of scp from a Windows command prompt:
 
-scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
--i /cygdrive/C/Users/jsmith/.ssh/MyDataTest \
-/cygdrive/C/Users/jsmith/Desktop/hello.txt \
-mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
+    scp -v -oNoHostAuthenticationForLocalhost=yes -P 2200 \
+    -i /cygdrive/C/Users/jsmith/.ssh/MyDataTest \
+    /cygdrive/C/Users/jsmith/Desktop/hello.txt \
+    mydata@localhost:/cygdrive/C/Users/jsmith/hello2.txt
+
 """
 # pylint: disable=invalid-name
 # pylint: disable=unused-argument
@@ -283,7 +298,8 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 self.chan.close()
 
             if "scp" in self.server_instance.command:
-                self.verbose = ("-v" in self.server_instance.command.split(" "))
+                self.verbose = \
+                    ("-v" in self.server_instance.command.split(" "))
                 if self.verbose:
                     logger.info("Executing: %s", self.server_instance.command)
                 stderr_handle = subprocess.PIPE if self.verbose else None
@@ -495,7 +511,8 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
         except Exception as e:
             logger.error(
                 '*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
-            if not isinstance(e, socket.error) and not isinstance(e, select.error):
+            if not isinstance(e, socket.error) and \
+                    not isinstance(e, select.error):
                 logger.error(traceback.format_exc())
             self.close_transport(success=False)
             return

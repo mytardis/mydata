@@ -11,6 +11,7 @@ import select
 import wx
 
 import mydata.utils.openssh as OpenSSH
+import mydata.tests.fake_mytardis_helpers.get as fake_mytardis_get
 from ...logs import logger
 from ...settings import SETTINGS
 from ...models.settings.validation import ValidateSettings
@@ -23,6 +24,7 @@ from ...utils.exceptions import PrivateKeyDoesNotExist
 from .. import MyDataScanFoldersTester
 from ..fake_ssh_server import ThreadedSshServer
 from ..utils import Subtract
+from ..utils import GetEphemeralPort
 
 
 class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
@@ -33,6 +35,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         super(ScanUsernameDatasetScpTester, self).__init__(*args, **kwargs)
         self.fakeSshServerThread = None
         self.fakeSshServerStopped = False
+        self.scpPort = None
 
     def setUp(self):
         super(ScanUsernameDatasetScpTester, self).setUp()
@@ -47,6 +50,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
         except PrivateKeyDoesNotExist:
             self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
+        self.scpPort = GetEphemeralPort()
+        fake_mytardis_get.SCP_PORT = self.scpPort
         self.StartFakeSshServer()
 
     def tearDown(self):
@@ -111,15 +116,15 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         username = "mydata"
         privateKeyFilePath = self.keyPair.privateKeyFilePath
         host = "127.0.0.1"
-        port = 2200
         sys.stderr.write("Waiting for fake SSH server to start up...\n")
         attempts = 0
         while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
-                                           host, port):
+                                           host, self.scpPort):
             attempts += 1
             if attempts > 10:
                 raise Exception(
-                    "Couldn't connect to SSH server at 127.0.0.1:2200")
+                    "Couldn't connect to SSH server at 127.0.0.1:%s"
+                    % self.scpPort)
             time.sleep(0.25)
 
         foldersController.InitForUploads()
@@ -182,7 +187,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
                          numFiles - numExistingVerifiedFiles -
                          numUnverifiedFullSizeFiles -
                          numTriggeringMissingApiEndpoint)
-
 
         sys.stderr.write("Testing canceling uploads...\n")
         loggerOutput = logger.GetValue()
@@ -310,7 +314,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         defaultTimeout = OpenSSH.CONNECTION_TIMEOUT
         OpenSSH.CONNECTION_TIMEOUT = 1
         sys.stderr.write(
-            "\tSSH ConnectionTimeout: %s second(s)\n" % OpenSSH.CONNECTION_TIMEOUT)
+            "\tSSH ConnectionTimeout: %s second(s)\n"
+            % OpenSSH.CONNECTION_TIMEOUT)
         sys.stderr.write(
             "\tMax upload retries: %s\n" % SETTINGS.advanced.maxUploadRetries)
         sys.stderr.write("\tNumber of uploads: %s\n\n" % uploadsProcessed)
@@ -335,9 +340,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
 
         self.assertRegexpMatches(
             newLogs,
-            ".*ssh: connect to host localhost port 2200: Connection refused.*"
+            ".*ssh: connect to host localhost port %s: Connection refused.*"
             "|"
-            ".*Connection timed out during banner exchange.*")
+            ".*Connection timed out during banner exchange.*" % self.scpPort)
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
         OpenSSH.CONNECTION_TIMEOUT = defaultTimeout
 
@@ -345,7 +350,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         """
         Start fake SSH server.
         """
-        self.sshd = ThreadedSshServer(("127.0.0.1", 2200))
+        self.sshd = ThreadedSshServer(("127.0.0.1", self.scpPort))
 
         def FakeSshServer():
             """ Run fake SSH server """
