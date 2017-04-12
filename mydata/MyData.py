@@ -166,7 +166,6 @@ class MyData(wx.App):
         self.shouldAbort = threading.Event()
 
         self.scanningFoldersThreadingLock = threading.Lock()
-        self.numUserFoldersScanned = 0
 
         self.connectivity = Connectivity()
 
@@ -776,20 +775,18 @@ class MyData(wx.App):
         else:
             userOrGroup = "user"
 
-        self.numUserFoldersScanned = 0
         self.shouldAbort.clear()
 
-        def WriteProgressUpdateToStatusBar():
+        def WriteProgressUpdateToStatusBar(numUserOrGroupFoldersScanned):
             """
             Write progress update to status bar.
             """
-            self.numUserFoldersScanned += 1
             message = "Scanned %d of %d %s folders" % (
-                self.numUserFoldersScanned,
+                numUserOrGroupFoldersScanned,
                 UsersModel.GetNumUserOrGroupFolders(),
                 userOrGroup)
             self.frame.SetStatusMessage(message)
-            if self.numUserFoldersScanned == \
+            if numUserOrGroupFoldersScanned == \
                     UsersModel.GetNumUserOrGroupFolders():
                 logger.info(message)
                 if testRun:

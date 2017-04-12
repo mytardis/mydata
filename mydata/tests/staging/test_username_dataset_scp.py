@@ -77,7 +77,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         self.assertEqual(SETTINGS.uploaderModel.name, "Test Instrument")
         self.InitializeModels()
         self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ProgressCallback,
             MyDataScanFoldersTester.ShouldAbort)
         # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
         # so the "INVALID_USER" folder is not included:

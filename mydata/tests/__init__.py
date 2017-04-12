@@ -201,11 +201,11 @@ class MyDataScanFoldersTester(MyDataTester):
     Includes callbacks used by ScanFolders.
     """
     @staticmethod
-    def IncrementProgressDialog():
+    def ProgressCallback(numUserOrGroupFoldersScanned):
         """
         Callback for ScanFolders.
         """
-        pass
+        assert numUserOrGroupFoldersScanned > 0
 
     @staticmethod
     def ShouldAbort():
@@ -221,5 +221,5 @@ class MyDataScanFoldersTester(MyDataTester):
         ValidateSettings()
         self.InitializeModels()
         self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ProgressCallback,
             MyDataScanFoldersTester.ShouldAbort)

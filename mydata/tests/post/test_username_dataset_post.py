@@ -40,7 +40,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         self.InitializeModels()
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
         self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
+            MyDataScanFoldersTester.ProgressCallback,
             MyDataScanFoldersTester.ShouldAbort)
         self.assertEqual(
             sorted(self.usersModel.GetValuesForColname("Username")),

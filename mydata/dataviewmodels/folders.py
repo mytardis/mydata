@@ -208,6 +208,7 @@ class FoldersModel(MyDataDataViewModel):
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
         dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
+        numUserFoldersScanned = 0
         for userFolderName in userFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
@@ -288,10 +289,12 @@ class FoldersModel(MyDataDataViewModel):
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
 
+            numUserFoldersScanned += 1
             if threading.current_thread().name == "MainThread":
-                writeProgressUpdateToStatusBar()
+                writeProgressUpdateToStatusBar(numUserFoldersScanned)
             else:
-                wx.CallAfter(writeProgressUpdateToStatusBar)
+                wx.CallAfter(
+                    writeProgressUpdateToStatusBar, numUserFoldersScanned)
 
     def ScanForGroupFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
         """
@@ -305,6 +308,7 @@ class FoldersModel(MyDataDataViewModel):
         folderStructure = SETTINGS.advanced.folderStructure
         uploadInvalidUserOrGroupFolders = \
             SETTINGS.advanced.uploadInvalidUserOrGroupFolders
+        numGroupFoldersScanned = 0
         for groupFolderName in groupFolderNames:
             if shouldAbort():
                 wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
@@ -353,10 +357,12 @@ class FoldersModel(MyDataDataViewModel):
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
+            numGroupFoldersScanned += 1
             if threading.current_thread().name == "MainThread":
-                writeProgressUpdateToStatusBar()
+                writeProgressUpdateToStatusBar(numGroupFoldersScanned)
             else:
-                wx.CallAfter(writeProgressUpdateToStatusBar)
+                wx.CallAfter(
+                    writeProgressUpdateToStatusBar, numGroupFoldersScanned)
 
     def ScanForDatasetFolders(self, pathToScan, owner, userFolderName):
         """
