@@ -22,7 +22,7 @@ class Notification(object):
         Post notification.
         """
         if sys.platform.startswith("win"):
-            wx.GetApp().taskBarIcon.ShowBalloon(title, message)
+            wx.GetApp().frame.taskBarIcon.ShowBalloon(title, message)
             return
         if sys.platform.startswith("linux"):
             try:
