@@ -6,9 +6,6 @@ Main module for MyData.
 To run MyData from the command-line, use "python run.py", where run.py is
 in the parent directory of the directory containing MyData.py.
 """
-
-# pylint: disable=wrong-import-position
-
 import sys
 import os
 import traceback
@@ -20,20 +17,7 @@ import webbrowser
 
 import appdirs
 import requests
-
 import wx
-if 'phoenix' in wx.PlatformInfo:
-    from wx.adv import EVT_TASKBAR_LEFT_UP
-    from wx.adv import EVT_TASKBAR_LEFT_DOWN
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-else:
-    from wx import EVT_TASKBAR_LEFT_UP
-    from wx import EVT_TASKBAR_LEFT_DOWN
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
-    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
 from . import __version__ as VERSION
 from . import LATEST_COMMIT
@@ -69,6 +53,19 @@ from .utils.connectivity import Connectivity
 from .views.connectivity import ReportNoActiveInterfaces
 if sys.platform.startswith("linux"):
     from .linuxsubprocesses import StopErrandBoy
+
+if 'phoenix' in wx.PlatformInfo:
+    from wx.adv import EVT_TASKBAR_LEFT_UP
+    from wx.adv import EVT_TASKBAR_LEFT_DOWN
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
+else:
+    from wx import EVT_TASKBAR_LEFT_UP
+    from wx import EVT_TASKBAR_LEFT_DOWN
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
 
 class MyData(wx.App):

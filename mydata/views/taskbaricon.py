@@ -5,21 +5,19 @@ mydata/views/taskbaricon.py
 Provides a system tray icon (Windows)
 or menubar icon (Mac OS X) for MyData.
 """
-
-# pylint: disable=wrong-import-position
-
 import webbrowser
 
 import wx
+
+from ..media import MYDATA_ICONS
+from ..logs import logger
+
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
     from wx.adv import TaskBarIcon
 else:
     from wx import EmptyIcon
     from wx import TaskBarIcon
-
-from ..media import MYDATA_ICONS
-from ..logs import logger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):

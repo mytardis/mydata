@@ -12,7 +12,6 @@ __version__ = "0.7.0-beta6"
 try:
     if hasattr(sys, "frozen"):
         # pylint: disable=import-error
-        # pylint: disable=wrong-import-position
         from .commitdef import LATEST_COMMIT
     else:
         LINE = None

@@ -6,12 +6,13 @@ import threading
 import traceback
 
 import wx
+
+from ..logs import logger
+
 if 'phoenix' in wx.PlatformInfo:
     from wx.dataview import DataViewIndexListModel
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
-
-from ..logs import logger  # pylint: disable=wrong-import-position
 
 
 class ColumnRenderer(object):

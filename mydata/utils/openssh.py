@@ -15,8 +15,6 @@ otherwise we need to worry about escaping special characters like
 '>' with carets (i.e. '^>').
 
 """
-# pylint: disable=wrong-import-position
-
 import sys
 from datetime import datetime
 import os
@@ -32,11 +30,6 @@ import struct
 import psutil
 import requests
 
-if sys.platform.startswith("win"):
-    import win32process
-
-if sys.platform.startswith("linux"):
-    import mydata.linuxsubprocesses as linuxsubprocesses
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.datafile import DataFileModel
@@ -51,6 +44,12 @@ from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
+
+if sys.platform.startswith("win"):
+    import win32process
+
+if sys.platform.startswith("linux"):
+    import mydata.linuxsubprocesses as linuxsubprocesses
 
 # Running subprocess's communicate from multiple threads can cause high CPU
 # usage, so we poll each subprocess before running communicate, using a sleep

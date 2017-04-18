@@ -1,13 +1,11 @@
 """
 Classes for MyData's settings dialog.
 """
-
 # Disabling some Pylint checks for now...
 # pylint: disable=missing-docstring
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-statements
 # pylint: disable=no-member
-# pylint: disable=wrong-import-position
 
 from datetime import datetime
 from datetime import timedelta
@@ -17,14 +15,6 @@ import os
 import traceback
 
 import wx
-if 'phoenix' in wx.PlatformInfo:
-    import wx.lib.masked
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-else:
-    import wx.lib.masked
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
 
 from ..settings import SETTINGS
 from ..models.settings.serialize import LoadSettings
@@ -35,6 +25,15 @@ from ..utils.autostart import IsMyDataShortcutInWinStartupItems
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
+
+if 'phoenix' in wx.PlatformInfo:
+    import wx.lib.masked
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+else:
+    import wx.lib.masked
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
 
 
 class SettingsDropTarget(wx.FileDropTarget):
