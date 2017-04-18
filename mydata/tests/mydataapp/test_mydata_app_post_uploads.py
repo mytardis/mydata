@@ -28,14 +28,14 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
-        self.mydataApp.taskBarIcon.CreatePopupMenu()
+        self.mydataApp.frame.taskBarIcon.CreatePopupMenu()
         # When running MyData without an event loop, this will block until complete:
         self.mydataApp.OnRefresh(event=None, needToValidateSettings=False)
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
-        uploadsModel = self.mydataApp.uploadsModel
+        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         statusColumn = 5
         self.assertEqual(uploadsModel.GetValueByRow(0, statusColumn),
                          uploadsModel.completedIcon)

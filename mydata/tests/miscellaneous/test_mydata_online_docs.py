@@ -1,6 +1,8 @@
 """
 Test ability to access MyData's online documentation.
 """
+import os
+
 import wx
 
 from ...MyData import MyData
@@ -15,13 +17,19 @@ class MyDataOnlineDocsTester(MyDataMinimalTester):
         super(MyDataOnlineDocsTester, self).__init__(*args, **kwargs)
         self.mydataApp = None
 
+    def setUp(self):
+        super(MyDataOnlineDocsTester, self).setUp()
+        os.environ['MYDATA_DONT_RUN_SCHEDULE'] = 'True'
+
+    def tearDown(self):
+        super(MyDataOnlineDocsTester, self).tearDown()
+        del os.environ['MYDATA_DONT_RUN_SCHEDULE']
+
     def test_mydata_online_docs(self):
         """
         Test ability to access MyData's online documentation.
         """
-        self.mydataApp = MyData(
-            argv=['MyData', '--loglevel', 'DEBUG'],
-            okToShowModalDialogs=False, okToRunSchedule=False)
+        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         pyEvent = wx.PyEvent()
         self.mydataApp.OnHelp(pyEvent)
         self.mydataApp.OnWalkthrough(pyEvent)

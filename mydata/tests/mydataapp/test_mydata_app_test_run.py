@@ -32,7 +32,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
 
-        popupMenu = self.mydataApp.taskBarIcon.CreatePopupMenu()
+        popupMenu = self.mydataApp.frame.taskBarIcon.CreatePopupMenu()
 
         # Just for test coverage:
         self.mydataApp.LogOnRefreshCaller(event=None, jobId=1)
@@ -45,7 +45,8 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         pyEvent.SetId(toolbar.uploadTool.GetId())
         self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
         # Requires popupMenu (defined above):
-        pyEvent.SetId(self.mydataApp.taskBarIcon.GetSyncNowMenuItem().GetId())
+        pyEvent.SetId(
+            self.mydataApp.frame.taskBarIcon.GetSyncNowMenuItem().GetId())
         self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
         mydataEvent = MYDATA_EVENTS.ValidateSettingsForRefreshEvent()
         self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)

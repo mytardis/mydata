@@ -52,7 +52,8 @@ class ManualScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         self.assertIn(
             "ApplySchedule - MainThread - DEBUG - Schedule type is Manually",
             logger.loggerOutput.getvalue())

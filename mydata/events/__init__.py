@@ -1,6 +1,7 @@
 """
 Custom events for MyData.
 """
+import os
 import threading
 import traceback
 import sys
@@ -242,7 +243,7 @@ def ShutdownForRefresh(event):
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 wx.CallAfter(ShowDialog)
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
@@ -368,7 +369,7 @@ def RenameInstrument(event):
                        event.facilityName)
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
-                if wx.GetApp().okToShowModalDialogs:
+                if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                     dlg.ShowModal()
                 event.settingsDialog.instrumentNameField.SetFocus()
                 event.settingsDialog.instrumentNameField.SelectAll()
@@ -500,7 +501,7 @@ def ProvideSettingsValidationResults(event):
                     % invalidSettings.suggestion
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.CANCEL | wx.ICON_ERROR)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 okToUseSuggestion = dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -516,7 +517,7 @@ def ProvideSettingsValidationResults(event):
         else:
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -584,7 +585,7 @@ def ProvideSettingsValidationResults(event):
         confirmationDialog = \
             wx.MessageDialog(None, message, "MyData",
                              wx.YES | wx.NO | wx.ICON_QUESTION)
-        if wx.GetApp().okToShowModalDialogs:
+        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
@@ -621,7 +622,7 @@ def ProvideSettingsValidationResults(event):
             title = "Manual Schedule"
             dlg = wx.MessageDialog(None, message, title,
                                    wx.OK | wx.ICON_WARNING)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 dlg.ShowModal()
             else:
                 logger.warning(message)

@@ -40,14 +40,12 @@ class FoldersController(object):
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
-    def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
-                 verificationsModel, uploadsModel):
+    def __init__(self, notifyWindow, dataViewModels):
         self.notifyWindow = notifyWindow
-        self.foldersModel = foldersModel
-        self.foldersView = foldersView
-        self.usersModel = usersModel
-        self.verificationsModel = verificationsModel
-        self.uploadsModel = uploadsModel
+        self.foldersModel = dataViewModels['folders']
+        self.usersModel = dataViewModels['users']
+        self.verificationsModel = dataViewModels['verifications']
+        self.uploadsModel = dataViewModels['uploads']
 
         self.shuttingDown = threading.Event()
         self.showingErrorDialog = threading.Event()

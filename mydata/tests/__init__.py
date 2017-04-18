@@ -73,6 +73,7 @@ class MyDataTester(unittest.TestCase):
 
     def setUp(self):
         os.environ['MYDATA_TESTING'] = 'True'
+        os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
@@ -85,11 +86,11 @@ class MyDataTester(unittest.TestCase):
         Initialize generic wxPython app and main frame
         """
         self.app = wx.App()
-        self.app.okToShowModalDialogs = False
         self.frame = wx.Frame(parent=None, title=title)
 
     def tearDown(self):
         del os.environ['MYDATA_TESTING']
+        del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
         if self.frame:
             self.frame.Hide()
             self.frame.Destroy()

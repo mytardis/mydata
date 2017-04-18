@@ -9,11 +9,24 @@ import wx
 
 from ..media import MYDATA_ICONS
 from ..media import IconStyle
+from .dataview import MyDataDataView
+from .log import LogView
+from .taskbaricon import MyDataTaskBarIcon
 
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
+    from wx.adv import EVT_TASKBAR_LEFT_UP
+    from wx.adv import EVT_TASKBAR_LEFT_DOWN
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 else:
     from wx import EmptyIcon
+    from wx import EVT_TASKBAR_LEFT_UP
+    from wx import EVT_TASKBAR_LEFT_DOWN
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
+    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 
 
 class NotebookTabs(object):
@@ -33,8 +46,9 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
-    def __init__(self, title, style):
-        wx.Frame.__init__(self, None, wx.ID_ANY, title, style=style)
+    def __init__(self, title, dataViewModels):
+        # R: 44, 4: Too many statements (51/50) (too-many-statements)
+        wx.Frame.__init__(self, None, wx.ID_ANY, title)
         self.SetSize(wx.Size(1000, 600))
         self.statusbar = wx.StatusBar(self)
         if sys.platform.startswith("win"):
@@ -46,10 +60,9 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetStatusWidths([-1, 60])
 
         self.mydataApp = wx.GetApp()
+        self.dataViewModels = dataViewModels
 
-        self.menuBar = None
-        self.editMenu = None
-        self.helpMenu = None
+        self.panel = wx.Panel(self)
 
         if sys.platform.startswith("darwin"):
             self.CreateMacMenu()
@@ -60,6 +73,74 @@ class MyDataFrame(wx.Frame):
         icon = EmptyIcon()
         icon.CopyFromBitmap(bmp)
         self.SetIcon(icon)
+
+        self.panel = wx.Panel(self)
+
+        if 'phoenix' in wx.PlatformInfo:
+            self.tabbedView = AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
+        else:
+            self.tabbedView = AuiNotebook(self.panel, style=AUI_NB_TOP)
+        # Without the following line, the tab font looks
+        # too small on Mac OS X:
+        self.tabbedView.SetFont(self.panel.GetFont())
+        self.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
+                  self.OnNotebookPageChanging, self.tabbedView)
+
+        self.dataViews = dict()
+        if self.dataViewModels:
+            self.AddDataViews()
+
+        self.logView = LogView(self.tabbedView)
+        self.tabbedView.AddPage(self.logView, "Log")
+
+        sizer = wx.BoxSizer()
+        sizer.Add(self.tabbedView, 1, flag=wx.EXPAND)
+        self.panel.SetSizer(sizer)
+
+        sizer = wx.BoxSizer()
+        sizer.Add(self.panel, 1, flag=wx.EXPAND)
+        self.SetSizer(sizer)
+
+        self.tabbedView.SendSizeEvent()
+
+        self.panel.SetFocus()
+
+        self.taskBarIcon = MyDataTaskBarIcon(self)
+        if sys.platform.startswith("linux"):
+            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
+        else:
+            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
+
+        self.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
+
+    def AddDataViews(self):
+        """
+        Create data views and add them to tabbed view.
+        """
+        self.dataViews['folders'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['folders'])
+        self.tabbedView.AddPage(self.dataViews['folders'], "Folders")
+
+        self.dataViews['users'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['users'])
+        self.tabbedView.AddPage(self.dataViews['users'], "Users")
+
+        self.dataViews['groups'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['groups'])
+        self.tabbedView.AddPage(self.dataViews['groups'], "Groups")
+
+        self.dataViews['verifications'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['verifications'])
+        self.tabbedView.AddPage(
+            self.dataViews['verifications'], "Verifications")
+
+        self.dataViews['uploads'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['uploads'])
+        self.tabbedView.AddPage(self.dataViews['uploads'], "Uploads")
+
+        self.dataViews['tasks'] = MyDataDataView(
+            self.tabbedView, self.dataViewModels['tasks'])
+        self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
 
     def SetStatusMessage(self, msg):
         """
@@ -82,35 +163,60 @@ class MyDataFrame(wx.Frame):
         enabling command-c (copy) and command-v (paste)
         """
         from ..MyData import MyData
-        self.menuBar = wx.MenuBar()
-        self.editMenu = wx.Menu()
-        self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-        self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-        self.editMenu.AppendSeparator()
-        self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
-                             "Cut the selected text")
-        self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
-                             "Copy the selected text")
-        self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
-                             "Paste text from the clipboard")
-        self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
-                             "Select All")
-        self.menuBar.Append(self.editMenu, "Edit")
+        menuBar = wx.MenuBar()
+        editMenu = wx.Menu()
+        editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
+        editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
+        editMenu.AppendSeparator()
+        editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X", "Cut the selected text")
+        editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C", "Copy the selected text")
+        editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
+                        "Paste text from the clipboard")
+        editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A", "Select All")
+        menuBar.Append(editMenu, "Edit")
 
-        self.helpMenu = wx.Menu()
+        helpMenu = wx.Menu()
 
         helpMenuItemID = wx.NewId()
-        self.helpMenu.Append(helpMenuItemID, "&MyData Help")
+        helpMenu.Append(helpMenuItemID, "&MyData Help")
         self.Bind(wx.EVT_MENU, MyData.OnHelp, id=helpMenuItemID)
 
         walkthroughMenuItemID = wx.NewId()
-        self.helpMenu.Append(walkthroughMenuItemID, "Mac OS X &Walkthrough")
+        helpMenu.Append(walkthroughMenuItemID, "Mac OS X &Walkthrough")
         self.Bind(wx.EVT_MENU, MyData.OnWalkthrough, id=walkthroughMenuItemID)
 
-        self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
+        helpMenu.Append(wx.ID_ABOUT, "&About MyData")
         self.Bind(wx.EVT_MENU, MyData.OnAbout, id=wx.ID_ABOUT)
-        self.menuBar.Append(self.helpMenu, "&Help")
-        self.SetMenuBar(self.menuBar)
+        menuBar.Append(helpMenu, "&Help")
+        self.SetMenuBar(menuBar)
+
+    def OnNotebookPageChanging(self, event):
+        """
+        Clear the search field after switching views
+        (e.g. from Folders to Users).
+        """
+        if self.toolbar.searchCtrl:
+            self.toolbar.searchCtrl.SetValue("")
+        event.Skip()
+
+    def OnDoSearch(self, event):
+        """
+        Triggered by user typing into search field in upper-right corner
+        or main window.
+        """
+        if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
+            self.dataViewModels['folders'].Filter(event.GetString())
+        elif self.tabbedView.GetSelection() == NotebookTabs.USERS:
+            self.dataViewModels['users'].Filter(event.GetString())
+        elif self.tabbedView.GetSelection() == NotebookTabs.GROUPS:
+            self.dataViewModels['groups'].Filter(event.GetString())
+
+    def OnTaskBarLeftClick(self, event):
+        """
+        Called when task bar icon is clicked with the left mouse button.
+        """
+        self.taskBarIcon.PopupMenu(self.taskBarIcon.CreatePopupMenu())
+        event.Skip()
 
 
 class MyDataToolbar(object):
@@ -275,11 +381,9 @@ class MyDataToolbar(object):
                                         style=wx.TE_PROCESS_ENTER)
         self.searchCtrl.ShowSearchButton(True)
         self.searchCtrl.ShowCancelButton(True)
-        if hasattr(self.mydataApp, "OnDoSearch"):
-            self.parent.Bind(
-                wx.EVT_TEXT_ENTER, self.mydataApp.OnDoSearch, self.searchCtrl)
-            self.parent.Bind(
-                wx.EVT_TEXT, self.mydataApp.OnDoSearch, self.searchCtrl)
+        self.parent.Bind(
+            wx.EVT_TEXT_ENTER, self.parent.OnDoSearch, self.searchCtrl)
+        self.parent.Bind(wx.EVT_TEXT, self.parent.OnDoSearch, self.searchCtrl)
         self.toolbar.AddControl(self.searchCtrl)
 
     def GetToolEnabled(self, toolId):

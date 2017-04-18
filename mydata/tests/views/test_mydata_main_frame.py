@@ -13,8 +13,7 @@ class MyDataMainFrameTester(unittest.TestCase):
     """
     def setUp(self):
         self.app = wx.App()
-        self.mydataFrame = MyDataFrame(
-            title="MyData", style=wx.DEFAULT_FRAME_STYLE)
+        self.mydataFrame = MyDataFrame(title="MyData", dataViewModels=None)
 
     def tearDown(self):
         self.mydataFrame.Hide()

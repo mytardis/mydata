@@ -12,7 +12,6 @@ from ...settings import SETTINGS
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
-from ...views.dataview import MyDataDataView
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
 from ..utils import Subtract
@@ -59,11 +58,12 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
-        foldersView = MyDataDataView(self.frame, self.foldersModel)
-        foldersController = FoldersController(
-            self.frame, self.foldersModel, foldersView, self.usersModel,
-            verificationsModel, uploadsModel)
-
+        dataViewModels = dict(
+            folders=self.foldersModel,
+            users=self.usersModel,
+            verifications=verificationsModel,
+            uploads=uploadsModel)
+        foldersController = FoldersController(self.frame, dataViewModels)
         foldersController.InitForUploads()
         for row in range(self.foldersModel.GetRowCount()):
             folderModel = self.foldersModel.GetFolderRecord(row)

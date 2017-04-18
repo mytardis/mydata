@@ -51,13 +51,15 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
-        self.assertEqual(self.mydataApp.tasksModel.GetRowCount(), 1)
-        self.assertEqual(self.mydataApp.tasksModel.GetValueByRow(0, 4), "Weekly (MTW-FSS)")
-        self.mydataApp.tasksModel.DeleteAllRows()
-        self.assertEqual(self.mydataApp.tasksModel.GetRowCount(), 0)
+        tasksModel = self.mydataApp.dataViewModels['tasks']
+        self.assertEqual(tasksModel.GetRowCount(), 1)
+        self.assertEqual(tasksModel.GetValueByRow(0, 4), "Weekly (MTW-FSS)")
+        tasksModel.DeleteAllRows()
+        self.assertEqual(tasksModel.GetRowCount(), 0)
         self.assertIn(
             "CreateWeeklyTask - MainThread - DEBUG - Schedule type is Weekly",
             logger.loggerOutput.getvalue())

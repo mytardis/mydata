@@ -34,7 +34,7 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
-        self.mydataApp.taskBarIcon.CreatePopupMenu()
+        self.mydataApp.frame.taskBarIcon.CreatePopupMenu()
         pyEvent = wx.PyEvent()
         SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
@@ -51,7 +51,8 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         self.assertIn(
             ("CreateOnSettingsSavedTask - MainThread - DEBUG - "
              "Schedule type is On Settings Saved"),

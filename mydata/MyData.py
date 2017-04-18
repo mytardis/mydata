@@ -24,22 +24,19 @@ from . import LATEST_COMMIT
 from .settings import SETTINGS
 from .dataviewmodels.folders import FoldersModel
 from .controllers.folders import FoldersController
-from .views.dataview import MyDataDataView
 from .views.mydata import MyDataFrame
-from .views.mydata import NotebookTabs
 from .dataviewmodels.users import UsersModel
 from .dataviewmodels.groups import GroupsModel
 from .dataviewmodels.verifications import VerificationsModel
 from .dataviewmodels.uploads import UploadsModel
 from .dataviewmodels.tasks import TasksModel
-from .views.log import LogView
 from .models.settings.serialize import LoadSettings
 from .models.settings.validation import ValidateSettings
+from .views.mydata import NotebookTabs
 from .views.settings import SettingsDialog
 from .utils.exceptions import InvalidFolderStructure
 from .utils.exceptions import InvalidSettings
 from .logs import logger
-from .views.taskbaricon import MyDataTaskBarIcon
 from .events import MYDATA_EVENTS
 from .events import PostEvent
 from .utils.notification import Notification
@@ -54,70 +51,62 @@ from .views.connectivity import ReportNoActiveInterfaces
 if sys.platform.startswith("linux"):
     from .linuxsubprocesses import StopErrandBoy
 
-if 'phoenix' in wx.PlatformInfo:
-    from wx.adv import EVT_TASKBAR_LEFT_UP
-    from wx.adv import EVT_TASKBAR_LEFT_DOWN
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-    from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-else:
-    from wx import EVT_TASKBAR_LEFT_UP
-    from wx import EVT_TASKBAR_LEFT_DOWN
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
-    from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-
 
 class MyData(wx.App):
     """
     Encapsulates the MyData application.
     """
-    # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, argv, okToShowModalDialogs=True, okToRunSchedule=True):
-        self.name = "MyData"
-        self.argv = argv
-        self.okToShowModalDialogs = okToShowModalDialogs
-        self.okToRunSchedule = okToRunSchedule
-
+    def __init__(self, argv):
         self.instance = None
 
         self.configPath = None
 
         self.frame = None
         self.testRunFrame = None
-        self.panel = None
-        self.tabbedView = None
 
-        self.taskBarIcon = None
-
-        self.scanningFolders = threading.Event()
-        self.performingLookupsAndUploads = threading.Event()
-        self.testRunRunning = threading.Event()
-        self.shouldAbort = threading.Event()
+        self.threadSafeFlags = dict()
+        self.threadSafeFlags['scanningFolders'] = threading.Event()
+        self.threadSafeFlags['performingLookupsAndUploads'] = threading.Event()
+        self.threadSafeFlags['testRunRunning'] = threading.Event()
+        self.threadSafeFlags['shouldAbort'] = threading.Event()
 
         self.scanningFoldersThreadingLock = threading.Lock()
 
         self.connectivity = Connectivity()
 
-        self.foldersModel = None
-        self.foldersView = None
+        self.dataViewModels = dict()
+
         self.foldersController = None
         self.scheduleController = None
-        self.usersModel = None
-        self.usersView = None
-        self.groupsModel = None
-        self.groupsView = None
-        self.verificationsModel = None
-        self.verificationsView = None
-        self.uploadsModel = None
-        self.uploadsView = None
-        self.tasksModel = None
-        self.tasksView = None
-        self.logView = None
+
+        MyData.ParseArgs(argv)
 
         wx.App.__init__(self, redirect=False)
+
+    @staticmethod
+    def ParseArgs(argv):
+        """
+        Parse command-line arguments.
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-v", "--version", action="store_true",
+                            help="Display MyData version and exit")
+        parser.add_argument("-l", "--loglevel", help="set logging verbosity")
+        args, _ = parser.parse_known_args(argv[1:])
+        if args.version:
+            sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
+            sys.exit(0)
+        if args.loglevel:
+            if args.loglevel.upper() == "DEBUG":
+                logger.SetLevel(logging.DEBUG)
+            elif args.loglevel.upper() == "INFO":
+                logger.SetLevel(logging.INFO)
+            elif args.loglevel.upper() == "WARN":
+                logger.SetLevel(logging.WARN)
+            elif args.loglevel.upper() == "ERROR":
+                logger.SetLevel(logging.ERROR)
 
     def OnInit(self):
         """
@@ -126,7 +115,6 @@ class MyData(wx.App):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
         self.SetAppName("MyData")
-        logger.debug("self.argv = " + str(self.argv))
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
@@ -152,114 +140,41 @@ class MyData(wx.App):
             os.environ['REQUESTS_CA_BUNDLE'] = \
                 os.path.join(certPath, 'cacert.pem')
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-v", "--version", action="store_true",
-                            help="Display MyData version and exit")
-        parser.add_argument("-l", "--loglevel", help="set logging verbosity")
-        args, _ = parser.parse_known_args(self.argv[1:])
-        if args.version:
-            sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
-            sys.exit(0)
-        if args.loglevel:
-            if args.loglevel.upper() == "DEBUG":
-                logger.SetLevel(logging.DEBUG)
-            elif args.loglevel.upper() == "INFO":
-                logger.SetLevel(logging.INFO)
-            elif args.loglevel.upper() == "WARN":
-                logger.SetLevel(logging.WARN)
-            elif args.loglevel.upper() == "ERROR":
-                logger.SetLevel(logging.ERROR)
-
         # MyData.cfg stores settings in INI format, readable by ConfigParser
         self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
         logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
         if not SETTINGS.configPath:
             SETTINGS.configPath = self.GetConfigPath()
             LoadSettings(SETTINGS, self.GetConfigPath())
-        self.frame = MyDataFrame(self.name, style=wx.DEFAULT_FRAME_STYLE)
+
+        self.dataViewModels = dict(
+            users=UsersModel(),
+            groups=GroupsModel(),
+            verifications=VerificationsModel(),
+            uploads=UploadsModel(),
+            tasks=TasksModel())
+        self.dataViewModels['folders'] = \
+            FoldersModel(self.dataViewModels['users'], self.dataViewModels['groups'])
+
+        self.frame = MyDataFrame("MyData", self.dataViewModels)
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.testRunFrame = TestRunFrame(self.frame)
 
+        self.foldersController = FoldersController(self.frame, self.dataViewModels)
+        self.scheduleController = ScheduleController(self.dataViewModels['tasks'])
+
         if sys.platform.startswith("win"):
             self.CheckIfAlreadyRunning(appdirPath)
 
-        self.usersModel = UsersModel()
-        self.groupsModel = GroupsModel()
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
-        self.usersModel.foldersModel = self.foldersModel
-        self.verificationsModel = VerificationsModel()
-        self.uploadsModel = UploadsModel()
-        self.tasksModel = TasksModel()
-
-        self.taskBarIcon = MyDataTaskBarIcon(self.frame)
-        if sys.platform.startswith("linux"):
-            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
-        else:
-            self.taskBarIcon.Bind(EVT_TASKBAR_LEFT_UP, self.OnTaskBarLeftClick)
-
-        self.frame.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
-
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
-
-        self.panel = wx.Panel(self.frame)
-
-        if 'phoenix' in wx.PlatformInfo:
-            self.tabbedView = AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
-        else:
-            self.tabbedView = AuiNotebook(self.panel, style=AUI_NB_TOP)
-        # Without the following line, the tab font looks
-        # too small on Mac OS X:
-        self.tabbedView.SetFont(self.panel.GetFont())
-        self.frame.Bind(EVT_AUINOTEBOOK_PAGE_CHANGING,
-                        self.OnNotebookPageChanging, self.tabbedView)
-
-        self.foldersView = MyDataDataView(self.tabbedView, self.foldersModel)
-
-        self.tabbedView.AddPage(self.foldersView, "Folders")
-        self.foldersController = FoldersController(
-            self.frame, self.foldersModel, self.foldersView, self.usersModel,
-            self.verificationsModel, self.uploadsModel)
-
-        self.scheduleController = ScheduleController(self.tasksModel)
-
-        self.usersView = MyDataDataView(self.tabbedView, self.usersModel)
-        self.tabbedView.AddPage(self.usersView, "Users")
-
-        self.groupsView = MyDataDataView(self.tabbedView, self.groupsModel)
-        self.tabbedView.AddPage(self.groupsView, "Groups")
-
-        self.verificationsView = MyDataDataView(
-            self.tabbedView, self.verificationsModel)
-        self.tabbedView.AddPage(self.verificationsView, "Verifications")
-
-        self.uploadsView = MyDataDataView(self.tabbedView, self.uploadsModel)
-        self.tabbedView.AddPage(self.uploadsView, "Uploads")
-
-        self.tasksView = MyDataDataView(self.tabbedView, self.tasksModel)
-        self.tabbedView.AddPage(self.tasksView, "Tasks")
-
-        self.logView = LogView(self.tabbedView)
-        self.tabbedView.AddPage(self.logView, "Log")
-
-        sizer = wx.BoxSizer()
-        sizer.Add(self.tabbedView, 1, flag=wx.EXPAND)
-        self.panel.SetSizer(sizer)
-
-        sizer = wx.BoxSizer()
-        sizer.Add(self.panel, 1, flag=wx.EXPAND)
-        self.frame.SetSizer(sizer)
-
-        self.tabbedView.SendSizeEvent()
-
-        self.panel.SetFocus()
-
         self.SetTopWindow(self.frame)
 
         event = None
-        if self.okToShowModalDialogs and SETTINGS.RequiredFieldIsBlank():
+        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ and \
+                SETTINGS.RequiredFieldIsBlank():
             self.frame.Show(True)
             self.OnSettings(event)
         else:
@@ -289,7 +204,7 @@ class MyData(wx.App):
                     "Click the MyData system tray icon to access its menu."
             Notification.Notify(message, title=title)
             if 'MYDATA_TESTING' in os.environ:
-                if self.okToRunSchedule:
+                if 'MYDATA_DONT_RUN_SCHEDULE' not in os.environ:
                     self.scheduleController.ApplySchedule(event)
             else:
                 # wx.CallAfter is used to wait until the main loop has started
@@ -305,7 +220,7 @@ class MyData(wx.App):
         Using wx.SingleInstanceChecker to check whether MyData is already
         running.  Only used on Windows at present.
         """
-        self.instance = wx.SingleInstanceChecker(self.name, path=appdirPath)
+        self.instance = wx.SingleInstanceChecker("MyData", path=appdirPath)
         if self.instance.IsAnotherRunning():
             message = "MyData is already running!"
             if wx.PyApp.IsMainLoopRunning():
@@ -323,13 +238,6 @@ class MyData(wx.App):
             if sys.platform.startswith("darwin"):
                 self.frame.Show(True)
                 self.frame.Raise()
-        event.Skip()
-
-    def OnTaskBarLeftClick(self, event):
-        """
-        Called when task bar icon is clicked with the left mouse button.
-        """
-        self.taskBarIcon.PopupMenu(self.taskBarIcon.CreatePopupMenu())
         event.Skip()
 
     def OnCloseFrame(self, event):
@@ -362,7 +270,7 @@ class MyData(wx.App):
             BeginBusyCursorIfRequired()
             self.foldersController.ShutDownUploadThreads()
             EndBusyCursorIfRequired()
-            self.tasksModel.ShutDown()
+            self.dataViewModels['tasks'].ShutDown()
             if sys.platform.startswith("linux"):
                 StopErrandBoy()
             # sys.exit can raise exceptions if the wx.App
@@ -380,18 +288,6 @@ class MyData(wx.App):
             self.frame.Show(True)
             self.frame.Raise()
         # event.Skip()
-
-    def OnDoSearch(self, event):
-        """
-        Triggered by user typing into search field in upper-right corner
-        or main window.
-        """
-        if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
-            self.foldersModel.Filter(event.GetString())
-        elif self.tabbedView.GetSelection() == NotebookTabs.USERS:
-            self.usersModel.Filter(event.GetString())
-        elif self.tabbedView.GetSelection() == NotebookTabs.GROUPS:
-            self.groupsModel.Filter(event.GetString())
 
     def OnScanAndUploadFromToolbar(self, event):
         """
@@ -555,7 +451,7 @@ class MyData(wx.App):
                 ValidateSettingsWorker()
             return
 
-        self.shouldAbort.clear()
+        self.threadSafeFlags['shouldAbort'].clear()
 
         def WriteProgressUpdateToStatusBar(numUserOrGroupFoldersScanned):
             """
@@ -594,8 +490,8 @@ class MyData(wx.App):
                 self.SetScanningFolders(True)
                 logger.debug("Just set ScanningFolders to True")
                 wx.CallAfter(self.DisableTestAndUploadToolbarButtons)
-                self.foldersModel.ScanFolders(WriteProgressUpdateToStatusBar,
-                                              self.ShouldAbort)
+                self.dataViewModels['folders'].ScanFolders(
+                    WriteProgressUpdateToStatusBar, self.ShouldAbort)
                 self.foldersController.FinishedScanningForDatasetFolders()
                 self.SetScanningFolders(False)
                 self.scanningFoldersThreadingLock.release()
@@ -623,14 +519,16 @@ class MyData(wx.App):
                 return
 
             folderStructure = SETTINGS.advanced.folderStructure
+            usersModel = self.dataViewModels['users']
+            groupsModel = self.dataViewModels['groups']
             if any([
                     UsersModel.GetNumUserOrGroupFolders() == 0,
                     folderStructure.startswith("Username") and
-                    self.usersModel.GetCount() == 0,
+                    usersModel.GetCount() == 0,
                     folderStructure.startswith("Email") and
-                    self.usersModel.GetCount() == 0,
+                    usersModel.GetCount() == 0,
                     folderStructure.startswith("User Group") and
-                    self.groupsModel.GetCount() == 0]):
+                    groupsModel.GetCount() == 0]):
                 if UsersModel.GetNumUserOrGroupFolders() == 0:
                     message = "No folders were found to upload from."
                 else:
@@ -664,7 +562,8 @@ class MyData(wx.App):
         icon menu item, or a scheduled task).
         """
         try:
-            syncNowMenuItemId = self.taskBarIcon.GetSyncNowMenuItem().GetId()
+            syncNowMenuItemId = \
+                self.frame.taskBarIcon.GetSyncNowMenuItem().GetId()
         except (AttributeError, RuntimeError):
             syncNowMenuItemId = None
         if jobId:
@@ -716,7 +615,7 @@ class MyData(wx.App):
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        return self.shouldAbort.isSet()
+        return self.threadSafeFlags['shouldAbort'].isSet()
 
     def SetShouldAbort(self, shouldAbort=True):
         """
@@ -724,26 +623,17 @@ class MyData(wx.App):
         datafile lookups (verifications) and/or uploads.
         """
         if shouldAbort:
-            self.shouldAbort.set()
+            self.threadSafeFlags['shouldAbort'].set()
         else:
-            self.shouldAbort.clear()
+            self.threadSafeFlags['shouldAbort'].clear()
 
     def OnOpen(self, event):
         """
         Open the selected data folder in Windows Explorer (Windows) or
         in Finder (Mac OS X).
         """
-        if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
+        if self.frame.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
             self.foldersController.OnOpenFolder(event)
-
-    def OnNotebookPageChanging(self, event):
-        """
-        Clear the search field after switching views
-        (e.g. from Folders to Users).
-        """
-        if self.frame.toolbar.searchCtrl:
-            self.frame.toolbar.searchCtrl.SetValue("")
-        event.Skip()
 
     def OnSettings(self, event, validationMessage=None):
         """
@@ -761,7 +651,7 @@ class MyData(wx.App):
         if settingsDialog.ShowModal() == wx.ID_OK:
             logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
             self.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
-            self.tasksModel.DeleteAllRows()
+            self.dataViewModels['tasks'].DeleteAllRows()
             self.scheduleController.ApplySchedule(event)
 
     def OnMyTardis(self, event):
@@ -770,10 +660,10 @@ class MyData(wx.App):
         main toolbar.
         """
         try:
-            items = self.foldersView.dataViewControl.GetSelections()
-            rows = [self.foldersModel.GetRow(item) for item in items]
+            items = self.frame.foldersView.dataViewControl.GetSelections()
+            rows = [self.dataViewModels['folders'].GetRow(item) for item in items]
             if len(rows) == 1:
-                folderRecord = self.foldersModel.GetFolderRecord(rows[0])
+                folderRecord = self.dataViewModels['folders'].GetFolderRecord(rows[0])
                 if folderRecord.datasetModel is not None:
                     MyData.OpenUrl(SETTINGS.general.myTardisUrl + "/" +
                                    folderRecord.datasetModel.viewUri)
@@ -882,16 +772,16 @@ class MyData(wx.App):
         """
         Returns True if MyData is currently scanning data folders.
         """
-        return self.scanningFolders.isSet()
+        return self.threadSafeFlags['scanningFolders'].isSet()
 
     def SetScanningFolders(self, value):
         """
         Records whether MyData is currently scanning data folders.
         """
         if value:
-            self.scanningFolders.set()
+            self.threadSafeFlags['scanningFolders'].set()
         else:
-            self.scanningFolders.clear()
+            self.threadSafeFlags['scanningFolders'].clear()
 
     def PerformingLookupsAndUploads(self):
         """
@@ -899,7 +789,7 @@ class MyData(wx.App):
         datafile lookups (verifications) and uploading
         datafiles.
         """
-        return self.performingLookupsAndUploads.isSet()
+        return self.threadSafeFlags['performingLookupsAndUploads'].isSet()
 
     def SetPerformingLookupsAndUploads(self, value):
         """
@@ -908,9 +798,9 @@ class MyData(wx.App):
         datafiles.
         """
         if value:
-            self.performingLookupsAndUploads.set()
+            self.threadSafeFlags['performingLookupsAndUploads'].set()
         else:
-            self.performingLookupsAndUploads.clear()
+            self.threadSafeFlags['performingLookupsAndUploads'].clear()
 
     def EnableTestAndUploadToolbarButtons(self):
         """
@@ -946,16 +836,16 @@ class MyData(wx.App):
         be aborted.  If not, we need to be careful to avoid
         aborting a real uploads run.
         """
-        return self.testRunRunning.isSet()
+        return self.threadSafeFlags['testRunRunning'].isSet()
 
     def SetTestRunRunning(self, value):
         """
         Records whether MyData is currently performing a test run.
         """
         if value:
-            self.testRunRunning.set()
+            self.threadSafeFlags['testRunRunning'].set()
         else:
-            self.testRunRunning.clear()
+            self.threadSafeFlags['testRunRunning'].clear()
 
 
 def Run(argv):
