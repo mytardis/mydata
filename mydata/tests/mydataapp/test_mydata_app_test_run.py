@@ -39,9 +39,10 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         self.mydataApp.LogOnRefreshCaller(event=None, jobId=None)
         pyEvent = wx.PyEvent()
         jobId = None
-        pyEvent.SetId(self.mydataApp.settingsTool.GetId())
+        toolbar = self.mydataApp.frame.toolbar
+        pyEvent.SetId(toolbar.settingsTool.GetId())
         self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
-        pyEvent.SetId(self.mydataApp.uploadTool.GetId())
+        pyEvent.SetId(toolbar.uploadTool.GetId())
         self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
         # Requires popupMenu (defined above):
         pyEvent.SetId(self.mydataApp.taskBarIcon.GetSyncNowMenuItem().GetId())

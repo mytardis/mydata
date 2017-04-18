@@ -7,7 +7,6 @@ To run MyData from the command-line, use "python run.py", where run.py is
 in the parent directory of the directory containing MyData.py.
 """
 
-# pylint: disable=too-many-lines
 # pylint: disable=wrong-import-position
 
 import sys
@@ -23,15 +22,13 @@ import appdirs
 import requests
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    from wx import Icon as EmptyIcon
+if 'phoenix' in wx.PlatformInfo:
     from wx.adv import EVT_TASKBAR_LEFT_UP
     from wx.adv import EVT_TASKBAR_LEFT_DOWN
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
     from wx.lib.agw.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
 else:
-    from wx import EmptyIcon
     from wx import EVT_TASKBAR_LEFT_UP
     from wx import EVT_TASKBAR_LEFT_DOWN
     from wx.aui import AuiNotebook
@@ -61,8 +58,6 @@ from .logs import logger
 from .views.taskbaricon import MyDataTaskBarIcon
 from .events import MYDATA_EVENTS
 from .events import PostEvent
-from .media import MYDATA_ICONS
-from .media import IconStyle
 from .utils.notification import Notification
 from .models.settings import LastSettingsUpdateTrigger
 from .controllers.schedule import ScheduleController
@@ -98,22 +93,7 @@ class MyData(wx.App):
         self.panel = None
         self.tabbedView = None
 
-        self.menuBar = None
-        self.editMenu = None
-        self.helpMenu = None
-
-        self.toolbar = None
-        self.settingsTool = None
-        self.stopTool = None
-        self.testTool = None
-        self.uploadTool = None
-        self.myTardisTool = None
-        self.aboutTool = None
-        self.helpTool = None
-
         self.taskBarIcon = None
-
-        self.searchCtrl = None
 
         self.scanningFolders = threading.Event()
         self.performingLookupsAndUploads = threading.Event()
@@ -142,14 +122,13 @@ class MyData(wx.App):
 
         wx.App.__init__(self, redirect=False)
 
-    # This method is too long.  Needs refactoring.
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-statements
     def OnInit(self):
         """
         Called automatically when application instance is created.
         """
-        self.SetAppName("MyData")  # pylint: disable=no-member
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
+        self.SetAppName("MyData")
         logger.debug("self.argv = " + str(self.argv))
         logger.debug("MyData version:   " + VERSION)
         logger.debug("MyData commit:  " + LATEST_COMMIT)
@@ -209,9 +188,6 @@ class MyData(wx.App):
         if sys.platform.startswith("win"):
             self.CheckIfAlreadyRunning(appdirPath)
 
-        if sys.platform.startswith("darwin"):
-            self.CreateMacMenu()
-
         self.usersModel = UsersModel()
         self.groupsModel = GroupsModel()
         self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
@@ -231,14 +207,9 @@ class MyData(wx.App):
         self.frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
         self.frame.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
 
-        bmp = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
-        icon = EmptyIcon()
-        icon.CopyFromBitmap(bmp)
-        self.frame.SetIcon(icon)
-
         self.panel = wx.Panel(self.frame)
 
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.tabbedView = AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
         else:
             self.tabbedView = AuiNotebook(self.panel, style=AUI_NB_TOP)
@@ -275,8 +246,6 @@ class MyData(wx.App):
 
         self.logView = LogView(self.tabbedView)
         self.tabbedView.AddPage(self.logView, "Log")
-
-        self.CreateToolbar()
 
         sizer = wx.BoxSizer()
         sizer.Add(self.tabbedView, 1, flag=wx.EXPAND)
@@ -349,43 +318,6 @@ class MyData(wx.App):
             else:
                 sys.stderr.write("%s\n" % message)
 
-    def CreateMacMenu(self):
-        """
-        On Mac OS X, adding an Edit menu seems to help with
-        enabling command-c (copy) and command-v (paste)
-        """
-        self.menuBar = wx.MenuBar()
-        self.editMenu = wx.Menu()
-        self.editMenu.Append(wx.ID_UNDO, "Undo\tCTRL+Z", "Undo")
-        self.editMenu.Append(wx.ID_REDO, "Redo\tCTRL+SHIFT+Z", "Redo")
-        self.editMenu.AppendSeparator()
-        self.editMenu.Append(wx.ID_CUT, "Cut\tCTRL+X",
-                             "Cut the selected text")
-        self.editMenu.Append(wx.ID_COPY, "Copy\tCTRL+C",
-                             "Copy the selected text")
-        self.editMenu.Append(wx.ID_PASTE, "Paste\tCTRL+V",
-                             "Paste text from the clipboard")
-        self.editMenu.Append(wx.ID_SELECTALL, "Select All\tCTRL+A",
-                             "Select All")
-        self.menuBar.Append(self.editMenu, "Edit")
-
-        self.helpMenu = wx.Menu()
-
-        helpMenuItemID = wx.NewId()
-        self.helpMenu.Append(helpMenuItemID, "&MyData Help")
-        self.frame.Bind(wx.EVT_MENU, MyData.OnHelp, id=helpMenuItemID)
-
-        walkthroughMenuItemID = wx.NewId()
-        self.helpMenu.Append(
-            walkthroughMenuItemID, "Mac OS X &Walkthrough")
-        self.frame.Bind(wx.EVT_MENU, MyData.OnWalkthrough,
-                        id=walkthroughMenuItemID)
-
-        self.helpMenu.Append(wx.ID_ABOUT, "&About MyData")
-        self.frame.Bind(wx.EVT_MENU, MyData.OnAbout, id=wx.ID_ABOUT)
-        self.menuBar.Append(self.helpMenu, "&Help")
-        self.frame.SetMenuBar(self.menuBar)
-
     def OnActivateApp(self, event):
         """
         Called when MyData is activated.
@@ -403,20 +335,20 @@ class MyData(wx.App):
         self.taskBarIcon.PopupMenu(self.taskBarIcon.CreatePopupMenu())
         event.Skip()
 
-    # pylint: disable=unused-argument
     def OnCloseFrame(self, event):
         """
         Don't actually close it, just hide it.
         """
+        event.StopPropagation()
         if sys.platform.startswith("win"):
             self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.frame.Hide()
 
-    # pylint: disable=unused-argument
     def ShutDownCleanlyAndExit(self, event, confirm=True):
         """
         Shut down MyData cleanly and quit.
         """
+        event.StopPropagation()
         okToExit = wx.ID_YES
         if confirm and self.Processing():
             message = "Are you sure you want to shut down MyData's " \
@@ -451,105 +383,6 @@ class MyData(wx.App):
             self.frame.Show(True)
             self.frame.Raise()
         # event.Skip()
-
-    def CreateToolbar(self):
-        """
-        Create a toolbar.
-        """
-        self.toolbar = self.frame.CreateToolBar()
-        self.toolbar.SetToolBitmapSize(wx.Size(24, 24))  # sets icon size
-
-        openIcon = MYDATA_ICONS.GetIcon("Open folder", size="24x24")
-        if wx.version().startswith("3.0.3.dev"):
-            addToolMethod = self.toolbar.AddTool
-        else:
-            addToolMethod = self.toolbar.AddLabelTool
-        openTool = addToolMethod(wx.ID_ANY, "Open folder",
-                                 openIcon, shortHelp="Open folder")
-        self.frame.Bind(wx.EVT_MENU, self.OnOpen, openTool)
-
-        self.toolbar.AddSeparator()
-
-        testIcon = MYDATA_ICONS.GetIcon("Test tubes", size="24x24")
-        self.testTool = addToolMethod(wx.ID_ANY, "Test Run",
-                                      testIcon, shortHelp="Test Run")
-        self.frame.Bind(wx.EVT_TOOL, self.OnTestRunFromToolbar, self.testTool,
-                        self.testTool.GetId())
-
-        self.toolbar.AddSeparator()
-
-        uploadIcon = MYDATA_ICONS.GetIcon("Upload button", size="24x24")
-        self.uploadTool = addToolMethod(wx.ID_ANY, "Scan and Upload",
-                                        uploadIcon, shortHelp="Scan and Upload")
-        self.frame.Bind(wx.EVT_TOOL, self.OnScanAndUploadFromToolbar, self.uploadTool,
-                        self.uploadTool.GetId())
-
-        self.toolbar.AddSeparator()
-
-        stopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
-                                        style=IconStyle.NORMAL)
-        self.stopTool = addToolMethod(wx.ID_STOP, "Stop",
-                                      stopIcon, shortHelp="Stop")
-        disabledStopIcon = MYDATA_ICONS.GetIcon("Stop sign", size="24x24",
-                                                style=IconStyle.DISABLED)
-        self.toolbar.SetToolDisabledBitmap(self.stopTool.GetId(),
-                                           disabledStopIcon)
-        self.toolbar.EnableTool(self.stopTool.GetId(), False)
-
-        self.frame.Bind(wx.EVT_TOOL, self.OnStop, self.stopTool,
-                        self.stopTool.GetId())
-
-        self.toolbar.AddSeparator()
-
-        settingsIcon = MYDATA_ICONS.GetIcon("Settings", size="24x24")
-        self.settingsTool = addToolMethod(wx.ID_ANY, "Settings",
-                                          settingsIcon, shortHelp="Settings")
-        self.frame.Bind(wx.EVT_TOOL, self.OnSettings, self.settingsTool)
-
-        self.toolbar.AddSeparator()
-
-        internetIcon = MYDATA_ICONS.GetIcon("Internet explorer", size="24x24")
-        self.myTardisTool = addToolMethod(wx.ID_ANY, "MyTardis",
-                                          internetIcon, shortHelp="MyTardis")
-        self.frame.Bind(wx.EVT_TOOL, self.OnMyTardis, self.myTardisTool)
-
-        self.toolbar.AddSeparator()
-
-        aboutIcon = MYDATA_ICONS.GetIcon("About", size="24x24",
-                                         style=IconStyle.HOT)
-        self.aboutTool = addToolMethod(wx.ID_ANY, "About MyData",
-                                       aboutIcon, shortHelp="About MyData")
-        self.frame.Bind(wx.EVT_TOOL, MyData.OnAbout, self.aboutTool)
-
-        self.toolbar.AddSeparator()
-
-        helpIcon = MYDATA_ICONS.GetIcon("Help", size="24x24",
-                                        style=IconStyle.HOT)
-        self.helpTool = addToolMethod(wx.ID_ANY, "Help", helpIcon,
-                                      shortHelp="MyData User Guide")
-        self.frame.Bind(wx.EVT_TOOL, MyData.OnHelp, self.helpTool)
-
-        self.toolbar.AddStretchableSpace()
-        self.searchCtrl = wx.SearchCtrl(self.toolbar, size=wx.Size(200, -1),
-                                        style=wx.TE_PROCESS_ENTER)
-        self.searchCtrl.ShowSearchButton(True)
-        self.searchCtrl.ShowCancelButton(True)
-
-        self.frame.Bind(wx.EVT_TEXT_ENTER, self.OnDoSearch, self.searchCtrl)
-        self.frame.Bind(wx.EVT_TEXT, self.OnDoSearch, self.searchCtrl)
-
-        self.toolbar.AddControl(self.searchCtrl)
-
-        # This basically shows the toolbar
-        self.toolbar.Realize()
-
-        # self.SetCallFilterEvent(True)
-
-    # def OnSearchButton(self,event):
-        # pass
-
-    # def OnSearchCancel(self,event):
-        # pass
 
     def OnDoSearch(self, event):
         """
@@ -641,7 +474,7 @@ class MyData(wx.App):
 
         self.foldersController.SetShuttingDown(False)
 
-        self.searchCtrl.SetValue("")
+        self.frame.toolbar.searchCtrl.SetValue("")
 
         # Settings validation:
 
@@ -725,11 +558,6 @@ class MyData(wx.App):
                 ValidateSettingsWorker()
             return
 
-        if "Group" in SETTINGS.advanced.folderStructure:
-            userOrGroup = "user group"
-        else:
-            userOrGroup = "user"
-
         self.shouldAbort.clear()
 
         def WriteProgressUpdateToStatusBar(numUserOrGroupFoldersScanned):
@@ -739,7 +567,7 @@ class MyData(wx.App):
             message = "Scanned %d of %d %s folders" % (
                 numUserOrGroupFoldersScanned,
                 UsersModel.GetNumUserOrGroupFolders(),
-                userOrGroup)
+                SETTINGS.advanced.userOrGroupString)
             self.frame.SetStatusMessage(message)
             if numUserOrGroupFoldersScanned == \
                     UsersModel.GetNumUserOrGroupFolders():
@@ -798,14 +626,14 @@ class MyData(wx.App):
                 return
 
             folderStructure = SETTINGS.advanced.folderStructure
-            # pylint: disable=too-many-boolean-expressions
-            if UsersModel.GetNumUserOrGroupFolders() == 0 or \
-                    (folderStructure.startswith("Username") and
-                     self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("Email") and
-                     self.usersModel.GetCount() == 0) or \
-                    (folderStructure.startswith("User Group") and
-                     self.groupsModel.GetCount() == 0):
+            if any([
+                    UsersModel.GetNumUserOrGroupFolders() == 0,
+                    folderStructure.startswith("Username") and
+                    self.usersModel.GetCount() == 0,
+                    folderStructure.startswith("Email") and
+                    self.usersModel.GetCount() == 0,
+                    folderStructure.startswith("User Group") and
+                    self.groupsModel.GetCount() == 0]):
                 if UsersModel.GetNumUserOrGroupFolders() == 0:
                     message = "No folders were found to upload from."
                 else:
@@ -847,11 +675,11 @@ class MyData(wx.App):
         elif event is None:
             logger.debug("OnRefresh called automatically "
                          "from MyData's OnInit().")
-        elif event.GetId() == self.settingsTool.GetId():
+        elif event.GetId() == self.frame.toolbar.settingsTool.GetId():
             logger.debug("OnRefresh called automatically from "
                          "OnSettings(), after displaying SettingsDialog, "
                          "which was launched from MyData's toolbar.")
-        elif event.GetId() == self.uploadTool.GetId():
+        elif event.GetId() == self.frame.toolbar.uploadTool.GetId():
             logger.debug("OnRefresh triggered by Upload toolbar icon.")
         elif syncNowMenuItemId and event.GetId() == syncNowMenuItemId:
             logger.debug("OnRefresh triggered by 'Sync Now' "
@@ -916,8 +744,9 @@ class MyData(wx.App):
         Clear the search field after switching views
         (e.g. from Folders to Users).
         """
-        if self.searchCtrl:
-            self.searchCtrl.SetValue("")
+        if self.frame.toolbar.searchCtrl:
+            self.frame.toolbar.searchCtrl.SetValue("")
+        event.Skip()
 
     def OnSettings(self, event, validationMessage=None):
         """
@@ -944,7 +773,7 @@ class MyData(wx.App):
         main toolbar.
         """
         try:
-            items = self.foldersView.GetDataViewControl().GetSelections()
+            items = self.foldersView.dataViewControl.GetSelections()
             rows = [self.foldersModel.GetRow(item) for item in items]
             if len(rows) == 1:
                 folderRecord = self.foldersModel.GetFolderRecord(rows[0])
@@ -957,6 +786,7 @@ class MyData(wx.App):
                 MyData.OpenUrl(SETTINGS.general.myTardisUrl)
         except:
             logger.error(traceback.format_exc())
+        event.Skip()
 
     @staticmethod
     def OnHelp(event):
@@ -967,6 +797,7 @@ class MyData(wx.App):
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/"
         MyData.OpenUrl(url, new=new)
+        event.Skip()
 
     @staticmethod
     def OnWalkthrough(event):
@@ -978,6 +809,7 @@ class MyData(wx.App):
         new = 2  # Open in a new tab, if possible
         url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
         MyData.OpenUrl(url, new=new)
+        event.Skip()
 
     @staticmethod
     def OnAbout(event):
@@ -1000,6 +832,7 @@ class MyData(wx.App):
             dlg.ShowModal()
         else:
             sys.stderr.write("\n%s\n" % msg)
+        event.Skip()
 
     @staticmethod
     def OpenUrl(url, new=0, autoraise=True):
@@ -1088,9 +921,7 @@ class MyData(wx.App):
         indicating that MyData is ready to respond to a
         request to start scanning folders and uploading data.
         """
-        self.toolbar.EnableTool(self.stopTool.GetId(), False)
-        self.toolbar.EnableTool(self.testTool.GetId(), True)
-        self.toolbar.EnableTool(self.uploadTool.GetId(), True)
+        self.frame.toolbar.EnableTestAndUploadToolbarButtons()
 
     def DisableTestAndUploadToolbarButtons(self):
         """
@@ -1099,9 +930,7 @@ class MyData(wx.App):
         uploading data, validating settings or performing
         a test run.
         """
-        self.toolbar.EnableTool(self.stopTool.GetId(), True)
-        self.toolbar.EnableTool(self.testTool.GetId(), False)
-        self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+        self.frame.toolbar.DisableTestAndUploadToolbarButtons()
 
     def Processing(self):
         """
@@ -1109,8 +938,8 @@ class MyData(wx.App):
         currently busy processing something.
         """
         try:
-            return self.toolbar.GetToolEnabled(self.stopTool.GetId())
-        except wx.PyDeadObjectError:
+            return self.frame.toolbar.GetToolEnabled(self.frame.toolbar.stopTool.GetId())
+        except wx.PyDeadObjectError:  # Exception no longer exists in Phoenix.
             return False
 
     def TestRunRunning(self):
