@@ -49,9 +49,11 @@ class MyDataMinimalTester(unittest.TestCase):
     """
     def setUp(self):
         os.environ['MYDATA_TESTING'] = 'True'
+        os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
 
     def tearDown(self):
         del os.environ['MYDATA_TESTING']
+        del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
 
 
 class MyDataTester(unittest.TestCase):
