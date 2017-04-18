@@ -79,7 +79,7 @@ def BeginBusyCursorIfRequired(event=None):
         if not wx.IsBusy():
             wx.BeginBusyCursor()
         if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
-            if wx.version().startswith("3.0.3.dev"):
+            if 'phoenix' in wx.PlatformInfo:
                 busyCursor = wx.Cursor(wx.CURSOR_WAIT)
             else:
                 busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
@@ -97,7 +97,7 @@ def EndBusyCursorIfRequired(event=None):
         if wx.IsBusy():
             wx.EndBusyCursor()
         if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
-            if wx.version().startswith("3.0.3.dev"):
+            if 'phoenix' in wx.PlatformInfo:
                 arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)

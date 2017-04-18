@@ -17,7 +17,7 @@ import os
 import traceback
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
+if 'phoenix' in wx.PlatformInfo:
     import wx.lib.masked
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
@@ -83,7 +83,7 @@ class SettingsDialog(wx.Dialog):
 
         self.dialogPanel = wx.Panel(self)
 
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.settingsTabsNotebook = \
                 AuiNotebook(self.dialogPanel, agwStyle=AUI_NB_TOP)
         else:

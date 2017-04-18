@@ -11,7 +11,7 @@ or menubar icon (Mac OS X) for MyData.
 import webbrowser
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
+if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
     from wx.adv import TaskBarIcon
 else:
@@ -60,7 +60,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.aboutMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "About MyData")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.aboutMyDataMenuItem)
         else:
             self.menu.AppendItem(self.aboutMyDataMenuItem)
@@ -71,7 +71,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.syncNowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Sync Now")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.syncNowMenuItem)
         else:
             self.menu.AppendItem(self.syncNowMenuItem)
@@ -82,7 +82,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisMainWindowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Main Window")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisMainWindowMenuItem)
         else:
             self.menu.AppendItem(self.myTardisMainWindowMenuItem)
@@ -91,7 +91,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisSettingsMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Settings")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisSettingsMenuItem)
         else:
             self.menu.AppendItem(self.myTardisSettingsMenuItem)
@@ -102,7 +102,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisHelpMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Help")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisHelpMenuItem)
         else:
             self.menu.AppendItem(self.myTardisHelpMenuItem)
@@ -113,7 +113,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.exitMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Exit MyData")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.exitMyDataMenuItem)
         else:
             self.menu.AppendItem(self.exitMyDataMenuItem)

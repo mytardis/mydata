@@ -6,7 +6,7 @@ import threading
 import traceback
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
+if 'phoenix' in wx.PlatformInfo:
     from wx.dataview import DataViewIndexListModel
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
