@@ -31,5 +31,5 @@ class MyDataOnlineDocsTester(MyDataMinimalTester):
         """
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         pyEvent = wx.PyEvent()
-        self.mydataApp.OnHelp(pyEvent)
-        self.mydataApp.OnWalkthrough(pyEvent)
+        self.mydataApp.frame.OnHelp(pyEvent)
+        self.mydataApp.frame.OnWalkthrough(pyEvent)

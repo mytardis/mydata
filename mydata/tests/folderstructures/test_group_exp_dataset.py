@@ -18,7 +18,7 @@ class ScanGroupExpDatasetTester(MyDataScanFoldersTester):
         Test ability to scan the User Group / Experiment / Dataset folder structure.
         """
         self.UpdateSettingsFromCfg("testdataGroupExpDataset")
-        self.ScanFolders()
+        self.ValidateSettingsAndScanFolders()
         self.assertEqual(
             sorted(self.groupsModel.GetValuesForColname("Full Name")),
             ["TestFacility-Group1", "TestFacility-Group2"])

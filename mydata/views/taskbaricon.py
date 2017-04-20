@@ -62,7 +62,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
             self.menu.Append(self.aboutMyDataMenuItem)
         else:
             self.menu.AppendItem(self.aboutMyDataMenuItem)
-        self.Bind(wx.EVT_MENU, wx.GetApp().OnAbout,
+        self.Bind(wx.EVT_MENU, self.frame.OnAbout,
                   self.aboutMyDataMenuItem, self.aboutMyDataMenuItem.GetId())
 
         self.menu.AppendSeparator()

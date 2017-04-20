@@ -5,12 +5,13 @@ Miscellaneous utility functions.
 import unicodedata
 import sys
 import traceback
+import webbrowser
 
 import psutil
+import requests
 import wx
 
 from ..logs import logger
-
 
 def PidIsRunning(pid):
     """
@@ -206,3 +207,14 @@ def HandleGenericErrorWithDialog(err):
         wx.CallAfter(ShowErrorDialog, message)
     else:
         raise err
+
+
+def OpenUrl(url, new=0, autoraise=True):
+    """
+    Open URL in web browser or just check URL is accessible if running tests.
+    """
+    if wx.PyApp.IsMainLoopRunning():
+        webbrowser.open(url, new, autoraise)
+    else:
+        response = requests.get(url)
+        assert response.status_code == 200

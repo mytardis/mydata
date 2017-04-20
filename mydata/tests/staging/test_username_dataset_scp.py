@@ -80,9 +80,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.uploaderModel.UploadUploaderInfo()
         self.assertEqual(SETTINGS.uploaderModel.name, "Test Instrument")
         self.InitializeModels()
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.ProgressCallback,
-            MyDataScanFoldersTester.ShouldAbort)
+        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
         # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
         # so the "INVALID_USER" folder is not included:
         self.assertEqual(
@@ -221,8 +219,10 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.01)
         sys.stderr.write("Canceling uploads...\n")
+        self.app.CheckIfShouldAbort = lambda: True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
+        self.app.CheckIfShouldAbort = lambda: False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 

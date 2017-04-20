@@ -18,7 +18,7 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
         Test ability to upload files at the Experiment level.
         """
         self.UpdateSettingsFromCfg("testdataExpDatasetExpFiles")
-        self.ScanFolders()
+        self.ValidateSettingsAndScanFolders()
 
         folders = []
         for row in range(self.foldersModel.GetRowCount()):

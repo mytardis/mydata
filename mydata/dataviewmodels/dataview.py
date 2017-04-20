@@ -76,6 +76,11 @@ class MyDataDataViewModel(DataViewIndexListModel):
         This method is called to provide the rowsData object
         for a particular row, col
         """
+        # Workaround for thread synchronization issue:
+        try:
+            assert self.rowsData[row]
+        except IndexError:
+            return ""
         columnKey = self.GetColumnKeyName(col)
         return str(self.rowsData[row].GetValueForKey(columnKey))
 

@@ -13,10 +13,8 @@ import threading
 import argparse
 import logging
 import subprocess
-import webbrowser
 
 import appdirs
-import requests
 import wx
 
 from . import __version__ as VERSION
@@ -36,6 +34,7 @@ from .views.mydata import NotebookTabs
 from .views.settings import SettingsDialog
 from .utils.exceptions import InvalidFolderStructure
 from .utils.exceptions import InvalidSettings
+from .utils.exceptions import UserAbortedSettingsValidation
 from .logs import logger
 from .events import MYDATA_EVENTS
 from .events import PostEvent
@@ -47,6 +46,8 @@ from .utils import BeginBusyCursorIfRequired
 from .utils import EndBusyCursorIfRequired
 from .utils import HandleGenericErrorWithDialog
 from .utils.connectivity import Connectivity
+from .threads.flags import FLAGS
+from .threads.locks import LOCKS
 from .views.connectivity import ReportNoActiveInterfaces
 if sys.platform.startswith("linux"):
     from .linuxsubprocesses import StopErrandBoy
@@ -56,23 +57,20 @@ class MyData(wx.App):
     """
     Encapsulates the MyData application.
     """
-    # pylint: disable=too-many-public-methods
+    # piylint: disable=too-many-public-methods
 
     def __init__(self, argv):
         self.instance = None
 
+        # The location on disk of MyData.cfg
+        # e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
         self.configPath = None
 
         self.frame = None
+
+        # The Test Run frame summarizes the results of a dry run:
         self.testRunFrame = None
-
-        self.threadSafeFlags = dict()
-        self.threadSafeFlags['scanningFolders'] = threading.Event()
-        self.threadSafeFlags['performingLookupsAndUploads'] = threading.Event()
-        self.threadSafeFlags['testRunRunning'] = threading.Event()
-        self.threadSafeFlags['shouldAbort'] = threading.Event()
-
-        self.scanningFoldersThreadingLock = threading.Lock()
 
         self.connectivity = Connectivity()
 
@@ -138,10 +136,10 @@ class MyData(wx.App):
                 os.path.join(certPath, 'cacert.pem')
 
         # MyData.cfg stores settings in INI format, readable by ConfigParser
-        self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
+        self.configPath = os.path.join(appdirPath, appname + '.cfg')
         if not SETTINGS.configPath:
-            SETTINGS.configPath = self.GetConfigPath()
-            LoadSettings(SETTINGS, self.GetConfigPath())
+            SETTINGS.configPath = self.configPath
+            LoadSettings(SETTINGS, self.configPath)
 
         self.dataViewModels = dict(
             users=UsersModel(),
@@ -160,7 +158,7 @@ class MyData(wx.App):
         logger.info("MyData version: v%s" % VERSION)
         logger.info("MyData commit:  %s" % LATEST_COMMIT)
         logger.info("appdirPath: " + appdirPath)
-        logger.info("self.GetConfigPath(): " + self.GetConfigPath())
+        logger.info("self.configPath: " + self.configPath)
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
@@ -307,7 +305,7 @@ class MyData(wx.App):
         SETTINGS.schedule.scheduleType = "Manually"
         SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
-        self.SetShouldAbort(False)
+        self.ResetShouldAbortStatus()
         self.scheduleController.ApplySchedule(event, runManually=True)
 
     def OnTestRunFromToolbar(self, event):
@@ -315,13 +313,13 @@ class MyData(wx.App):
         The user pressed the Test Run icon on the main window's toolbar.
         """
         logger.debug("OnTestRunFromToolbar")
-        self.SetTestRunRunning(True)
+        FLAGS.testRunRunning = True
         SETTINGS.schedule.scheduleType = "Manually"
         SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
         self.frame.toolbar.DisableTestAndUploadToolbarButtons()
         self.testRunFrame.saveButton.Disable()
-        self.SetShouldAbort(False)
+        self.ResetShouldAbortStatus()
         self.scheduleController.ApplySchedule(event, runManually=True,
                                               needToValidateSettings=True,
                                               testRun=True)
@@ -329,6 +327,35 @@ class MyData(wx.App):
         self.testRunFrame.Clear()
         self.testRunFrame.SetTitle("%s - Test Run" % self.frame.GetTitle())
         logger.testrun("Starting Test Run...")
+
+    def CheckIfShouldAbort(self):
+        """
+        Check if user has requested aborting scans and uploads,
+        and if so, restores icons and cursors to their default state,
+        and then raises an exception.
+        """
+        if FLAGS.shouldAbort or self.foldersController.canceled:
+            self.RestoreUserInterfaceForAbort()
+            return True
+        return False
+
+    def RestoreUserInterfaceForAbort(self):
+        """
+        Restores icons and cursors to their default state.
+        """
+        wx.CallAfter(EndBusyCursorIfRequired)
+        wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
+        if self.testRunFrame.IsShown():
+            wx.CallAfter(self.testRunFrame.Hide)
+        FLAGS.scanningFolders = False
+        FLAGS.testRunRunning = False
+
+    def ResetShouldAbortStatus(self):
+        """
+        Resets the ShouldAbort status
+        """
+        FLAGS.shouldAbort = False
+        self.foldersController.ClearStatusFlags()
 
     def OnRefresh(self, event, needToValidateSettings=True, jobId=None,
                   testRun=False):
@@ -339,6 +366,8 @@ class MyData(wx.App):
         not yet available on MyTardis.
         """
         self.LogOnRefreshCaller(event, jobId)
+        if self.CheckIfShouldAbort():
+            return
         shutdownForRefreshComplete = event and \
             event.GetEventType() in (
                 MYDATA_EVENTS.EVT_SHUTDOWN_FOR_REFRESH_COMPLETE,
@@ -351,7 +380,7 @@ class MyData(wx.App):
         if hasattr(event, "testRun") and event.testRun:
             testRun = True
 
-        if (self.ScanningFolders() or self.PerformingLookupsAndUploads()) \
+        if (FLAGS.scanningFolders or FLAGS.performingLookupsAndUploads) \
                 and not shutdownForRefreshComplete:
             # Shuts down upload threads before restarting them when
             # a scan and upload task is due to start while another
@@ -417,6 +446,9 @@ class MyData(wx.App):
                             testRun=testRun)
                         PostEvent(event)
                         wx.CallAfter(EndBusyCursorIfRequired)
+                    except UserAbortedSettingsValidation:
+                        self.RestoreUserInterfaceForAbort()
+                        return
                     except InvalidSettings as invalidSettings:
                         # If settings validation is run automatically shortly
                         # after a scheduled task begins, ignore complaints from
@@ -429,13 +461,11 @@ class MyData(wx.App):
                                 "Displaying result from settings validation.")
                             message = invalidSettings.message
                             logger.error(message)
-                            wx.CallAfter(EndBusyCursorIfRequired)
-                            wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
-                            self.SetScanningFolders(False)
+                            self.RestoreUserInterfaceForAbort()
                             self.frame.SetStatusMessage(
                                 "Settings validation failed.")
                             if testRun:
-                                wx.CallAfter(self.GetTestRunFrame().Hide)
+                                wx.CallAfter(self.testRunFrame.Hide)
                             wx.CallAfter(self.OnSettings, None,
                                          validationMessage=message)
                             return
@@ -454,8 +484,6 @@ class MyData(wx.App):
             else:
                 ValidateSettingsWorker()
             return
-
-        self.threadSafeFlags['shouldAbort'].clear()
 
         def WriteProgressUpdateToStatusBar(numUserOrGroupFoldersScanned):
             """
@@ -479,9 +507,11 @@ class MyData(wx.App):
             Scan data folders, looking for datafiles to look up on MyTardis
             and upload if necessary.
             """
-            logger.debug("Starting run() method for thread %s"
-                         % threading.current_thread().name)
+            if self.CheckIfShouldAbort():
+                return
             self.foldersController.InitForUploads()
+            if self.CheckIfShouldAbort():
+                return
             message = "Scanning data folders..."
             wx.CallAfter(self.frame.SetStatusMessage, message)
             message = "Scanning data folders in %s..." \
@@ -490,16 +520,16 @@ class MyData(wx.App):
             if testRun:
                 logger.testrun(message)
             try:
-                self.scanningFoldersThreadingLock.acquire()
-                self.SetScanningFolders(True)
-                logger.debug("Just set ScanningFolders to True")
+                LOCKS.scanningFoldersThreadingLock.acquire()
+                FLAGS.scanningFolders = True
+                logger.debug("Just set scanningFolders to True")
                 wx.CallAfter(self.frame.toolbar.DisableTestAndUploadToolbarButtons)
                 self.dataViewModels['folders'].ScanFolders(
-                    WriteProgressUpdateToStatusBar, self.ShouldAbort)
+                    WriteProgressUpdateToStatusBar)
                 self.foldersController.FinishedScanningForDatasetFolders()
-                self.SetScanningFolders(False)
-                self.scanningFoldersThreadingLock.release()
-                logger.debug("Just set ScanningFolders to False")
+                FLAGS.scanningFolders = False
+                LOCKS.scanningFoldersThreadingLock.release()
+                logger.debug("Just set scanningFolders to False")
             except InvalidFolderStructure as ifs:
                 def ShowMessageDialog():
                     """
@@ -512,14 +542,11 @@ class MyData(wx.App):
                 self.frame.SetStatusMessage(str(ifs))
                 return
 
-            if self.ShouldAbort():
-                wx.CallAfter(EndBusyCursorIfRequired)
-                wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
-                self.SetScanningFolders(False)
-                logger.debug("Just set ScanningFolders to False")
+            if self.CheckIfShouldAbort():
+                self.RestoreUserInterfaceForAbort()
                 if testRun:
                     logger.testrun("Data scans and uploads were canceled.")
-                    self.SetTestRunRunning(False)
+                    FLAGS.testRunRunning = False
                 return
 
             folderStructure = SETTINGS.advanced.folderStructure
@@ -541,20 +568,13 @@ class MyData(wx.App):
                 if testRun:
                     logger.testrun(message)
                 wx.CallAfter(self.frame.SetStatusMessage, message)
-                wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
-                self.SetScanningFolders(False)
-                logger.debug("Just set ScanningFolders to False")
-
+                self.RestoreUserInterfaceForAbort()
             wx.CallAfter(EndBusyCursorIfRequired)
-            logger.debug("Finishing run() method for thread %s"
-                         % threading.current_thread().name)
 
         if wx.PyApp.IsMainLoopRunning():
             thread = threading.Thread(target=ScanDataDirs,
                                       name="ScanDataDirectoriesThread")
-            logger.debug("OnRefresh: Starting ScanDataDirs thread.")
             thread.start()
-            logger.debug("OnRefresh: Started ScanDataDirs thread.")
         else:
             ScanDataDirs()
 
@@ -608,28 +628,18 @@ class MyData(wx.App):
         """
         The user pressed the stop button on the main toolbar.
         """
-        self.SetShouldAbort(True)
-        BeginBusyCursorIfRequired()
-        PostEvent(self.foldersController.ShutdownUploadsEvent(canceled=True))
+        FLAGS.shouldAbort = True
+        if self.foldersController.started:
+            BeginBusyCursorIfRequired()
+            PostEvent(
+                self.foldersController.ShutdownUploadsEvent(canceled=True))
+        else:
+            self.RestoreUserInterfaceForAbort()
+            message = "Data scans and uploads were canceled."
+            logger.info(message)
+            self.frame.SetStatusMessage(message)
         if event:
             event.Skip()
-
-    def ShouldAbort(self):
-        """
-        The user has requested aborting the data folder scans and/or
-        datafile lookups (verifications) and/or uploads.
-        """
-        return self.threadSafeFlags['shouldAbort'].isSet()
-
-    def SetShouldAbort(self, shouldAbort=True):
-        """
-        The user has requested aborting the data folder scans and/or
-        datafile lookups (verifications) and/or uploads.
-        """
-        if shouldAbort:
-            self.threadSafeFlags['shouldAbort'].set()
-        else:
-            self.threadSafeFlags['shouldAbort'].clear()
 
     def OnOpen(self, event):
         """
@@ -646,7 +656,10 @@ class MyData(wx.App):
         icon's "MyData Settings" menu item, or in response to MyData being
         launched without any previously saved settings.
         """
-        self.SetShouldAbort(False)
+        # When Settings is launched by user e.g. from the toolbar, we don't
+        # want it to be aborted, so we'll ensure FLAGS.shouldAbort is False.
+        if event:
+            self.ResetShouldAbortStatus()
         self.frame.SetStatusMessage("")
         settingsDialog = SettingsDialog(self.frame,
                                         size=wx.Size(400, 400),
@@ -658,147 +671,6 @@ class MyData(wx.App):
             self.dataViewModels['tasks'].DeleteAllRows()
             self.scheduleController.ApplySchedule(event)
 
-    def OnMyTardis(self, event):
-        """
-        Called when user clicks the Internet Browser icon on the
-        main toolbar.
-        """
-        try:
-            items = self.frame.foldersView.dataViewControl.GetSelections()
-            rows = [self.dataViewModels['folders'].GetRow(item) for item in items]
-            if len(rows) == 1:
-                folderRecord = self.dataViewModels['folders'].GetFolderRecord(rows[0])
-                if folderRecord.datasetModel is not None:
-                    MyData.OpenUrl(SETTINGS.general.myTardisUrl + "/" +
-                                   folderRecord.datasetModel.viewUri)
-                else:
-                    MyData.OpenUrl(SETTINGS.general.myTardisUrl)
-            else:
-                MyData.OpenUrl(SETTINGS.general.myTardisUrl)
-        except:
-            logger.error(traceback.format_exc())
-        event.Skip()
-
-    @staticmethod
-    def OnHelp(event):
-        """
-        Called when the user clicks the Help icon on the
-        main toolbar.
-        """
-        new = 2  # Open in a new tab, if possible
-        url = "http://mydata.readthedocs.org/en/latest/"
-        MyData.OpenUrl(url, new=new)
-        event.Skip()
-
-    @staticmethod
-    def OnWalkthrough(event):
-        """
-        Mac OS X Only.
-        Called when the user clicks the Mac OS X Walkthrough
-        menu item in the Help menu.
-        """
-        new = 2  # Open in a new tab, if possible
-        url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        MyData.OpenUrl(url, new=new)
-        event.Skip()
-
-    @staticmethod
-    def OnAbout(event):
-        """
-        Called when the user clicks the Info icon on the
-        main toolbar.
-        """
-        msg = "MyData is a desktop application" \
-              " for uploading data to MyTardis " \
-              "(https://github.com/mytardis/mytardis).\n\n" \
-              "MyData is being developed at the Monash e-Research Centre " \
-              "(Monash University, Australia)\n\n" \
-              "MyData is open source (GPL3) software available from " \
-              "https://github.com/mytardis/mydata\n\n" \
-              "Version:   " + VERSION + "\n" \
-              "Commit:  " + LATEST_COMMIT + "\n"
-        dlg = wx.MessageDialog(None, msg, "About MyData",
-                               wx.OK | wx.ICON_INFORMATION)
-        if wx.PyApp.IsMainLoopRunning():
-            dlg.ShowModal()
-        else:
-            sys.stderr.write("\n%s\n" % msg)
-        event.Skip()
-
-    @staticmethod
-    def OpenUrl(url, new=0, autoraise=True):
-        """
-        Open URL in web browser or just check URL is accessible if running tests.
-        """
-        if wx.PyApp.IsMainLoopRunning():
-            webbrowser.open(url, new, autoraise)
-        else:
-            response = requests.get(url)
-            assert response.status_code == 200
-
-    def GetTestRunFrame(self):
-        """
-        Returns the Test Run frame, summarizes the
-        results of a dry run.
-        """
-        return self.testRunFrame
-
-    def GetScheduleController(self):
-        """
-        Returns MyData's schedule controller.
-        """
-        return self.scheduleController
-
-    def GetConfigPath(self):
-        """
-        Returns the location on disk of MyData.cfg
-        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
-        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
-        """
-        return self.configPath
-
-    def SetConfigPath(self, configPath):
-        """
-        Sets the location on disk of MyData.cfg
-        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
-        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg".
-        """
-        self.configPath = configPath
-
-    def ScanningFolders(self):
-        """
-        Returns True if MyData is currently scanning data folders.
-        """
-        return self.threadSafeFlags['scanningFolders'].isSet()
-
-    def SetScanningFolders(self, value):
-        """
-        Records whether MyData is currently scanning data folders.
-        """
-        if value:
-            self.threadSafeFlags['scanningFolders'].set()
-        else:
-            self.threadSafeFlags['scanningFolders'].clear()
-
-    def PerformingLookupsAndUploads(self):
-        """
-        Returns True if MyData is currently performing
-        datafile lookups (verifications) and uploading
-        datafiles.
-        """
-        return self.threadSafeFlags['performingLookupsAndUploads'].isSet()
-
-    def SetPerformingLookupsAndUploads(self, value):
-        """
-        Records whether MyData is currently performing
-        datafile lookups (verifications) and uploading
-        datafiles.
-        """
-        if value:
-            self.threadSafeFlags['performingLookupsAndUploads'].set()
-        else:
-            self.threadSafeFlags['performingLookupsAndUploads'].clear()
-
     def Processing(self):
         """
         Returns True/False, depending on whether MyData is
@@ -808,24 +680,6 @@ class MyData(wx.App):
             return self.frame.toolbar.GetToolEnabled(self.frame.toolbar.stopTool.GetId())
         except wx.PyDeadObjectError:  # Exception no longer exists in Phoenix.
             return False
-
-    def TestRunRunning(self):
-        """
-        Called when the Test Run window is closed to determine
-        whether the Test Run is still running.  If so, it will
-        be aborted.  If not, we need to be careful to avoid
-        aborting a real uploads run.
-        """
-        return self.threadSafeFlags['testRunRunning'].isSet()
-
-    def SetTestRunRunning(self, value):
-        """
-        Records whether MyData is currently performing a test run.
-        """
-        if value:
-            self.threadSafeFlags['testRunRunning'].set()
-        else:
-            self.threadSafeFlags['testRunRunning'].clear()
 
 
 def Run(argv):

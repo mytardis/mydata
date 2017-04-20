@@ -18,6 +18,7 @@ from ..utils.exceptions import UserAbortedSettingsValidation
 from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..threads.flags import FLAGS
 from ..logs import logger
 
 
@@ -222,7 +223,7 @@ def ShutdownForRefresh(event):
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
-            app.GetScheduleController().ApplySchedule(event)
+            app.scheduleController.ApplySchedule(event)
             event.foldersController.ShutDownUploadThreads()
             shutdownForRefreshCompleteEvent = \
                 MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
@@ -602,8 +603,8 @@ def ProvideSettingsValidationResults(event):
         # determined by a user dragging and dropping a config
         # file onto MyData's Settings dialog:
         app = wx.GetApp()
-        if hasattr(app, "GetConfigPath"):
-            configPath = app.GetConfigPath()
+        if hasattr(app, "configPath"):
+            configPath = app.configPath
         else:
             configPath = None
         SaveFieldsFromDialog(
@@ -666,11 +667,11 @@ def StartDataUploadsForFolder(event):
             "if necessary for folder: %s" % event.folderModel.folderName
         logger.info(message)
         app = wx.GetApp()
-        if hasattr(app, "TestRunRunning") and app.TestRunRunning():
+        if FLAGS.testRunRunning:
             logger.testrun(message)
         if type(app).__name__ == "MyData":
             app.frame.toolbar.DisableTestAndUploadToolbarButtons()
-            app.SetPerformingLookupsAndUploads(True)
+            FLAGS.performingLookupsAndUploads = True
             app.foldersController.StartUploadsForFolder(
                 event.folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)

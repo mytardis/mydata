@@ -21,7 +21,7 @@ class ScanUserGroupInstrumentTester(MyDataScanFoldersTester):
         self.UpdateSettingsFromCfg("testdataGroupInstrument")
         datasetCount = CheckStructureAndCountDatasets()
         self.assertEqual(datasetCount, 8)
-        self.ScanFolders()
+        self.ValidateSettingsAndScanFolders()
         self.assertEqual(
             sorted(self.groupsModel.GetValuesForColname("Full Name")),
             ["TestFacility-Group1", "TestFacility-Group2"])

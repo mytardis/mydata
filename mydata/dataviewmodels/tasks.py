@@ -12,7 +12,6 @@ import wx
 from ..models.task import TaskModel
 from ..utils.notification import Notification
 from ..logs import logger
-from ..utils import EndBusyCursorIfRequired
 from .dataview import MyDataDataViewModel
 
 
@@ -156,7 +155,8 @@ class TasksModel(MyDataDataViewModel):
                         sys.stderr.write("%s\n" % msg)
 
             app = wx.GetApp()
-            if not app.ShouldAbort():
+            if not app.CheckIfShouldAbort() and \
+                    not app.foldersController.started:
                 if wx.PyApp.IsMainLoopRunning():
                     thread = threading.Thread(target=TaskJobFunc)
                     logger.debug("Starting task %s" % taskModel.jobDesc)
@@ -164,11 +164,15 @@ class TasksModel(MyDataDataViewModel):
                 else:
                     TaskJobFunc()
             else:
-                logger.info("Not starting task because we are aborting.")
-                app.frame.toolbar.EnableTestAndUploadToolbarButtons()
-                EndBusyCursorIfRequired()
-                message = "Data scans and uploads were canceled."
-                wx.GetApp().frame.SetStatusMessage(message)
+                if app.CheckIfShouldAbort():
+                    logger.warning(
+                        "Not starting task because we are aborting.")
+                    message = "Data scans and uploads were canceled."
+                    wx.GetApp().frame.SetStatusMessage(message)
+                else:
+                    logger.warning(
+                        "Not starting task because scans and uploads are "
+                        "already running.")
                 return
 
         row = len(self.rowsData) - 1

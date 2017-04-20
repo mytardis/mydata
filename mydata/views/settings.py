@@ -1479,9 +1479,9 @@ class SettingsDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 configPath = dlg.GetPath()
                 SaveFieldsFromDialog(self, configPath=configPath)
-                if configPath != wx.GetApp().GetConfigPath():
+                if configPath != wx.GetApp().configPath:
                     SaveFieldsFromDialog(
-                        self, configPath=wx.GetApp().GetConfigPath())
+                        self, configPath=wx.GetApp().configPath)
         # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):

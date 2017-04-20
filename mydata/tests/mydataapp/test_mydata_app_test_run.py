@@ -64,14 +64,14 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
 
         # Test opening webpages using fake MyTardis URL.
         pyEvent = wx.PyEvent()
-        self.mydataApp.OnMyTardis(pyEvent)
-        self.mydataApp.OnAbout(pyEvent)
+        self.mydataApp.frame.OnMyTardis(pyEvent)
+        self.mydataApp.frame.OnAbout(pyEvent)
 
         # When running MyData without an event loop, this will block until complete:
         self.mydataApp.OnTestRunFromToolbar(event=wx.PyEvent())
 
     def tearDown(self):
         super(MyDataAppInstanceTester, self).tearDown()
-        self.mydataApp.GetTestRunFrame().Hide()
+        self.mydataApp.testRunFrame.Hide()
         self.mydataApp.frame.Hide()
         self.mydataApp.frame.Destroy()

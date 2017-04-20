@@ -18,7 +18,7 @@ class ScanFoldersTester(MyDataScanFoldersTester):
         Test ability to scan folders with the Email / Dataset structure.
         """
         self.UpdateSettingsFromCfg("testdataEmailDataset")
-        self.ScanFolders()
+        self.ValidateSettingsAndScanFolders()
         self.AssertUsers(["testuser1", "testuser2"])
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

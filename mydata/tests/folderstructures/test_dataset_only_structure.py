@@ -18,6 +18,6 @@ class ScanDatasetTester(MyDataScanFoldersTester):
         Test ability to scan the Dataset folder structure.
         """
         self.UpdateSettingsFromCfg("testdataDataset")
-        self.ScanFolders()
+        self.ValidateSettingsAndScanFolders()
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

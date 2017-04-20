@@ -88,6 +88,7 @@ class MyDataTester(unittest.TestCase):
         Initialize generic wxPython app and main frame
         """
         self.app = wx.App()
+        self.app.CheckIfShouldAbort = lambda: False
         self.frame = wx.Frame(parent=None, title=title)
 
     def tearDown(self):
@@ -210,19 +211,10 @@ class MyDataScanFoldersTester(MyDataTester):
         """
         assert numUserOrGroupFoldersScanned > 0
 
-    @staticmethod
-    def ShouldAbort():
-        """
-        Callback for ScanFolders.
-        """
-        return False
-
-    def ScanFolders(self):
+    def ValidateSettingsAndScanFolders(self):
         """
         Collecting some common code needed by multiple "scan folders" tests
         """
         ValidateSettings()
         self.InitializeModels()
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.ProgressCallback,
-            MyDataScanFoldersTester.ShouldAbort)
+        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)

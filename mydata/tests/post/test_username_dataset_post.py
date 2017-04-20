@@ -38,9 +38,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         ValidateSettings()
         self.InitializeModels()
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.ProgressCallback,
-            MyDataScanFoldersTester.ShouldAbort)
+        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
         self.assertEqual(
             sorted(self.usersModel.GetValuesForColname("Username")),
             ['INVALID_USER', 'testuser1', 'testuser2'])
@@ -106,8 +104,10 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.05)
         sys.stderr.write("\nCanceling uploads...\n")
+        self.app.CheckIfShouldAbort = lambda: True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
+        self.app.CheckIfShouldAbort = lambda: False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 

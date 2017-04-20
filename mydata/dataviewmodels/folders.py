@@ -20,6 +20,7 @@ from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import DoesNotExist
 from ..utils import EndBusyCursorIfRequired
 from ..utils import Compare
+from ..threads.flags import FLAGS
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from .dataview import MyDataDataViewModel
@@ -72,6 +73,11 @@ class FoldersModel(MyDataDataViewModel):
         This method is called to provide the rowsData object for a
         particular row,col
         """
+        # Workaround for a thread synchronization issue:
+        try:
+            assert self.rowsData[row]
+        except IndexError:
+            return ""
         columnKey = self.GetColumnKeyName(col)
         if columnKey.startswith("owner."):
             ownerKey = columnKey.split("owner.")[1]
@@ -151,7 +157,7 @@ class FoldersModel(MyDataDataViewModel):
                 else:
                     wx.CallAfter(self.TryRowValueChanged, row, col)
 
-    def ScanFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
+    def ScanFolders(self, writeProgressUpdateToStatusBar):
         """
         Scan dataset folders.
         """
@@ -182,11 +188,9 @@ class FoldersModel(MyDataDataViewModel):
         logger.debug("FoldersModel.ScanFolders(): Scanning " + dataDir + "...")
         if folderStructure.startswith("Username") or \
                 folderStructure.startswith("Email"):
-            self.ScanForUserFolders(writeProgressUpdateToStatusBar,
-                                    shouldAbort)
+            self.ScanForUserFolders(writeProgressUpdateToStatusBar)
         elif folderStructure.startswith("User Group"):
-            self.ScanForGroupFolders(writeProgressUpdateToStatusBar,
-                                     shouldAbort)
+            self.ScanForGroupFolders(writeProgressUpdateToStatusBar)
         elif folderStructure.startswith("Experiment"):
             self.ScanForExperimentFolders(dataDir, defaultOwner,
                                           defaultOwner.username)
@@ -196,7 +200,7 @@ class FoldersModel(MyDataDataViewModel):
         else:
             raise InvalidFolderStructure("Unknown folder structure.")
 
-    def ScanForUserFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
+    def ScanForUserFolders(self, writeProgressUpdateToStatusBar):
         """
         Scan for user folders.
         """
@@ -210,7 +214,7 @@ class FoldersModel(MyDataDataViewModel):
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
         numUserFoldersScanned = 0
         for userFolderName in userFolderNames:
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
@@ -230,7 +234,7 @@ class FoldersModel(MyDataDataViewModel):
                     userRecord = None
             except DoesNotExist:
                 userRecord = None
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
@@ -282,7 +286,7 @@ class FoldersModel(MyDataDataViewModel):
                 self.ScanForExperimentFolders(myTardisFolderPath,
                                               userRecord,
                                               userFolderName)
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
@@ -295,7 +299,7 @@ class FoldersModel(MyDataDataViewModel):
                 wx.CallAfter(
                     writeProgressUpdateToStatusBar, numUserFoldersScanned)
 
-    def ScanForGroupFolders(self, writeProgressUpdateToStatusBar, shouldAbort):
+    def ScanForGroupFolders(self, writeProgressUpdateToStatusBar):
         """
         Scan for group folders.
         """
@@ -309,7 +313,7 @@ class FoldersModel(MyDataDataViewModel):
             SETTINGS.advanced.uploadInvalidUserOrGroupFolders
         numGroupFoldersScanned = 0
         for groupFolderName in groupFolderNames:
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
@@ -331,7 +335,7 @@ class FoldersModel(MyDataDataViewModel):
                                    "'Upload invalid user group folders' "
                                    "setting is not checked." % groupFolderName)
                     continue
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
@@ -351,7 +355,7 @@ class FoldersModel(MyDataDataViewModel):
                                               groupFolderName=groupFolderName)
             else:
                 raise InvalidFolderStructure("Unknown folder structure.")
-            if shouldAbort():
+            if FLAGS.shouldAbort:
                 wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)

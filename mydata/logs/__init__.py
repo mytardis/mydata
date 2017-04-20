@@ -215,7 +215,7 @@ class Logger(object):
         to ensure that log messages appear in a deterministic order.
         """
         if wx.PyApp.IsMainLoopRunning():
-            wx.CallAfter(wx.GetApp().GetTestRunFrame().WriteLine, message)
+            wx.CallAfter(wx.GetApp().testRunFrame.WriteLine, message)
         else:
             sys.stderr.write("%s\n" % message)
 
