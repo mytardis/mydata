@@ -41,6 +41,7 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
             logger.testrun(message)
 
     try:
+        CheckIfShouldAbort(setStatusMessage)
         CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
                      % SETTINGS.advanced.folderStructure)
@@ -74,6 +75,8 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         return datasetCount
     except Exception as err:
         if isinstance(err, InvalidSettings):
+            raise
+        if isinstance(err, UserAbortedSettingsValidation):
             raise
         logger.error(traceback.format_exc())
         message = str(err)
