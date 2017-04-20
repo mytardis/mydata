@@ -73,5 +73,5 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
     def tearDown(self):
         super(MyDataAppInstanceTester, self).tearDown()
         self.mydataApp.GetTestRunFrame().Hide()
-        self.mydataApp.GetMainFrame().Hide()
-        self.mydataApp.GetMainFrame().Destroy()
+        self.mydataApp.frame.Hide()
+        self.mydataApp.frame.Destroy()

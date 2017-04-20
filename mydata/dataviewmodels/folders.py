@@ -211,7 +211,7 @@ class FoldersModel(MyDataDataViewModel):
         numUserFoldersScanned = 0
         for userFolderName in userFolderNames:
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
@@ -231,7 +231,7 @@ class FoldersModel(MyDataDataViewModel):
             except DoesNotExist:
                 userRecord = None
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
@@ -283,8 +283,7 @@ class FoldersModel(MyDataDataViewModel):
                                               userRecord,
                                               userFolderName)
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame()
-                             .SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
@@ -311,7 +310,7 @@ class FoldersModel(MyDataDataViewModel):
         numGroupFoldersScanned = 0
         for groupFolderName in groupFolderNames:
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
@@ -333,7 +332,7 @@ class FoldersModel(MyDataDataViewModel):
                                    "setting is not checked." % groupFolderName)
                     continue
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
@@ -353,7 +352,7 @@ class FoldersModel(MyDataDataViewModel):
             else:
                 raise InvalidFolderStructure("Unknown folder structure.")
             if shouldAbort():
-                wx.CallAfter(wx.GetApp().GetMainFrame().SetStatusMessage,
+                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return

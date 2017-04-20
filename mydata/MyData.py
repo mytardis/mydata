@@ -115,8 +115,6 @@ class MyData(wx.App):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
         self.SetAppName("MyData")
-        logger.debug("MyData version:   " + VERSION)
-        logger.debug("MyData commit:  " + LATEST_COMMIT)
         appname = "MyData"
         if sys.platform.startswith("win"):
             # We use a setup wizard on Windows which runs with admin
@@ -128,7 +126,6 @@ class MyData(wx.App):
             # On Mac, we currently use a DMG drag-and-drop installation, so
             # we can't create a system-wide MyData.cfg writeable by all users.
             appdirPath = appdirs.user_data_dir(appname, "Monash University")
-        logger.debug("appdirPath: " + appdirPath)
         if not os.path.exists(appdirPath):
             os.makedirs(appdirPath)
 
@@ -142,7 +139,6 @@ class MyData(wx.App):
 
         # MyData.cfg stores settings in INI format, readable by ConfigParser
         self.SetConfigPath(os.path.join(appdirPath, appname + '.cfg'))
-        logger.debug("self.GetConfigPath(): " + self.GetConfigPath())
         if not SETTINGS.configPath:
             SETTINGS.configPath = self.GetConfigPath()
             LoadSettings(SETTINGS, self.GetConfigPath())
@@ -154,9 +150,17 @@ class MyData(wx.App):
             uploads=UploadsModel(),
             tasks=TasksModel())
         self.dataViewModels['folders'] = \
-            FoldersModel(self.dataViewModels['users'], self.dataViewModels['groups'])
+            FoldersModel(self.dataViewModels['users'],
+                         self.dataViewModels['groups'])
 
         self.frame = MyDataFrame("MyData", self.dataViewModels)
+
+        # Wait until views have been created (in MyDataFrame) before doing
+        # logging, so that the logged messages will appear in the Log View:
+        logger.info("MyData version: v%s" % VERSION)
+        logger.info("MyData commit:  %s" % LATEST_COMMIT)
+        logger.info("appdirPath: " + appdirPath)
+        logger.info("self.GetConfigPath(): " + self.GetConfigPath())
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
@@ -315,7 +319,7 @@ class MyData(wx.App):
         SETTINGS.schedule.scheduleType = "Manually"
         SETTINGS.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.UI_RESPONSE
-        self.DisableTestAndUploadToolbarButtons()
+        self.frame.toolbar.DisableTestAndUploadToolbarButtons()
         self.testRunFrame.saveButton.Disable()
         self.SetShouldAbort(False)
         self.scheduleController.ApplySchedule(event, runManually=True,
@@ -426,7 +430,7 @@ class MyData(wx.App):
                             message = invalidSettings.message
                             logger.error(message)
                             wx.CallAfter(EndBusyCursorIfRequired)
-                            wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                            wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
                             self.SetScanningFolders(False)
                             self.frame.SetStatusMessage(
                                 "Settings validation failed.")
@@ -489,7 +493,7 @@ class MyData(wx.App):
                 self.scanningFoldersThreadingLock.acquire()
                 self.SetScanningFolders(True)
                 logger.debug("Just set ScanningFolders to True")
-                wx.CallAfter(self.DisableTestAndUploadToolbarButtons)
+                wx.CallAfter(self.frame.toolbar.DisableTestAndUploadToolbarButtons)
                 self.dataViewModels['folders'].ScanFolders(
                     WriteProgressUpdateToStatusBar, self.ShouldAbort)
                 self.foldersController.FinishedScanningForDatasetFolders()
@@ -510,7 +514,7 @@ class MyData(wx.App):
 
             if self.ShouldAbort():
                 wx.CallAfter(EndBusyCursorIfRequired)
-                wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
                 logger.debug("Just set ScanningFolders to False")
                 if testRun:
@@ -537,7 +541,7 @@ class MyData(wx.App):
                 if testRun:
                     logger.testrun(message)
                 wx.CallAfter(self.frame.SetStatusMessage, message)
-                wx.CallAfter(self.EnableTestAndUploadToolbarButtons)
+                wx.CallAfter(self.frame.toolbar.EnableTestAndUploadToolbarButtons)
                 self.SetScanningFolders(False)
                 logger.debug("Just set ScanningFolders to False")
 
@@ -732,13 +736,6 @@ class MyData(wx.App):
             response = requests.get(url)
             assert response.status_code == 200
 
-    def GetMainFrame(self):
-        """
-        Returns the application's main frame, which is
-        an instance of MyDataFrame.
-        """
-        return self.frame
-
     def GetTestRunFrame(self):
         """
         Returns the Test Run frame, summarizes the
@@ -801,23 +798,6 @@ class MyData(wx.App):
             self.threadSafeFlags['performingLookupsAndUploads'].set()
         else:
             self.threadSafeFlags['performingLookupsAndUploads'].clear()
-
-    def EnableTestAndUploadToolbarButtons(self):
-        """
-        Enables the Test Run and Upload toolbar buttons,
-        indicating that MyData is ready to respond to a
-        request to start scanning folders and uploading data.
-        """
-        self.frame.toolbar.EnableTestAndUploadToolbarButtons()
-
-    def DisableTestAndUploadToolbarButtons(self):
-        """
-        Disables the Test Run and Upload toolbar buttons,
-        indicating that MyData is busy scanning folders,
-        uploading data, validating settings or performing
-        a test run.
-        """
-        self.frame.toolbar.DisableTestAndUploadToolbarButtons()
 
     def Processing(self):
         """

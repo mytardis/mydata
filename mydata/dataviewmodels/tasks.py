@@ -165,11 +165,11 @@ class TasksModel(MyDataDataViewModel):
                     TaskJobFunc()
             else:
                 logger.info("Not starting task because we are aborting.")
-                app.EnableTestAndUploadToolbarButtons()
+                app.frame.toolbar.EnableTestAndUploadToolbarButtons()
                 EndBusyCursorIfRequired()
                 app.SetShouldAbort(False)
                 message = "Data scans and uploads were canceled."
-                wx.GetApp().GetMainFrame().SetStatusMessage(message)
+                wx.GetApp().frame.SetStatusMessage(message)
                 return
 
         row = len(self.rowsData) - 1

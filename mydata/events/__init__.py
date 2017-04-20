@@ -83,7 +83,7 @@ def PostEvent(event):
     if wx.PyApp.IsMainLoopRunning():
         target = event.GetDefaultTarget()
         if not target:
-            target = app.GetMainFrame()
+            target = app.frame
         wx.PostEvent(target, event)
     else:
         if hasattr(event, "GetDefaultHandler"):
@@ -432,9 +432,9 @@ def SettingsDialogValidation(event):
                 """
                 Updates status bar.
                 """
-                if hasattr(app, "GetMainFrame"):
+                if hasattr(app, "frame"):
                     wx.CallAfter(
-                        wx.GetApp().GetMainFrame().SetStatusMessage, message)
+                        wx.GetApp().frame.SetStatusMessage, message)
             try:
                 datasetCount = ValidateSettings(SetStatusMessage)
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
@@ -481,8 +481,8 @@ def ProvideSettingsValidationResults(event):
         message = invalidSettings.message
         logger.error(message)
         app = wx.GetApp()
-        if hasattr(app, "GetMainFrame"):
-            app.GetMainFrame().SetStatusMessage("")
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage("")
 
         if invalidSettings.suggestion:
             currentValue = ""
@@ -669,7 +669,7 @@ def StartDataUploadsForFolder(event):
         if hasattr(app, "TestRunRunning") and app.TestRunRunning():
             logger.testrun(message)
         if type(app).__name__ == "MyData":
-            app.DisableTestAndUploadToolbarButtons()
+            app.frame.toolbar.DisableTestAndUploadToolbarButtons()
             app.SetPerformingLookupsAndUploads(True)
             app.foldersController.StartUploadsForFolder(
                 event.folderModel)

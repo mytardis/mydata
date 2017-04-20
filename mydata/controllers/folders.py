@@ -616,7 +616,7 @@ class FoldersController(object):
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
-        if hasattr(wx.GetApp(), "GetMainFrame"):
+        if hasattr(wx.GetApp(), "frame"):
             if numVerificationsCompleted == \
                     self.numVerificationsToBePerformed \
                     and uploadsToBePerformed > 0:
@@ -626,7 +626,7 @@ class FoldersController(object):
                 message = "Looked up %d of %d files on server." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
+            wx.GetApp().frame.SetStatusMessage(message)
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
@@ -663,22 +663,22 @@ class FoldersController(object):
                 not app.PerformingLookupsAndUploads():
             # This means StartUploadsForFolder was never called
             EndBusyCursorIfRequired()
-            if hasattr(app, "toolbar"):
-                app.EnableTestAndUploadToolbarButtons()
+            if hasattr(app, "frame"):
+                app.frame.toolbar.EnableTestAndUploadToolbarButtons()
                 app.SetShouldAbort(False)
                 if self.testRun:
                     app.testRunFrame.saveButton.Enable()
             message = "No folders were found to upload from."
             logger.info(message)
-            if hasattr(app, "GetMainFrame"):
-                app.GetMainFrame().SetStatusMessage(message)
+            if hasattr(app, "frame"):
+                app.frame.SetStatusMessage(message)
             self.completed = True
             self.SetShuttingDown(False)
             return
         message = "Shutting down upload threads..."
         logger.info(message)
-        if hasattr(app, "GetMainFrame"):
-            app.GetMainFrame().SetStatusMessage(message)
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
             self.failed = True
             self.uploadsModel.CancelRemaining()
@@ -740,13 +740,13 @@ class FoldersController(object):
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
         logger.info(message)
-        if hasattr(app, "GetMainFrame"):
-            app.GetMainFrame().SetStatusMessage(message)
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage(message)
         if self.testRun:
             logger.testrun(message)
 
-        if hasattr(app, "toolbar"):
-            app.EnableTestAndUploadToolbarButtons()
+        if hasattr(app, "frame"):
+            app.frame.toolbar.EnableTestAndUploadToolbarButtons()
             app.SetShouldAbort(False)
             if self.testRun:
                 app.testRunFrame.saveButton.Enable()

@@ -1472,7 +1472,7 @@ class SettingsDialog(wx.Dialog):
         # pylint: disable=unused-argument
         mydataConfigPath = SETTINGS.configPath
         if mydataConfigPath is not None:
-            dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
+            dlg = wx.FileDialog(wx.GetApp().frame,
                                 "Save MyData configuration as...", "",
                                 "%s.cfg" % self.GetInstrumentName(), "*.cfg",
                                 wx.SAVE | wx.OVERWRITE_PROMPT)

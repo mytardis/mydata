@@ -21,7 +21,7 @@ def ReportNoActiveInterfaces():
         """
         dlg = wx.MessageDialog(None, message, "MyData", wx.OK | wx.ICON_ERROR)
         dlg.ShowModal()
-        wx.GetApp().GetMainFrame().SetStatusMessage("")
+        wx.GetApp().frame.SetStatusMessage("")
 
     if wx.PyApp.IsMainLoopRunning():
         wx.CallAfter(ShowDialog)
