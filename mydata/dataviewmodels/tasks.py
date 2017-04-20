@@ -167,7 +167,6 @@ class TasksModel(MyDataDataViewModel):
                 logger.info("Not starting task because we are aborting.")
                 app.frame.toolbar.EnableTestAndUploadToolbarButtons()
                 EndBusyCursorIfRequired()
-                app.SetShouldAbort(False)
                 message = "Data scans and uploads were canceled."
                 wx.GetApp().frame.SetStatusMessage(message)
                 return
