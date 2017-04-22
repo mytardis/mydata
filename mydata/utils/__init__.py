@@ -2,16 +2,20 @@
 """
 Miscellaneous utility functions.
 """
-import unicodedata
+import os
 import sys
+import subprocess
 import traceback
+import unicodedata
 import webbrowser
 
+import appdirs
 import psutil
 import requests
 import wx
 
 from ..logs import logger
+
 
 def PidIsRunning(pid):
     """
@@ -218,3 +222,60 @@ def OpenUrl(url, new=0, autoraise=True):
     else:
         response = requests.get(url)
         assert response.status_code == 200
+
+
+def CreateConfigPathIfNecessary(appname, appauthor):
+    """
+    Create path for saving MyData.cfg if it doesn't already exist.
+    """
+    if sys.platform.startswith("win"):
+        # We use a setup wizard on Windows which runs with admin
+        # privileges, so we can ensure that the appdirPath below,
+        # i.e. C:\ProgramData\Monash University\MyData\ is
+        # writeable by all users.
+        appdirPath = appdirs.site_config_dir(appname, appauthor)
+    else:
+        # On Mac, we currently use a DMG drag-and-drop installation, so
+        # we can't create a system-wide MyData.cfg writeable by all users.
+        appdirPath = appdirs.user_data_dir(appname, appauthor)
+    if not os.path.exists(appdirPath):
+        os.makedirs(appdirPath)
+    return appdirPath
+
+
+def InitializeTrustedCertsPath():
+    """
+    Tell the requests module where to find the CA (Certificate Authority)
+    certificates bundled with MyData.
+    """
+    if hasattr(sys, "frozen"):
+        if sys.platform.startswith("darwin"):
+            certPath = os.path.realpath('.')
+        else:
+            certPath = os.path.dirname(sys.executable)
+        os.environ['REQUESTS_CA_BUNDLE'] = \
+            os.path.join(certPath, 'cacert.pem')
+
+
+def CheckIfSystemTrayFunctionalityMissing(appname):
+    """
+    Recent Linux desktop envrionments have removed the system tray icon
+    functionality and replaced it with an indicator panel.  wxPython doesn't
+    yet support using inidicator panels, so on Ubuntu, we check if the
+    indicator-systemtray-unity package (which restores the system tray icon
+    functionality) is installed.
+    """
+    if os.getenv('DESKTOP_SESSION', '') == 'ubuntu':
+        proc = subprocess.Popen(['dpkg', '-s',
+                                 'indicator-systemtray-unity'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        _ = proc.communicate()
+        if proc.returncode != 0:
+            message = "Running MyData on Ubuntu's default " \
+                "(Unity) desktop requires the " \
+                "indicator-systemtray-unity package: " \
+                "https://github.com/GGleb/" \
+                "indicator-systemtray-unity"
+            wx.MessageBox(message, appname, wx.ICON_ERROR)
+            sys.exit(1)

@@ -12,9 +12,7 @@ import traceback
 import threading
 import argparse
 import logging
-import subprocess
 
-import appdirs
 import wx
 
 from . import __version__ as VERSION
@@ -45,6 +43,9 @@ from .views.testrun import TestRunFrame
 from .utils import BeginBusyCursorIfRequired
 from .utils import EndBusyCursorIfRequired
 from .utils import HandleGenericErrorWithDialog
+from .utils import CreateConfigPathIfNecessary
+from .utils import InitializeTrustedCertsPath
+from .utils import CheckIfSystemTrayFunctionalityMissing
 from .utils.connectivity import Connectivity
 from .threads.flags import FLAGS
 from .threads.locks import LOCKS
@@ -105,30 +106,11 @@ class MyData(wx.App):
         """
         Called automatically when application instance is created.
         """
-        # pylint: disable=too-many-statements
-        # pylint: disable=too-many-branches
-        self.SetAppName("MyData")
         appname = "MyData"
-        if sys.platform.startswith("win"):
-            # We use a setup wizard on Windows which runs with admin
-            # privileges, so we can ensure that the appdirPath below,
-            # i.e. C:\ProgramData\Monash University\MyData\ is
-            # writeable by all users.
-            appdirPath = appdirs.site_config_dir(appname, "Monash University")
-        else:
-            # On Mac, we currently use a DMG drag-and-drop installation, so
-            # we can't create a system-wide MyData.cfg writeable by all users.
-            appdirPath = appdirs.user_data_dir(appname, "Monash University")
-        if not os.path.exists(appdirPath):
-            os.makedirs(appdirPath)
-
-        if hasattr(sys, "frozen"):
-            if sys.platform.startswith("darwin"):
-                certPath = os.path.realpath('.')
-            else:
-                certPath = os.path.dirname(sys.executable)
-            os.environ['REQUESTS_CA_BUNDLE'] = \
-                os.path.join(certPath, 'cacert.pem')
+        appauthor = "Monash University"
+        self.SetAppName(appname)
+        appdirPath = CreateConfigPathIfNecessary(appname, appauthor)
+        InitializeTrustedCertsPath()
 
         if not SETTINGS.configPath:
             # SETTINGS.configPath is set to None in mydata/settings.py
@@ -147,12 +129,12 @@ class MyData(wx.App):
             FoldersModel(self.dataViewModels['users'],
                          self.dataViewModels['groups'])
 
-        self.frame = MyDataFrame("MyData", self.dataViewModels)
+        self.frame = MyDataFrame(appname, self.dataViewModels)
 
         # Wait until views have been created (in MyDataFrame) before doing
         # logging, so that the logged messages will appear in the Log View:
-        logger.info("MyData version: v%s" % VERSION)
-        logger.info("MyData commit:  %s" % LATEST_COMMIT)
+        logger.info("%s version: v%s" % (appname, VERSION))
+        logger.info("%s commit:  %s" % (appname, LATEST_COMMIT))
         logger.info("appdirPath: " + appdirPath)
         logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
 
@@ -160,8 +142,10 @@ class MyData(wx.App):
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.testRunFrame = TestRunFrame(self.frame)
 
-        self.foldersController = FoldersController(self.frame, self.dataViewModels)
-        self.scheduleController = ScheduleController(self.dataViewModels['tasks'])
+        self.foldersController = \
+            FoldersController(self.frame, self.dataViewModels)
+        self.scheduleController = \
+            ScheduleController(self.dataViewModels['tasks'])
 
         if sys.platform.startswith("win"):
             self.CheckIfAlreadyRunning(appdirPath)
@@ -176,31 +160,18 @@ class MyData(wx.App):
             self.frame.Show(True)
             self.OnSettings(event)
         else:
-            self.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
+            self.frame.SetTitle(
+                "%s - %s" % (appname, SETTINGS.general.instrumentName))
             if sys.platform.startswith("linux"):
-                if os.getenv('DESKTOP_SESSION', '') == 'ubuntu':
-                    proc = subprocess.Popen(['dpkg', '-s',
-                                             'indicator-systemtray-unity'],
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT)
-                    _ = proc.communicate()
-                    if proc.returncode != 0:
-                        message = "Running MyData on Ubuntu's default " \
-                            "(Unity) desktop requires the " \
-                            "indicator-systemtray-unity package: " \
-                            "https://github.com/GGleb/" \
-                            "indicator-systemtray-unity"
-                        wx.MessageBox(message, "MyData", wx.ICON_ERROR)
-                        sys.exit(1)
+                CheckIfSystemTrayFunctionalityMissing(appname)
             self.frame.Hide()
-            title = "MyData"
             if sys.platform.startswith("darwin"):
                 message = \
                     "Click the MyData menubar icon to access its menu."
             else:
                 message = \
                     "Click the MyData system tray icon to access its menu."
-            Notification.Notify(message, title=title)
+            Notification.Notify(message, title=appname)
             if 'MYDATA_TESTING' in os.environ:
                 if 'MYDATA_DONT_RUN_SCHEDULE' not in os.environ:
                     self.scheduleController.ApplySchedule(event)
@@ -472,8 +443,9 @@ class MyData(wx.App):
                              % threading.current_thread().name)
 
             if wx.PyApp.IsMainLoopRunning():
-                thread = threading.Thread(target=ValidateSettingsWorker,
-                                          name="OnRefreshValidateSettingsThread")
+                thread = threading.Thread(
+                    target=ValidateSettingsWorker,
+                    name="OnRefreshValidateSettingsThread")
                 logger.debug("Starting thread %s" % thread.name)
                 thread.start()
                 logger.debug("Started thread %s" % thread.name)
@@ -519,7 +491,8 @@ class MyData(wx.App):
                 LOCKS.scanningFoldersThreadingLock.acquire()
                 FLAGS.scanningFolders = True
                 logger.debug("Just set scanningFolders to True")
-                wx.CallAfter(self.frame.toolbar.DisableTestAndUploadToolbarButtons)
+                wx.CallAfter(
+                    self.frame.toolbar.DisableTestAndUploadToolbarButtons)
                 self.dataViewModels['folders'].ScanFolders(
                     WriteProgressUpdateToStatusBar)
                 self.foldersController.FinishedScanningForDatasetFolders()
@@ -673,7 +646,8 @@ class MyData(wx.App):
         currently busy processing something.
         """
         try:
-            return self.frame.toolbar.GetToolEnabled(self.frame.toolbar.stopTool.GetId())
+            return self.frame.toolbar.GetToolEnabled(
+                self.frame.toolbar.stopTool.GetId())
         except wx.PyDeadObjectError:  # Exception no longer exists in Phoenix.
             return False
 
