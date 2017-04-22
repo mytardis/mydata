@@ -36,7 +36,11 @@ class SettingsModel(object):
             miscellaneous=dict(mydataConfig=dict()),
             lastSettingsUpdateTrigger=None)
 
+        # The location on disk of MyData.cfg
+        # e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
         self.configPath = configPath
+
         self._verifiedDatafilesCache = None
         self.verifiedDatafilesCachePath = None
         self.initializeCacheLock = threading.Lock()

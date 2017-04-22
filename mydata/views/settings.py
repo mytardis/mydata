@@ -25,6 +25,7 @@ from ..utils.autostart import IsMyDataShortcutInWinStartupItems
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
+from ..threads.flags import FLAGS
 
 if 'phoenix' in wx.PlatformInfo:
     import wx.lib.masked
@@ -1226,7 +1227,7 @@ class SettingsDialog(wx.Dialog):
         # If we are not running scans and uploads, but we could be
         # running settings validation, stop when Cancel is pressed.
         if not wx.GetApp().Processing():
-            wx.GetApp().SetShouldAbort(True)
+            FLAGS.shouldAbort = True
         event.Skip()
 
     def OnOK(self, event):  # pylint: disable=invalid-name
@@ -1470,18 +1471,15 @@ class SettingsDialog(wx.Dialog):
 
     def OnSave(self, event):
         # pylint: disable=unused-argument
-        mydataConfigPath = SETTINGS.configPath
-        if mydataConfigPath is not None:
-            dlg = wx.FileDialog(wx.GetApp().frame,
-                                "Save MyData configuration as...", "",
-                                "%s.cfg" % self.GetInstrumentName(), "*.cfg",
-                                wx.SAVE | wx.OVERWRITE_PROMPT)
-            if dlg.ShowModal() == wx.ID_OK:
-                configPath = dlg.GetPath()
-                SaveFieldsFromDialog(self, configPath=configPath)
-                if configPath != wx.GetApp().configPath:
-                    SaveFieldsFromDialog(
-                        self, configPath=wx.GetApp().configPath)
+        dlg = wx.FileDialog(wx.GetApp().frame,
+                            "Save MyData configuration as...", "",
+                            "%s.cfg" % self.GetInstrumentName(), "*.cfg",
+                            wx.SAVE | wx.OVERWRITE_PROMPT)
+        if dlg.ShowModal() == wx.ID_OK:
+            configPath = dlg.GetPath()
+            SaveFieldsFromDialog(self, configPath=configPath)
+            if configPath != SETTINGS.configPath:
+                SaveFieldsFromDialog(self, configPath=SETTINGS.configPath)
         # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):

@@ -602,13 +602,7 @@ def ProvideSettingsValidationResults(event):
         # Use the config path determined by appdirs, not the one
         # determined by a user dragging and dropping a config
         # file onto MyData's Settings dialog:
-        app = wx.GetApp()
-        if hasattr(app, "configPath"):
-            configPath = app.configPath
-        else:
-            configPath = None
-        SaveFieldsFromDialog(
-            event.settingsDialog, configPath=configPath, saveToDisk=True)
+        SaveFieldsFromDialog(event.settingsDialog, saveToDisk=True)
         if wx.PyApp.IsMainLoopRunning():
             event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)

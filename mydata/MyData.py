@@ -62,11 +62,6 @@ class MyData(wx.App):
     def __init__(self, argv):
         self.instance = None
 
-        # The location on disk of MyData.cfg
-        # e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
-        # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
-        self.configPath = None
-
         self.frame = None
 
         # The Test Run frame summarizes the results of a dry run:
@@ -135,11 +130,12 @@ class MyData(wx.App):
             os.environ['REQUESTS_CA_BUNDLE'] = \
                 os.path.join(certPath, 'cacert.pem')
 
-        # MyData.cfg stores settings in INI format, readable by ConfigParser
-        self.configPath = os.path.join(appdirPath, appname + '.cfg')
         if not SETTINGS.configPath:
-            SETTINGS.configPath = self.configPath
-            LoadSettings(SETTINGS, self.configPath)
+            # SETTINGS.configPath is set to None in mydata/settings.py
+            # but it could be overwritten in unittests.
+            SETTINGS.configPath = os.path.join(appdirPath, appname + '.cfg')
+            # Load settings from MyData.cfg, stored in INI format:
+            LoadSettings(SETTINGS)
 
         self.dataViewModels = dict(
             users=UsersModel(),
@@ -158,7 +154,7 @@ class MyData(wx.App):
         logger.info("MyData version: v%s" % VERSION)
         logger.info("MyData commit:  %s" % LATEST_COMMIT)
         logger.info("appdirPath: " + appdirPath)
-        logger.info("self.configPath: " + self.configPath)
+        logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
