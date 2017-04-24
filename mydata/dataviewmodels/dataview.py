@@ -158,7 +158,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
         Only show rows matching the query string, typed in the search box
         in the upper-right corner of the main window.
         """
-        if len(self.filterFields) == 0:
+        if not self.filterFields:
             return
         self.searchString = searchString
         query = self.searchString.lower()

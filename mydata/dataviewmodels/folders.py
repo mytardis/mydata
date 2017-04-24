@@ -496,7 +496,7 @@ class FoldersModel(MyDataDataViewModel):
                     raise InvalidFolderStructure("Unknown folder structure.")
                 folderModel.SetCreatedDate()
                 self.AddRow(folderModel)
-            if len(filesDepth1) > 0:
+            if filesDepth1:
                 logger.info("Found %s experiment file(s) in %s\n"
                             % (len(filesDepth1), expFolderPath))
                 dataViewId = self.GetMaxDataViewId() + 1
@@ -546,7 +546,7 @@ class FoldersModel(MyDataDataViewModel):
                 message = "Multiple instrument folders found in %s" \
                     % groupFolderPath
                 logger.warning(message)
-            elif len(instrumentFolders) == 0:
+            elif not instrumentFolders:
                 message = "No instrument folder was found in %s" \
                     % groupFolderPath
                 logger.warning(message)

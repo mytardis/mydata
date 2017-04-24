@@ -55,7 +55,7 @@ class Connectivity(object):
         except Exception as err:
             HandleGenericErrorWithDialog(err)
         wx.CallAfter(EndBusyCursorIfRequired, event)
-        if len(activeNetworkInterfaces) > 0:
+        if activeNetworkInterfaces:
             logger.debug("Found at least one active network interface: %s."
                          % activeNetworkInterfaces[0])
             self.lastCheckSuccess = True

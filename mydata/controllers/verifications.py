@@ -137,7 +137,7 @@ class VerifyDatafileRunnable(object):
         """
         Check if existing DataFile is verified.
         """
-        if len(existingDatafile.replicas) == 0 or \
+        if not existingDatafile.replicas or \
                 not existingDatafile.replicas[0].verified:
             self.HandleExistingUnverifiedDatafile(existingDatafile)
         else:
@@ -162,7 +162,7 @@ class VerifyDatafileRunnable(object):
                 UploadMethod.VIA_STAGING and \
                 uploadToStagingRequest is not None and \
                 uploadToStagingRequest.approved and \
-                len(existingDatafile.replicas) > 0:
+                existingDatafile.replicas:
             self.HandleUnverifiedFileOnStaging(existingDatafile)
         else:
             self.HandleUnverifiedUnstagedUpload(existingDatafile)

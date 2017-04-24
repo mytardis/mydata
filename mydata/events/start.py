@@ -135,7 +135,7 @@ def StartScansAndUploads(
                         Connectivity.GetActiveNetworkInterfaces()
                 except Exception as err:
                     HandleGenericErrorWithDialog(err)
-                if len(activeNetworkInterfaces) == 0:
+                if not activeNetworkInterfaces:
                     ReportNoActiveInterfaces()
                     return
 

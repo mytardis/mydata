@@ -431,13 +431,13 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                             proc.stdin.write(chunk)
                             proc.stdin.flush()
                             if len(chunk) < chunk_size:
-                                if len(chunk) > 0 and chunk[-1] != '\0':
+                                if chunk and chunk[-1] != '\0':
                                     # We just read the final chunk, but it
                                     # didn't end with a null character ('\0'),
                                     # so we'll add one.
                                     proc.stdin.write('\0')
                                     proc.stdin.flush()
-                                elif len(chunk) == 0 and \
+                                elif not chunk and \
                                         (not previous_chunk or
                                          previous_chunk[-1] != '\0'):
                                     # We just read an empty chunk, so the

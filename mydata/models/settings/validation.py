@@ -383,7 +383,7 @@ def CheckFacility(setStatusMessage):
         facilities = FacilityModel.GetMyFacilities()
         message = "Facility \"%s\" was not found in MyTardis." \
             % SETTINGS.general.facilityName
-        if len(facilities) > 0:
+        if facilities:
             message += "\n\n" + \
                 "The facilities which user \"%s\" " \
                 "has access to are:\n\n" % SETTINGS.general.username
