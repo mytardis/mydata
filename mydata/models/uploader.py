@@ -88,7 +88,7 @@ import mydata.utils.openssh as OpenSSH
 from .. import __version__ as VERSION
 from ..logs import logger
 from ..settings import SETTINGS
-from ..utils.connectivity import Connectivity
+from ..utils.connectivity import GetDefaultInterfaceType
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import PrivateKeyDoesNotExist
 from ..utils.exceptions import MissingMyDataAppOnMyTardisServer
@@ -136,7 +136,7 @@ class UploaderModel(object):
         if SETTINGS.miscellaneous.uuid is None:
             SETTINGS.miscellaneous.uuid = str(uuid.uuid1())
 
-        defaultInterfaceType = Connectivity.GetDefaultInterfaceType()
+        defaultInterfaceType = GetDefaultInterfaceType()
         if defaultInterfaceType:
             self.ifconfig['interface'] = \
                 netifaces.gateways()['default'][defaultInterfaceType][1]

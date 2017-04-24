@@ -6,39 +6,30 @@ Main module for MyData.
 To run MyData from the command-line, use "python run.py", where run.py is
 in the parent directory of the directory containing MyData.py.
 """
-import sys
 import os
-import argparse
-import logging
+import sys
 
 import wx
 
 from . import __version__ as VERSION
 from . import LATEST_COMMIT
-from .settings import SETTINGS
 from .constants import APPNAME, APPAUTHOR
-from .dataviewmodels.folders import FoldersModel
-from .controllers.folders import FoldersController
+from .settings import SETTINGS
+
+from .dataviewmodels.dataview import DATAVIEW_MODELS
+
 from .views.mydata import MyDataFrame
-from .dataviewmodels.users import UsersModel
-from .dataviewmodels.groups import GroupsModel
-from .dataviewmodels.verifications import VerificationsModel
-from .dataviewmodels.uploads import UploadsModel
-from .dataviewmodels.tasks import TasksModel
-from .logs import logger
-from .events import MYDATA_EVENTS
-from .events.settings import OnSettings
-from .utils.notification import Notification
-from .controllers.schedule import ScheduleController
 from .views.testrun import TestRunFrame
-from .utils import BeginBusyCursorIfRequired
-from .utils import EndBusyCursorIfRequired
-from .utils import CreateConfigPathIfNecessary
-from .utils import InitializeTrustedCertsPath
-from .utils import CheckIfSystemTrayFunctionalityMissing
-from .utils.connectivity import Connectivity
-if sys.platform.startswith("linux"):
-    from .linuxsubprocesses import StopErrandBoy
+
+from .controllers.folders import FoldersController
+from .controllers.schedule import ScheduleController
+
+from .events.settings import OnSettings
+from .events import MYDATA_EVENTS
+
+from .utils.notification import Notification
+
+from .logs import logger
 
 
 class MyData(wx.App):
@@ -46,16 +37,17 @@ class MyData(wx.App):
     Encapsulates the MyData application.
     """
     def __init__(self, argv):
+        """
+        __init__ is run before OnInit.
+
+        :param argv: Command-line arguments or mock arguments from unittests
+        """
         self.instance = None
 
         self.frame = None
 
         # The Test Run frame summarizes the results of a dry run:
         self.testRunFrame = None
-
-        self.connectivity = Connectivity()
-
-        self.dataViewModels = dict()
 
         self.foldersController = None
         self.scheduleController = None
@@ -69,6 +61,9 @@ class MyData(wx.App):
         """
         Parse command-line arguments.
         """
+        import argparse
+        import logging
+
         parser = argparse.ArgumentParser()
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
@@ -91,25 +86,16 @@ class MyData(wx.App):
         """
         Called automatically when application instance is created.
         """
+        from .utils import CreateConfigPathIfNecessary
+        from .utils import InitializeTrustedCertsPath
+        from .utils import CheckIfSystemTrayFunctionalityMissing
         self.SetAppName(APPNAME)
         appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
         InitializeTrustedCertsPath()
-        if not SETTINGS.configPath:
-            # SETTINGS.configPath is set to None in mydata/settings.py
-            # but it could be overwritten in unittests.
+        if not 'MYDATA_TESTING' in os.environ:
             SETTINGS.SetConfigPathAndLoadSettings(appdirPath, APPNAME)
-
-        self.dataViewModels = dict(
-            users=UsersModel(),
-            groups=GroupsModel(),
-            verifications=VerificationsModel(),
-            uploads=UploadsModel(),
-            tasks=TasksModel())
-        self.dataViewModels['folders'] = \
-            FoldersModel(self.dataViewModels['users'],
-                         self.dataViewModels['groups'])
-
-        self.frame = MyDataFrame(APPNAME, self.dataViewModels)
+        InitializeDataViewModels()
+        self.frame = MyDataFrame()
 
         # Wait until views have been created (in MyDataFrame) before doing
         # logging, so that the logged messages will appear in the Log View:
@@ -122,10 +108,8 @@ class MyData(wx.App):
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.testRunFrame = TestRunFrame(self.frame)
 
-        self.foldersController = \
-            FoldersController(self.frame, self.dataViewModels)
-        self.scheduleController = \
-            ScheduleController(self.dataViewModels['tasks'])
+        self.foldersController = FoldersController(self.frame)
+        self.scheduleController = ScheduleController()
 
         if sys.platform.startswith("win"):
             self.CheckIfAlreadyRunning(appdirPath)
@@ -191,6 +175,11 @@ class MyData(wx.App):
         """
         Shut down MyData cleanly and quit.
         """
+        from .utils import BeginBusyCursorIfRequired
+        from .utils import EndBusyCursorIfRequired
+        if sys.platform.startswith("linux"):
+            from .linuxsubprocesses import StopErrandBoy
+
         event.StopPropagation()
         okToExit = wx.ID_YES
         if confirm and self.Processing():
@@ -208,7 +197,7 @@ class MyData(wx.App):
             BeginBusyCursorIfRequired()
             self.foldersController.ShutDownUploadThreads()
             EndBusyCursorIfRequired()
-            self.dataViewModels['tasks'].ShutDown()
+            DATAVIEW_MODELS['tasks'].ShutDown()
             if sys.platform.startswith("linux"):
                 StopErrandBoy()
             # sys.exit can raise exceptions if the wx.App
@@ -225,6 +214,24 @@ class MyData(wx.App):
                 self.frame.toolbar.stopTool.GetId())
         except wx.PyDeadObjectError:  # Exception no longer exists in Phoenix.
             return False
+
+
+def InitializeDataViewModels():
+    """
+    Initialize data view models
+    """
+    from .dataviewmodels.users import UsersModel
+    from .dataviewmodels.groups import GroupsModel
+    from .dataviewmodels.verifications import VerificationsModel
+    from .dataviewmodels.uploads import UploadsModel
+    from .dataviewmodels.tasks import TasksModel
+    from .dataviewmodels.folders import FoldersModel
+    DATAVIEW_MODELS['users'] = UsersModel()
+    DATAVIEW_MODELS['groups'] = GroupsModel()
+    DATAVIEW_MODELS['verifications'] = VerificationsModel()
+    DATAVIEW_MODELS['uploads'] = UploadsModel()
+    DATAVIEW_MODELS['tasks'] = TasksModel()
+    DATAVIEW_MODELS['folders'] = FoldersModel()
 
 
 def Run(argv):

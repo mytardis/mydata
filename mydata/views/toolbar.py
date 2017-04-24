@@ -9,6 +9,7 @@ import sys
 
 import wx
 
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..media import MYDATA_ICONS
 from ..media import IconStyle
 
@@ -209,7 +210,7 @@ class MyDataToolbar(object):
         Open the selected folder
         """
         event.StopPropagation()
-        foldersModel = self.parent.dataViewModels['folders']
+        foldersModel = DATAVIEW_MODELS['folders']
         foldersView = self.parent.dataViews['folders']
         items = foldersView.dataViewControl.GetSelections()
         rows = [foldersModel.GetRow(item) for item in items]

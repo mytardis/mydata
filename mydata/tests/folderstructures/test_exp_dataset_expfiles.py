@@ -1,7 +1,9 @@
 """
 Test ability to upload files at the Experiment level.
 """
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from .. import MyDataScanFoldersTester
+from .. import ValidateSettingsAndScanFolders
 
 
 class UploadExpFilesTester(MyDataScanFoldersTester):
@@ -18,11 +20,12 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
         Test ability to upload files at the Experiment level.
         """
         self.UpdateSettingsFromCfg("testdataExpDatasetExpFiles")
-        self.ValidateSettingsAndScanFolders()
+        ValidateSettingsAndScanFolders()
 
         folders = []
-        for row in range(self.foldersModel.GetRowCount()):
-            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
+        foldersModel = DATAVIEW_MODELS['folders']
+        for row in range(foldersModel.GetRowCount()):
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folders),
                          ["Birds", "Flowers",
                           "__EXPERIMENT_FILES__",
@@ -30,8 +33,8 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
 
         totalNumFiles = 0
         foundExpFilename = False
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             numFiles = folderModel.GetNumFiles()
             totalNumFiles += numFiles
             for fileIndex in range(numFiles):

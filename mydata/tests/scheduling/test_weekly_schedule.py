@@ -7,6 +7,7 @@ from datetime import timedelta
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -51,11 +52,11 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        uploadsModel = DATAVIEW_MODELS['uploads']
         self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.
-        tasksModel = self.mydataApp.dataViewModels['tasks']
+        tasksModel = DATAVIEW_MODELS['tasks']
         self.assertEqual(tasksModel.GetRowCount(), 1)
         self.assertEqual(tasksModel.GetValueByRow(0, 4), "Weekly (MTW-FSS)")
         tasksModel.DeleteAllRows()

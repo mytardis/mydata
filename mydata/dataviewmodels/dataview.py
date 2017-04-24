@@ -297,3 +297,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
         Return the renderer to be used for the specified dataview column
         """
         return ColumnRenderer.TEXT
+
+
+# This will be populated as each dataview model is initialized:
+DATAVIEW_MODELS = dict()

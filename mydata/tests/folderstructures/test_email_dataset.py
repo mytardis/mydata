@@ -2,6 +2,7 @@
 Test ability to scan folders with the Email / Dataset structure.
 """
 from .. import MyDataScanFoldersTester
+from .. import ValidateSettingsAndScanFolders
 
 
 class ScanFoldersTester(MyDataScanFoldersTester):
@@ -18,7 +19,7 @@ class ScanFoldersTester(MyDataScanFoldersTester):
         Test ability to scan folders with the Email / Dataset structure.
         """
         self.UpdateSettingsFromCfg("testdataEmailDataset")
-        self.ValidateSettingsAndScanFolders()
+        ValidateSettingsAndScanFolders()
         self.AssertUsers(["testuser1", "testuser2"])
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

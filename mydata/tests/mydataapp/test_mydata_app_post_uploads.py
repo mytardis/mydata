@@ -2,6 +2,7 @@
 Test ability to create a MyData App instance and uploads files using POST.
 """
 from ...MyData import MyData
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...events.start import StartScansAndUploads
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
@@ -35,7 +36,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        uploadsModel = self.mydataApp.dataViewModels['uploads']
+        uploadsModel = DATAVIEW_MODELS['uploads']
         self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         statusColumn = 5
         self.assertEqual(uploadsModel.GetValueByRow(0, statusColumn),

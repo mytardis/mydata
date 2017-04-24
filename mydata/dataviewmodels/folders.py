@@ -24,6 +24,7 @@ from ..threads.flags import FLAGS
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from .dataview import MyDataDataViewModel
+from .dataview import DATAVIEW_MODELS
 
 
 class FoldersModel(MyDataDataViewModel):
@@ -37,11 +38,8 @@ class FoldersModel(MyDataDataViewModel):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def __init__(self, usersModel, groupsModel):
+    def __init__(self):
         super(FoldersModel, self).__init__()
-
-        self.usersModel = usersModel
-        self.groupsModel = groupsModel
 
         self.columnNames = ["Id", "Folder (dataset)", "Location", "Created",
                             "Experiment", "Status", "Owner", "Group"]
@@ -162,12 +160,14 @@ class FoldersModel(MyDataDataViewModel):
         """
         Scan dataset folders.
         """
+        usersModel = DATAVIEW_MODELS['users']
+        groupsModel = DATAVIEW_MODELS['groups']
         if self.GetCount() > 0:
             self.DeleteAllRows()
-        if self.usersModel.GetCount() > 0:
-            self.usersModel.DeleteAllRows()
-        if self.groupsModel.GetCount() > 0:
-            self.groupsModel.DeleteAllRows()
+        if usersModel.GetCount() > 0:
+            usersModel.DeleteAllRows()
+        if groupsModel.GetCount() > 0:
+            groupsModel.DeleteAllRows()
         dataDir = SETTINGS.general.dataDirectory
         defaultOwner = SETTINGS.defaultOwner
         folderStructure = SETTINGS.advanced.folderStructure
@@ -205,6 +205,7 @@ class FoldersModel(MyDataDataViewModel):
         """
         Scan for user folders.
         """
+        usersModel = DATAVIEW_MODELS['users']
         dataDir = SETTINGS.general.dataDirectory
         userOrGroupFilterString = '*%s*' % SETTINGS.filters.userFilter
         folderStructure = SETTINGS.advanced.folderStructure
@@ -240,7 +241,7 @@ class FoldersModel(MyDataDataViewModel):
                              "Data scans and uploads were canceled.")
                 wx.CallAfter(EndBusyCursorIfRequired)
                 return
-            usersDataViewId = self.usersModel.GetMaxDataViewId() + 1
+            usersDataViewId = usersModel.GetMaxDataViewId() + 1
             if not userRecord:
                 message = "Didn't find a MyTardis user record for folder " \
                     "\"%s\" in %s" % (userFolderName, dataDir)
@@ -257,7 +258,7 @@ class FoldersModel(MyDataDataViewModel):
                     userRecord = UserModel(
                         email=userFolderName, userNotFoundInMyTardis=True)
             userRecord.dataViewId = usersDataViewId
-            self.usersModel.AddRow(userRecord)
+            usersModel.AddRow(userRecord)
 
             userFolderPath = os.path.join(dataDir, userFolderName)
             logger.debug("Folder structure: " + folderStructure)
@@ -304,6 +305,7 @@ class FoldersModel(MyDataDataViewModel):
         """
         Scan for group folders.
         """
+        groupsModel = DATAVIEW_MODELS['groups']
         dataDir = SETTINGS.general.dataDirectory
         userOrGroupFilterString = '*%s*' % SETTINGS.filters.userFilter
         filesDepth1 = glob(os.path.join(dataDir, userOrGroupFilterString))
@@ -321,7 +323,7 @@ class FoldersModel(MyDataDataViewModel):
                 return
             logger.debug("Found folder assumed to be user group name: " +
                          groupFolderName)
-            groupsDataViewId = self.groupsModel.GetMaxDataViewId() + 1
+            groupsDataViewId = groupsModel.GetMaxDataViewId() + 1
             try:
                 groupName = SETTINGS.advanced.groupPrefix + groupFolderName
                 groupRecord = GroupModel.GetGroupByName(groupName)
@@ -343,7 +345,7 @@ class FoldersModel(MyDataDataViewModel):
                 return
             if groupRecord:
                 groupRecord.dataViewId = groupsDataViewId
-                self.groupsModel.AddRow(groupRecord)
+                groupsModel.AddRow(groupRecord)
             groupFolderPath = os.path.join(dataDir, groupFolderName)
             if folderStructure == \
                     'User Group / Instrument / Full Name / Dataset':

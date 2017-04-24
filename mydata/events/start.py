@@ -16,6 +16,7 @@ import wx
 
 from ..settings import SETTINGS
 from ..dataviewmodels.users import UsersModel
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..models.settings import LastSettingsUpdateTrigger
 from ..models.settings.validation import ValidateSettings
 from ..utils.exceptions import InvalidFolderStructure
@@ -27,7 +28,8 @@ from ..events import PostEvent
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..utils import HandleGenericErrorWithDialog
-from ..utils.connectivity import Connectivity
+from ..utils.connectivity import CONNECTIVITY
+from ..utils.connectivity import GetActiveNetworkInterfaces
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from ..views.connectivity import ReportNoActiveInterfaces
@@ -107,7 +109,7 @@ def StartScansAndUploads(
             MYDATA_EVENTS.ValidateSettingsForRefreshEvent(
                 needToValidateSettings=needToValidateSettings,
                 testRun=testRun)
-        if app.connectivity.CheckForRefresh(
+        if CONNECTIVITY.CheckForRefresh(
                 nextEvent=validateSettingsForRefreshEvent):
             # Wait for the event to be handled, which will result
             # in StartScansAndUploads being called again.
@@ -131,8 +133,7 @@ def StartScansAndUploads(
             try:
                 wx.CallAfter(BeginBusyCursorIfRequired)
                 try:
-                    activeNetworkInterfaces = \
-                        Connectivity.GetActiveNetworkInterfaces()
+                    activeNetworkInterfaces = GetActiveNetworkInterfaces()
                 except Exception as err:
                     HandleGenericErrorWithDialog(err)
                 if not activeNetworkInterfaces:
@@ -226,7 +227,7 @@ def StartScansAndUploads(
             logger.debug("Just set scanningFolders to True")
             wx.CallAfter(
                 app.frame.toolbar.DisableTestAndUploadToolbarButtons)
-            app.dataViewModels['folders'].ScanFolders(
+            DATAVIEW_MODELS['folders'].ScanFolders(
                 WriteProgressUpdateToStatusBar)
             app.foldersController.FinishedScanningForDatasetFolders()
             FLAGS.scanningFolders = False
@@ -252,8 +253,8 @@ def StartScansAndUploads(
             return
 
         folderStructure = SETTINGS.advanced.folderStructure
-        usersModel = app.dataViewModels['users']
-        groupsModel = app.dataViewModels['groups']
+        usersModel = DATAVIEW_MODELS['users']
+        groupsModel = DATAVIEW_MODELS['groups']
         if any([
                 UsersModel.GetNumUserOrGroupFolders() == 0,
                 folderStructure.startswith("Username") and

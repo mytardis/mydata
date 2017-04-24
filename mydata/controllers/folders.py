@@ -17,6 +17,7 @@ import wx.lib.newevent
 import wx.dataview
 
 import mydata.events as mde
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events.stop import CheckIfShouldAbort
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
@@ -42,12 +43,12 @@ class FoldersController(object):
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
-    def __init__(self, notifyWindow, dataViewModels):
+    def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
-        self.foldersModel = dataViewModels['folders']
-        self.usersModel = dataViewModels['users']
-        self.verificationsModel = dataViewModels['verifications']
-        self.uploadsModel = dataViewModels['uploads']
+        self.foldersModel = DATAVIEW_MODELS['folders']
+        self.usersModel = DATAVIEW_MODELS['users']
+        self.verificationsModel = DATAVIEW_MODELS['verifications']
+        self.uploadsModel = DATAVIEW_MODELS['uploads']
 
         self.shuttingDown = threading.Event()
         self.showingErrorDialog = threading.Event()

@@ -11,6 +11,7 @@ import time
 
 import wx
 
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events.start import StartScansAndUploads
 from ..settings import SETTINGS
 from ..models.task import TaskModel
@@ -49,8 +50,8 @@ class ScheduleController(object):
     """
     Functionality for scheduling tasks.
     """
-    def __init__(self, tasksModel):
-        self.tasksModel = tasksModel
+    def __init__(self):
+        self.tasksModel = DATAVIEW_MODELS['tasks']
 
     def ApplySchedule(self, event, runManually=False,
                       needToValidateSettings=True, testRun=False):

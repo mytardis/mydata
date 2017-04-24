@@ -2,6 +2,7 @@
 Test ability to scan the Experiment / Dataset folder structure.
 """
 from .. import MyDataScanFoldersTester
+from .. import ValidateSettingsAndScanFolders
 
 
 class ScanExpDatasetTester(MyDataScanFoldersTester):
@@ -18,6 +19,6 @@ class ScanExpDatasetTester(MyDataScanFoldersTester):
         Test ability to scan the Experiment / Dataset folder structure.
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
-        self.ValidateSettingsAndScanFolders()
+        ValidateSettingsAndScanFolders()
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

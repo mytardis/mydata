@@ -34,6 +34,7 @@ from ..settings import SETTINGS
 from ..threads.flags import FLAGS
 from ..models.settings import SettingsModel
 from ..models.settings.validation import ValidateSettings
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..dataviewmodels.folders import FoldersModel
 from ..dataviewmodels.users import UsersModel
 from ..dataviewmodels.groups import GroupsModel
@@ -70,9 +71,6 @@ class MyDataTester(unittest.TestCase):
         self.fakeMyTardisPort = None
         self.fakeMyTardisServerThread = None
         self.fakeMyTardisUrl = None
-        self.usersModel = None
-        self.groupsModel = None
-        self.foldersModel = None
 
     def setUp(self):
         os.environ['MYDATA_TESTING'] = 'True'
@@ -133,40 +131,33 @@ class MyDataTester(unittest.TestCase):
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         SETTINGS.miscellaneous.cacheDataFileLookups = False
 
-    def InitializeModels(self):
-        """
-        Initialize dataview models.
-
-        Should be called after loading valid settings.
-        """
-        self.usersModel = UsersModel()
-        self.groupsModel = GroupsModel()
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
-
     def AssertUsers(self, users):
         """
         Check the users in self.usersModel
         """
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")), users)
+            sorted(usersModel.GetValuesForColname("Username")), users)
 
     def AssertFolders(self, folders):
         """
-        Check the folders in self.foldersModel
+        Check the folders in DATAVIEW_MODELS['folders']
         """
         folderNames = []
-        for row in range(self.foldersModel.GetRowCount()):
+        foldersModel = DATAVIEW_MODELS['folders']
+        for row in range(foldersModel.GetRowCount()):
             folderNames.append(
-                self.foldersModel.GetFolderRecord(row).folderName)
+                foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folderNames), folders)
 
     def AssertNumFiles(self, numFiles):
         """
-        Check the number of files found in self.foldersModel
+        Check the number of files found in DATAVIEW_MODELS['folders']
         """
         totalFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            totalFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        foldersModel = DATAVIEW_MODELS['folders']
+        for row in range(foldersModel.GetRowCount()):
+            totalFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(totalFiles, numFiles)
 
 
@@ -212,10 +203,23 @@ class MyDataScanFoldersTester(MyDataTester):
         """
         assert numUserOrGroupFoldersScanned > 0
 
-    def ValidateSettingsAndScanFolders(self):
-        """
-        Collecting some common code needed by multiple "scan folders" tests
-        """
-        ValidateSettings()
-        self.InitializeModels()
-        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+
+def InitializeModels():
+    """
+    Initialize dataview models.
+
+    Should be called after loading valid settings.
+    """
+    DATAVIEW_MODELS['users'] = UsersModel()
+    DATAVIEW_MODELS['groups'] = GroupsModel()
+    DATAVIEW_MODELS['folders'] = FoldersModel()
+
+
+def ValidateSettingsAndScanFolders():
+    """
+    Collecting some common code needed by multiple "scan folders" tests
+    """
+    ValidateSettings()
+    InitializeModels()
+    foldersModel = DATAVIEW_MODELS['folders']
+    foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)

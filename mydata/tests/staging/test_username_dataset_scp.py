@@ -15,6 +15,7 @@ import mydata.tests.fake_mytardis_helpers.get as fake_mytardis_get
 from ...logs import logger
 from ...settings import SETTINGS
 from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
@@ -22,6 +23,7 @@ from ...models.upload import UploadStatus
 from ...threads.flags import FLAGS
 from ...utils.exceptions import PrivateKeyDoesNotExist
 from .. import MyDataScanFoldersTester
+from .. import InitializeModels
 from ..fake_ssh_server import ThreadedSshServer
 from ..utils import Subtract
 from ..utils import GetEphemeralPort
@@ -80,36 +82,35 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.uploaderModel.UploadUploaderInfo()
         self.assertEqual(SETTINGS.uploaderModel.name, "Test Instrument")
         SETTINGS.uploaderModel.sshKeyPair = self.keyPair
-        self.InitializeModels()
-        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+        InitializeModels()
+        foldersModel = DATAVIEW_MODELS['folders']
+        foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
         # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
         # so the "INVALID_USER" folder is not included:
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")),
+            sorted(usersModel.GetValuesForColname("Username")),
             ["testuser1", "testuser2"])
 
         folders = []
-        for row in range(self.foldersModel.GetRowCount()):
-            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
+        for row in range(foldersModel.GetRowCount()):
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            numFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(foldersModel.GetRowCount()):
+            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 10)
 
         numExistingVerifiedFiles = 1
         numUnverifiedFullSizeFiles = 1
         numTriggeringMissingApiEndpoint = 1
 
-        uploadsModel = UploadsModel()
-        verificationsModel = VerificationsModel()
-        dataViewModels = dict(
-            folders=self.foldersModel,
-            users=self.usersModel,
-            verifications=verificationsModel,
-            uploads=uploadsModel)
-        foldersController = FoldersController(self.frame, dataViewModels)
+        DATAVIEW_MODELS['verifications'] = VerificationsModel()
+        verificationsModel = DATAVIEW_MODELS['verifications']
+        DATAVIEW_MODELS['uploads'] = UploadsModel()
+        uploadsModel = DATAVIEW_MODELS['uploads']
+        foldersController = FoldersController(self.frame)
         # This helps with PostEvent's logging in mydata/events/__init__.py:
         self.app.foldersController = foldersController
 
@@ -128,8 +129,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             time.sleep(0.25)
 
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
 
@@ -196,8 +197,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             Start Uploads worker
             """
             foldersController.InitForUploads()
-            for row in range(self.foldersModel.GetRowCount()):
-                folderModel = self.foldersModel.GetFolderRecord(row)
+            for row in range(foldersModel.GetRowCount()):
+                folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
             foldersController.FinishedScanningForDatasetFolders()
 
@@ -234,8 +235,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.miscellaneous.uuid = "1234567891"
         loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         newLogs = Subtract(logger.GetValue(), loggerOutput)
@@ -250,8 +251,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         OpenSSH.OPENSSH.scp += "_INVALID"
         loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         OpenSSH.OPENSSH.scp = OpenSSH.OPENSSH.scp.rstrip("_INVALID")
@@ -276,8 +277,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         OpenSSH.OPENSSH.ssh += "_INVALID"
         loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         OpenSSH.OPENSSH.ssh = OpenSSH.OPENSSH.ssh.rstrip("_INVALID")
@@ -295,8 +296,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             "\nTesting attempted uploads with invalid file paths...\n")
         foldersController.InitForUploads()
         loggerOutput = logger.GetValue()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
                 folderModel.dataFilePaths[dataFileIndex] += "_INVALID"
             foldersController.StartUploadsForFolder(folderModel)
@@ -323,8 +324,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         sys.stderr.write("\tNumber of uploads: %s\n\n" % uploadsProcessed)
         foldersController.InitForUploads()
         loggerOutput = logger.GetValue()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
                 folderModel.dataFilePaths[dataFileIndex] = \
                     folderModel.dataFilePaths[dataFileIndex].rstrip("_INVALID")

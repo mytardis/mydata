@@ -8,12 +8,14 @@ import traceback
 
 import wx
 
+from ..constants import APPNAME
 from ..logs import logger
 from ..media import MYDATA_ICONS
 from ..utils import OpenUrl
 from ..events.docs import OnHelp
 from ..events.docs import OnWalkthrough
 from .dataview import MyDataDataView
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from .log import LogView
 from .taskbaricon import MyDataTaskBarIcon
 from .toolbar import MyDataToolbar
@@ -51,8 +53,8 @@ class MyDataFrame(wx.Frame):
     """
     MyData's main window.
     """
-    def __init__(self, title, dataViewModels):
-        wx.Frame.__init__(self, None, wx.ID_ANY, title)
+    def __init__(self):
+        wx.Frame.__init__(self, None, wx.ID_ANY, APPNAME)
         self.SetSize(wx.Size(1000, 600))
         self.statusbar = wx.StatusBar(self)
         if sys.platform.startswith("win"):
@@ -64,7 +66,6 @@ class MyDataFrame(wx.Frame):
         self.statusbar.SetStatusWidths([-1, 60])
 
         self.mydataApp = wx.GetApp()
-        self.dataViewModels = dataViewModels
 
         self.panel = wx.Panel(self)
 
@@ -91,7 +92,7 @@ class MyDataFrame(wx.Frame):
                   self.OnNotebookPageChanging, self.tabbedView)
 
         self.dataViews = dict()
-        if self.dataViewModels:
+        if DATAVIEW_MODELS:
             self.AddDataViews()
 
         self.logView = LogView(self.tabbedView)
@@ -125,28 +126,28 @@ class MyDataFrame(wx.Frame):
         Create data views and add them to tabbed view.
         """
         self.dataViews['folders'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['folders'])
+            self.tabbedView, DATAVIEW_MODELS['folders'])
         self.tabbedView.AddPage(self.dataViews['folders'], "Folders")
 
         self.dataViews['users'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['users'])
+            self.tabbedView, DATAVIEW_MODELS['users'])
         self.tabbedView.AddPage(self.dataViews['users'], "Users")
 
         self.dataViews['groups'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['groups'])
+            self.tabbedView, DATAVIEW_MODELS['groups'])
         self.tabbedView.AddPage(self.dataViews['groups'], "Groups")
 
         self.dataViews['verifications'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['verifications'])
+            self.tabbedView, DATAVIEW_MODELS['verifications'])
         self.tabbedView.AddPage(
             self.dataViews['verifications'], "Verifications")
 
         self.dataViews['uploads'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['uploads'])
+            self.tabbedView, DATAVIEW_MODELS['uploads'])
         self.tabbedView.AddPage(self.dataViews['uploads'], "Uploads")
 
         self.dataViews['tasks'] = MyDataDataView(
-            self.tabbedView, self.dataViewModels['tasks'])
+            self.tabbedView, DATAVIEW_MODELS['tasks'])
         self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
 
     def SetStatusMessage(self, msg):
@@ -212,11 +213,11 @@ class MyDataFrame(wx.Frame):
         or main window.
         """
         if self.tabbedView.GetSelection() == NotebookTabs.FOLDERS:
-            self.dataViewModels['folders'].Filter(event.GetString())
+            DATAVIEW_MODELS['folders'].Filter(event.GetString())
         elif self.tabbedView.GetSelection() == NotebookTabs.USERS:
-            self.dataViewModels['users'].Filter(event.GetString())
+            DATAVIEW_MODELS['users'].Filter(event.GetString())
         elif self.tabbedView.GetSelection() == NotebookTabs.GROUPS:
-            self.dataViewModels['groups'].Filter(event.GetString())
+            DATAVIEW_MODELS['groups'].Filter(event.GetString())
 
     def OnTaskBarLeftClick(self, event):
         """
@@ -233,9 +234,9 @@ class MyDataFrame(wx.Frame):
         from ..settings import SETTINGS
         try:
             items = self.dataViews['folders'].dataViewControl.GetSelections()
-            rows = [self.dataViewModels['folders'].GetRow(item) for item in items]
+            rows = [DATAVIEW_MODELS['folders'].GetRow(item) for item in items]
             if len(rows) == 1:
-                folderRecord = self.dataViewModels['folders'].GetFolderRecord(rows[0])
+                folderRecord = DATAVIEW_MODELS['folders'].GetFolderRecord(rows[0])
                 if folderRecord.datasetModel is not None:
                     OpenUrl(SETTINGS.general.myTardisUrl + "/" +
                             folderRecord.datasetModel.viewUri)

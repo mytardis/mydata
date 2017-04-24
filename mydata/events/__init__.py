@@ -13,6 +13,7 @@ from ..models.settings.serialize import SaveFieldsFromDialog
 from ..models.settings.validation import ValidateSettings
 from ..models.instrument import InstrumentModel
 from ..models.uploader import UploaderModel
+from ..utils.connectivity import CONNECTIVITY
 from ..utils.exceptions import DuplicateKey
 from ..utils.exceptions import UserAbortedSettingsValidation
 from ..utils.exceptions import InvalidSettings
@@ -270,15 +271,14 @@ def CheckConnectivity(event):
     """
     Checks network connectivity.
     """
-    app = wx.GetApp()
     if wx.PyApp.IsMainLoopRunning():
         checkConnectivityThread = threading.Thread(
-            target=app.connectivity.Check,
+            target=CONNECTIVITY.Check,
             name="CheckConnectivityThread", args=[event])
         MYDATA_THREADS.Add(checkConnectivityThread)
         checkConnectivityThread.start()
     else:
-        app.connectivity.Check(event)
+        CONNECTIVITY.Check(event)
 
 
 def InstrumentNameMismatch(event):
@@ -324,11 +324,10 @@ def InstrumentNameMismatch(event):
             event.settingsDialog.instrumentNameField.SelectAll()
         elif dlg.GetStringSelection() == createChoice:
             logger.info("OK, we will create a new instrument record.")
-            app = wx.GetApp()
             settingsDialogValidationEvent = \
                 MYDATA_EVENTS.SettingsDialogValidationEvent(
                     settingsDialog=event.settingsDialog)
-            if app.connectivity.NeedToCheck():
+            if CONNECTIVITY.NeedToCheck():
                 checkConnectivityEvent = \
                     MYDATA_EVENTS.CheckConnectivityEvent(
                         nextEvent=settingsDialogValidationEvent)
@@ -414,7 +413,7 @@ def SettingsDialogValidation(event):
 
             app = wx.GetApp()
             if hasattr(app, "connectivity"):
-                if app.connectivity.NeedToCheck():
+                if CONNECTIVITY.NeedToCheck():
                     settingsDialogValidationEvent = \
                         MYDATA_EVENTS.SettingsDialogValidationEvent(
                             settingsDialog=event.settingsDialog,

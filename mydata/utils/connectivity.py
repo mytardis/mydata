@@ -51,7 +51,7 @@ class Connectivity(object):
         from ..events import PostEvent
         wx.CallAfter(BeginBusyCursorIfRequired)
         try:
-            activeNetworkInterfaces = Connectivity.GetActiveNetworkInterfaces()
+            activeNetworkInterfaces = GetActiveNetworkInterfaces()
         except Exception as err:
             HandleGenericErrorWithDialog(err)
         wx.CallAfter(EndBusyCursorIfRequired, event)
@@ -77,29 +77,32 @@ class Connectivity(object):
         return intervalSinceLastCheck.total_seconds() >= CHECK_INTERVAL \
             or not self.lastCheckSuccess
 
-    @staticmethod
-    def GetDefaultInterfaceType():
-        """
-        Get default interface type
-        """
-        defaultInterfaceType = netifaces.AF_INET
-        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
-            defaultInterfaceType = netifaces.AF_INET6
-        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
-            defaultInterfaceType = netifaces.AF_LINK
-        if defaultInterfaceType not in netifaces.gateways()['default'].keys():
-            defaultInterfaceType = None
-        return defaultInterfaceType
 
-    @staticmethod
-    def GetActiveNetworkInterfaces():
-        """
-        Get active network interfaces
-        """
-        logger.debug("Determining the active network interface...")
-        activeInterfaces = []
-        defaultInterfaceType = Connectivity.GetDefaultInterfaceType()
-        if defaultInterfaceType:
-            activeInterfaces.append(
-                netifaces.gateways()['default'][defaultInterfaceType][1])
-        return activeInterfaces
+def GetDefaultInterfaceType():
+    """
+    Get default interface type
+    """
+    defaultInterfaceType = netifaces.AF_INET
+    if defaultInterfaceType not in netifaces.gateways()['default'].keys():
+        defaultInterfaceType = netifaces.AF_INET6
+    if defaultInterfaceType not in netifaces.gateways()['default'].keys():
+        defaultInterfaceType = netifaces.AF_LINK
+    if defaultInterfaceType not in netifaces.gateways()['default'].keys():
+        defaultInterfaceType = None
+    return defaultInterfaceType
+
+
+def GetActiveNetworkInterfaces():
+    """
+    Get active network interfaces
+    """
+    logger.debug("Determining the active network interface...")
+    activeInterfaces = []
+    defaultInterfaceType = GetDefaultInterfaceType()
+    if defaultInterfaceType:
+        activeInterfaces.append(
+            netifaces.gateways()['default'][defaultInterfaceType][1])
+    return activeInterfaces
+
+
+CONNECTIVITY = Connectivity()

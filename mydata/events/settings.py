@@ -5,6 +5,7 @@ This module contains event handlers relating to settings.
 """
 import wx
 
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..logs import logger
 from ..views.settings import SettingsDialog
 from ..settings import SETTINGS
@@ -30,5 +31,5 @@ def OnSettings(event, validationMessage=None):
     if settingsDialog.ShowModal() == wx.ID_OK:
         logger.debug("settingsDialog.ShowModal() returned wx.ID_OK")
         app.frame.SetTitle("MyData - " + SETTINGS.general.instrumentName)
-        app.dataViewModels['tasks'].DeleteAllRows()
+        DATAVIEW_MODELS['tasks'].DeleteAllRows()
         app.scheduleController.ApplySchedule(event)

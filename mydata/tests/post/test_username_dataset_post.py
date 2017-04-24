@@ -11,12 +11,14 @@ from ...logs import logger
 from ...settings import SETTINGS
 from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
 from ..utils import Subtract
 from .. import MyDataScanFoldersTester
+from .. import InitializeModels
 
 
 class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
@@ -37,35 +39,34 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         ValidateSettings()
-        self.InitializeModels()
+        InitializeModels()
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
-        self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+        foldersModel = DATAVIEW_MODELS['folders']
+        foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")),
+            sorted(usersModel.GetValuesForColname("Username")),
             ['INVALID_USER', 'testuser1', 'testuser2'])
 
         folders = []
-        for row in range(self.foldersModel.GetRowCount()):
-            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
+        for row in range(foldersModel.GetRowCount()):
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(
             sorted(folders), ['Birds', 'Flowers', 'InvalidUserDataset1'])
 
         numFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            numFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(foldersModel.GetRowCount()):
+            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 11)
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
-        dataViewModels = dict(
-            folders=self.foldersModel,
-            users=self.usersModel,
-            verifications=verificationsModel,
-            uploads=uploadsModel)
-        foldersController = FoldersController(self.frame, dataViewModels)
+        DATAVIEW_MODELS['verifications'] = verificationsModel
+        DATAVIEW_MODELS['uploads'] = uploadsModel
+        foldersController = FoldersController(self.frame)
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
 
@@ -89,8 +90,8 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             Start Uploads worker
             """
             foldersController.InitForUploads()
-            for row in range(self.foldersModel.GetRowCount()):
-                folderModel = self.foldersModel.GetFolderRecord(row)
+            for row in range(foldersModel.GetRowCount()):
+                folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
             foldersController.FinishedScanningForDatasetFolders()
 
@@ -119,7 +120,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
         event = wx.PyEvent()
-        event.folderModel = self.foldersModel.GetFolderRecord(0)
+        event.folderModel = foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
         newLogs = Subtract(logger.GetValue(), loggerOutput)
