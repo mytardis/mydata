@@ -11,6 +11,8 @@ import wx
 from ..logs import logger
 from ..media import MYDATA_ICONS
 from ..utils import OpenUrl
+from ..events.docs import OnHelp
+from ..events.docs import OnWalkthrough
 from .dataview import MyDataDataView
 from .log import LogView
 from .taskbaricon import MyDataTaskBarIcon
@@ -183,12 +185,12 @@ class MyDataFrame(wx.Frame):
 
         helpMenuItemID = wx.NewId()
         helpMenu.Append(helpMenuItemID, "&MyData Help")
-        self.Bind(wx.EVT_MENU, MyDataFrame.OnHelp, id=helpMenuItemID)
+        self.Bind(wx.EVT_MENU, OnHelp, id=helpMenuItemID)
 
         walkthroughMenuItemID = wx.NewId()
         helpMenu.Append(walkthroughMenuItemID, "Mac OS X &Walkthrough")
         self.Bind(
-            wx.EVT_MENU, MyDataFrame.OnWalkthrough, id=walkthroughMenuItemID)
+            wx.EVT_MENU, OnWalkthrough, id=walkthroughMenuItemID)
 
         helpMenu.Append(wx.ID_ABOUT, "&About MyData")
         self.Bind(wx.EVT_MENU, MyDataFrame.OnAbout, id=wx.ID_ABOUT)
@@ -245,31 +247,7 @@ class MyDataFrame(wx.Frame):
             logger.error(traceback.format_exc())
         event.Skip()
 
-    @staticmethod
-    def OnHelp(event):
-        """
-        Called when the user clicks the Help icon on the
-        main toolbar.
-        """
-        new = 2  # Open in a new tab, if possible
-        url = "http://mydata.readthedocs.org/en/latest/"
-        OpenUrl(url, new=new)
-        event.Skip()
-
-    @staticmethod
-    def OnWalkthrough(event):
-        """
-        Mac OS X Only.
-        Called when the user clicks the Mac OS X Walkthrough
-        menu item in the Help menu.
-        """
-        new = 2  # Open in a new tab, if possible
-        url = "http://mydata.readthedocs.org/en/latest/macosx-walkthrough.html"
-        OpenUrl(url, new=new)
-        event.Skip()
-
-    @staticmethod
-    def OnAbout(event):
+    def OnAbout(self, event):
         """
         Called when the user clicks the Info icon on the
         main toolbar.
@@ -285,7 +263,7 @@ class MyDataFrame(wx.Frame):
               "https://github.com/mytardis/mydata\n\n" \
               "Version:   " + VERSION + "\n" \
               "Commit:  " + LATEST_COMMIT + "\n"
-        dlg = wx.MessageDialog(None, msg, "About MyData",
+        dlg = wx.MessageDialog(self, msg, "About MyData",
                                wx.OK | wx.ICON_INFORMATION)
         if wx.PyApp.IsMainLoopRunning():
             dlg.ShowModal()

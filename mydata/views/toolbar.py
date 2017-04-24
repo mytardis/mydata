@@ -9,9 +9,6 @@ import sys
 
 import wx
 
-from ..events.settings import OnSettings
-from ..events.start import OnTestRunFromToolbar
-from ..events.stop import OnStop
 from ..media import MYDATA_ICONS
 from ..media import IconStyle
 
@@ -88,6 +85,7 @@ class MyDataToolbar(object):
         """
         Add test run tool for starting test run.
         """
+        from ..events.start import OnTestRunFromToolbar
         testIcon = MYDATA_ICONS.GetIcon("Test tubes", size="24x24")
         self.testTool = self.addToolMethod(
             wx.ID_ANY, "Test Run", testIcon, shortHelp="Test Run")
@@ -111,6 +109,7 @@ class MyDataToolbar(object):
         """
         Add stop tool for stopping scans and uploads.
         """
+        from ..events.stop import OnStop
         stopIcon = MYDATA_ICONS.GetIcon(
             "Stop sign", size="24x24", style=IconStyle.NORMAL)
         self.stopTool = self.addToolMethod(
@@ -127,6 +126,7 @@ class MyDataToolbar(object):
         """
         Add settings tool for opening Settings dialog.
         """
+        from ..events.settings import OnSettings
         settingsIcon = MYDATA_ICONS.GetIcon("Settings", size="24x24")
         self.settingsTool = self.addToolMethod(
             wx.ID_ANY, "Settings", settingsIcon, shortHelp="Settings")
@@ -147,23 +147,22 @@ class MyDataToolbar(object):
         """
         Add About tool for opening MyData's About dialog.
         """
-        from .mydata import MyDataFrame
         aboutIcon = MYDATA_ICONS.GetIcon("About", size="24x24",
                                          style=IconStyle.HOT)
         aboutTool = self.addToolMethod(wx.ID_ANY, "About MyData",
                                        aboutIcon, shortHelp="About MyData")
-        self.parent.Bind(wx.EVT_TOOL, MyDataFrame.OnAbout, aboutTool)
+        self.parent.Bind(wx.EVT_TOOL, self.parent.OnAbout, aboutTool)
 
     def AddHelpTool(self):
         """
         Add Help tool for opening MyData's online help.
         """
-        from .mydata import MyDataFrame
+        from ..events.docs import OnHelp
         helpIcon = MYDATA_ICONS.GetIcon("Help", size="24x24",
                                         style=IconStyle.HOT)
         helpTool = self.addToolMethod(wx.ID_ANY, "Help", helpIcon,
                                       shortHelp="MyData User Guide")
-        self.parent.Bind(wx.EVT_TOOL, MyDataFrame.OnHelp, helpTool)
+        self.parent.Bind(wx.EVT_TOOL, OnHelp, helpTool)
 
     def AddSearchControl(self):
         """
