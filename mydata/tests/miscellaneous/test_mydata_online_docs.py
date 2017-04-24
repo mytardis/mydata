@@ -16,6 +16,7 @@ class MyDataOnlineDocsTester(MyDataMinimalTester):
         """
         Test ability to access MyData's online documentation.
         """
+        assert self  # Avoid Pylint's no-self-use
         pyEvent = wx.PyEvent()
         OnHelp(pyEvent)
         OnWalkthrough(pyEvent)
