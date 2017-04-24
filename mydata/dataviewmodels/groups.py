@@ -37,9 +37,10 @@ class GroupsModel(MyDataDataViewModel):
             pass
         if not ascending:
             groupRecord2, groupRecord1 = groupRecord1, groupRecord2
-        if col == 0 or col == 3:
-            return Compare(int(groupRecord1.dataViewId),
-                           int(groupRecord2.dataViewId))
+        if col == 0:
+            obj1 = int(groupRecord1.dataViewId)
+            obj2 = int(groupRecord2.dataViewId)
         else:
-            return Compare(groupRecord1.GetValueForKey(self.columnKeys[col]),
-                           groupRecord2.GetValueForKey(self.columnKeys[col]))
+            obj1 = groupRecord1.GetValueForKey(self.columnKeys[col])
+            obj2 = groupRecord2.GetValueForKey(self.columnKeys[col])
+        return Compare(obj1, obj2)

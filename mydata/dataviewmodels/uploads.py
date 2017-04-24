@@ -74,9 +74,10 @@ class UploadsModel(MyDataDataViewModel):
                 return icon
             columnKey = self.GetColumnKeyName(col)
             if self.GetColumnType(col) == "string":
-                return str(self.rowsData[row].GetValueForKey(columnKey))
+                value = str(self.rowsData[row].GetValueForKey(columnKey))
             else:
-                return self.rowsData[row].GetValueForKey(columnKey)
+                value = self.rowsData[row].GetValueForKey(columnKey)
+            return value
         except IndexError:
             # A "list index out of range" exception can be
             # thrown if the row is currently being deleted
@@ -172,9 +173,10 @@ class UploadsModel(MyDataDataViewModel):
         Get overall elapsed time for uploads
         """
         if self.startTime and self.finishTime:
-            return self.finishTime - self.startTime
+            elapsed = self.finishTime - self.startTime
         else:
-            return None
+            elapsed = None
+        return elapsed
 
     def SetMessage(self, uploadModel, message):
         """
@@ -206,8 +208,9 @@ class UploadsModel(MyDataDataViewModel):
         Return the renderer to be used for the specified dataview column
         """
         if col == 5:
-            return ColumnRenderer.BITMAP
+            renderer = ColumnRenderer.BITMAP
         elif col == 6:
-            return ColumnRenderer.PROGRESS
+            renderer = ColumnRenderer.PROGRESS
         else:
-            return ColumnRenderer.TEXT
+            renderer = ColumnRenderer.TEXT
+        return renderer

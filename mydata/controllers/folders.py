@@ -563,11 +563,10 @@ class FoldersController(object):
                         "to encounter these exceptions while canceling "
                         "uploads.")
                     self.uploadsQueue.task_done()
-                    return
                 else:
                     logger.error(traceback.format_exc())
                     self.uploadsQueue.task_done()
-                    return
+                return
             except:
                 logger.error(traceback.format_exc())
                 self.uploadsQueue.task_done()
@@ -596,11 +595,10 @@ class FoldersController(object):
                         "to encounter these exceptions while canceling "
                         "uploads.")
                     self.verificationsQueue.task_done()
-                    return
                 else:
                     logger.error(traceback.format_exc())
                     self.verificationsQueue.task_done()
-                    return
+                return
             except:
                 logger.error(traceback.format_exc())
                 self.verificationsQueue.task_done()

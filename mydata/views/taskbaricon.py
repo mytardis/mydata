@@ -125,10 +125,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         """
         Returns the "Sync Now" menu item.
         """
-        if hasattr(self, "syncNowMenuItem"):
-            return self.syncNowMenuItem
-        else:
-            return None
+        return getattr(self, "syncNowMenuItem", None)
 
     def OnMyDataMainWindow(self, event):
         """

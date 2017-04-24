@@ -284,11 +284,10 @@ class UploadDatafileRunnable(object):
                 logger.debug("Aborting upload for \"%s\" because "
                              "file handle was closed." %
                              self.uploadModel.GetRelativePathToUpload())
-                return
             else:
                 logger.error(traceback.format_exc())
                 self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
-                return
+            return
         except urllib2.HTTPError as err:
             self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())

@@ -128,11 +128,12 @@ class FoldersModel(MyDataDataViewModel):
         if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
         if col == 0 or col == 3:
-            return Compare(int(folderRecord1.dataViewId),
-                           int(folderRecord2.dataViewId))
+            obj1 = int(folderRecord1.dataViewId)
+            obj2 = int(folderRecord2.dataViewId)
         else:
-            return Compare(folderRecord1.GetValueForKey(self.columnKeys[col]),
-                           folderRecord2.GetValueForKey(self.columnKeys[col]))
+            obj1 = folderRecord1.GetValueForKey(self.columnKeys[col])
+            obj2 = folderRecord2.GetValueForKey(self.columnKeys[col])
+        return Compare(obj1, obj2)
 
     def AddRow(self, folderModel):
         """

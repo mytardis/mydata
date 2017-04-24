@@ -44,9 +44,10 @@ class AdvancedSettingsModel(object):
         Used when reporting progress on user/group folder scanning.
         """
         if "Group" in self.mydataConfig['folder_structure']:
-            return "user group"
+            userOrGroupString = "user group"
         else:
-            return "user"
+            userOrGroupString = "user"
+        return userOrGroupString
 
     @property
     def validateFolderStructure(self):

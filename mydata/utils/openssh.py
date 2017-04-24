@@ -387,15 +387,15 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     progressCallback(bytesUploaded, fileSize, message="Uploading...")
 
     if sys.platform.startswith("win"):
-        return UploadFileFromWindows(filePath, fileSize, username,
-                                     privateKeyFilePath, host, port,
-                                     remoteFilePath, progressCallback,
-                                     foldersController, uploadModel)
+        UploadFileFromWindows(filePath, fileSize, username,
+                              privateKeyFilePath, host, port,
+                              remoteFilePath, progressCallback,
+                              foldersController, uploadModel)
     else:
-        return UploadFileFromPosixSystem(filePath, fileSize, username,
-                                         privateKeyFilePath, host, port,
-                                         remoteFilePath, progressCallback,
-                                         foldersController, uploadModel)
+        UploadFileFromPosixSystem(filePath, fileSize, username,
+                                  privateKeyFilePath, host, port,
+                                  remoteFilePath, progressCallback,
+                                  foldersController, uploadModel)
 
 
 def MonitorProgress(foldersController, progressPollInterval, uploadModel,
