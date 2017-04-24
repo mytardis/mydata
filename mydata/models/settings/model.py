@@ -7,8 +7,10 @@ import pickle
 import traceback
 import urlparse
 
+from ...constants import APPNAME, APPAUTHOR
 from ...logs import logger
 from ...threads.locks import LOCKS
+from ...utils import CreateConfigPathIfNecessary
 from .general import GeneralSettingsModel
 from .schedule import ScheduleSettingsModel
 from .filters import FiltersSettingsModel
@@ -38,7 +40,7 @@ class SettingsModel(object):
         # The location on disk of MyData.cfg
         # e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
         # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
-        self.configPath = configPath
+        self._configPath = configPath
 
         self._verifiedDatafilesCache = None
 
@@ -334,11 +336,23 @@ class SettingsModel(object):
                     logger.warning("Couldn't save verified datafiles cache.")
                     logger.warning(traceback.format_exc())
 
-    def SetConfigPathAndLoadSettings(self, appdirPath, appname):
+    @property
+    def configPath(self):
         """
-        This is called immediately after MyDat launches, except when
-        the configPath has already been set (e.g. in a unittest).
+        The location on disk of MyData.cfg
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
         """
-        self.configPath = os.path.join(appdirPath, appname + '.cfg')
-        # Load settings from MyData.cfg, stored in INI format:
-        LoadSettings(self)
+        if not self._configPath:
+            appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
+            self._configPath = os.path.join(appdirPath, APPNAME + '.cfg')
+        return self._configPath
+
+    @configPath.setter
+    def configPath(self, configPath):
+        """
+        The location on disk of MyData.cfg
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
+        """
+        self._configPath = configPath
