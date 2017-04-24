@@ -11,6 +11,7 @@ import time
 
 import wx
 
+from ..events.start import StartScansAndUploads
 from ..settings import SETTINGS
 from ..models.task import TaskModel
 from ..models.settings import LastSettingsUpdateTrigger
@@ -26,12 +27,12 @@ def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
         wx.CallAfter(app.frame.toolbar.DisableTestAndUploadToolbarButtons)
         while not app.Processing():
             time.sleep(0.01)
-        wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+        wx.CallAfter(StartScansAndUploads, event, needToValidateSettings,
                      jobId, testRun)
         while app.Processing():
             time.sleep(0.01)
     else:
-        app.OnRefresh(event, needToValidateSettings, jobId, testRun)
+        StartScansAndUploads(event, needToValidateSettings, jobId, testRun)
 
 
 def HandleValueError(err):

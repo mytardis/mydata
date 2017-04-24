@@ -29,8 +29,8 @@ class Connectivity(object):
         and if so, posts a check connectivity event, and returns True
         to indicate that the event has been posted.
 
-        Called from OnRefresh (the main method for scanning data folders
-        and uploading data).
+        Called from StartScansAndUploads (the main method for scanning data
+        folders and uploading data).
         """
         from ..events import MYDATA_EVENTS
         from ..events import PostEvent

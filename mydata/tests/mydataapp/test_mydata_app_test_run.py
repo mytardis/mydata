@@ -5,6 +5,8 @@ import wx
 
 from ...MyData import MyData
 from ...events import MYDATA_EVENTS
+from ...events.start import LogStartScansAndUploadsCaller
+from ...events.start import OnTestRunFromToolbar
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -35,30 +37,30 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         popupMenu = self.mydataApp.frame.taskBarIcon.CreatePopupMenu()
 
         # Just for test coverage:
-        self.mydataApp.LogOnRefreshCaller(event=None, jobId=1)
-        self.mydataApp.LogOnRefreshCaller(event=None, jobId=None)
+        LogStartScansAndUploadsCaller(event=None, jobId=1)
+        LogStartScansAndUploadsCaller(event=None, jobId=None)
         pyEvent = wx.PyEvent()
         jobId = None
         toolbar = self.mydataApp.frame.toolbar
         pyEvent.SetId(toolbar.settingsTool.GetId())
-        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        LogStartScansAndUploadsCaller(pyEvent, jobId)
         pyEvent.SetId(toolbar.uploadTool.GetId())
-        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        LogStartScansAndUploadsCaller(pyEvent, jobId)
         # Requires popupMenu (defined above):
         pyEvent.SetId(
             self.mydataApp.frame.taskBarIcon.GetSyncNowMenuItem().GetId())
-        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        LogStartScansAndUploadsCaller(pyEvent, jobId)
         mydataEvent = MYDATA_EVENTS.ValidateSettingsForRefreshEvent()
-        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        LogStartScansAndUploadsCaller(mydataEvent, jobId)
         mydataEvent = MYDATA_EVENTS.SettingsValidationCompleteEvent()
-        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        LogStartScansAndUploadsCaller(mydataEvent, jobId)
         mydataEvent = MYDATA_EVENTS.ShutdownForRefreshCompleteEvent()
-        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        LogStartScansAndUploadsCaller(mydataEvent, jobId)
         mydataEvent = MYDATA_EVENTS.SettingsValidationCompleteEvent()
-        self.mydataApp.LogOnRefreshCaller(mydataEvent, jobId)
+        LogStartScansAndUploadsCaller(mydataEvent, jobId)
         pyEvent = wx.PyEvent()
         pyEvent.SetEventType(12345)
-        self.mydataApp.LogOnRefreshCaller(pyEvent, jobId)
+        LogStartScansAndUploadsCaller(pyEvent, jobId)
 
         popupMenu.Destroy()
 
@@ -68,7 +70,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         self.mydataApp.frame.OnAbout(pyEvent)
 
         # When running MyData without an event loop, this will block until complete:
-        self.mydataApp.OnTestRunFromToolbar(event=wx.PyEvent())
+        OnTestRunFromToolbar(event=wx.PyEvent())
 
     def tearDown(self):
         super(MyDataAppInstanceTester, self).tearDown()

@@ -2,6 +2,7 @@
 Test ability to create a MyData App instance and uploads files using POST.
 """
 from ...MyData import MyData
+from ...events.start import StartScansAndUploads
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -30,7 +31,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.mydataApp.frame.taskBarIcon.CreatePopupMenu()
         # When running MyData without an event loop, this will block until complete:
-        self.mydataApp.OnRefresh(event=None, needToValidateSettings=False)
+        StartScansAndUploads(event=None, needToValidateSettings=False)
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:

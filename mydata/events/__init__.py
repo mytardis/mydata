@@ -262,7 +262,8 @@ def ShutdownForRefreshComplete(event):
     """
     Respond to completion of shutdown for refresh.
     """
-    wx.GetApp().OnRefresh(event)
+    from .start import StartScansAndUploads
+    StartScansAndUploads(event)
 
 
 def CheckConnectivity(event):
@@ -627,18 +628,20 @@ def ProvideSettingsValidationResults(event):
 
 def ValidateSettingsForRefresh(event):
     """
-    Call MyDataApp's OnRefresh (again) to trigger settings validation.
+    Call StartScansAndUploads (again) to trigger settings validation.
     """
-    wx.GetApp().OnRefresh(event)
+    from .start import StartScansAndUploads
+    StartScansAndUploads(event)
 
 
 def SettingsValidationForRefreshComplete(event):
     """
-    Call MyDataApp's OnRefresh (again) to proceed with starting up the
+    Call StartScansAndUploads (again) to proceed with starting up the
     data folder scans once the settings validation has been completed.
     """
+    from .start import StartScansAndUploads
     event.needToValidateSettings = False
-    wx.GetApp().OnRefresh(event)
+    StartScansAndUploads(event)
 
 
 def StartDataUploadsForFolder(event):

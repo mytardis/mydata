@@ -19,6 +19,7 @@ from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
+from ...threads.flags import FLAGS
 from ...utils.exceptions import PrivateKeyDoesNotExist
 from .. import MyDataScanFoldersTester
 from ..fake_ssh_server import ThreadedSshServer
@@ -219,10 +220,10 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.01)
         sys.stderr.write("Canceling uploads...\n")
-        self.app.CheckIfShouldAbort = lambda: True
+        FLAGS.shouldAbort = True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
-        self.app.CheckIfShouldAbort = lambda: False
+        FLAGS.shouldAbort = False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 

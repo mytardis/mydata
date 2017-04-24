@@ -9,6 +9,7 @@ import wx
 
 from ...logs import logger
 from ...settings import SETTINGS
+from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
@@ -104,10 +105,10 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.05)
         sys.stderr.write("\nCanceling uploads...\n")
-        self.app.CheckIfShouldAbort = lambda: True
+        FLAGS.shouldAbort = True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
-        self.app.CheckIfShouldAbort = lambda: False
+        FLAGS.shouldAbort = False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 

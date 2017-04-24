@@ -41,31 +41,31 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
             logger.testrun(message)
 
     try:
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
                      % SETTINGS.advanced.folderStructure)
         WarnIfIgnoringInvalidUserFolders(testRun)
         CheckFilters(setStatusMessage, testRun)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         if SETTINGS.advanced.validateFolderStructure:
             datasetCount = CheckStructureAndCountDatasets(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckMyTardisUrl(setStatusMessage, testRun)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckMyTardisCredentials(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckFacility(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckInstrument(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckContactEmailAndEmailFolders(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE \
                 and not sys.platform.startswith("win"):
             CheckAutostart(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckScheduledTime()
         message = "Settings validation - succeeded!"
         logger.debug(message)
@@ -231,7 +231,7 @@ def CheckDataFileGlobFiles(setStatusMessage):
         PerformGlobsFileValidation(SETTINGS.filters.includesFile,
                                    "Includes", "includes", "includes_file")
 
-    CheckIfShouldAbort(setStatusMessage)
+    CheckIfUserAborted(setStatusMessage)
 
     if SETTINGS.filters.useExcludesFile:
         message = "Settings validation - checking excludes file..."
@@ -601,7 +601,7 @@ def FolderGlob(level, instrumentName='*'):
     return globDict[SETTINGS.advanced.folderStructure][level - 1]
 
 
-def CheckIfShouldAbort(setStatusMessage):
+def CheckIfUserAborted(setStatusMessage):
     """
     Check if settings validation should abort, because the user has clicked the
     Stop button on the main MyData frame's toolbar.  And if so, raise

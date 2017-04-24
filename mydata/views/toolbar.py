@@ -3,8 +3,15 @@ mydata/views/toolbar.py
 
 MyData's toolbar.
 """
+import os
+import subprocess
+import sys
+
 import wx
 
+from ..events.settings import OnSettings
+from ..events.start import OnTestRunFromToolbar
+from ..events.stop import OnStop
 from ..media import MYDATA_ICONS
 from ..media import IconStyle
 
@@ -75,8 +82,7 @@ class MyDataToolbar(object):
         openIcon = MYDATA_ICONS.GetIcon("Open folder", size="24x24")
         openTool = self.addToolMethod(
             wx.ID_ANY, "Open folder", openIcon, shortHelp="Open folder")
-        if hasattr(self.mydataApp, "OnOpen"):
-            self.parent.Bind(wx.EVT_MENU, self.mydataApp.OnOpen, openTool)
+        self.parent.Bind(wx.EVT_MENU, self.OnOpenFolder, openTool)
 
     def AddTestRunTool(self):
         """
@@ -85,9 +91,8 @@ class MyDataToolbar(object):
         testIcon = MYDATA_ICONS.GetIcon("Test tubes", size="24x24")
         self.testTool = self.addToolMethod(
             wx.ID_ANY, "Test Run", testIcon, shortHelp="Test Run")
-        if hasattr(self.mydataApp, "OnTestRunFromToolbar"):
-            self.parent.Bind(wx.EVT_TOOL, self.mydataApp.OnTestRunFromToolbar,
-                             self.testTool, self.testTool.GetId())
+        self.parent.Bind(wx.EVT_TOOL, OnTestRunFromToolbar,
+                         self.testTool, self.testTool.GetId())
 
     def AddUploadTool(self):
         """
@@ -115,9 +120,8 @@ class MyDataToolbar(object):
         self.toolbar.SetToolDisabledBitmap(
             self.stopTool.GetId(), disabledStopIcon)
         self.toolbar.EnableTool(self.stopTool.GetId(), False)
-        if hasattr(self.mydataApp, "OnStop"):
-            self.parent.Bind(wx.EVT_TOOL, self.mydataApp.OnStop, self.stopTool,
-                             self.stopTool.GetId())
+        self.parent.Bind(wx.EVT_TOOL, OnStop, self.stopTool,
+                         self.stopTool.GetId())
 
     def AddSettingsTool(self):
         """
@@ -126,9 +130,7 @@ class MyDataToolbar(object):
         settingsIcon = MYDATA_ICONS.GetIcon("Settings", size="24x24")
         self.settingsTool = self.addToolMethod(
             wx.ID_ANY, "Settings", settingsIcon, shortHelp="Settings")
-        if hasattr(self.mydataApp, "OnSettings"):
-            self.parent.Bind(
-                wx.EVT_TOOL, self.mydataApp.OnSettings, self.settingsTool)
+        self.parent.Bind(wx.EVT_TOOL, OnSettings, self.settingsTool)
 
     def AddMyTardisTool(self):
         """
@@ -202,3 +204,47 @@ class MyDataToolbar(object):
         self.toolbar.EnableTool(self.stopTool.GetId(), True)
         self.toolbar.EnableTool(self.testTool.GetId(), False)
         self.toolbar.EnableTool(self.uploadTool.GetId(), False)
+
+    def OnOpenFolder(self, event):
+        """
+        Open the selected folder
+        """
+        event.StopPropagation()
+        foldersModel = self.parent.dataViewModels['folders']
+        foldersView = self.parent.dataViews['folders']
+        items = foldersView.dataViewControl.GetSelections()
+        rows = [foldersModel.GetRow(item) for item in items]
+        if len(rows) != 1:
+            if len(rows) > 1:
+                message = "Please select a single folder."
+            else:
+                message = "Please select a folder to open."
+            dlg = wx.MessageDialog(self.parent, message, "Open Folder", wx.OK)
+            dlg.ShowModal()
+            return
+        row = rows[0]
+
+        folderModel = foldersModel.rowsData[row]
+        if not folderModel.isExperimentFilesFolder:
+            path = os.path.join(folderModel.location, folderModel.folderName)
+        else:
+            path = folderModel.location
+        if not os.path.exists(path):
+            message = "Path doesn't exist: " + path
+            dlg = wx.MessageDialog(None, message, "Open Folder", wx.OK)
+            dlg.ShowModal()
+            return
+        if sys.platform == 'darwin':
+            def OpenFolder(path):
+                """Open folder."""
+                subprocess.check_call(['open', '--', path])
+        elif sys.platform.startswith('linux'):
+            def OpenFolder(path):
+                """Open folder."""
+                subprocess.check_call(['xdg-open', '--', path])
+        else:  # sys.platform.startswith('win')
+            def OpenFolder(path):
+                """Open folder."""
+                subprocess.call(['explorer', path])
+
+        OpenFolder(path)

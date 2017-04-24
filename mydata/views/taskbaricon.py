@@ -9,6 +9,8 @@ import webbrowser
 
 import wx
 
+from ..events.start import ManuallyTriggerScanFoldersAndUpload
+from ..events.settings import OnSettings
 from ..media import MYDATA_ICONS
 from ..logs import logger
 
@@ -144,7 +146,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         """
         self.frame.Show(True)
         self.frame.Raise()
-        wx.GetApp().OnSettings(event)
+        OnSettings(event)
         event.Skip()
 
     @staticmethod
@@ -154,7 +156,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         selected from MyData's system tray / menu bar icon menu.
         """
         logger.debug("Sync Now called from task bar menu item.")
-        wx.GetApp().ScanFoldersAndUpload(event)
+        ManuallyTriggerScanFoldersAndUpload(event)
 
     @staticmethod
     def OnMyDataHelp(event):

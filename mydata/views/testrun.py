@@ -4,6 +4,7 @@ the results of a dry run.
 """
 import wx
 
+from ..events.stop import OnStop
 from ..logs import logger
 from ..threads.flags import FLAGS
 
@@ -55,7 +56,7 @@ class TestRunFrame(wx.Frame):
         """
         if FLAGS.testRunRunning:
             logger.info("Closing Test Run Window and calling OnStop.")
-            wx.GetApp().OnStop(None)
+            OnStop(None)
         else:
             logger.info("Closing Test Run Window.")
         self.Hide()

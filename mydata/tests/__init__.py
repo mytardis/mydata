@@ -31,6 +31,7 @@ import wx
 
 from ..events import MYDATA_EVENTS
 from ..settings import SETTINGS
+from ..threads.flags import FLAGS
 from ..models.settings import SettingsModel
 from ..models.settings.validation import ValidateSettings
 from ..dataviewmodels.folders import FoldersModel
@@ -88,8 +89,8 @@ class MyDataTester(unittest.TestCase):
         Initialize generic wxPython app and main frame
         """
         self.app = wx.App()
-        self.app.CheckIfShouldAbort = lambda: False
         self.frame = wx.Frame(parent=None, title=title)
+        FLAGS.shouldAbort = False
 
     def tearDown(self):
         del os.environ['MYDATA_TESTING']

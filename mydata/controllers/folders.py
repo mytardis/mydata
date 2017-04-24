@@ -17,6 +17,7 @@ import wx.lib.newevent
 import wx.dataview
 
 import mydata.events as mde
+from ..events.stop import CheckIfShouldAbort
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
 from ..models.dataset import DatasetModel
@@ -452,12 +453,11 @@ class FoldersController(object):
         ScanFolders method has finished populating
         self.foldersModel with dataset folders.
         """
-        app = wx.GetApp()
         self.finishedScanningForDatasetFolders.set()
         logger.debug("Finished scanning for dataset folders.")
         while len(self.finishedCountingVerifications.keys()) < \
                 self.foldersModel.GetCount():
-            if self.IsShuttingDown() or app.CheckIfShouldAbort():
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 break
             time.sleep(0.01)
         self.CountCompletedUploadsAndVerifications(event=None)
@@ -467,14 +467,13 @@ class FoldersController(object):
         Start uploads for the specified folder
         """
         # pylint: disable=too-many-branches
-        app = wx.GetApp()
-        if app.CheckIfShouldAbort():
+        if CheckIfShouldAbort():
             return
         try:
             self.finishedCountingThreadingLock.acquire()
             self.finishedCountingVerifications[folderModel] = threading.Event()
             self.finishedCountingThreadingLock.release()
-            if self.IsShuttingDown() or app.CheckIfShouldAbort():
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             self.numVerificationsToBePerformedLock.acquire()
             self.numVerificationsToBePerformed += folderModel.GetNumFiles()
@@ -482,7 +481,7 @@ class FoldersController(object):
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " + folderModel.folderName)
-            if self.IsShuttingDown() or app.CheckIfShouldAbort():
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             try:
                 try:
@@ -525,7 +524,7 @@ class FoldersController(object):
                              "experiment to store data in for "
                              "folder " + folderModel.folderName)
                 return
-            if self.IsShuttingDown() or app.CheckIfShouldAbort():
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             self.finishedCountingThreadingLock.acquire()
             self.finishedCountingVerifications[folderModel].set()
@@ -674,7 +673,7 @@ class FoldersController(object):
         if not FLAGS.performingLookupsAndUploads:
             # This means StartUploadsForFolder was never called
             EndBusyCursorIfRequired()
-            if app.CheckIfShouldAbort():
+            if CheckIfShouldAbort():
                 message = "Data scans and uploads were canceled."
                 self.canceled = True
             else:
