@@ -164,7 +164,7 @@ def SafeStr(err, inputEnc=sys.getfilesystemencoding(), outputEnc='utf-8'):
         return str(err)
     except UnicodeDecodeError:
         inputEnc = inputEnc or 'utf-8'
-        if isinstance(err, IOError) or isinstance(err, OSError):
+        if isinstance(err, (IOError, OSError)):
             decoded = "%s: [Errno %s] %s: '%s'" \
                 % (type(err).__name__, err.errno,
                    err.strerror.decode(inputEnc),
