@@ -137,7 +137,7 @@ class SettingsValidationTester(MyDataSettingsTester):
         # to validate a non-string as though it were a string.
         # A logged exception and a failed settings validation is better
         # than having the GUI become unresponsive.
-        SETTINGS.general.facilityName = 12345  # pylint: disable=redefined-variable-type
+        SETTINGS.general.facilityName = None
         with self.assertRaises(InvalidSettings) as contextManager:
             ValidateSettings()
         invalidSettings = contextManager.exception
