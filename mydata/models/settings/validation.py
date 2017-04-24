@@ -452,21 +452,16 @@ def CheckAutostart(setStatusMessage):
     On macOS and Linux, this is done within the individual user's
     home directory, so it needs to be done the first time MyData
     runs, and after the start automatically checkbox value changes.
-
-    If SETTINGS.advanced.startAutomaticallyOnLogin hasn't changed since the
-    last check in this MyData session, then we don't update the autostart file,
-    because doing so can be time-consuming.
-    See: mydata.utils.autostart.UpdateMacAutostartFile
     """
-    from ...settings import SETTINGS
-    if SETTINGS.lastCheckedAutostartValue != \
-            SETTINGS.advanced.startAutomaticallyOnLogin:
-        message = "Settings validation - " \
-            "checking if MyData is set to start automatically..."
-        logger.debug(message)
-        if setStatusMessage:
-            setStatusMessage(message)
-        UpdateAutostartFile()
+    if not hasattr(sys, "frozen"):
+        logger.debug("Not checking autostart because app is not frozen.")
+        return
+    message = "Settings validation - " \
+        "checking if MyData is set to start automatically..."
+    logger.debug(message)
+    if setStatusMessage:
+        setStatusMessage(message)
+    UpdateAutostartFile()
 
 
 def CheckScheduledTime():

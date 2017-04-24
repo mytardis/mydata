@@ -70,7 +70,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         self.UpdateSettingsFromCfg("testdataUsernameDataset")
         self.assertEqual(SETTINGS.miscellaneous.uuid, "1234567890")
         self.assertEqual(SETTINGS.general.instrumentName, "Test Instrument")
-        SETTINGS.sshKeyPair = self.keyPair
         ValidateSettings()
         # Reset global settings' uploader model, so we when we next call
         # the SETTINGS.uploaderModel property method, we'll generate a
@@ -79,6 +78,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.uploaderModel = None
         SETTINGS.uploaderModel.UploadUploaderInfo()
         self.assertEqual(SETTINGS.uploaderModel.name, "Test Instrument")
+        SETTINGS.uploaderModel.sshKeyPair = self.keyPair
         self.InitializeModels()
         self.foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
         # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,

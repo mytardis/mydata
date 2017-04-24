@@ -18,6 +18,7 @@ import wx
 from . import __version__ as VERSION
 from . import LATEST_COMMIT
 from .settings import SETTINGS
+from .constants import APPNAME, APPAUTHOR
 from .dataviewmodels.folders import FoldersModel
 from .controllers.folders import FoldersController
 from .views.mydata import MyDataFrame
@@ -26,7 +27,6 @@ from .dataviewmodels.groups import GroupsModel
 from .dataviewmodels.verifications import VerificationsModel
 from .dataviewmodels.uploads import UploadsModel
 from .dataviewmodels.tasks import TasksModel
-from .models.settings.serialize import LoadSettings
 from .models.settings.validation import ValidateSettings
 from .views.mydata import NotebookTabs
 from .views.settings import SettingsDialog
@@ -106,18 +106,13 @@ class MyData(wx.App):
         """
         Called automatically when application instance is created.
         """
-        appname = "MyData"
-        appauthor = "Monash University"
-        self.SetAppName(appname)
-        appdirPath = CreateConfigPathIfNecessary(appname, appauthor)
+        self.SetAppName(APPNAME)
+        appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
         InitializeTrustedCertsPath()
-
         if not SETTINGS.configPath:
             # SETTINGS.configPath is set to None in mydata/settings.py
             # but it could be overwritten in unittests.
-            SETTINGS.configPath = os.path.join(appdirPath, appname + '.cfg')
-            # Load settings from MyData.cfg, stored in INI format:
-            LoadSettings(SETTINGS)
+            SETTINGS.SetConfigPathAndLoadSettings(appdirPath, APPNAME)
 
         self.dataViewModels = dict(
             users=UsersModel(),
@@ -129,12 +124,12 @@ class MyData(wx.App):
             FoldersModel(self.dataViewModels['users'],
                          self.dataViewModels['groups'])
 
-        self.frame = MyDataFrame(appname, self.dataViewModels)
+        self.frame = MyDataFrame(APPNAME, self.dataViewModels)
 
         # Wait until views have been created (in MyDataFrame) before doing
         # logging, so that the logged messages will appear in the Log View:
-        logger.info("%s version: v%s" % (appname, VERSION))
-        logger.info("%s commit:  %s" % (appname, LATEST_COMMIT))
+        logger.info("%s version: v%s" % (APPNAME, VERSION))
+        logger.info("%s commit:  %s" % (APPNAME, LATEST_COMMIT))
         logger.info("appdirPath: " + appdirPath)
         logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
 
@@ -161,9 +156,9 @@ class MyData(wx.App):
             self.OnSettings(event)
         else:
             self.frame.SetTitle(
-                "%s - %s" % (appname, SETTINGS.general.instrumentName))
+                "%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
             if sys.platform.startswith("linux"):
-                CheckIfSystemTrayFunctionalityMissing(appname)
+                CheckIfSystemTrayFunctionalityMissing(APPNAME)
             self.frame.Hide()
             if sys.platform.startswith("darwin"):
                 message = \
@@ -171,7 +166,7 @@ class MyData(wx.App):
             else:
                 message = \
                     "Click the MyData system tray icon to access its menu."
-            Notification.Notify(message, title=appname)
+            Notification.Notify(message, title=APPNAME)
             if 'MYDATA_TESTING' in os.environ:
                 if 'MYDATA_DONT_RUN_SCHEDULE' not in os.environ:
                     self.scheduleController.ApplySchedule(event)

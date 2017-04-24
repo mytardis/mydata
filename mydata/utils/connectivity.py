@@ -6,7 +6,7 @@ from datetime import datetime
 import netifaces
 import wx
 
-from ..settings import SETTINGS
+from ..constants import CONNECTIVITY_CHECK_INTERVAL as CHECK_INTERVAL
 from ..logs import logger
 from ..views.connectivity import ReportNoActiveInterfaces
 from . import HandleGenericErrorWithDialog
@@ -35,8 +35,7 @@ class Connectivity(object):
         from ..events import MYDATA_EVENTS
         from ..events import PostEvent
         intervalSinceLastCheck = datetime.now() - self.lastCheckTime
-        checkInterval = SETTINGS.connectivityCheckInterval
-        if intervalSinceLastCheck.total_seconds() >= checkInterval or \
+        if intervalSinceLastCheck.total_seconds() >= CHECK_INTERVAL or \
                 not self.lastCheckSuccess:
             logger.debug("Checking network connectivity...")
             checkConnectivityEvent = \
@@ -75,8 +74,7 @@ class Connectivity(object):
         Return True if a connectivity check is needed
         """
         intervalSinceLastCheck = datetime.now() - self.lastCheckTime
-        checkInterval = SETTINGS.connectivityCheckInterval
-        return intervalSinceLastCheck.total_seconds() >= checkInterval \
+        return intervalSinceLastCheck.total_seconds() >= CHECK_INTERVAL \
             or not self.lastCheckSuccess
 
     @staticmethod

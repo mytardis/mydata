@@ -29,6 +29,7 @@ from ..models.replica import ReplicaModel
 from ..models.verification import VerificationModel
 from ..models.verification import VerificationStatus
 from ..models.datafile import DataFileModel
+from ..threads.locks import LOCKS
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 from ..events import PostEvent
@@ -155,7 +156,7 @@ class VerifyDatafileRunnable(object):
         logger.debug(message)
         self.verificationModel.message = \
             "Found unverified datafile record on MyTardis."
-        uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+        uploadToStagingRequest = SETTINGS.uploaderModel.uploadToStagingRequest
 
         if self.foldersController.uploadMethod == \
                 UploadMethod.VIA_STAGING and \
@@ -299,7 +300,7 @@ class VerifyDatafileRunnable(object):
         cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
                               dataFilePath.encode('utf8'))
         if SETTINGS.miscellaneous.cacheDataFileLookups:
-            with SETTINGS.updateCacheLock:
+            with LOCKS.updateCacheLock:
                 SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)

@@ -5,10 +5,10 @@ and saved to disk in MyData.cfg
 import os
 import pickle
 import traceback
-import threading
 import urlparse
 
 from ...logs import logger
+from ...threads.locks import LOCKS
 from .general import GeneralSettingsModel
 from .schedule import ScheduleSettingsModel
 from .filters import FiltersSettingsModel
@@ -23,7 +23,6 @@ class SettingsModel(object):
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, configPath, checkForUpdates=True):
         super(SettingsModel, self).__init__()
 
@@ -42,40 +41,60 @@ class SettingsModel(object):
         self.configPath = configPath
 
         self._verifiedDatafilesCache = None
-        self.verifiedDatafilesCachePath = None
-        self.initializeCacheLock = threading.Lock()
-        self.updateCacheLock = threading.Lock()
-        self.closeCacheLock = threading.Lock()
 
         self._uploaderModel = None
-        self.uploadToStagingRequest = None
-        self.sshKeyPair = None
 
         self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
 
-        # When configuring MyData to start automatically (or not), record the
-        # last used value of SETTINGS.advanced.startAutomaticallyOnLogin here,
-        # so we don't waste time checking the autostart file again if the
-        # intended state hasn't changed:
-        self.lastCheckedAutostartValue = None
-
-        self.connectivityCheckInterval = 30  # seconds
-
-        self.general = GeneralSettingsModel()
-        self.schedule = ScheduleSettingsModel()
-        self.filters = FiltersSettingsModel()
-        self.advanced = AdvancedSettingsModel()
-        self.miscellaneous = MiscellaneousSettingsModel()
+        self.models = dict(
+            general=GeneralSettingsModel(),
+            schedule=ScheduleSettingsModel(),
+            filters=FiltersSettingsModel(),
+            advanced=AdvancedSettingsModel(),
+            miscellaneous=MiscellaneousSettingsModel())
 
         self.SetDefaultConfig()
-
-        self.createUploaderThreadingLock = threading.Lock()
 
         try:
             LoadSettings(self, checkForUpdates=checkForUpdates)
         except:
             logger.error(traceback.format_exc())
+
+    @property
+    def general(self):
+        """
+        Settings in the Settings Dialog's General tab
+        """
+        return self.models['general']
+
+    @property
+    def schedule(self):
+        """
+        Settings in the Settings Dialog's Schedule tab
+        """
+        return self.models['schedule']
+
+    @property
+    def filters(self):
+        """
+        Settings in the Settings Dialog's Filters tab
+        """
+        return self.models['filters']
+
+    @property
+    def advanced(self):
+        """
+        Settings in the Settings Dialog's Advanced tab
+        """
+        return self.models['advanced']
+
+    @property
+    def miscellaneous(self):
+        """
+        Miscellaneous settings
+        """
+        return self.models['miscellaneous']
 
     def __setitem__(self, key, item):
         """
@@ -152,11 +171,11 @@ class SettingsModel(object):
         if self._uploaderModel:
             return self._uploaderModel
         try:
-            self.createUploaderThreadingLock.acquire()
+            LOCKS.createUploaderThreadingLock.acquire()
             self._uploaderModel = UploaderModel()
             return self._uploaderModel
         finally:
-            self.createUploaderThreadingLock.release()
+            LOCKS.createUploaderThreadingLock.release()
 
     @uploaderModel.setter
     def uploaderModel(self, uploaderModel):
@@ -267,20 +286,26 @@ class SettingsModel(object):
         }
 
     @property
+    def verifiedDatafilesCachePath(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        parsed = urlparse.urlparse(self.general.myTardisUrl)
+        return os.path.join(
+            os.path.dirname(self.configPath),
+            "verified-files-%s-%s" %
+            (parsed.scheme, parsed.netloc))
+
+    @property
     def verifiedDatafilesCache(self):
         """
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if not self._verifiedDatafilesCache:
-            with self.initializeCacheLock:
+            with LOCKS.initializeCacheLock:
                 try:
-                    myTardisUrl = self.general.myTardisUrl
-                    parsed = urlparse.urlparse(myTardisUrl)
-                    self.verifiedDatafilesCachePath = os.path.join(
-                        os.path.dirname(self.configPath),
-                        "verified-files-%s-%s" %
-                        (parsed.scheme, parsed.netloc))
                     if os.path.exists(self.verifiedDatafilesCachePath):
                         with open(self.verifiedDatafilesCachePath,
                                   'rb') as cacheFile:
@@ -299,7 +324,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if self._verifiedDatafilesCache:
-            with self.closeCacheLock:
+            with LOCKS.closeCacheLock:
                 try:
                     with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
@@ -308,3 +333,12 @@ class SettingsModel(object):
                 except:
                     logger.warning("Couldn't save verified datafiles cache.")
                     logger.warning(traceback.format_exc())
+
+    def SetConfigPathAndLoadSettings(self, appdirPath, appname):
+        """
+        This is called immediately after MyDat launches, except when
+        the configPath has already been set (e.g. in a unittest).
+        """
+        self.configPath = os.path.join(appdirPath, appname + '.cfg')
+        # Load settings from MyData.cfg, stored in INI format:
+        LoadSettings(self)

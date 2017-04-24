@@ -357,7 +357,8 @@ class FoldersController(object):
 
         try:
             SETTINGS.uploaderModel.RequestStagingAccess()
-            uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+            uploadToStagingRequest = \
+                SETTINGS.uploaderModel.uploadToStagingRequest
         except Exception as err:
             # MyData app could be missing from MyTardis server.
             logger.error(traceback.format_exc())

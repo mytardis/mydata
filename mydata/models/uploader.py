@@ -78,7 +78,6 @@ import pkgutil
 import urllib
 import traceback
 import uuid
-import threading
 
 import dateutil.parser
 import netifaces
@@ -96,6 +95,8 @@ from ..utils.exceptions import MissingMyDataAppOnMyTardisServer
 from ..utils.exceptions import StorageBoxOptionNotFound
 from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..utils import BytesToHuman
+from ..utils import MyDataInstallLocation
+from ..threads.locks import LOCKS
 from . import HandleHttpError
 from .storage import StorageBox
 
@@ -112,7 +113,9 @@ class UploaderModel(object):
         self.uploaderId = None
         self.resourceUri = None
         self.uploaderSettings = None
+        self.uploadToStagingRequest = None
         self.settingsUpdated = None
+        self.sshKeyPair = None
 
         self.sysInfo = dict(
             osPlatform=sys.platform,
@@ -129,8 +132,6 @@ class UploaderModel(object):
 
         self.ifconfig = dict(interface=None, macAddress='', ipv4Address='',
                              ipv6Address='', subnetMask='')
-
-        self.requestStagingAccessThreadLock = threading.Lock()
 
         if SETTINGS.miscellaneous.uuid is None:
             SETTINGS.miscellaneous.uuid = str(uuid.uuid1())
@@ -163,16 +164,6 @@ class UploaderModel(object):
             logger.warning("There is no active network interface.")
 
         self.name = SETTINGS.general.instrumentName
-
-        self.userAgentInstallLocation = ""
-        if hasattr(sys, 'frozen'):
-            self.userAgentInstallLocation = os.path.dirname(sys.executable)
-        else:
-            try:
-                self.userAgentInstallLocation = \
-                    os.path.dirname(pkgutil.get_loader("MyData").filename)
-            except:
-                self.userAgentInstallLocation = os.getcwd()
 
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
         diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
@@ -248,8 +239,7 @@ class UploaderModel(object):
 
             "user_agent_name": "MyData",
             "user_agent_version": VERSION,
-            "user_agent_install_location":
-                self.userAgentInstallLocation,
+            "user_agent_install_location": MyDataInstallLocation(),
 
             "os_platform": self.sysInfo['osPlatform'],
             "os_system": self.sysInfo['osSystem'],
@@ -294,29 +284,41 @@ class UploaderModel(object):
             HandleHttpError(response)
 
     @property
+    def userAgentInstallLocation(self):
+        """
+        Return MyData install location
+        """
+        if hasattr(sys, 'frozen'):
+            return os.path.dirname(sys.executable)
+        else:
+            try:
+                return os.path.dirname(pkgutil.get_loader("MyData").filename)
+            except:
+                return os.getcwd()
+        return ""
+
+    @property
     def hostname(self):
         """
         Return the instrument PC's hostname
         """
         return self.sysInfo['hostname']
 
-    @staticmethod
-    def ExistingUploadToStagingRequest():
+    def ExistingUploadToStagingRequest(self):
         """
         Look for existing upload to staging request.
         """
         try:
-            keyPair = SETTINGS.sshKeyPair
-            if not keyPair:
-                keyPair = OpenSSH.FindKeyPair("MyData")
+            if not self.sshKeyPair:
+                self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            keyPair = OpenSSH.NewKeyPair("MyData")
-        SETTINGS.sshKeyPair = keyPair
+            self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
         myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + SETTINGS.miscellaneous.uuid + \
-            "&requester_key_fingerprint=" + urllib.quote(keyPair.fingerprint)
+            "&requester_key_fingerprint=" + urllib.quote(
+                self.sshKeyPair.fingerprint)
         logger.debug(url)
         headers = SETTINGS.defaultHeaders
         response = requests.get(headers=headers, url=url)
@@ -341,12 +343,10 @@ class UploaderModel(object):
         to a staging area, and then register in MyTardis.
         """
         try:
-            keyPair = SETTINGS.sshKeyPair
-            if not keyPair:
-                keyPair = OpenSSH.FindKeyPair("MyData")
+            if not self.sshKeyPair:
+                self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            keyPair = OpenSSH.NewKeyPair("MyData")
-        SETTINGS.sshKeyPair = keyPair
+            self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
         myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \
@@ -354,8 +354,8 @@ class UploaderModel(object):
              "name": self.name,
              "requester_name": SETTINGS.general.contactName,
              "requester_email": SETTINGS.general.contactEmail,
-             "requester_public_key": keyPair.publicKey,
-             "requester_key_fingerprint": keyPair.fingerprint}
+             "requester_public_key": self.sshKeyPair.publicKey,
+             "requester_key_fingerprint": self.sshKeyPair.fingerprint}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
                                  data=data)
@@ -370,7 +370,7 @@ class UploaderModel(object):
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        if self.requestStagingAccessThreadLock.acquire(False):
+        if LOCKS.requestStagingAccessThreadLock.acquire(False):
             try:
                 try:
                     self.UploadUploaderInfo()
@@ -378,31 +378,30 @@ class UploaderModel(object):
                     logger.error(traceback.format_exc())
                     raise
                 try:
-                    uploadToStagingRequest = \
-                        UploaderModel.ExistingUploadToStagingRequest()
+                    self.uploadToStagingRequest = \
+                        self.ExistingUploadToStagingRequest()
                 except DoesNotExist:
-                    uploadToStagingRequest = \
+                    self.uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
                     logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
                     logger.debug(
                         "Generating new uploader registration request, "
                         "because private key was moved or deleted.")
-                    uploadToStagingRequest = \
+                    self.uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
                     logger.debug("Generated new uploader registration request,"
                                  " because private key was moved or deleted.")
-                if uploadToStagingRequest.approved:
+                if self.uploadToStagingRequest.approved:
                     logger.debug("Uploads to staging have been approved!")
                 else:
                     logger.debug(
                         "Uploads to staging haven't been approved yet.")
-                SETTINGS.uploadToStagingRequest = uploadToStagingRequest
             except:
                 logger.error(traceback.format_exc())
                 raise
             finally:
-                self.requestStagingAccessThreadLock.release()
+                LOCKS.requestStagingAccessThreadLock.release()
 
     def UpdateSettings(self, settingsList):
         """

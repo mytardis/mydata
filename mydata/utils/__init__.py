@@ -3,6 +3,7 @@
 Miscellaneous utility functions.
 """
 import os
+import pkgutil
 import sys
 import subprocess
 import traceback
@@ -279,3 +280,16 @@ def CheckIfSystemTrayFunctionalityMissing(appname):
                 "indicator-systemtray-unity"
             wx.MessageBox(message, appname, wx.ICON_ERROR)
             sys.exit(1)
+
+def MyDataInstallLocation():
+    """
+    Return MyData install location
+    """
+    if hasattr(sys, 'frozen'):
+        return os.path.dirname(sys.executable)
+    else:
+        try:
+            return os.path.dirname(pkgutil.get_loader("MyData").filename)
+        except:
+            return os.getcwd()
+    return ""
