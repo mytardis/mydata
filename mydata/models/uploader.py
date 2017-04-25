@@ -370,7 +370,7 @@ class UploaderModel(object):
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        if LOCKS.requestStagingAccessThreadLock.acquire(False):
+        with LOCKS.requestStagingAccessThreadLock:
             try:
                 try:
                     self.UploadUploaderInfo()
@@ -400,8 +400,6 @@ class UploaderModel(object):
             except:
                 logger.error(traceback.format_exc())
                 raise
-            finally:
-                LOCKS.requestStagingAccessThreadLock.release()
 
     def UpdateSettings(self, settingsList):
         """
@@ -412,8 +410,8 @@ class UploaderModel(object):
         headers = SETTINGS.defaultHeaders
 
         if not self.uploaderId:
-            url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-                                "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+            url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
+                % (myTardisUrl, urllib.quote(SETTINGS.miscellaneous.uuid))
             try:
                 response = requests.get(headers=headers, url=url)
             except Exception as err:
@@ -455,8 +453,8 @@ class UploaderModel(object):
         """
         myTardisUrl = SETTINGS.general.myTardisUrl
         headers = SETTINGS.defaultHeaders
-        url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-                            "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+        url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
+            % (myTardisUrl, urllib.quote(SETTINGS.miscellaneous.uuid))
         try:
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
