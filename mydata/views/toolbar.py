@@ -97,14 +97,14 @@ class MyDataToolbar(object):
         """
         Add upload tool
         """
+        from ..events.start import OnScanAndUploadFromToolbar
         uploadIcon = MYDATA_ICONS.GetIcon("Upload button", size="24x24")
         self.uploadTool = self.addToolMethod(
             wx.ID_ANY, "Scan and Upload", uploadIcon,
             shortHelp="Scan and Upload")
-        if hasattr(self.mydataApp, "OnScanAndUploadFromToolbar"):
-            self.parent.Bind(
-                wx.EVT_TOOL, self.mydataApp.OnScanAndUploadFromToolbar,
-                self.uploadTool, self.uploadTool.GetId())
+        self.parent.Bind(
+            wx.EVT_TOOL, OnScanAndUploadFromToolbar,
+            self.uploadTool, self.uploadTool.GetId())
 
     def AddStopTool(self):
         """
