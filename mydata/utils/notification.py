@@ -46,7 +46,7 @@ class Notification(object):
         else:
             args += ["-activate", "org.python.python"]
         if hasattr(sys, "frozen"):
-            path = "../MacOS"
+            path = os.path.dirname(sys.executable)
         else:
             path = "resources/macOS/MyData Notifications.app/Contents/MacOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,

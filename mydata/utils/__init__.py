@@ -251,7 +251,8 @@ def InitializeTrustedCertsPath():
     """
     if hasattr(sys, "frozen"):
         if sys.platform.startswith("darwin"):
-            certPath = os.path.realpath('.')
+            certPath = os.path.realpath(os.path.join(
+                os.path.dirname(sys.executable), '..', 'Resources'))
         else:
             certPath = os.path.dirname(sys.executable)
         os.environ['REQUESTS_CA_BUNDLE'] = \
@@ -280,6 +281,7 @@ def CheckIfSystemTrayFunctionalityMissing(appname):
                 "indicator-systemtray-unity"
             wx.MessageBox(message, appname, wx.ICON_ERROR)
             sys.exit(1)
+
 
 def MyDataInstallLocation():
     """

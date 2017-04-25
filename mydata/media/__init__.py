@@ -30,6 +30,9 @@ class Icons(object):
                 # and MyData's media folder will be placed inside that
                 # directory, so we can use a relative path.
                 self.mediaPath = self.mediaFolderName
+                self.mediaPath = os.path.realpath(os.path.join(
+                    os.path.dirname(sys.executable), "..", "Resources",
+                    self.mediaFolderName))
             else:
                 # On Windows, MyData's media folder will put installed
                 # in the same directory as MyData.exe.
