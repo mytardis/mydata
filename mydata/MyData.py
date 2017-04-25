@@ -24,6 +24,7 @@ from .views.testrun import TestRunFrame
 
 from .controllers.folders import FoldersController
 from .controllers.schedule import ScheduleController
+from .controllers.updates import VersionCheck
 
 from .events.settings import OnSettings
 from .events import MYDATA_EVENTS
@@ -105,6 +106,8 @@ class MyData(wx.App):
         logger.info("%s commit:  %s" % (APPNAME, LATEST_COMMIT))
         logger.info("appdirPath: " + appdirPath)
         logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
+
+        VersionCheck()
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
