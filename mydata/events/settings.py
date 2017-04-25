@@ -18,11 +18,12 @@ def OnSettings(event, validationMessage=None):
     icon's "MyData Settings" menu item, or in response to MyData being
     launched without any previously saved settings.
     """
+    from .stop import ResetShouldAbortStatus
     # When Settings is launched by user e.g. from the toolbar, we don't
     # want it to be aborted, so we'll ensure FLAGS.shouldAbort is False.
     app = wx.GetApp()
     if event:
-        app.ResetShouldAbortStatus()
+        ResetShouldAbortStatus()
     app.frame.SetStatusMessage("")
     settingsDialog = SettingsDialog(app.frame,
                                     size=wx.Size(400, 400),
