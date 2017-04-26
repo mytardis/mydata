@@ -79,8 +79,6 @@ class MyDataFrame(wx.Frame):
         icon.CopyFromBitmap(bmp)
         self.SetIcon(icon)
 
-        self.panel = wx.Panel(self)
-
         if 'phoenix' in wx.PlatformInfo:
             self.tabbedView = AuiNotebook(self.panel, agwStyle=AUI_NB_TOP)
         else:
@@ -162,8 +160,7 @@ class MyDataFrame(wx.Frame):
             self.statusbar.SetStatusText(msg)
         if sys.platform.startswith("win"):
             if wx.PyApp.IsMainLoopRunning():
-                self.mydataApp.taskBarIcon.SetIcon(
-                    self.mydataApp.taskBarIcon.icon, msg)
+                self.taskBarIcon.SetIcon(self.taskBarIcon.icon, msg)
 
     def CreateMacMenu(self):
         """
