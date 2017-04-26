@@ -84,10 +84,8 @@ import netifaces
 import psutil
 import requests
 
-import mydata.utils.openssh as OpenSSH
 from .. import __version__ as VERSION
 from ..logs import logger
-from ..settings import SETTINGS
 from ..utils.connectivity import GetDefaultInterfaceType
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import PrivateKeyDoesNotExist
@@ -108,8 +106,9 @@ class UploaderModel(object):
     Model class for MyTardis API v1's UploaderAppResource.
     See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
     """
-    def __init__(self):
+    def __init__(self, settings):
         # pylint: disable=too-many-branches
+        self.settings = settings
         self.uploaderId = None
         self.resourceUri = None
         self.uploaderSettings = None
@@ -133,8 +132,8 @@ class UploaderModel(object):
         self.ifconfig = dict(interface=None, macAddress='', ipv4Address='',
                              ipv6Address='', subnetMask='')
 
-        if SETTINGS.miscellaneous.uuid is None:
-            SETTINGS.miscellaneous.uuid = str(uuid.uuid1())
+        if self.settings.miscellaneous.uuid is None:
+            self.settings.miscellaneous.uuid = str(uuid.uuid1())
 
         defaultInterfaceType = GetDefaultInterfaceType()
         if defaultInterfaceType:
@@ -163,8 +162,6 @@ class UploaderModel(object):
         else:
             logger.warning("There is no active network interface.")
 
-        self.name = SETTINGS.general.instrumentName
-
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
         diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
                            "Mount")
@@ -191,11 +188,11 @@ class UploaderModel(object):
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         # pylint: disable=too-many-branches
-        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-            "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+            "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
         try:
-            headers = SETTINGS.defaultHeaders
+            headers = self.settings.defaultHeaders
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
         except Exception as err:
@@ -232,10 +229,10 @@ class UploaderModel(object):
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
         uploaderJson = {
-            "uuid": SETTINGS.miscellaneous.uuid,
-            "name": self.name,
-            "contact_name": SETTINGS.general.contactName,
-            "contact_email": SETTINGS.general.contactEmail,
+            "uuid": self.settings.miscellaneous.uuid,
+            "name": self.settings.general.instrumentName,
+            "contact_name": self.settings.general.contactName,
+            "contact_email": self.settings.general.contactEmail,
 
             "user_agent_name": "MyData",
             "user_agent_version": VERSION,
@@ -254,8 +251,8 @@ class UploaderModel(object):
             "cpus": self.sysInfo['cpus'],
 
             "disk_usage": self.diskUsage,
-            "data_path": SETTINGS.general.dataDirectory,
-            "default_user": SETTINGS.general.username,
+            "data_path": self.settings.general.dataDirectory,
+            "default_user": self.settings.general.username,
 
             "interface": self.ifconfig['interface'],
             "mac_address": self.ifconfig['macAddress'],
@@ -265,12 +262,12 @@ class UploaderModel(object):
 
             "hostname": self.sysInfo['hostname'],
 
-            "instruments": [SETTINGS.instrument.resourceUri]
+            "instruments": [self.settings.instrument.resourceUri]
         }
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
-        headers = SETTINGS.defaultHeaders
+        headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data,
                                     timeout=DEFAULT_TIMEOUT)
@@ -308,19 +305,20 @@ class UploaderModel(object):
         """
         Look for existing upload to staging request.
         """
+        import mydata.utils.openssh as OpenSSH
         try:
             if not self.sshKeyPair:
                 self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
-        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
-            "&uploader__uuid=" + SETTINGS.miscellaneous.uuid + \
+            "&uploader__uuid=" + self.settings.miscellaneous.uuid + \
             "&requester_key_fingerprint=" + urllib.quote(
                 self.sshKeyPair.fingerprint)
         logger.debug(url)
-        headers = SETTINGS.defaultHeaders
+        headers = self.settings.defaultHeaders
         response = requests.get(headers=headers, url=url)
         if response.status_code != 200:
             HandleHttpError(response)
@@ -342,22 +340,23 @@ class UploaderModel(object):
         Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
         """
+        import mydata.utils.openssh as OpenSSH
         try:
             if not self.sshKeyPair:
                 self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
             self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
-        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \
             {"uploader": self.resourceUri,
-             "name": self.name,
-             "requester_name": SETTINGS.general.contactName,
-             "requester_email": SETTINGS.general.contactEmail,
+             "name": self.settings.general.instrumentName,
+             "requester_name": self.settings.general.contactName,
+             "requester_email": self.settings.general.contactEmail,
              "requester_public_key": self.sshKeyPair.publicKey,
              "requester_key_fingerprint": self.sshKeyPair.fingerprint}
         data = json.dumps(uploaderRegistrationRequestJson)
-        response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
+        response = requests.post(headers=self.settings.defaultHeaders, url=url,
                                  data=data)
         if response.status_code == 201:
             return UploaderRegistrationRequest(
@@ -406,12 +405,12 @@ class UploaderModel(object):
         Used to save uploader settings to the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        headers = SETTINGS.defaultHeaders
+        myTardisUrl = self.settings.general.myTardisUrl
+        headers = self.settings.defaultHeaders
 
         if not self.uploaderId:
             url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-                % (myTardisUrl, urllib.quote(SETTINGS.miscellaneous.uuid))
+                % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
             try:
                 response = requests.get(headers=headers, url=url)
             except Exception as err:
@@ -439,7 +438,7 @@ class UploaderModel(object):
 
         patchData = {
             'settings': settingsList,
-            'uuid': SETTINGS.miscellaneous.uuid
+            'uuid': self.settings.miscellaneous.uuid
         }
         response = requests.patch(headers=headers, url=url,
                                   data=json.dumps(patchData))
@@ -451,10 +450,10 @@ class UploaderModel(object):
         Used to retrieve uploader settings from the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        headers = SETTINGS.defaultHeaders
+        myTardisUrl = self.settings.general.myTardisUrl
+        headers = self.settings.defaultHeaders
         url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-            % (myTardisUrl, urllib.quote(SETTINGS.miscellaneous.uuid))
+            % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
         try:
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)

@@ -596,7 +596,7 @@ def ProvideSettingsValidationResults(event):
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")
     try:
-        uploaderModel = UploaderModel()
+        uploaderModel = UploaderModel(SETTINGS)
         SETTINGS.uploaderModel = uploaderModel
 
         # Use the config path determined by appdirs, not the one

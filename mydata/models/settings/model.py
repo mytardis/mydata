@@ -174,7 +174,7 @@ class SettingsModel(object):
             return self._uploaderModel
         try:
             LOCKS.createUploaderThreadingLock.acquire()
-            self._uploaderModel = UploaderModel()
+            self._uploaderModel = UploaderModel(self)
             return self._uploaderModel
         finally:
             LOCKS.createUploaderThreadingLock.release()
