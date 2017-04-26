@@ -281,6 +281,15 @@ class UploaderModel(object):
             HandleHttpError(response)
 
     @property
+    def name(self):
+        """
+        For now the uploader name is the same as the instrument name, but
+        that could change if we ever support uploading data from multiple
+        instruments using the same MyData instance.
+        """
+        return self.settings.general.instrumentName
+
+    @property
     def userAgentInstallLocation(self):
         """
         Return MyData install location
@@ -305,12 +314,13 @@ class UploaderModel(object):
         """
         Look for existing upload to staging request.
         """
-        import mydata.utils.openssh as OpenSSH
+        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+
         try:
             if not self.sshKeyPair:
-                self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
+                self.sshKeyPair = FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
+            self.sshKeyPair = NewKeyPair("MyData")
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
@@ -340,7 +350,8 @@ class UploaderModel(object):
         Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
         """
-        import mydata.utils.openssh as OpenSSH
+        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+
         try:
             if not self.sshKeyPair:
                 self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
