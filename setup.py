@@ -21,6 +21,7 @@ import tempfile
 import commands
 import subprocess
 import shutil
+import zipfile
 
 from distutils.command.build import build
 from distutils.command.bdist import bdist
@@ -68,27 +69,54 @@ class CustomBuildCommand(build):
         On macOS, create dist/MyData.app/*
         """
         if sys.platform.startswith("win"):
+            sys.stdout.write(
+                "Creating dist/MyData.exe using PyUpdater / PyInstaller...\n")
+            if os.path.exists("build"):
+                shutil.rmtree("build")
+                os.mkdir("build")
+            if not os.path.exists("build/pyu-data"):
+                os.makedirs("build/pyu-data")
             if os.path.exists("dist"):
-                os.system(r"DEL /Q dist\*.*")
+                shutil.rmtree("dist")
+                os.mkdir("dist")
+            if not os.path.exists("dist/MyData"):
+                os.makedirs("dist/MyData")
+            if not os.path.exists("dist/MyData-console"):
+                os.makedirs("dist/MyData-console")
+            pyu_settings.CONFIG_DATA_FOLDER = \
+                os.path.abspath("build/.pyupdater")
+            if not os.path.exists(pyu_settings.CONFIG_DATA_FOLDER):
+                os.makedirs(pyu_settings.CONFIG_DATA_FOLDER)
+            pyu_settings.USER_DATA_FOLDER = os.path.abspath("build/pyu-data")
+            # The way we set the App name below avoids having to
+            # create .pyupdater/config.pyu:
+            pyu_settings.GENERIC_APP_NAME = APP_NAME
+            pyu_settings.GENERIC_COMPANY_NAME = COMPANY_NAME
+            pyinstallerArgs = ['--windowed', 'run.py']
+            args = Namespace(app_version=APP_VERSION, clean=False,
+                             command='build', distpath=None, keep=False,
+                             name=None, onedir=False, onefile=False,
+                             specpath=None, workpath=None)
+            builder = Builder(args, pyinstallerArgs)
+            builder.build()
 
-            exitCode = \
-                os.system(sys.executable +
-                          r" .\pyinstaller\pyinstaller.py -y "
-                          r"--name=MyData --icon=mydata\media\MyData.ico "
-                          r"--windowed run.py")
-            if exitCode != 0:
-                print "\nPyInstaller failed to build MyData.exe\n"
-                sys.exit(1)
+            pyuNewDir = os.path.join(pyu_settings.USER_DATA_FOLDER, 'new')
+            buildFileName = '%s-win-%s.zip' % (APP_NAME, APP_VERSION)
+            buildFilePath = os.path.join(pyuNewDir, buildFileName)
+            with zipfile.ZipFile(buildFilePath, 'r') as zipFile:
+                zipFile.extractall("dist/MyData")
 
-            exitCode = \
-                os.system(sys.executable +
-                          r" .\pyinstaller\pyinstaller.py -y "
-                          r"--name=MyData-console "
-                          r"--icon=mydata\media\MyData.ico "
-                          r"--console run.py")
-            if exitCode != 0:
-                print "\nPyInstaller failed to build MyData-console.exe\n"
-                sys.exit(1)
+            pyu_settings.GENERIC_APP_NAME = "%s-console" % APP_NAME
+            pyinstallerArgs = ['--console', 'run.py']
+            builder = Builder(args, pyinstallerArgs)
+            builder.build()
+
+            pyuNewDir = os.path.join(pyu_settings.USER_DATA_FOLDER, 'new')
+            buildFileName = '%s-console-win-%s.zip' % (APP_NAME, APP_VERSION)
+            buildFilePath = os.path.join(pyuNewDir, buildFileName)
+            with zipfile.ZipFile(buildFilePath, 'r') as zipFile:
+                zipFile.extractall("dist/MyData-console")
+
             os.system(r"COPY /Y dist\MyData-console\MyData-console.exe "
                       r"dist\MyData\MyData.com")
 
@@ -133,15 +161,17 @@ class CustomBuildCommand(build):
                 "Creating dist/MyData.app using PyUpdater / PyInstaller...\n")
             os.system("rm -fr build/*")
             os.system("rm -fr dist/*")
-            sys.stderr.write("TO DO: PyUpdater / PyInstaller Mac build!\n")
             if not os.path.exists("build/pyu-data"):
                 os.makedirs("build/pyu-data")
+            pyu_settings.CONFIG_DATA_FOLDER = \
+                os.path.abspath("build/.pyupdater")
+            if not os.path.exists(pyu_settings.CONFIG_DATA_FOLDER):
+                os.makedirs(pyu_settings.CONFIG_DATA_FOLDER)
             pyu_settings.USER_DATA_FOLDER = os.path.abspath("build/pyu-data")
             # The way we set the App name below avoids having to
             # create .pyupdater/config.pyu:
             pyu_settings.GENERIC_APP_NAME = APP_NAME
             pyu_settings.GENERIC_COMPANY_NAME = COMPANY_NAME
-            # with open("setup_templates/macOS/MyData.spec.template",
             with open("setup_templates/macOS/mac.spec.template",
                       'r') as macSpecTemplateFile:
                 macSpecTemplate = macSpecTemplateFile.read()
@@ -209,10 +239,6 @@ class CustomBuildCommand(build):
                         "dist/MyData.app/Contents/MacOS/")
             shutil.copy("resources/macOS/ObjectiveC/bin/loginitem-exists",
                         "dist/MyData.app/Contents/MacOS/")
-
-            pyu_settings.CONFIG_DATA_FOLDER = os.path.abspath("build/.pyupdater")
-            if not os.path.exists(pyu_settings.CONFIG_DATA_FOLDER):
-                os.makedirs(pyu_settings.CONFIG_DATA_FOLDER)
 
         elif sys.platform.startswith("linux"):
             os.system("cd linux; ./package_linux_version.sh")
@@ -407,7 +433,8 @@ class CustomInstallCommand(install):
             print "Drag MyData.app into the Applications folder to complete " \
                 "the installation.\n"
         else:
-            raise NotImplementedError("Only implemented for Windows and macOS.")
+            raise NotImplementedError(
+                "Only implemented for Windows and macOS.")
 
 
 SETUP_ARGS = dict(name=APP_NAME,
