@@ -354,9 +354,9 @@ class UploaderModel(object):
 
         try:
             if not self.sshKeyPair:
-                self.sshKeyPair = OpenSSH.FindKeyPair("MyData")
+                self.sshKeyPair = FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            self.sshKeyPair = OpenSSH.NewKeyPair("MyData")
+            self.sshKeyPair = NewKeyPair("MyData")
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \
