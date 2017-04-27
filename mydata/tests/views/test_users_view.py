@@ -15,7 +15,8 @@ class UsersViewTester(unittest.TestCase):
     Test ability to open users view.
     """
     def setUp(self):
-        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.app = wx.App(redirect=False)
+        self.app.SetAppName('UsersViewTester')
         self.frame = wx.Frame(None, title='UsersViewTester')
         self.usersModel = UsersModel()
         self.usersView = MyDataDataView(self.frame, self.usersModel)

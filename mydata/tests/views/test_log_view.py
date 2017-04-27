@@ -15,7 +15,8 @@ class LogViewTester(unittest.TestCase):
     Test ability to open log view.
     """
     def setUp(self):
-        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.app = wx.App(redirect=False)
+        self.app.SetAppName('LogViewTester')
         self.frame = wx.Frame(None, title='LogViewTester')
         self.frame.Show()
 

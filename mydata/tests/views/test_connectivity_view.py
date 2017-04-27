@@ -13,7 +13,8 @@ class ConnectivityViewTester(unittest.TestCase):
     Test ability to open connectivity view.
     """
     def setUp(self):
-        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.app = wx.App(redirect=False)
+        self.app.SetAppName('ConnectivityViewTester')
         self.frame = wx.Frame(None, title='ConnectivityViewTester')
         self.frame.Show()
 
