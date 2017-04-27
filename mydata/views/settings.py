@@ -1230,7 +1230,7 @@ class SettingsDialog(wx.Dialog):
             FLAGS.shouldAbort = True
         event.Skip()
 
-    def OnOK(self, event):  # pylint: disable=invalid-name
+    def OnOK(self, event):
         if self.GetInstrumentName() != \
                 SETTINGS.general.instrumentName and \
                 SETTINGS.general.instrumentName != "":
