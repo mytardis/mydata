@@ -1,8 +1,10 @@
 """
 Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
 """
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings.validation import CheckStructureAndCountDatasets
 from .. import MyDataScanFoldersTester
+from .. import ValidateSettingsAndScanFolders
 
 
 class ScanUserGroupInstrumentTester(MyDataScanFoldersTester):
@@ -21,9 +23,10 @@ class ScanUserGroupInstrumentTester(MyDataScanFoldersTester):
         self.UpdateSettingsFromCfg("testdataGroupInstrument")
         datasetCount = CheckStructureAndCountDatasets()
         self.assertEqual(datasetCount, 8)
-        self.ScanFolders()
+        ValidateSettingsAndScanFolders()
+        groupsModel = DATAVIEW_MODELS['groups']
         self.assertEqual(
-            sorted(self.groupsModel.GetValuesForColname("Full Name")),
+            sorted(groupsModel.GetValuesForColname("Full Name")),
             ["TestFacility-Group1", "TestFacility-Group2"])
         self.AssertFolders(
             ['Dataset 001', 'Dataset 002', 'Dataset 003', 'Dataset 004',

@@ -9,14 +9,16 @@ import wx
 
 from ...logs import logger
 from ...settings import SETTINGS
+from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
-from ...views.dataview import MyDataDataView
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
 from ..utils import Subtract
 from .. import MyDataScanFoldersTester
+from .. import InitializeModels
 
 
 class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
@@ -37,36 +39,34 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         ValidateSettings()
-        self.InitializeModels()
+        InitializeModels()
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
-            MyDataScanFoldersTester.ShouldAbort)
+        foldersModel = DATAVIEW_MODELS['folders']
+        foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")),
+            sorted(usersModel.GetValuesForColname("Username")),
             ['INVALID_USER', 'testuser1', 'testuser2'])
 
         folders = []
-        for row in range(self.foldersModel.GetRowCount()):
-            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
+        for row in range(foldersModel.GetRowCount()):
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(
             sorted(folders), ['Birds', 'Flowers', 'InvalidUserDataset1'])
 
         numFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            numFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(foldersModel.GetRowCount()):
+            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 11)
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
-        foldersView = MyDataDataView(self.frame, self.foldersModel)
-        foldersController = FoldersController(
-            self.frame, self.foldersModel, foldersView, self.usersModel,
-            verificationsModel, uploadsModel)
-
+        DATAVIEW_MODELS['verifications'] = verificationsModel
+        DATAVIEW_MODELS['uploads'] = uploadsModel
+        foldersController = FoldersController(self.frame)
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
 
@@ -84,19 +84,21 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
 
         # Now let's test canceling the uploads:
 
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         def StartUploads():
             """
             Start Uploads worker
             """
             foldersController.InitForUploads()
-            for row in range(self.foldersModel.GetRowCount()):
-                folderModel = self.foldersModel.GetFolderRecord(row)
+            for row in range(foldersModel.GetRowCount()):
+                folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
             foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
+        # Do this synchronously to ensure that the completed flag is reset:
+        foldersController.InitializeStatusFlags()
         startUploadsThread.start()
         sys.stderr.write("Waiting for uploads to start...\n")
         while uploadsModel.GetCount() == 0:
@@ -104,26 +106,29 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.05)
         sys.stderr.write("\nCanceling uploads...\n")
+        FLAGS.shouldAbort = True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        FLAGS.shouldAbort = False
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 
         # Simulate ConnectionError while trying to access MyTardis URL:
         sys.stderr.write(
             "\nAsking fake MyTardis server to shut down abruptly...\n")
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         SETTINGS.general.myTardisUrl = \
             "%s/request/connectionerror/" % self.fakeMyTardisUrl
         event = wx.PyEvent()
-        event.folderModel = self.foldersModel.GetFolderRecord(0)
+        event.folderModel = foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
         foldersController.UploadDatafile(event)
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         # We should see some sort of connection error in the log, but we don't
         # know which one it will be.
         # Errno 10053 is a Winsock error: "Software caused connection abort"
         self.assertTrue(
             "urlopen error [Errno 32] Broken pipe" in newLogs or
+            "[Errno 54] Connection reset by peer" in newLogs or
             "BadStatusLine" in newLogs or
             "urlopen error [Errno 10053]" in newLogs)

@@ -11,18 +11,22 @@ import select
 import wx
 
 import mydata.utils.openssh as OpenSSH
+import mydata.tests.fake_mytardis_helpers.get as fake_mytardis_get
 from ...logs import logger
 from ...settings import SETTINGS
 from ...models.settings.validation import ValidateSettings
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
-from ...views.dataview import MyDataDataView
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
+from ...threads.flags import FLAGS
 from ...utils.exceptions import PrivateKeyDoesNotExist
 from .. import MyDataScanFoldersTester
+from .. import InitializeModels
 from ..fake_ssh_server import ThreadedSshServer
 from ..utils import Subtract
+from ..utils import GetEphemeralPort
 
 
 class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
@@ -33,6 +37,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         super(ScanUsernameDatasetScpTester, self).__init__(*args, **kwargs)
         self.fakeSshServerThread = None
         self.fakeSshServerStopped = False
+        self.scpPort = None
 
     def setUp(self):
         super(ScanUsernameDatasetScpTester, self).setUp()
@@ -47,6 +52,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
         except PrivateKeyDoesNotExist:
             self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
+        self.scpPort = GetEphemeralPort()
+        fake_mytardis_get.SCP_PORT = self.scpPort
         self.StartFakeSshServer()
 
     def tearDown(self):
@@ -66,7 +73,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         self.UpdateSettingsFromCfg("testdataUsernameDataset")
         self.assertEqual(SETTINGS.miscellaneous.uuid, "1234567890")
         self.assertEqual(SETTINGS.general.instrumentName, "Test Instrument")
-        SETTINGS.sshKeyPair = self.keyPair
         ValidateSettings()
         # Reset global settings' uploader model, so we when we next call
         # the SETTINGS.uploaderModel property method, we'll generate a
@@ -75,56 +81,56 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.uploaderModel = None
         SETTINGS.uploaderModel.UploadUploaderInfo()
         self.assertEqual(SETTINGS.uploaderModel.name, "Test Instrument")
-        self.InitializeModels()
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
-            MyDataScanFoldersTester.ShouldAbort)
+        SETTINGS.uploaderModel.sshKeyPair = self.keyPair
+        InitializeModels()
+        foldersModel = DATAVIEW_MODELS['folders']
+        foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
         # testdataUsernameDataset.cfg has upload_invalid_user_folders = False,
         # so the "INVALID_USER" folder is not included:
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")),
+            sorted(usersModel.GetValuesForColname("Username")),
             ["testuser1", "testuser2"])
 
         folders = []
-        for row in range(self.foldersModel.GetRowCount()):
-            folders.append(self.foldersModel.GetFolderRecord(row).folderName)
+        for row in range(foldersModel.GetRowCount()):
+            folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folders), ["Birds", "Flowers"])
 
         numFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            numFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(foldersModel.GetRowCount()):
+            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(numFiles, 10)
 
         numExistingVerifiedFiles = 1
         numUnverifiedFullSizeFiles = 1
         numTriggeringMissingApiEndpoint = 1
 
-        uploadsModel = UploadsModel()
-        verificationsModel = VerificationsModel()
-        foldersView = MyDataDataView(self.frame, self.foldersModel)
-        foldersController = FoldersController(
-            self.frame, self.foldersModel, foldersView, self.usersModel,
-            verificationsModel, uploadsModel)
+        DATAVIEW_MODELS['verifications'] = VerificationsModel()
+        verificationsModel = DATAVIEW_MODELS['verifications']
+        DATAVIEW_MODELS['uploads'] = UploadsModel()
+        uploadsModel = DATAVIEW_MODELS['uploads']
+        foldersController = FoldersController(self.frame)
         # This helps with PostEvent's logging in mydata/events/__init__.py:
         self.app.foldersController = foldersController
 
         username = "mydata"
         privateKeyFilePath = self.keyPair.privateKeyFilePath
         host = "127.0.0.1"
-        port = 2200
         sys.stderr.write("Waiting for fake SSH server to start up...\n")
         attempts = 0
         while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
-                                           host, port):
+                                           host, self.scpPort):
             attempts += 1
             if attempts > 10:
                 raise Exception(
-                    "Couldn't connect to SSH server at 127.0.0.1:2200")
+                    "Couldn't connect to SSH server at 127.0.0.1:%s"
+                    % self.scpPort)
             time.sleep(0.25)
 
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
 
@@ -183,22 +189,23 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
                          numUnverifiedFullSizeFiles -
                          numTriggeringMissingApiEndpoint)
 
-
         sys.stderr.write("Testing canceling uploads...\n")
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
 
         def StartUploads():
             """
             Start Uploads worker
             """
             foldersController.InitForUploads()
-            for row in range(self.foldersModel.GetRowCount()):
-                folderModel = self.foldersModel.GetFolderRecord(row)
+            for row in range(foldersModel.GetRowCount()):
+                folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
             foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
+        # Do this synchronously to ensure that the completed flag is reset:
+        foldersController.InitializeStatusFlags()
         startUploadsThread.start()
         sys.stderr.write("Waiting for uploads to start...\n")
         # We don't need to have an active SCP process during the Cancel for
@@ -214,9 +221,11 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
             time.sleep(0.01)
         sys.stderr.write("Canceling uploads...\n")
+        FLAGS.shouldAbort = True
         foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        FLAGS.shouldAbort = False
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
 
         sys.stderr.write(
@@ -224,13 +233,13 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         # This UUID tells our fake MyTardis server to simulate a
         # missing storage box attribute:
         SETTINGS.miscellaneous.uuid = "1234567891"
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn(
             "Key 'scp_username' not found in attributes for storage box",
             newLogs)
@@ -240,14 +249,14 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         sys.stderr.write(
             "\nTesting handling of invalid path to SCP binary...\n")
         OpenSSH.OPENSSH.scp += "_INVALID"
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         OpenSSH.OPENSSH.scp = OpenSSH.OPENSSH.scp.rstrip("_INVALID")
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
@@ -266,14 +275,14 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         # command to run.
         OpenSSH.REMOTE_DIRS_CREATED = dict()
         OpenSSH.OPENSSH.ssh += "_INVALID"
-        loggerOutput = logger.loggerOutput.getvalue()
+        loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         OpenSSH.OPENSSH.ssh = OpenSSH.OPENSSH.ssh.rstrip("_INVALID")
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
@@ -286,14 +295,14 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         sys.stderr.write(
             "\nTesting attempted uploads with invalid file paths...\n")
         foldersController.InitForUploads()
-        loggerOutput = logger.loggerOutput.getvalue()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        loggerOutput = logger.GetValue()
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
                 folderModel.dataFilePaths[dataFileIndex] += "_INVALID"
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertRegexpMatches(
             newLogs, (".*Not uploading .+, because it has been "
                       "moved, renamed or deleted.*"))
@@ -308,20 +317,21 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         defaultTimeout = OpenSSH.CONNECTION_TIMEOUT
         OpenSSH.CONNECTION_TIMEOUT = 1
         sys.stderr.write(
-            "\tSSH ConnectionTimeout: %s second(s)\n" % OpenSSH.CONNECTION_TIMEOUT)
+            "\tSSH ConnectionTimeout: %s second(s)\n"
+            % OpenSSH.CONNECTION_TIMEOUT)
         sys.stderr.write(
             "\tMax upload retries: %s\n" % SETTINGS.advanced.maxUploadRetries)
         sys.stderr.write("\tNumber of uploads: %s\n\n" % uploadsProcessed)
         foldersController.InitForUploads()
-        loggerOutput = logger.loggerOutput.getvalue()
-        for row in range(self.foldersModel.GetRowCount()):
-            folderModel = self.foldersModel.GetFolderRecord(row)
+        loggerOutput = logger.GetValue()
+        for row in range(foldersModel.GetRowCount()):
+            folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
                 folderModel.dataFilePaths[dataFileIndex] = \
                     folderModel.dataFilePaths[dataFileIndex].rstrip("_INVALID")
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
-        newLogs = Subtract(logger.loggerOutput.getvalue(), loggerOutput)
+        newLogs = Subtract(logger.GetValue(), loggerOutput)
 
         for uploadModel in uploadsModel.rowsData:
             self.assertEqual(uploadModel.status, UploadStatus.FAILED)
@@ -333,9 +343,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
 
         self.assertRegexpMatches(
             newLogs,
-            ".*ssh: connect to host localhost port 2200: Connection refused.*"
+            ".*ssh: connect to host localhost port %s: Connection refused.*"
             "|"
-            ".*Connection timed out during banner exchange.*")
+            ".*Connection timed out during banner exchange.*" % self.scpPort)
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
         OpenSSH.CONNECTION_TIMEOUT = defaultTimeout
 
@@ -343,7 +353,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         """
         Start fake SSH server.
         """
-        self.sshd = ThreadedSshServer(("127.0.0.1", 2200))
+        self.sshd = ThreadedSshServer(("127.0.0.1", self.scpPort))
 
         def FakeSshServer():
             """ Run fake SSH server """

@@ -133,9 +133,10 @@ class UploadModel(object):
         relative to the dataset folder
         """
         if self.subdirectory != "":
-            return os.path.join(self.subdirectory, self.filename)
+            relpath = os.path.join(self.subdirectory, self.filename)
         else:
-            return self.filename
+            relpath = self.filename
+        return relpath
 
     def Cancel(self):
         """

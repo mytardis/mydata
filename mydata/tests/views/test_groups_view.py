@@ -15,7 +15,8 @@ class GroupsViewTester(unittest.TestCase):
     Test ability to open groups view.
     """
     def setUp(self):
-        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.app = wx.App(redirect=False)
+        self.app.SetAppName('GroupsViewTester')
         self.frame = wx.Frame(None, title='GroupsViewTester')
         self.groupsModel = GroupsModel()
         self.groupsView = MyDataDataView(self.frame, self.groupsModel)

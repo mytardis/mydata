@@ -39,6 +39,17 @@ class AdvancedSettingsModel(object):
         self.mydataConfig['folder_structure'] = folderStructure
 
     @property
+    def userOrGroupString(self):
+        """
+        Used when reporting progress on user/group folder scanning.
+        """
+        if "Group" in self.mydataConfig['folder_structure']:
+            userOrGroupString = "user group"
+        else:
+            userOrGroupString = "user"
+        return userOrGroupString
+
+    @property
     def validateFolderStructure(self):
         """
         Returns True if folder structure should be validated
@@ -50,7 +61,8 @@ class AdvancedSettingsModel(object):
         """
         Set this to True if folder structure should be validated
         """
-        self.mydataConfig['validate_folder_structure'] = validateFolderStructure
+        self.mydataConfig['validate_folder_structure'] = \
+            validateFolderStructure
 
     @property
     def startAutomaticallyOnLogin(self):
@@ -64,7 +76,8 @@ class AdvancedSettingsModel(object):
         """
         Set this to True if MyData should start automatically on login
         """
-        self.mydataConfig['start_automatically_on_login'] = startAutomaticallyOnLogin
+        self.mydataConfig['start_automatically_on_login'] = \
+            startAutomaticallyOnLogin
 
     @property
     def uploadInvalidUserOrGroupFolders(self):

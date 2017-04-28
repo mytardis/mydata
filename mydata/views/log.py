@@ -33,6 +33,8 @@ class LogView(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog,
                   id=self.submitDebugLogButton.GetId())
         self.debugCheckBox = wx.CheckBox(footerPanel, wx.ID_ANY, "Debug logging")
+        if logger.GetLevel() == logging.DEBUG:
+            self.debugCheckBox.SetValue(True)
         self.Bind(wx.EVT_CHECKBOX, self.OnDebugLogging,
                   id=self.debugCheckBox.GetId())
         footerPanelSizer.Add(self.debugCheckBox)

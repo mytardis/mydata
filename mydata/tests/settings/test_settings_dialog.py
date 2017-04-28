@@ -208,9 +208,6 @@ class SettingsDialogTester(MyDataSettingsTester):
         self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(6)
         self.settingsDialog.SetIgnoreOldDatasetIntervalUnit("months")
         self.settingsDialog.SetValidateFolderStructure(True)
-        # Don't check / update autostart file here:
-        SETTINGS.lastCheckedAutostartValue = \
-            SETTINGS.advanced.startAutomaticallyOnLogin
         PostEvent(settingsDialogValidationEvent)
 
         if not sys.platform.startswith("win"):
@@ -225,8 +222,6 @@ class SettingsDialogTester(MyDataSettingsTester):
                 "startAutomaticallyOnLogin = False...\n")
             SETTINGS.advanced.startAutomaticallyOnLogin = False
             UpdateAutostartFile()
-            SETTINGS.lastCheckedAutostartValue = \
-                SETTINGS.advanced.startAutomaticallyOnLogin
             sys.stderr.write("Finished testing updating autostart file\n")
 
         # Test renaming instrument to an available instrument name:

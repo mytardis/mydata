@@ -12,6 +12,9 @@ import urllib
 from . import EMPTY_API_LIST, STAGING_PATH, TEST_FACILITY, TEST_INSTRUMENT
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
 
+# This storage box attribute can be overwritten by an ephemeral port:
+SCP_PORT = 2200
+
 
 def FakeMyTardisGet(mytardis):
     """
@@ -32,12 +35,20 @@ def FakeMyTardisGet(mytardis):
         RespondToRequestForStatusCode(mytardis)
         return
 
-    assert mytardis.path.startswith("/api/v1/")
-    if mytardis.path == "/api/v1/?format=json":
-        # We use this path to test that the MyTardis server is
-        # accessible and that the API responds in a reasonable time.
+    if mytardis.path == "/" or mytardis.path == "/api/v1/?format=json":
+        # "/" is for testing opening MyTardis's web interface
+        # (as distinct from its RESTful API).
+        # "/api/v1/?format=json" is used in settings validation to ensure
+        # that the MyTardis server is accessible and that its API responds
+        # in a reasonable time.
         RespondWithStatusCode(mytardis, 200)
         return
+
+    if not mytardis.path.startswith("/api/v1/"):
+        raise Exception(
+            "Fake MyTardis server doesn't know how to respond to %s"
+            % mytardis.path)
+
     authorization = mytardis.headers.getheader("Authorization", "")
     match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
     apiKey = match.groups()[1]
@@ -381,7 +392,7 @@ def RespondToUploaderRegRequest(mytardis):
                             "key": "scp_port",
                             "resource_uri": "/api/v1/storageboxattribute/13/",
                             "storage_box": "/api/v1/storagebox/10/",
-                            "value": "2200",
+                            "value": str(SCP_PORT),
                         },
                     ],
                     "options": [

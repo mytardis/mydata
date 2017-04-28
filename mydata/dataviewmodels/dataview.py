@@ -6,12 +6,13 @@ import threading
 import traceback
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
+
+from ..logs import logger
+
+if 'phoenix' in wx.PlatformInfo:
     from wx.dataview import DataViewIndexListModel
 else:
     from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
-
-from ..logs import logger  # pylint: disable=wrong-import-position
 
 
 class ColumnRenderer(object):
@@ -75,6 +76,11 @@ class MyDataDataViewModel(DataViewIndexListModel):
         This method is called to provide the rowsData object
         for a particular row, col
         """
+        # Workaround for thread synchronization issue:
+        try:
+            assert self.rowsData[row]
+        except IndexError:
+            return ""
         columnKey = self.GetColumnKeyName(col)
         return str(self.rowsData[row].GetValueForKey(columnKey))
 
@@ -152,7 +158,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
         Only show rows matching the query string, typed in the search box
         in the upper-right corner of the main window.
         """
-        if len(self.filterFields) == 0:
+        if not self.filterFields:
             return
         self.searchString = searchString
         query = self.searchString.lower()
@@ -291,3 +297,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
         Return the renderer to be used for the specified dataview column
         """
         return ColumnRenderer.TEXT
+
+
+# This will be populated as each dataview model is initialized:
+DATAVIEW_MODELS = dict()

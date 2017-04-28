@@ -1,13 +1,11 @@
 """
 Classes for MyData's settings dialog.
 """
-
 # Disabling some Pylint checks for now...
 # pylint: disable=missing-docstring
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-statements
 # pylint: disable=no-member
-# pylint: disable=wrong-import-position
 
 from datetime import datetime
 from datetime import timedelta
@@ -17,14 +15,6 @@ import os
 import traceback
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
-    import wx.lib.masked
-    from wx.lib.agw.aui import AuiNotebook
-    from wx.lib.agw.aui import AUI_NB_TOP
-else:
-    import wx.lib.masked
-    from wx.aui import AuiNotebook
-    from wx.aui import AUI_NB_TOP
 
 from ..settings import SETTINGS
 from ..models.settings.serialize import LoadSettings
@@ -35,6 +25,16 @@ from ..utils.autostart import IsMyDataShortcutInWinStartupItems
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
+from ..threads.flags import FLAGS
+
+if 'phoenix' in wx.PlatformInfo:
+    import wx.lib.masked
+    from wx.lib.agw.aui import AuiNotebook
+    from wx.lib.agw.aui import AUI_NB_TOP
+else:
+    import wx.lib.masked
+    from wx.aui import AuiNotebook
+    from wx.aui import AUI_NB_TOP
 
 
 class SettingsDropTarget(wx.FileDropTarget):
@@ -83,7 +83,7 @@ class SettingsDialog(wx.Dialog):
 
         self.dialogPanel = wx.Panel(self)
 
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.settingsTabsNotebook = \
                 AuiNotebook(self.dialogPanel, agwStyle=AUI_NB_TOP)
         else:
@@ -739,9 +739,11 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
+        # Upper limit of max upload threads is set to 10, based on the default
+        # value of MaxSessions (10) in a typical SCP server's sshd_config.
         self.maxUploadThreadsSpinCtrl = \
             wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
-                        "5", min=1, max=99)
+                        "4", min=1, max=10)
         self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl,
                                             flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
@@ -1225,10 +1227,10 @@ class SettingsDialog(wx.Dialog):
         # If we are not running scans and uploads, but we could be
         # running settings validation, stop when Cancel is pressed.
         if not wx.GetApp().Processing():
-            wx.GetApp().SetShouldAbort(True)
+            FLAGS.shouldAbort = True
         event.Skip()
 
-    def OnOK(self, event):  # pylint: disable=invalid-name
+    def OnOK(self, event):
         if self.GetInstrumentName() != \
                 SETTINGS.general.instrumentName and \
                 SETTINGS.general.instrumentName != "":
@@ -1469,18 +1471,15 @@ class SettingsDialog(wx.Dialog):
 
     def OnSave(self, event):
         # pylint: disable=unused-argument
-        mydataConfigPath = SETTINGS.configPath
-        if mydataConfigPath is not None:
-            dlg = wx.FileDialog(wx.GetApp().GetMainFrame(),
-                                "Save MyData configuration as...", "",
-                                "%s.cfg" % self.GetInstrumentName(), "*.cfg",
-                                wx.SAVE | wx.OVERWRITE_PROMPT)
-            if dlg.ShowModal() == wx.ID_OK:
-                configPath = dlg.GetPath()
-                SaveFieldsFromDialog(self, configPath=configPath)
-                if configPath != wx.GetApp().GetConfigPath():
-                    SaveFieldsFromDialog(
-                        self, configPath=wx.GetApp().GetConfigPath())
+        dlg = wx.FileDialog(wx.GetApp().frame,
+                            "Save MyData configuration as...", "",
+                            "%s.cfg" % self.GetInstrumentName(), "*.cfg",
+                            wx.SAVE | wx.OVERWRITE_PROMPT)
+        if dlg.ShowModal() == wx.ID_OK:
+            configPath = dlg.GetPath()
+            SaveFieldsFromDialog(self, configPath=configPath)
+            if configPath != SETTINGS.configPath:
+                SaveFieldsFromDialog(self, configPath=SETTINGS.configPath)
         # event.Skip()
 
     def OnApiKeyFieldFocused(self, event):

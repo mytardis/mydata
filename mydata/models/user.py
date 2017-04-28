@@ -48,9 +48,10 @@ class UserModel(object):
         the user was not found on the MyTardis server
         """
         if self._username:
-            return self._username
+            username = self._username
         else:
-            return UserModel.userNotFoundString
+            username = UserModel.userNotFoundString
+        return username
 
     @username.setter
     def username(self, username):
@@ -66,9 +67,10 @@ class UserModel(object):
         that the user was not found on the MyTardis server
         """
         if self._fullName:
-            return self._fullName
+            fullName = self._fullName
         else:
-            return UserModel.userNotFoundString
+            fullName = UserModel.userNotFoundString
+        return fullName
 
     @fullName.setter
     def fullName(self, fullName):
@@ -84,9 +86,10 @@ class UserModel(object):
         that the user was not found on the MyTardis server
         """
         if self._email:
-            return self._email
+            email = self._email
         else:
-            return UserModel.userNotFoundString
+            email = UserModel.userNotFoundString
+        return email
 
     @email.setter
     def email(self, email):
@@ -104,9 +107,10 @@ class UserModel(object):
             return getattr(self, key)
         elif key in ('username', 'fullName', 'email') and \
                 self.userNotFoundInMyTardis:
-            return UserModel.userNotFoundString
+            value = UserModel.userNotFoundString
         else:
-            return None
+            value = None
+        return value
 
     @staticmethod
     def GetUserByUsername(username):

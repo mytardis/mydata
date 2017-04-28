@@ -78,24 +78,23 @@ import pkgutil
 import urllib
 import traceback
 import uuid
-import threading
 
 import dateutil.parser
 import netifaces
 import psutil
 import requests
 
-import mydata.utils.openssh as OpenSSH
 from .. import __version__ as VERSION
 from ..logs import logger
-from ..settings import SETTINGS
-from ..utils.connectivity import Connectivity
+from ..utils.connectivity import GetDefaultInterfaceType
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import PrivateKeyDoesNotExist
 from ..utils.exceptions import MissingMyDataAppOnMyTardisServer
 from ..utils.exceptions import StorageBoxOptionNotFound
 from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..utils import BytesToHuman
+from ..utils import MyDataInstallLocation
+from ..threads.locks import LOCKS
 from . import HandleHttpError
 from .storage import StorageBox
 
@@ -107,12 +106,15 @@ class UploaderModel(object):
     Model class for MyTardis API v1's UploaderAppResource.
     See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
     """
-    def __init__(self):
+    def __init__(self, settings):
         # pylint: disable=too-many-branches
+        self.settings = settings
         self.uploaderId = None
         self.resourceUri = None
         self.uploaderSettings = None
+        self.uploadToStagingRequest = None
         self.settingsUpdated = None
+        self.sshKeyPair = None
 
         self.sysInfo = dict(
             osPlatform=sys.platform,
@@ -130,12 +132,10 @@ class UploaderModel(object):
         self.ifconfig = dict(interface=None, macAddress='', ipv4Address='',
                              ipv6Address='', subnetMask='')
 
-        self.requestStagingAccessThreadLock = threading.Lock()
+        if self.settings.miscellaneous.uuid is None:
+            self.settings.miscellaneous.uuid = str(uuid.uuid1())
 
-        if SETTINGS.miscellaneous.uuid is None:
-            SETTINGS.miscellaneous.uuid = str(uuid.uuid1())
-
-        defaultInterfaceType = Connectivity.GetDefaultInterfaceType()
+        defaultInterfaceType = GetDefaultInterfaceType()
         if defaultInterfaceType:
             self.ifconfig['interface'] = \
                 netifaces.gateways()['default'][defaultInterfaceType][1]
@@ -161,18 +161,6 @@ class UploaderModel(object):
                          % str(self.ifconfig['interface']))
         else:
             logger.warning("There is no active network interface.")
-
-        self.name = SETTINGS.general.instrumentName
-
-        self.userAgentInstallLocation = ""
-        if hasattr(sys, 'frozen'):
-            self.userAgentInstallLocation = os.path.dirname(sys.executable)
-        else:
-            try:
-                self.userAgentInstallLocation = \
-                    os.path.dirname(pkgutil.get_loader("MyData").filename)
-            except:
-                self.userAgentInstallLocation = os.getcwd()
 
         fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
         diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
@@ -200,11 +188,11 @@ class UploaderModel(object):
     def UploadUploaderInfo(self):
         """ Uploads info about the instrument PC to MyTardis via HTTP POST """
         # pylint: disable=too-many-branches
-        myTardisUrl = SETTINGS.general.myTardisUrl
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-            "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+            "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
         try:
-            headers = SETTINGS.defaultHeaders
+            headers = self.settings.defaultHeaders
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)
         except Exception as err:
@@ -241,15 +229,14 @@ class UploaderModel(object):
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
         uploaderJson = {
-            "uuid": SETTINGS.miscellaneous.uuid,
-            "name": self.name,
-            "contact_name": SETTINGS.general.contactName,
-            "contact_email": SETTINGS.general.contactEmail,
+            "uuid": self.settings.miscellaneous.uuid,
+            "name": self.settings.general.instrumentName,
+            "contact_name": self.settings.general.contactName,
+            "contact_email": self.settings.general.contactEmail,
 
             "user_agent_name": "MyData",
             "user_agent_version": VERSION,
-            "user_agent_install_location":
-                self.userAgentInstallLocation,
+            "user_agent_install_location": MyDataInstallLocation(),
 
             "os_platform": self.sysInfo['osPlatform'],
             "os_system": self.sysInfo['osSystem'],
@@ -264,8 +251,8 @@ class UploaderModel(object):
             "cpus": self.sysInfo['cpus'],
 
             "disk_usage": self.diskUsage,
-            "data_path": SETTINGS.general.dataDirectory,
-            "default_user": SETTINGS.general.username,
+            "data_path": self.settings.general.dataDirectory,
+            "default_user": self.settings.general.username,
 
             "interface": self.ifconfig['interface'],
             "mac_address": self.ifconfig['macAddress'],
@@ -275,12 +262,12 @@ class UploaderModel(object):
 
             "hostname": self.sysInfo['hostname'],
 
-            "instruments": [SETTINGS.instrument.resourceUri]
+            "instruments": [self.settings.instrument.resourceUri]
         }
 
         data = json.dumps(uploaderJson, indent=4)
         logger.debug(data)
-        headers = SETTINGS.defaultHeaders
+        headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
             response = requests.put(headers=headers, url=url, data=data,
                                     timeout=DEFAULT_TIMEOUT)
@@ -294,31 +281,54 @@ class UploaderModel(object):
             HandleHttpError(response)
 
     @property
+    def name(self):
+        """
+        For now the uploader name is the same as the instrument name, but
+        that could change if we ever support uploading data from multiple
+        instruments using the same MyData instance.
+        """
+        return self.settings.general.instrumentName
+
+    @property
+    def userAgentInstallLocation(self):
+        """
+        Return MyData install location
+        """
+        if hasattr(sys, 'frozen'):
+            return os.path.dirname(sys.executable)
+        else:
+            try:
+                return os.path.dirname(pkgutil.get_loader("MyData").filename)
+            except:
+                return os.getcwd()
+        return ""
+
+    @property
     def hostname(self):
         """
         Return the instrument PC's hostname
         """
         return self.sysInfo['hostname']
 
-    @staticmethod
-    def ExistingUploadToStagingRequest():
+    def ExistingUploadToStagingRequest(self):
         """
         Look for existing upload to staging request.
         """
+        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+
         try:
-            keyPair = SETTINGS.sshKeyPair
-            if not keyPair:
-                keyPair = OpenSSH.FindKeyPair("MyData")
+            if not self.sshKeyPair:
+                self.sshKeyPair = FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            keyPair = OpenSSH.NewKeyPair("MyData")
-        SETTINGS.sshKeyPair = keyPair
-        myTardisUrl = SETTINGS.general.myTardisUrl
+            self.sshKeyPair = NewKeyPair("MyData")
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
-            "&uploader__uuid=" + SETTINGS.miscellaneous.uuid + \
-            "&requester_key_fingerprint=" + urllib.quote(keyPair.fingerprint)
+            "&uploader__uuid=" + self.settings.miscellaneous.uuid + \
+            "&requester_key_fingerprint=" + urllib.quote(
+                self.sshKeyPair.fingerprint)
         logger.debug(url)
-        headers = SETTINGS.defaultHeaders
+        headers = self.settings.defaultHeaders
         response = requests.get(headers=headers, url=url)
         if response.status_code != 200:
             HandleHttpError(response)
@@ -340,24 +350,24 @@ class UploaderModel(object):
         Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
         """
+        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+
         try:
-            keyPair = SETTINGS.sshKeyPair
-            if not keyPair:
-                keyPair = OpenSSH.FindKeyPair("MyData")
+            if not self.sshKeyPair:
+                self.sshKeyPair = FindKeyPair("MyData")
         except PrivateKeyDoesNotExist:
-            keyPair = OpenSSH.NewKeyPair("MyData")
-        SETTINGS.sshKeyPair = keyPair
-        myTardisUrl = SETTINGS.general.myTardisUrl
+            self.sshKeyPair = NewKeyPair("MyData")
+        myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \
             {"uploader": self.resourceUri,
-             "name": self.name,
-             "requester_name": SETTINGS.general.contactName,
-             "requester_email": SETTINGS.general.contactEmail,
-             "requester_public_key": keyPair.publicKey,
-             "requester_key_fingerprint": keyPair.fingerprint}
+             "name": self.settings.general.instrumentName,
+             "requester_name": self.settings.general.contactName,
+             "requester_email": self.settings.general.contactEmail,
+             "requester_public_key": self.sshKeyPair.publicKey,
+             "requester_key_fingerprint": self.sshKeyPair.fingerprint}
         data = json.dumps(uploaderRegistrationRequestJson)
-        response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
+        response = requests.post(headers=self.settings.defaultHeaders, url=url,
                                  data=data)
         if response.status_code == 201:
             return UploaderRegistrationRequest(
@@ -370,7 +380,7 @@ class UploaderModel(object):
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        if self.requestStagingAccessThreadLock.acquire(False):
+        with LOCKS.requestStagingAccessThreadLock:
             try:
                 try:
                     self.UploadUploaderInfo()
@@ -378,43 +388,40 @@ class UploaderModel(object):
                     logger.error(traceback.format_exc())
                     raise
                 try:
-                    uploadToStagingRequest = \
-                        UploaderModel.ExistingUploadToStagingRequest()
+                    self.uploadToStagingRequest = \
+                        self.ExistingUploadToStagingRequest()
                 except DoesNotExist:
-                    uploadToStagingRequest = \
+                    self.uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
                     logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
                     logger.debug(
                         "Generating new uploader registration request, "
                         "because private key was moved or deleted.")
-                    uploadToStagingRequest = \
+                    self.uploadToStagingRequest = \
                         self.RequestUploadToStagingApproval()
                     logger.debug("Generated new uploader registration request,"
                                  " because private key was moved or deleted.")
-                if uploadToStagingRequest.approved:
+                if self.uploadToStagingRequest.approved:
                     logger.debug("Uploads to staging have been approved!")
                 else:
                     logger.debug(
                         "Uploads to staging haven't been approved yet.")
-                SETTINGS.uploadToStagingRequest = uploadToStagingRequest
             except:
                 logger.error(traceback.format_exc())
                 raise
-            finally:
-                self.requestStagingAccessThreadLock.release()
 
     def UpdateSettings(self, settingsList):
         """
         Used to save uploader settings to the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        headers = SETTINGS.defaultHeaders
+        myTardisUrl = self.settings.general.myTardisUrl
+        headers = self.settings.defaultHeaders
 
         if not self.uploaderId:
-            url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-                                "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+            url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
+                % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
             try:
                 response = requests.get(headers=headers, url=url)
             except Exception as err:
@@ -442,7 +449,7 @@ class UploaderModel(object):
 
         patchData = {
             'settings': settingsList,
-            'uuid': SETTINGS.miscellaneous.uuid
+            'uuid': self.settings.miscellaneous.uuid
         }
         response = requests.patch(headers=headers, url=url,
                                   data=json.dumps(patchData))
@@ -454,10 +461,10 @@ class UploaderModel(object):
         Used to retrieve uploader settings from the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
         """
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        headers = SETTINGS.defaultHeaders
-        url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-                            "&uuid=" + urllib.quote(SETTINGS.miscellaneous.uuid)
+        myTardisUrl = self.settings.general.myTardisUrl
+        headers = self.settings.defaultHeaders
+        url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
+            % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
         try:
             response = requests.get(headers=headers, url=url,
                                     timeout=DEFAULT_TIMEOUT)

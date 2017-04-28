@@ -2,9 +2,6 @@
 Represents the Tasks tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
-
-# pylint: disable=wrong-import-position
-
 import sys
 import threading
 from datetime import datetime
@@ -12,10 +9,10 @@ from datetime import timedelta
 
 import wx
 
+from ..events.stop import CheckIfShouldAbort
 from ..models.task import TaskModel
 from ..utils.notification import Notification
 from ..logs import logger
-from ..utils import EndBusyCursorIfRequired
 from .dataview import MyDataDataViewModel
 
 
@@ -159,7 +156,8 @@ class TasksModel(MyDataDataViewModel):
                         sys.stderr.write("%s\n" % msg)
 
             app = wx.GetApp()
-            if not app.ShouldAbort():
+            if not CheckIfShouldAbort() and \
+                    not app.foldersController.started:
                 if wx.PyApp.IsMainLoopRunning():
                     thread = threading.Thread(target=TaskJobFunc)
                     logger.debug("Starting task %s" % taskModel.jobDesc)
@@ -167,12 +165,15 @@ class TasksModel(MyDataDataViewModel):
                 else:
                     TaskJobFunc()
             else:
-                logger.info("Not starting task because we are aborting.")
-                app.EnableTestAndUploadToolbarButtons()
-                EndBusyCursorIfRequired()
-                app.SetShouldAbort(False)
-                message = "Data scans and uploads were canceled."
-                wx.GetApp().GetMainFrame().SetStatusMessage(message)
+                if CheckIfShouldAbort():
+                    logger.warning(
+                        "Not starting task because we are aborting.")
+                    message = "Data scans and uploads were canceled."
+                    wx.GetApp().frame.SetStatusMessage(message)
+                else:
+                    logger.warning(
+                        "Not starting task because scans and uploads are "
+                        "already running.")
                 return
 
         row = len(self.rowsData) - 1

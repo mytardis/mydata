@@ -1,0 +1,48 @@
+# -*- mode: python -*-
+
+# PyUpdater creates a temporary build first, with app name 'mac',
+# so don't change the app name to 'MyData'.
+
+block_cipher = None
+
+
+a = Analysis(['<MYDATA_RUNNER>'],
+             pathex=['<MYDATA_REPO_PATH>', u'<MYDATA_REPO_PATH>'],
+             binaries=[],
+             datas=[],
+             hiddenimports=[],
+             hookspath=[u'<PYUPDATER_HOOKS_PATH>'],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data,
+             cipher=block_cipher)
+exe = EXE(pyz,
+          a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
+          name='mac',
+          debug=False,
+          strip=False,
+          upx=True,
+          console=False )
+app = BUNDLE(exe,
+             name='mac.app',
+             icon=None,
+             bundle_identifier=None,
+             info_plist={
+                'NSHighResolutionCapable': 'True',
+                'CFBundleDevelopmentRegion': 'English',
+                'CFBundleDisplayName': 'MyData',
+                'CFBundleExecutable': 'MyData',
+                'CFBundleIconFile': 'MyData.icns',
+                'CFBundleIdentifier': 'org.mytardis.MyData',
+                'CFBundleName': 'MyData',
+                'CFBundlePackageType': 'APPL',
+                'CFBundleShortVersionString': '<APP_VERSION>',
+                'LSArchitecturePriority': 'x86_64',
+                'LSUIElement': 'True'
+             })

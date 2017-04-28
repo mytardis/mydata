@@ -7,8 +7,6 @@ class DuplicateKey(Exception):
     """
     Duplicate key exception.
     """
-    def __init__(self, message):
-        super(DuplicateKey, self).__init__(message)
 
 
 class HttpException(Exception):
@@ -30,8 +28,6 @@ class MultipleObjectsReturned(HttpException):
     """
     Multiple objects returned exception.
     """
-    def __init__(self, message, response=None):
-        super(MultipleObjectsReturned, self).__init__(message, response)
 
 
 class DoesNotExist(HttpException):
@@ -55,40 +51,30 @@ class Unauthorized(HttpException):
     """
     Unauthorized exception (HTTP status: 403).
     """
-    def __init__(self, message, response=None):
-        super(Unauthorized, self).__init__(message, response)
 
 
 class InternalServerError(HttpException):
     """
     Internal server exception (HTTP status: 500).
     """
-    def __init__(self, message, response=None):
-        super(InternalServerError, self).__init__(message, response)
 
 
 class BadGateway(HttpException):
     """
     BadGateway exception (HTTP status: 502).
     """
-    def __init__(self, message, response=None):
-        super(BadGateway, self).__init__(message, response)
 
 
 class ServiceUnavailable(HttpException):
     """
     Service unavailable exception (HTTP status: 503).
     """
-    def __init__(self, message, response=None):
-        super(ServiceUnavailable, self).__init__(message, response)
 
 
 class GatewayTimeout(HttpException):
     """
     Gateway timeout exception (HTTP status: 504).
     """
-    def __init__(self, message, response=None):
-        super(GatewayTimeout, self).__init__(message, response)
 
 
 class SshException(Exception):
@@ -114,48 +100,36 @@ class NoActiveNetworkInterface(Exception):
     """
     No active network interface exception.
     """
-    def __init__(self, message):
-        super(NoActiveNetworkInterface, self).__init__(message)
 
 
 class BrokenPipe(Exception):
     """
     Broken pipe exception.
     """
-    def __init__(self, message):
-        super(BrokenPipe, self).__init__(message)
 
 
 class PrivateKeyDoesNotExist(Exception):
     """
     Private key does not exist exception.
     """
-    def __init__(self, message):
-        super(PrivateKeyDoesNotExist, self).__init__(message)
 
 
 class InvalidFolderStructure(Exception):
     """
     Invalid folder structure exception.
     """
-    def __init__(self, message):
-        super(InvalidFolderStructure, self).__init__(message)
 
 
 class MissingMyDataAppOnMyTardisServer(Exception):
     """
     Missing MyData app on MyTardis server exception.
     """
-    def __init__(self, message):
-        super(MissingMyDataAppOnMyTardisServer, self).__init__(message)
 
 
 class MissingMyDataReplicaApiEndpoint(Exception):
     """
     Missing /api/v1/mydata_replica/ endpoint on MyTardis server exception.
     """
-    def __init__(self, message):
-        super(MissingMyDataReplicaApiEndpoint, self).__init__(message)
 
 
 class StorageBoxAttributeNotFound(Exception):

@@ -17,6 +17,8 @@ import wx.lib.newevent
 import wx.dataview
 
 import mydata.events as mde
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
+from ..events.stop import CheckIfShouldAbort
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
 from ..models.dataset import DatasetModel
@@ -24,6 +26,7 @@ from ..logs import logger
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..utils.openssh import CleanUpScpAndSshProcesses
+from ..threads.flags import FLAGS
 from .uploads import UploadMethod
 from .uploads import UploadDatafileRunnable
 from .verifications import VerifyDatafileRunnable
@@ -40,14 +43,12 @@ class FoldersController(object):
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
-    def __init__(self, notifyWindow, foldersModel, foldersView, usersModel,
-                 verificationsModel, uploadsModel):
+    def __init__(self, notifyWindow):
         self.notifyWindow = notifyWindow
-        self.foldersModel = foldersModel
-        self.foldersView = foldersView
-        self.usersModel = usersModel
-        self.verificationsModel = verificationsModel
-        self.uploadsModel = uploadsModel
+        self.foldersModel = DATAVIEW_MODELS['folders']
+        self.usersModel = DATAVIEW_MODELS['users']
+        self.verificationsModel = DATAVIEW_MODELS['verifications']
+        self.uploadsModel = DATAVIEW_MODELS['uploads']
 
         self.shuttingDown = threading.Event()
         self.showingErrorDialog = threading.Event()
@@ -79,8 +80,6 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
-
-        self.testRun = False
 
         # pylint: disable=invalid-name
         self.ShowMessageDialogEvent, self.EVT_SHOW_MESSAGE_DIALOG = \
@@ -271,10 +270,8 @@ class FoldersController(object):
             dlg.ShowModal()
         else:
             sys.stderr.write("%s\n" % event.message)
-        app = wx.GetApp()
         if needToRestartBusyCursor and not self.IsShuttingDown() \
-                and hasattr(app, "PerformingLookupsAndUploads") \
-                and app.PerformingLookupsAndUploads():
+                and FLAGS.performingLookupsAndUploads:
             BeginBusyCursorIfRequired()
         if event.icon == wx.ICON_ERROR:
             self.SetShowingErrorDialog(False)
@@ -296,7 +293,7 @@ class FoldersController(object):
         existingUnverifiedDatafile = \
             getattr(event, "existingUnverifiedDatafile", False)
 
-        if self.testRun:
+        if FLAGS.testRunRunning:
             if existingUnverifiedDatafile:
                 message = "NEEDS RE-UPLOADING: %s" \
                     % folderModel.GetDataFileRelPath(dfi)
@@ -332,15 +329,7 @@ class FoldersController(object):
         Initialize folders controller in preparation for uploads
         """
         # pylint: disable=too-many-branches
-        app = wx.GetApp()
-        if hasattr(app, "TestRunRunning"):
-            self.testRun = app.TestRunRunning()
-        else:
-            self.testRun = False
-        self.started = True
-        self.canceled = False
-        self.failed = False
-        self.completed = False
+        self.InitializeStatusFlags()
         self.verificationsModel.DeleteAllRows()
         self.uploadsModel.DeleteAllRows()
         self.uploadsModel.SetStartTime(datetime.datetime.now())
@@ -362,13 +351,16 @@ class FoldersController(object):
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
         self.getOrCreateExpThreadingLock = threading.Lock()
+        self.lastErrorMessage = None
+        self.SetShowingErrorDialog(False)
 
         if sys.platform.startswith("linux"):
             StartErrandBoy()
 
         try:
             SETTINGS.uploaderModel.RequestStagingAccess()
-            uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+            uploadToStagingRequest = \
+                SETTINGS.uploaderModel.uploadToStagingRequest
         except Exception as err:
             # MyData app could be missing from MyTardis server.
             logger.error(traceback.format_exc())
@@ -425,6 +417,37 @@ class FoldersController(object):
         self.numVerificationsToBePerformed = 0
         self.finishedCountingVerifications = dict()
 
+    def ClearStatusFlags(self):
+        """
+        Clear flags which indicate the status of the scans and uploads
+        (started, canceled, completed etc.)  These assignments use the
+        FoldersController class's property setter methods to update the
+        status of threading.Event() objects.
+
+        This method is called by the MyData app class's
+        ResetShouldAbortStatus method.
+        """
+        self.started = False
+        self.canceled = False
+        self.failed = False
+        self.completed = False
+
+    def InitializeStatusFlags(self):
+        """
+        Initialize flags which indicate the status of the scans and uploads
+        (started, canceled, completed etc.)  These assignments use the
+        FoldersController class's property setter methods to update the
+        status of threading.Event() objects.
+
+        This method is called by InitForUploads, but it may also be called
+        earlier in tests where we want to ensure that the status flags are
+        set (or reset) before we test canceling the scans and uploads.
+        """
+        self.started = True
+        self.canceled = False
+        self.failed = False
+        self.completed = False
+
     def FinishedScanningForDatasetFolders(self):
         """
         At this point, we know that FoldersModel's
@@ -435,6 +458,8 @@ class FoldersController(object):
         logger.debug("Finished scanning for dataset folders.")
         while len(self.finishedCountingVerifications.keys()) < \
                 self.foldersModel.GetCount():
+            if self.IsShuttingDown() or CheckIfShouldAbort():
+                break
             time.sleep(0.01)
         self.CountCompletedUploadsAndVerifications(event=None)
 
@@ -443,13 +468,13 @@ class FoldersController(object):
         Start uploads for the specified folder
         """
         # pylint: disable=too-many-branches
+        if CheckIfShouldAbort():
+            return
         try:
             self.finishedCountingThreadingLock.acquire()
             self.finishedCountingVerifications[folderModel] = threading.Event()
             self.finishedCountingThreadingLock.release()
-            app = wx.GetApp()
-            if self.IsShuttingDown() or \
-                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             self.numVerificationsToBePerformedLock.acquire()
             self.numVerificationsToBePerformed += folderModel.GetNumFiles()
@@ -457,15 +482,13 @@ class FoldersController(object):
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " + folderModel.folderName)
-            if self.IsShuttingDown() or \
-                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             try:
                 try:
                     self.getOrCreateExpThreadingLock.acquire()
                     experimentModel = ExperimentModel\
-                        .GetOrCreateExperimentForFolder(folderModel,
-                                                        self.testRun)
+                        .GetOrCreateExperimentForFolder(folderModel)
                 except Exception as err:
                     logger.error(traceback.format_exc())
                     mde.PostEvent(
@@ -479,7 +502,7 @@ class FoldersController(object):
                 folderModel.experimentModel = experimentModel
                 try:
                     folderModel.datasetModel = DatasetModel\
-                        .CreateDatasetIfNecessary(folderModel, self.testRun)
+                        .CreateDatasetIfNecessary(folderModel)
                 except Exception as err:
                     logger.error(traceback.format_exc())
                     mde.PostEvent(
@@ -497,13 +520,12 @@ class FoldersController(object):
                              "for folder " + folderModel.folderName)
                 logger.error(traceback.format_exc())
                 return
-            if experimentModel is None and not self.testRun:
+            if experimentModel is None and not FLAGS.testRunRunning:
                 logger.error("Failed to acquire a MyTardis "
                              "experiment to store data in for "
                              "folder " + folderModel.folderName)
                 return
-            if self.IsShuttingDown() or \
-                    (hasattr(app, "ShouldAbort") and app.ShouldAbort()):
+            if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             self.finishedCountingThreadingLock.acquire()
             self.finishedCountingVerifications[folderModel].set()
@@ -542,11 +564,10 @@ class FoldersController(object):
                         "to encounter these exceptions while canceling "
                         "uploads.")
                     self.uploadsQueue.task_done()
-                    return
                 else:
                     logger.error(traceback.format_exc())
                     self.uploadsQueue.task_done()
-                    return
+                return
             except:
                 logger.error(traceback.format_exc())
                 self.uploadsQueue.task_done()
@@ -575,11 +596,10 @@ class FoldersController(object):
                         "to encounter these exceptions while canceling "
                         "uploads.")
                     self.verificationsQueue.task_done()
-                    return
                 else:
                     logger.error(traceback.format_exc())
                     self.verificationsQueue.task_done()
-                    return
+                return
             except:
                 logger.error(traceback.format_exc())
                 self.verificationsQueue.task_done()
@@ -603,7 +623,7 @@ class FoldersController(object):
         uploadsFailed = self.uploadsModel.GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
-        if hasattr(wx.GetApp(), "GetMainFrame"):
+        if hasattr(wx.GetApp(), "frame"):
             if numVerificationsCompleted == \
                     self.numVerificationsToBePerformed \
                     and uploadsToBePerformed > 0:
@@ -613,7 +633,7 @@ class FoldersController(object):
                 message = "Looked up %d of %d files on server." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
+            wx.GetApp().frame.SetStatusMessage(message)
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
@@ -625,13 +645,13 @@ class FoldersController(object):
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
                 and (uploadsProcessed == uploadsToBePerformed or
-                     self.testRun and
+                     FLAGS.testRunRunning and
                      self.uploadsAcknowledged == uploadsToBePerformed):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
             mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
-        elif not wx.PyApp.IsMainLoopRunning() and self.testRun and \
+        elif not wx.PyApp.IsMainLoopRunning() and FLAGS.testRunRunning and \
                 finishedVerificationCounting:
             mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
 
@@ -640,17 +660,38 @@ class FoldersController(object):
         Shut down upload threads
         """
         # pylint: disable=too-many-branches
-        if self.IsShuttingDown():
+        if self.IsShuttingDown() or self.completed or self.canceled:
             return
-        if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
-            if not wx.GetApp().PerformingLookupsAndUploads():
-                EndBusyCursorIfRequired()
-                return
         self.SetShuttingDown(True)
+        app = wx.GetApp()
+        if SETTINGS.miscellaneous.cacheDataFileLookups:
+            SETTINGS.CloseVerifiedDatafilesCache()
+        # Reset self.started so that scheduled tasks know that's OK to start
+        # new scan-and-upload tasks:
+        self.started = False
+        if not FLAGS.performingLookupsAndUploads:
+            # This means StartUploadsForFolder was never called
+            EndBusyCursorIfRequired()
+            if CheckIfShouldAbort():
+                message = "Data scans and uploads were canceled."
+                self.canceled = True
+            else:
+                message = "No folders were found to upload from."
+                self.completed = True
+            if hasattr(app, "frame"):
+                app.frame.toolbar.EnableTestAndUploadToolbarButtons()
+                FLAGS.shouldAbort = False
+                if FLAGS.testRunRunning:
+                    FLAGS.testRunFrame.saveButton.Enable()
+            logger.info(message)
+            if hasattr(app, "frame"):
+                app.frame.SetStatusMessage(message)
+            self.SetShuttingDown(False)
+            return
         message = "Shutting down upload threads..."
         logger.info(message)
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage(message)
         if hasattr(event, "failed") and event.failed:
             self.failed = True
             self.uploadsModel.CancelRemaining()
@@ -665,8 +706,8 @@ class FoldersController(object):
         if self.uploadMethod == UploadMethod.VIA_STAGING:
             # SCP can leave orphaned SSH processes which need to be
             # cleaned up.
-            # Give each UploadModel instance's Cancel() method a change to terminate
-            # its SCP process first:
+            # Give each UploadModel instance's Cancel() method a chance to
+            # terminate its SCP process first:
             time.sleep(0.1)
             CleanUpScpAndSshProcesses()
         for thread in self.uploadWorkerThreads:
@@ -681,32 +722,8 @@ class FoldersController(object):
         self.verifyDatafileRunnable = {}
         self.uploadDatafileRunnable = {}
 
-        if self.testRun:
-            numVerificationsCompleted = \
-                self.verificationsModel.GetCompletedCount()
-            numVerifiedUploads = \
-                self.verificationsModel.GetFoundVerifiedCount()
-            numFilesNotFoundOnServer = \
-                self.verificationsModel.GetNotFoundCount()
-            numFullSizeUnverifiedUploads = \
-                self.verificationsModel.GetFoundUnverifiedFullSizeCount()
-            numIncompleteUploads = \
-                self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
-            numFailedLookups = self.verificationsModel.GetFailedCount()
-            logger.testrun("")
-            logger.testrun("SUMMARY")
-            logger.testrun("")
-            logger.testrun("Files looked up on server: %s"
-                           % numVerificationsCompleted)
-            logger.testrun("Files verified on server: %s" % numVerifiedUploads)
-            logger.testrun("Files not found on server: %s"
-                           % numFilesNotFoundOnServer)
-            logger.testrun("Files unverified (but full size) on server: %s"
-                           % numFullSizeUnverifiedUploads)
-            logger.testrun("Files unverified (and incomplete) on server: %s"
-                           % numIncompleteUploads)
-            logger.testrun("Failed lookups: %s" % numFailedLookups)
-            logger.testrun("")
+        if FLAGS.testRunRunning:
+            self.LogTestRunSummary()
 
         if self.failed:
             message = "Data scans and uploads failed."
@@ -717,10 +734,10 @@ class FoldersController(object):
                 "Data scans and uploads completed with " \
                 "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
         elif self.completed:
-            message = "Data scans and uploads completed successfully."
             if self.uploadsModel.GetCompletedCount() > 0:
+                message = "Data scans and uploads completed successfully."
                 elapsedTime = self.uploadsModel.GetElapsedTime()
-                if elapsedTime and not self.testRun:
+                if elapsedTime and not FLAGS.testRunRunning:
                     averageSpeedMBs = \
                         (float(self.uploadsModel.GetCompletedSize()) /
                          1000000.0 / elapsedTime.total_seconds())
@@ -730,30 +747,59 @@ class FoldersController(object):
                         averageSpeed = \
                             "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
                     message += "  Average speed: %s" % averageSpeed
+            else:
+                message = "No new files were found to upload."
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."
         logger.info(message)
-        if hasattr(wx.GetApp(), "GetMainFrame"):
-            wx.GetApp().GetMainFrame().SetStatusMessage(message)
-        if self.testRun:
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage(message)
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
-        app = wx.GetApp()
-        if hasattr(app, "toolbar"):
-            app.EnableTestAndUploadToolbarButtons()
-            app.SetShouldAbort(False)
-            if self.testRun:
+        if hasattr(app, "frame"):
+            app.frame.toolbar.EnableTestAndUploadToolbarButtons()
+            FLAGS.shouldAbort = False
+            if FLAGS.testRunRunning:
                 app.testRunFrame.saveButton.Enable()
-        if hasattr(wx.GetApp(), "SetPerformingLookupsAndUploads"):
-            wx.GetApp().SetPerformingLookupsAndUploads(False)
+        FLAGS.performingLookupsAndUploads = False
         self.SetShuttingDown(False)
-        if hasattr(app, "SetTestRunRunning"):
-            app.SetTestRunRunning(False)
+        FLAGS.testRunRunning = False
 
         EndBusyCursorIfRequired()
 
         logger.debug("")
+
+    def LogTestRunSummary(self):
+        """
+        Log summary of test run to display in Test Run frame
+        """
+        numVerificationsCompleted = \
+            self.verificationsModel.GetCompletedCount()
+        numVerifiedUploads = \
+            self.verificationsModel.GetFoundVerifiedCount()
+        numFilesNotFoundOnServer = \
+            self.verificationsModel.GetNotFoundCount()
+        numFullSizeUnverifiedUploads = \
+            self.verificationsModel.GetFoundUnverifiedFullSizeCount()
+        numIncompleteUploads = \
+            self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
+        numFailedLookups = self.verificationsModel.GetFailedCount()
+        logger.testrun("")
+        logger.testrun("SUMMARY")
+        logger.testrun("")
+        logger.testrun("Files looked up on server: %s"
+                       % numVerificationsCompleted)
+        logger.testrun("Files verified on server: %s" % numVerifiedUploads)
+        logger.testrun("Files not found on server: %s"
+                       % numFilesNotFoundOnServer)
+        logger.testrun("Files unverified (but full size) on server: %s"
+                       % numFullSizeUnverifiedUploads)
+        logger.testrun("Files unverified (and incomplete) on server: %s"
+                       % numIncompleteUploads)
+        logger.testrun("Failed lookups: %s" % numFailedLookups)
+        logger.testrun("")
 
     def VerifyDatafiles(self, folderModel):
         """
@@ -766,7 +812,7 @@ class FoldersController(object):
                 return
             self.verifyDatafileRunnable[folderModel].append(
                 VerifyDatafileRunnable(
-                    self, self.foldersModel, folderModel, dfi, self.testRun))
+                    self, self.foldersModel, folderModel, dfi))
             if wx.PyApp.IsMainLoopRunning():
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])

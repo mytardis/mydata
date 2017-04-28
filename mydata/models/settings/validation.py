@@ -41,30 +41,31 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
             logger.testrun(message)
 
     try:
+        CheckIfUserAborted(setStatusMessage)
         CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
                      % SETTINGS.advanced.folderStructure)
         WarnIfIgnoringInvalidUserFolders(testRun)
         CheckFilters(setStatusMessage, testRun)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         if SETTINGS.advanced.validateFolderStructure:
             datasetCount = CheckStructureAndCountDatasets(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckMyTardisUrl(setStatusMessage, testRun)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckMyTardisCredentials(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckFacility(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckInstrument(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckContactEmailAndEmailFolders(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE \
                 and not sys.platform.startswith("win"):
             CheckAutostart(setStatusMessage)
-        CheckIfShouldAbort(setStatusMessage)
+        CheckIfUserAborted(setStatusMessage)
         CheckScheduledTime()
         message = "Settings validation - succeeded!"
         logger.debug(message)
@@ -74,6 +75,8 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         return datasetCount
     except Exception as err:
         if isinstance(err, InvalidSettings):
+            raise
+        if isinstance(err, UserAbortedSettingsValidation):
             raise
         logger.error(traceback.format_exc())
         message = str(err)
@@ -228,7 +231,7 @@ def CheckDataFileGlobFiles(setStatusMessage):
         PerformGlobsFileValidation(SETTINGS.filters.includesFile,
                                    "Includes", "includes", "includes_file")
 
-    CheckIfShouldAbort(setStatusMessage)
+    CheckIfUserAborted(setStatusMessage)
 
     if SETTINGS.filters.useExcludesFile:
         message = "Settings validation - checking excludes file..."
@@ -380,7 +383,7 @@ def CheckFacility(setStatusMessage):
         facilities = FacilityModel.GetMyFacilities()
         message = "Facility \"%s\" was not found in MyTardis." \
             % SETTINGS.general.facilityName
-        if len(facilities) > 0:
+        if facilities:
             message += "\n\n" + \
                 "The facilities which user \"%s\" " \
                 "has access to are:\n\n" % SETTINGS.general.username
@@ -449,21 +452,16 @@ def CheckAutostart(setStatusMessage):
     On macOS and Linux, this is done within the individual user's
     home directory, so it needs to be done the first time MyData
     runs, and after the start automatically checkbox value changes.
-
-    If SETTINGS.advanced.startAutomaticallyOnLogin hasn't changed since the
-    last check in this MyData session, then we don't update the autostart file,
-    because doing so can be time-consuming.
-    See: mydata.utils.autostart.UpdateMacAutostartFile
     """
-    from ...settings import SETTINGS
-    if SETTINGS.lastCheckedAutostartValue != \
-            SETTINGS.advanced.startAutomaticallyOnLogin:
-        message = "Settings validation - " \
-            "checking if MyData is set to start automatically..."
-        logger.debug(message)
-        if setStatusMessage:
-            setStatusMessage(message)
-        UpdateAutostartFile()
+    if not hasattr(sys, "frozen"):
+        logger.debug("Not checking autostart because app is not frozen.")
+        return
+    message = "Settings validation - " \
+        "checking if MyData is set to start automatically..."
+    logger.debug(message)
+    if setStatusMessage:
+        setStatusMessage(message)
+    UpdateAutostartFile()
 
 
 def CheckScheduledTime():
@@ -603,7 +601,7 @@ def FolderGlob(level, instrumentName='*'):
     return globDict[SETTINGS.advanced.folderStructure][level - 1]
 
 
-def CheckIfShouldAbort(setStatusMessage):
+def CheckIfUserAborted(setStatusMessage):
     """
     Check if settings validation should abort, because the user has clicked the
     Stop button on the main MyData frame's toolbar.  And if so, raise

@@ -40,12 +40,13 @@ class UsersModel(MyDataDataViewModel):
             pass
         if not ascending:
             userRecord2, userRecord1 = userRecord1, userRecord2
-        if col == 0 or col == 3:
-            return Compare(int(userRecord1.dataViewId),
-                           int(userRecord2.dataViewId))
+        if col == 0:
+            obj1 = int(userRecord1.dataViewId)
+            obj2 = int(userRecord2.dataViewId)
         else:
-            return Compare(userRecord1.GetValueForKey(self.columnKeys[col]),
-                           userRecord2.GetValueForKey(self.columnKeys[col]))
+            obj1 = userRecord1.GetValueForKey(self.columnKeys[col])
+            obj2 = userRecord2.GetValueForKey(self.columnKeys[col])
+        return Compare(obj1, obj2)
 
     @staticmethod
     def GetNumUserOrGroupFolders():

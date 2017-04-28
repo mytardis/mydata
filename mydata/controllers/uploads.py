@@ -284,11 +284,10 @@ class UploadDatafileRunnable(object):
                 logger.debug("Aborting upload for \"%s\" because "
                              "file handle was closed." %
                              self.uploadModel.GetRelativePathToUpload())
-                return
             else:
                 logger.error(traceback.format_exc())
                 self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
-                return
+            return
         except urllib2.HTTPError as err:
             self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())
@@ -319,9 +318,9 @@ class UploadDatafileRunnable(object):
         """
         # pylint:disable=too-many-locals
         # pylint:disable=too-many-branches
+        sshKeyPair = SETTINGS.uploaderModel.sshKeyPair
         dataFileDict['uploader_uuid'] = SETTINGS.miscellaneous.uuid
-        dataFileDict['requester_key_fingerprint'] = \
-            SETTINGS.sshKeyPair.fingerprint
+        dataFileDict['requester_key_fingerprint'] = sshKeyPair.fingerprint
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)
         response = None
@@ -335,7 +334,7 @@ class UploadDatafileRunnable(object):
                 UploadDatafileRunnable.HandleFailedCreateDataFile(
                     response, dataFileName, folderName, myTardisUsername)
                 return
-        uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+        uploadToStagingRequest = SETTINGS.uploaderModel.uploadToStagingRequest
         try:
             host = uploadToStagingRequest.scpHostname
             port = uploadToStagingRequest.scpPort
@@ -352,7 +351,7 @@ class UploadDatafileRunnable(object):
                 self.foldersController.ShowMessageDialogEvent(
                     title="MyData", message=message, icon=wx.ICON_ERROR))
             return
-        privateKeyFilePath = SETTINGS.sshKeyPair.privateKeyFilePath
+        privateKeyFilePath = sshKeyPair.privateKeyFilePath
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
             remoteFilePath = "%s/%s" % (location.rstrip('/'), uri)

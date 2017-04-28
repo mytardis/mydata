@@ -31,8 +31,10 @@ import wx
 
 from ..events import MYDATA_EVENTS
 from ..settings import SETTINGS
+from ..threads.flags import FLAGS
 from ..models.settings import SettingsModel
 from ..models.settings.validation import ValidateSettings
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..dataviewmodels.folders import FoldersModel
 from ..dataviewmodels.users import UsersModel
 from ..dataviewmodels.groups import GroupsModel
@@ -40,6 +42,20 @@ from .utils import StartFakeMyTardisServer
 from .utils import WaitForFakeMyTardisServerToStart
 if sys.platform.startswith("linux"):
     from ..linuxsubprocesses import StopErrandBoy
+
+
+class MyDataMinimalTester(unittest.TestCase):
+    """
+    Lightweight class to derive from for tests requiring the
+    MYDATA_TESTING environment variable to be set.
+    """
+    def setUp(self):
+        os.environ['MYDATA_TESTING'] = 'True'
+        os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
+
+    def tearDown(self):
+        del os.environ['MYDATA_TESTING']
+        del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
 
 
 class MyDataTester(unittest.TestCase):
@@ -55,11 +71,10 @@ class MyDataTester(unittest.TestCase):
         self.fakeMyTardisPort = None
         self.fakeMyTardisServerThread = None
         self.fakeMyTardisUrl = None
-        self.usersModel = None
-        self.groupsModel = None
-        self.foldersModel = None
 
     def setUp(self):
+        os.environ['MYDATA_TESTING'] = 'True'
+        os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
@@ -72,10 +87,12 @@ class MyDataTester(unittest.TestCase):
         Initialize generic wxPython app and main frame
         """
         self.app = wx.App()
-        self.app.okToShowModalDialogs = False
         self.frame = wx.Frame(parent=None, title=title)
+        FLAGS.shouldAbort = False
 
     def tearDown(self):
+        del os.environ['MYDATA_TESTING']
+        del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
         if self.frame:
             self.frame.Hide()
             self.frame.Destroy()
@@ -112,41 +129,35 @@ class MyDataTester(unittest.TestCase):
             raise
         SETTINGS.general.dataDirectory = dataDirectory
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-
-    def InitializeModels(self):
-        """
-        Initialize dataview models.
-
-        Should be called after loading valid settings.
-        """
-        self.usersModel = UsersModel()
-        self.groupsModel = GroupsModel()
-        self.foldersModel = FoldersModel(self.usersModel, self.groupsModel)
+        SETTINGS.miscellaneous.cacheDataFileLookups = False
 
     def AssertUsers(self, users):
         """
         Check the users in self.usersModel
         """
+        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(self.usersModel.GetValuesForColname("Username")), users)
+            sorted(usersModel.GetValuesForColname("Username")), users)
 
     def AssertFolders(self, folders):
         """
-        Check the folders in self.foldersModel
+        Check the folders in DATAVIEW_MODELS['folders']
         """
         folderNames = []
-        for row in range(self.foldersModel.GetRowCount()):
+        foldersModel = DATAVIEW_MODELS['folders']
+        for row in range(foldersModel.GetRowCount()):
             folderNames.append(
-                self.foldersModel.GetFolderRecord(row).folderName)
+                foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folderNames), folders)
 
     def AssertNumFiles(self, numFiles):
         """
-        Check the number of files found in self.foldersModel
+        Check the number of files found in DATAVIEW_MODELS['folders']
         """
         totalFiles = 0
-        for row in range(self.foldersModel.GetRowCount()):
-            totalFiles += self.foldersModel.GetFolderRecord(row).GetNumFiles()
+        foldersModel = DATAVIEW_MODELS['folders']
+        for row in range(foldersModel.GetRowCount()):
+            totalFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
         self.assertEqual(totalFiles, numFiles)
 
 
@@ -186,25 +197,29 @@ class MyDataScanFoldersTester(MyDataTester):
     Includes callbacks used by ScanFolders.
     """
     @staticmethod
-    def IncrementProgressDialog():
+    def ProgressCallback(numUserOrGroupFoldersScanned):
         """
         Callback for ScanFolders.
         """
-        pass
+        assert numUserOrGroupFoldersScanned > 0
 
-    @staticmethod
-    def ShouldAbort():
-        """
-        Callback for ScanFolders.
-        """
-        return False
 
-    def ScanFolders(self):
-        """
-        Collecting some common code needed by multiple "scan folders" tests
-        """
-        ValidateSettings()
-        self.InitializeModels()
-        self.foldersModel.ScanFolders(
-            MyDataScanFoldersTester.IncrementProgressDialog,
-            MyDataScanFoldersTester.ShouldAbort)
+def InitializeModels():
+    """
+    Initialize dataview models.
+
+    Should be called after loading valid settings.
+    """
+    DATAVIEW_MODELS['users'] = UsersModel()
+    DATAVIEW_MODELS['groups'] = GroupsModel()
+    DATAVIEW_MODELS['folders'] = FoldersModel()
+
+
+def ValidateSettingsAndScanFolders():
+    """
+    Collecting some common code needed by multiple "scan folders" tests
+    """
+    ValidateSettings()
+    InitializeModels()
+    foldersModel = DATAVIEW_MODELS['folders']
+    foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)

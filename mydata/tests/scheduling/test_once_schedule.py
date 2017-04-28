@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from ...settings import SETTINGS
 from ...MyData import MyData
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -40,6 +41,7 @@ class OnceScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = DATAVIEW_MODELS['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         # TO DO: A way of testing that additional tasks are scheduled,
         # according to the timer interval.

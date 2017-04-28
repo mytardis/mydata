@@ -17,7 +17,6 @@ class VerifyDatafileRunnable(object):
         HandleUnverifiedUnstagedUpload:  # No staged file to check size of
           Post FoundUnverifiedUnstagedEvent
 """
-
 import os
 import threading
 import traceback
@@ -30,6 +29,7 @@ from ..models.replica import ReplicaModel
 from ..models.verification import VerificationModel
 from ..models.verification import VerificationStatus
 from ..models.datafile import DataFileModel
+from ..threads.locks import LOCKS
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 from ..events import PostEvent
@@ -93,6 +93,17 @@ class VerifyDatafileRunnable(object):
             dataset = self.folderModel.datasetModel
             if not dataset:  # test runs don't create required datasets
                 raise DoesNotExist("Dataset doesn't exist.")
+            cacheKey = \
+                "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+            if SETTINGS.miscellaneous.cacheDataFileLookups and \
+                    cacheKey in SETTINGS.verifiedDatafilesCache:
+                self.verificationModel.message = \
+                    "Found datafile in verified-files cache."
+                self.verificationModel.status = \
+                    VerificationStatus.FOUND_VERIFIED
+                self.verificationsModel.MessageUpdated(self.verificationModel)
+                self.HandleExistingVerifiedDatafile()
+                return
             existingDatafile = DataFileModel.GetDataFile(
                 dataset=dataset, filename=dataFileName,
                 directory=dataFileDirectory)
@@ -126,7 +137,7 @@ class VerifyDatafileRunnable(object):
         """
         Check if existing DataFile is verified.
         """
-        if len(existingDatafile.replicas) == 0 or \
+        if not existingDatafile.replicas or \
                 not existingDatafile.replicas[0].verified:
             self.HandleExistingUnverifiedDatafile(existingDatafile)
         else:
@@ -145,13 +156,13 @@ class VerifyDatafileRunnable(object):
         logger.debug(message)
         self.verificationModel.message = \
             "Found unverified datafile record on MyTardis."
-        uploadToStagingRequest = SETTINGS.uploadToStagingRequest
+        uploadToStagingRequest = SETTINGS.uploaderModel.uploadToStagingRequest
 
         if self.foldersController.uploadMethod == \
                 UploadMethod.VIA_STAGING and \
                 uploadToStagingRequest is not None and \
                 uploadToStagingRequest.approved and \
-                len(existingDatafile.replicas) > 0:
+                existingDatafile.replicas:
             self.HandleUnverifiedFileOnStaging(existingDatafile)
         else:
             self.HandleUnverifiedUnstagedUpload(existingDatafile)
@@ -286,6 +297,11 @@ class VerifyDatafileRunnable(object):
         Found existing verified file on server.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
+        cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
+                              dataFilePath.encode('utf8'))
+        if SETTINGS.miscellaneous.cacheDataFileLookups:
+            with LOCKS.updateCacheLock:
+                SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)

@@ -215,7 +215,7 @@ class Logger(object):
         to ensure that log messages appear in a deterministic order.
         """
         if wx.PyApp.IsMainLoopRunning():
-            wx.CallAfter(wx.GetApp().GetTestRunFrame().WriteLine, message)
+            wx.CallAfter(wx.GetApp().testRunFrame.WriteLine, message)
         else:
             sys.stderr.write("%s\n" % message)
 
@@ -264,6 +264,13 @@ class Logger(object):
             debugLog += "\n\n"
             debugLog += "".join(logLines[-4000:])
         return debugLog
+
+    def GetValue(self):
+        """
+        Return all logs sent to StringIO handler
+        """
+        self.streamHandler.flush()
+        return self.loggerOutput.getvalue()
 
     def SubmitLog(self, myDataMainFrame, settings,
                   url="https://cvl.massive.org.au/cgi-bin/mydata_log_drop.py"):

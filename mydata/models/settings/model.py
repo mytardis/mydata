@@ -2,10 +2,15 @@
 Model class for the settings displayed in the settings dialog
 and saved to disk in MyData.cfg
 """
+import os
+import pickle
 import traceback
-import threading
+import urlparse
 
+from ...constants import APPNAME, APPAUTHOR
 from ...logs import logger
+from ...threads.locks import LOCKS
+from ...utils import CreateConfigPathIfNecessary
 from .general import GeneralSettingsModel
 from .schedule import ScheduleSettingsModel
 from .filters import FiltersSettingsModel
@@ -20,7 +25,6 @@ class SettingsModel(object):
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, configPath, checkForUpdates=True):
         super(SettingsModel, self).__init__()
 
@@ -33,37 +37,66 @@ class SettingsModel(object):
             miscellaneous=dict(mydataConfig=dict()),
             lastSettingsUpdateTrigger=None)
 
-        self.configPath = configPath
+        # The location on disk of MyData.cfg
+        # e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
+        self._configPath = configPath
+
+        self._verifiedDatafilesCache = None
 
         self._uploaderModel = None
-        self.uploadToStagingRequest = None
-        self.sshKeyPair = None
 
         self.lastSettingsUpdateTrigger = \
             LastSettingsUpdateTrigger.READ_FROM_DISK
 
-        # When configuring MyData to start automatically (or not), record the
-        # last used value of SETTINGS.advanced.startAutomaticallyOnLogin here,
-        # so we don't waste time checking the autostart file again if the
-        # intended state hasn't changed:
-        self.lastCheckedAutostartValue = None
-
-        self.connectivityCheckInterval = 30  # seconds
-
-        self.general = GeneralSettingsModel()
-        self.schedule = ScheduleSettingsModel()
-        self.filters = FiltersSettingsModel()
-        self.advanced = AdvancedSettingsModel()
-        self.miscellaneous = MiscellaneousSettingsModel()
+        self.models = dict(
+            general=GeneralSettingsModel(),
+            schedule=ScheduleSettingsModel(),
+            filters=FiltersSettingsModel(),
+            advanced=AdvancedSettingsModel(),
+            miscellaneous=MiscellaneousSettingsModel())
 
         self.SetDefaultConfig()
-
-        self.createUploaderThreadingLock = threading.Lock()
 
         try:
             LoadSettings(self, checkForUpdates=checkForUpdates)
         except:
             logger.error(traceback.format_exc())
+
+    @property
+    def general(self):
+        """
+        Settings in the Settings Dialog's General tab
+        """
+        return self.models['general']
+
+    @property
+    def schedule(self):
+        """
+        Settings in the Settings Dialog's Schedule tab
+        """
+        return self.models['schedule']
+
+    @property
+    def filters(self):
+        """
+        Settings in the Settings Dialog's Filters tab
+        """
+        return self.models['filters']
+
+    @property
+    def advanced(self):
+        """
+        Settings in the Settings Dialog's Advanced tab
+        """
+        return self.models['advanced']
+
+    @property
+    def miscellaneous(self):
+        """
+        Miscellaneous settings
+        """
+        return self.models['miscellaneous']
 
     def __setitem__(self, key, item):
         """
@@ -140,11 +173,11 @@ class SettingsModel(object):
         if self._uploaderModel:
             return self._uploaderModel
         try:
-            self.createUploaderThreadingLock.acquire()
-            self._uploaderModel = UploaderModel()
+            LOCKS.createUploaderThreadingLock.acquire()
+            self._uploaderModel = UploaderModel(self)
             return self._uploaderModel
         finally:
-            self.createUploaderThreadingLock.release()
+            LOCKS.createUploaderThreadingLock.release()
 
     @uploaderModel.setter
     def uploaderModel(self, uploaderModel):
@@ -164,7 +197,6 @@ class SettingsModel(object):
         self.miscellaneous.mydataConfig.update(
             settings.miscellaneous.mydataConfig)
         self.lastSettingsUpdateTrigger = settings.lastSettingsUpdateTrigger
-
 
     def SavePrevious(self):
         """
@@ -254,3 +286,73 @@ class SettingsModel(object):
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
+
+    @property
+    def verifiedDatafilesCachePath(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        parsed = urlparse.urlparse(self.general.myTardisUrl)
+        return os.path.join(
+            os.path.dirname(self.configPath),
+            "verified-files-%s-%s" %
+            (parsed.scheme, parsed.netloc))
+
+    @property
+    def verifiedDatafilesCache(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        if not self._verifiedDatafilesCache:
+            with LOCKS.initializeCacheLock:
+                try:
+                    if os.path.exists(self.verifiedDatafilesCachePath):
+                        with open(self.verifiedDatafilesCachePath,
+                                  'rb') as cacheFile:
+                            self._verifiedDatafilesCache = \
+                                pickle.load(cacheFile)
+                    else:
+                        self._verifiedDatafilesCache = dict()
+                except:
+                    self._verifiedDatafilesCache = dict()
+                    logger.warning(traceback.format_exc())
+        return self._verifiedDatafilesCache
+
+    def CloseVerifiedDatafilesCache(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        if self._verifiedDatafilesCache:
+            with LOCKS.closeCacheLock:
+                try:
+                    with open(self.verifiedDatafilesCachePath,
+                              'wb') as cacheFile:
+                        pickle.dump(self._verifiedDatafilesCache, cacheFile)
+                    self._verifiedDatafilesCache = None
+                except:
+                    logger.warning("Couldn't save verified datafiles cache.")
+                    logger.warning(traceback.format_exc())
+
+    @property
+    def configPath(self):
+        """
+        The location on disk of MyData.cfg
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
+        """
+        if not self._configPath:
+            appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
+            self._configPath = os.path.join(appdirPath, APPNAME + '.cfg')
+        return self._configPath
+
+    @configPath.setter
+    def configPath(self, configPath):
+        """
+        The location on disk of MyData.cfg
+        e.g. "C:\\ProgramData\\Monash University\\MyData\\MyData.cfg" or
+        "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
+        """
+        self._configPath = configPath

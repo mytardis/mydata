@@ -4,7 +4,9 @@ the results of a dry run.
 """
 import wx
 
+from ..events.stop import OnStop
 from ..logs import logger
+from ..threads.flags import FLAGS
 
 
 class TestRunFrame(wx.Frame):
@@ -52,9 +54,9 @@ class TestRunFrame(wx.Frame):
         """
         Don't actually destroy the frame, just hide it.
         """
-        if wx.GetApp().TestRunRunning():
+        if FLAGS.testRunRunning:
             logger.info("Closing Test Run Window and calling OnStop.")
-            wx.GetApp().OnStop(None)
+            OnStop(None)
         else:
             logger.info("Closing Test Run Window.")
         self.Hide()

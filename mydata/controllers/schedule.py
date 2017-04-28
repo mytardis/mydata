@@ -11,6 +11,8 @@ import time
 
 import wx
 
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
+from ..events.start import StartScansAndUploads
 from ..settings import SETTINGS
 from ..models.task import TaskModel
 from ..models.settings import LastSettingsUpdateTrigger
@@ -23,15 +25,15 @@ def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
     """
     app = wx.GetApp()
     if wx.PyApp.IsMainLoopRunning():
-        wx.CallAfter(app.DisableTestAndUploadToolbarButtons)
+        wx.CallAfter(app.frame.toolbar.DisableTestAndUploadToolbarButtons)
         while not app.Processing():
             time.sleep(0.01)
-        wx.CallAfter(app.OnRefresh, event, needToValidateSettings,
+        wx.CallAfter(StartScansAndUploads, event, needToValidateSettings,
                      jobId, testRun)
         while app.Processing():
             time.sleep(0.01)
     else:
-        app.OnRefresh(event, needToValidateSettings, jobId, testRun)
+        StartScansAndUploads(event, needToValidateSettings, jobId, testRun)
 
 
 def HandleValueError(err):
@@ -48,8 +50,8 @@ class ScheduleController(object):
     """
     Functionality for scheduling tasks.
     """
-    def __init__(self, tasksModel):
-        self.tasksModel = tasksModel
+    def __init__(self):
+        self.tasksModel = DATAVIEW_MODELS['tasks']
 
     def ApplySchedule(self, event, runManually=False,
                       needToValidateSettings=True, testRun=False):
@@ -102,7 +104,7 @@ class ScheduleController(object):
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s" % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -129,7 +131,7 @@ class ScheduleController(object):
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s" % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -159,7 +161,7 @@ class ScheduleController(object):
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s" % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -200,7 +202,7 @@ class ScheduleController(object):
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s" % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -232,7 +234,7 @@ class ScheduleController(object):
                "to run at %s on %s (recurring daily)"
                % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -274,7 +276,7 @@ class ScheduleController(object):
                "to run at %s on %s (recurring on specified days)"
                % (jobDesc, timeString, dateString))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
@@ -309,7 +311,7 @@ class ScheduleController(object):
                "to run at %s on %s (recurring every %d minutes)" %
                (jobDesc, timeString, dateString, intervalMinutes))
         if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().GetMainFrame().SetStatusMessage(msg)
+            wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1

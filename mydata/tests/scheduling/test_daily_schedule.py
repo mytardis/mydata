@@ -7,6 +7,7 @@ from datetime import timedelta
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -39,7 +40,8 @@ class DailyScheduleTester(MyDataSettingsTester):
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
 
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = DATAVIEW_MODELS['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         self.assertIn(
             "CreateDailyTask - MainThread - DEBUG - Schedule type is Daily",
             logger.loggerOutput.getvalue())

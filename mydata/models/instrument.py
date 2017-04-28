@@ -107,9 +107,8 @@ class InstrumentModel(object):
                             "RenameInstrument.")
         try:
             _ = InstrumentModel.GetInstrument(facility, newInstrumentName)
-            raise DuplicateKey(
-                message="Instrument with name \"%s\" "
-                        "already exists" % newInstrumentName)
+            raise DuplicateKey("Instrument with name \"%s\" "
+                               "already exists" % newInstrumentName)
         except DoesNotExist:
             oldInstrument.Rename(newInstrumentName)
 

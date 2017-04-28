@@ -4,6 +4,7 @@ Test On Startup schedule type.
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
@@ -34,7 +35,8 @@ class OnStartupScheduleTester(MyDataSettingsTester):
         # testdataUsernameDataset_POST.cfg has upload_invalid_user_folders = True,
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
-        self.assertEqual(self.mydataApp.uploadsModel.GetCompletedCount(), 7)
+        uploadsModel = DATAVIEW_MODELS['uploads']
+        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
         self.assertIn(
             "CreateOnStartupTask - MainThread - DEBUG - Schedule type is On Startup",
             logger.loggerOutput.getvalue())

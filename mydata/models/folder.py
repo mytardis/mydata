@@ -187,12 +187,13 @@ class FolderModel(object):
         data directory configured in MyData's settings
         """
         if self.isExperimentFilesFolder:
-            return os.path.relpath(self.location,
-                                   SETTINGS.general.dataDirectory)
+            relpath = os.path.relpath(
+                self.location, SETTINGS.general.dataDirectory)
         else:
-            return os.path.join(
+            relpath = os.path.join(
                 os.path.relpath(self.location, SETTINGS.general.dataDirectory),
                 self.folderName)
+        return relpath
 
     def GetNumFiles(self):
         """
@@ -285,10 +286,11 @@ class FolderModel(object):
         """
         if SETTINGS.filters.ignoreNewFiles:
             absoluteFilePath = self.GetDataFilePath(dataFileIndex)
-            return (time.time() - os.path.getmtime(absoluteFilePath)) <= \
+            tooNew = (time.time() - os.path.getmtime(absoluteFilePath)) <= \
                 (SETTINGS.filters.ignoreNewFilesMinutes * 60)
         else:
-            return False
+            tooNew = False
+        return tooNew
 
     def CalculateMd5Sum(self, dataFileIndex, progressCallback=None,
                         canceledCallback=None):

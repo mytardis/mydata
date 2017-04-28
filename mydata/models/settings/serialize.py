@@ -222,12 +222,14 @@ def LoadMiscellaneousSettings(settings, configParser):
     configFileSection = "MyData"
     fields = ["locked", "uuid", "cipher", "use_none_cipher",
               "max_verification_threads", "verification_delay",
-              "fake_md5_sum", "progress_poll_interval", "immutable_datasets"]
+              "fake_md5_sum", "progress_poll_interval", "immutable_datasets",
+              "cache_datafile_lookups"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
     booleanFields = [
-        "fake_md5_sum", "use_none_cipher", "locked", "immutable_datasets"]
+        "fake_md5_sum", "use_none_cipher", "locked", "immutable_datasets",
+        "cache_datafile_lookups"]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getboolean(configFileSection, field)
@@ -258,37 +260,43 @@ def CheckForUpdatedSettingsOnServer(settings):
             settingsUpdated > localModTime:
         logger.debug("Settings will be updated from the server.")
         for setting in settingsFromServer:
-            settings[setting['key']] = setting['value']
-            if setting['key'] in (
-                    "ignore_old_datasets", "ignore_new_files",
-                    "validate_folder_structure",
-                    "start_automatically_on_login",
-                    "upload_invalid_user_folders",
-                    "fake_md5_sum", "use_none_cipher", "locked",
-                    "monday_checked", "tuesday_checked",
-                    "wednesday_checked", "thursday_checked",
-                    "friday_checked", "saturday_checked",
-                    "sunday_checked", "use_includes_file",
-                    "use_excludes_file", "immutable_datasets"):
-                settings[setting['key']] = (setting['value'] == "True")
-            if setting['key'] in (
-                    "timer_minutes", "ignore_interval_number",
-                    "ignore_new_files_minutes",
-                    "progress_poll_interval", "verification_delay",
-                    "max_verification_threads",
-                    "max_upload_threads", "max_upload_retries"):
-                settings[setting['key']] = int(setting['value'])
-            if setting['key'] in (
-                    "scheduled_date"):
-                settings[setting['key']] = \
-                    datetime.date(datetime.strptime(setting['value'],
-                                                    "%Y-%m-%d"))
-            if setting['key'] in (
-                    "scheduled_time", "timer_from_time",
-                    "timer_to_time"):
-                settings[setting['key']] = \
-                    datetime.time(datetime.strptime(setting['value'],
-                                                    "%H:%M:%S"))
+            try:
+                settings[setting['key']] = setting['value']
+                if setting['key'] in (
+                        "ignore_old_datasets", "ignore_new_files",
+                        "validate_folder_structure",
+                        "start_automatically_on_login",
+                        "upload_invalid_user_folders",
+                        "fake_md5_sum", "use_none_cipher", "locked",
+                        "monday_checked", "tuesday_checked",
+                        "wednesday_checked", "thursday_checked",
+                        "friday_checked", "saturday_checked",
+                        "sunday_checked", "use_includes_file",
+                        "use_excludes_file", "immutable_datasets",
+                        "cache_datafile_lookups"):
+                    settings[setting['key']] = (setting['value'] == "True")
+                if setting['key'] in (
+                        "timer_minutes", "ignore_interval_number",
+                        "ignore_new_files_minutes",
+                        "progress_poll_interval", "verification_delay",
+                        "max_verification_threads",
+                        "max_upload_threads", "max_upload_retries"):
+                    settings[setting['key']] = int(setting['value'])
+                if setting['key'] in (
+                        "scheduled_date"):
+                    settings[setting['key']] = \
+                        datetime.date(datetime.strptime(setting['value'],
+                                                        "%Y-%m-%d"))
+                if setting['key'] in (
+                        "scheduled_time", "timer_from_time",
+                        "timer_to_time"):
+                    settings[setting['key']] = \
+                        datetime.time(datetime.strptime(setting['value'],
+                                                        "%H:%M:%S"))
+            except KeyError as err:
+                logger.warning(
+                    "Settings field '%s' found on server is not understood "
+                    "by this version of MyData." % setting['key'])
         return True
     return False
 
@@ -328,7 +336,7 @@ def SaveSettingsToDisk(configPath=None):
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
                   "start_automatically_on_login", "immutable_datasets",
-                  "upload_invalid_user_folders"]
+                  "cache_datafile_lookups", "upload_invalid_user_folders"]
         settingsList = []
         for field in fields:
             value = SETTINGS[field]

@@ -23,7 +23,10 @@ class MockResponse(object):
         """
         Initialize a mock response instance with a status code.
         """
-        self.status_code = statusCode  # pylint: disable=invalid-name
+        # The status_code attribute should be called "status_code" to be
+        # consistent with the requests library, but self.status_code clashes
+        # with MyData's Pylint rules, so we use self.__dict__:
+        self.__dict__['status_code'] = statusCode
         self.text = text
 
 
@@ -32,7 +35,8 @@ class HttpErrorHandlerTester(unittest.TestCase):
     Test method for handling HTTP error.
     """
     def setUp(self):
-        self.app = wx.App(redirect=False)  # pylint: disable=unused-variable
+        self.app = wx.App(redirect=False)
+        self.app.SetAppName("HttpErrorHandlerTester")
         self.frame = wx.Frame(None, title='HttpErrorHandlerTester')
         self.frame.Show()
 

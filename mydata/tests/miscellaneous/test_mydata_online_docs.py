@@ -1,27 +1,22 @@
 """
 Test ability to access MyData's online documentation.
 """
-import unittest
-
 import wx
 
-from ...MyData import MyData
+from ...events.docs import OnHelp
+from ...events.docs import OnWalkthrough
+from .. import MyDataMinimalTester
 
 
-class MyDataOnlineDocsTester(unittest.TestCase):
+class MyDataOnlineDocsTester(MyDataMinimalTester):
     """
     Test ability to access MyData's online documentation.
     """
-    def __init__(self, *args, **kwargs):
-        super(MyDataOnlineDocsTester, self).__init__(*args, **kwargs)
-        self.mydataApp = None
-
     def test_mydata_online_docs(self):
         """
         Test ability to access MyData's online documentation.
         """
-        self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'],
-                                okToShowModalDialogs=False)
+        assert self  # Avoid Pylint's no-self-use
         pyEvent = wx.PyEvent()
-        self.mydataApp.OnHelp(pyEvent)
-        self.mydataApp.OnWalkthrough(pyEvent)
+        OnHelp(pyEvent)
+        OnWalkthrough(pyEvent)

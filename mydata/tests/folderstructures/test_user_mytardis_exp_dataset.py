@@ -3,6 +3,7 @@ Test ability to scan the Username / MyTardis / Experiment / Dataset folder
 structure.
 """
 from .. import MyDataScanFoldersTester
+from .. import ValidateSettingsAndScanFolders
 
 
 class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
@@ -21,7 +22,7 @@ class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
         folder structure.
         """
         self.UpdateSettingsFromCfg("testdataUserMyTardisExpDataset")
-        self.ScanFolders()
+        ValidateSettingsAndScanFolders()
         self.AssertUsers(["testuser1", "testuser2"])
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

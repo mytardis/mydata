@@ -4,7 +4,7 @@ Test ability to display MyData's main frame.
 import unittest
 import wx
 
-from ...MyData import MyDataFrame
+from ...views.mydata import MyDataFrame
 
 
 class MyDataMainFrameTester(unittest.TestCase):
@@ -13,8 +13,7 @@ class MyDataMainFrameTester(unittest.TestCase):
     """
     def setUp(self):
         self.app = wx.App()
-        self.mydataFrame = MyDataFrame(
-            title="MyData", style=wx.DEFAULT_FRAME_STYLE)
+        self.mydataFrame = MyDataFrame()
 
     def tearDown(self):
         self.mydataFrame.Hide()

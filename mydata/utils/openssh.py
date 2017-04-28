@@ -15,8 +15,6 @@ otherwise we need to worry about escaping special characters like
 '>' with carets (i.e. '^>').
 
 """
-# pylint: disable=wrong-import-position
-
 import sys
 from datetime import datetime
 import os
@@ -32,11 +30,6 @@ import struct
 import psutil
 import requests
 
-if sys.platform.startswith("win"):
-    import win32process
-
-if sys.platform.startswith("linux"):
-    import mydata.linuxsubprocesses as linuxsubprocesses
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.datafile import DataFileModel
@@ -51,6 +44,12 @@ from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
+
+if sys.platform.startswith("win"):
+    import win32process
+
+if sys.platform.startswith("linux"):
+    import mydata.linuxsubprocesses as linuxsubprocesses
 
 # Running subprocess's communicate from multiple threads can cause high CPU
 # usage, so we poll each subprocess before running communicate, using a sleep
@@ -80,7 +79,7 @@ class OpenSSH(object):
         if sixtyFourBitOperatingSystem:
             winOpensshDir = r"win64\openssh-7.3p1-cygwin-2.6.0"
         else:
-            winOpensshDir = r"win32\openssh-7.1p1-hpn-14.9-cygwin-2.2.1"
+            winOpensshDir = r"win32\openssh-7.3p1-cygwin-2.8.0"
         if hasattr(sys, "frozen"):
             baseDir = os.path.dirname(sys.executable)
         else:
@@ -388,15 +387,15 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     progressCallback(bytesUploaded, fileSize, message="Uploading...")
 
     if sys.platform.startswith("win"):
-        return UploadFileFromWindows(filePath, fileSize, username,
-                                     privateKeyFilePath, host, port,
-                                     remoteFilePath, progressCallback,
-                                     foldersController, uploadModel)
+        UploadFileFromWindows(filePath, fileSize, username,
+                              privateKeyFilePath, host, port,
+                              remoteFilePath, progressCallback,
+                              foldersController, uploadModel)
     else:
-        return UploadFileFromPosixSystem(filePath, fileSize, username,
-                                         privateKeyFilePath, host, port,
-                                         remoteFilePath, progressCallback,
-                                         foldersController, uploadModel)
+        UploadFileFromPosixSystem(filePath, fileSize, username,
+                                  privateKeyFilePath, host, port,
+                                  remoteFilePath, progressCallback,
+                                  foldersController, uploadModel)
 
 
 def MonitorProgress(foldersController, progressPollInterval, uploadModel,
@@ -683,7 +682,7 @@ def CleanUpScpAndSshProcesses():
     matches MyData's SSH path.  On other platforms, we can use proc.cmdline()
     to ensure that the SSH process we're killing uses MyData's private key.
     """
-    privateKeyPath = SETTINGS.sshKeyPair.privateKeyFilePath
+    privateKeyPath = SETTINGS.uploaderModel.sshKeyPair.privateKeyFilePath
     for proc in psutil.process_iter():
         try:
             if proc.exe() == OPENSSH.ssh or proc.exe() == OPENSSH.scp:

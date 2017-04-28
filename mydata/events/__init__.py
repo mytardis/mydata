@@ -1,6 +1,7 @@
 """
 Custom events for MyData.
 """
+import os
 import threading
 import traceback
 import sys
@@ -12,11 +13,13 @@ from ..models.settings.serialize import SaveFieldsFromDialog
 from ..models.settings.validation import ValidateSettings
 from ..models.instrument import InstrumentModel
 from ..models.uploader import UploaderModel
+from ..utils.connectivity import CONNECTIVITY
 from ..utils.exceptions import DuplicateKey
 from ..utils.exceptions import UserAbortedSettingsValidation
 from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..threads.flags import FLAGS
 from ..logs import logger
 
 
@@ -82,7 +85,7 @@ def PostEvent(event):
     if wx.PyApp.IsMainLoopRunning():
         target = event.GetDefaultTarget()
         if not target:
-            target = app.GetMainFrame()
+            target = app.frame
         wx.PostEvent(target, event)
     else:
         if hasattr(event, "GetDefaultHandler"):
@@ -221,7 +224,7 @@ def ShutdownForRefresh(event):
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
-            app.GetScheduleController().ApplySchedule(event)
+            app.scheduleController.ApplySchedule(event)
             event.foldersController.ShutDownUploadThreads()
             shutdownForRefreshCompleteEvent = \
                 MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
@@ -242,7 +245,7 @@ def ShutdownForRefresh(event):
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 wx.CallAfter(ShowDialog)
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
@@ -260,22 +263,22 @@ def ShutdownForRefreshComplete(event):
     """
     Respond to completion of shutdown for refresh.
     """
-    wx.GetApp().OnRefresh(event)
+    from .start import StartScansAndUploads
+    StartScansAndUploads(event)
 
 
 def CheckConnectivity(event):
     """
     Checks network connectivity.
     """
-    app = wx.GetApp()
     if wx.PyApp.IsMainLoopRunning():
         checkConnectivityThread = threading.Thread(
-            target=app.connectivity.Check,
+            target=CONNECTIVITY.Check,
             name="CheckConnectivityThread", args=[event])
         MYDATA_THREADS.Add(checkConnectivityThread)
         checkConnectivityThread.start()
     else:
-        app.connectivity.Check(event)
+        CONNECTIVITY.Check(event)
 
 
 def InstrumentNameMismatch(event):
@@ -321,11 +324,10 @@ def InstrumentNameMismatch(event):
             event.settingsDialog.instrumentNameField.SelectAll()
         elif dlg.GetStringSelection() == createChoice:
             logger.info("OK, we will create a new instrument record.")
-            app = wx.GetApp()
             settingsDialogValidationEvent = \
                 MYDATA_EVENTS.SettingsDialogValidationEvent(
                     settingsDialog=event.settingsDialog)
-            if app.connectivity.NeedToCheck():
+            if CONNECTIVITY.NeedToCheck():
                 checkConnectivityEvent = \
                     MYDATA_EVENTS.CheckConnectivityEvent(
                         nextEvent=settingsDialogValidationEvent)
@@ -368,7 +370,7 @@ def RenameInstrument(event):
                        event.facilityName)
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
-                if wx.GetApp().okToShowModalDialogs:
+                if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                     dlg.ShowModal()
                 event.settingsDialog.instrumentNameField.SetFocus()
                 event.settingsDialog.instrumentNameField.SelectAll()
@@ -411,7 +413,7 @@ def SettingsDialogValidation(event):
 
             app = wx.GetApp()
             if hasattr(app, "connectivity"):
-                if app.connectivity.NeedToCheck():
+                if CONNECTIVITY.NeedToCheck():
                     settingsDialogValidationEvent = \
                         MYDATA_EVENTS.SettingsDialogValidationEvent(
                             settingsDialog=event.settingsDialog,
@@ -431,9 +433,9 @@ def SettingsDialogValidation(event):
                 """
                 Updates status bar.
                 """
-                if hasattr(app, "GetMainFrame"):
+                if hasattr(app, "frame"):
                     wx.CallAfter(
-                        wx.GetApp().GetMainFrame().SetStatusMessage, message)
+                        wx.GetApp().frame.SetStatusMessage, message)
             try:
                 datasetCount = ValidateSettings(SetStatusMessage)
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
@@ -480,8 +482,8 @@ def ProvideSettingsValidationResults(event):
         message = invalidSettings.message
         logger.error(message)
         app = wx.GetApp()
-        if hasattr(app, "GetMainFrame"):
-            app.GetMainFrame().SetStatusMessage("")
+        if hasattr(app, "frame"):
+            app.frame.SetStatusMessage("")
 
         if invalidSettings.suggestion:
             currentValue = ""
@@ -500,7 +502,7 @@ def ProvideSettingsValidationResults(event):
                     % invalidSettings.suggestion
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.CANCEL | wx.ICON_ERROR)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 okToUseSuggestion = dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -516,7 +518,7 @@ def ProvideSettingsValidationResults(event):
         else:
             dlg = wx.MessageDialog(None, message, "MyData",
                                    wx.OK | wx.ICON_ERROR)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 dlg.ShowModal()
             else:
                 sys.stderr.write("%s\n" % message)
@@ -565,11 +567,18 @@ def ProvideSettingsValidationResults(event):
     else:
         intervalIfUsed = ""
     numDatasets = getattr(event, "datasetCount", None)
-    if numDatasets and numDatasets != -1:
-        message = "Assuming a folder structure of '%s', " \
+    if numDatasets is not None and numDatasets != -1:
+        filtersSummary = ""
+        if SETTINGS.filters.userFilter or \
+                SETTINGS.filters.datasetFilter or \
+                SETTINGS.filters.experimentFilter:
+            filtersSummary = "and applying the specified filters, "
+
+        message = "Assuming a folder structure of '%s', %s" \
             "there %s %d %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
             % (SETTINGS.advanced.folderStructure,
+               filtersSummary,
                "are" if numDatasets != 1 else "is", numDatasets,
                "datasets" if numDatasets != 1 else "dataset",
                event.settingsDialog.GetDataDirectory(),
@@ -577,7 +586,7 @@ def ProvideSettingsValidationResults(event):
         confirmationDialog = \
             wx.MessageDialog(None, message, "MyData",
                              wx.YES | wx.NO | wx.ICON_QUESTION)
-        if wx.GetApp().okToShowModalDialogs:
+        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
             okToContinue = confirmationDialog.ShowModal()
             if okToContinue != wx.ID_YES:
                 return
@@ -587,19 +596,13 @@ def ProvideSettingsValidationResults(event):
     logger.debug("Settings were valid, so we'll save the settings "
                  "to disk and close the Settings dialog.")
     try:
-        uploaderModel = UploaderModel()
+        uploaderModel = UploaderModel(SETTINGS)
         SETTINGS.uploaderModel = uploaderModel
 
         # Use the config path determined by appdirs, not the one
         # determined by a user dragging and dropping a config
         # file onto MyData's Settings dialog:
-        app = wx.GetApp()
-        if hasattr(app, "GetConfigPath"):
-            configPath = app.GetConfigPath()
-        else:
-            configPath = None
-        SaveFieldsFromDialog(
-            event.settingsDialog, configPath=configPath, saveToDisk=True)
+        SaveFieldsFromDialog(event.settingsDialog, saveToDisk=True)
         if wx.PyApp.IsMainLoopRunning():
             event.settingsDialog.EndModal(wx.ID_OK)
         event.settingsDialog.Show(False)
@@ -614,7 +617,7 @@ def ProvideSettingsValidationResults(event):
             title = "Manual Schedule"
             dlg = wx.MessageDialog(None, message, title,
                                    wx.OK | wx.ICON_WARNING)
-            if wx.GetApp().okToShowModalDialogs:
+            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                 dlg.ShowModal()
             else:
                 logger.warning(message)
@@ -624,18 +627,20 @@ def ProvideSettingsValidationResults(event):
 
 def ValidateSettingsForRefresh(event):
     """
-    Call MyDataApp's OnRefresh (again) to trigger settings validation.
+    Call StartScansAndUploads (again) to trigger settings validation.
     """
-    wx.GetApp().OnRefresh(event)
+    from .start import StartScansAndUploads
+    StartScansAndUploads(event)
 
 
 def SettingsValidationForRefreshComplete(event):
     """
-    Call MyDataApp's OnRefresh (again) to proceed with starting up the
+    Call StartScansAndUploads (again) to proceed with starting up the
     data folder scans once the settings validation has been completed.
     """
+    from .start import StartScansAndUploads
     event.needToValidateSettings = False
-    wx.GetApp().OnRefresh(event)
+    StartScansAndUploads(event)
 
 
 def StartDataUploadsForFolder(event):
@@ -658,11 +663,11 @@ def StartDataUploadsForFolder(event):
             "if necessary for folder: %s" % event.folderModel.folderName
         logger.info(message)
         app = wx.GetApp()
-        if hasattr(app, "TestRunRunning") and app.TestRunRunning():
+        if FLAGS.testRunRunning:
             logger.testrun(message)
         if type(app).__name__ == "MyData":
-            app.DisableTestAndUploadToolbarButtons()
-            app.SetPerformingLookupsAndUploads(True)
+            app.frame.toolbar.DisableTestAndUploadToolbarButtons()
+            FLAGS.performingLookupsAndUploads = True
             app.foldersController.StartUploadsForFolder(
                 event.folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)

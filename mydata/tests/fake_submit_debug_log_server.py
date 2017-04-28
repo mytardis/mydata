@@ -52,7 +52,5 @@ class FakeSubmitDebugLogHandler(BaseHTTPRequestHandler):
         Supressing logging of HTTP requests to STDERR.
         """
         if DEBUG:
-            return BaseHTTPRequestHandler.log_message(
+            BaseHTTPRequestHandler.log_message(
                 self, format, *args)
-        else:
-            return

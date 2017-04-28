@@ -3,7 +3,7 @@
  * 
  * Checks for application in ~/Library/Preferences/com.apple.loginitems.plist
  *
- * Usage: loginitem-exists /Application/MyApplication.app
+ * Usage: loginitem-exists /Applications/MyApplication.app
  *
  * Exit code: 0 if the application was found in login items
  *            2 if the application was not found in login items
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 {
     NSArray *args = [[NSProcessInfo processInfo] arguments];
     if ([args count] != 2) {
-        fprintf(stderr, "Usage: loginitem-exists /Application/MyApplication.app\n");
+        fprintf(stderr, "Usage: loginitem-exists /Applications/MyApplication.app\n");
         exit(1);
     }
     NSString *appBundlePath = [args objectAtIndex:1];
@@ -32,11 +32,11 @@ int main(int argc, char** argv)
     LaunchAtLoginController *controller = [[LaunchAtLoginController alloc] init];
     NSURL *appUrl = [NSURL fileURLWithPath:[args objectAtIndex:1]];
     if ([controller willLaunchAtLogin:appUrl]) {
-        fprintf(stderr, "%s is currently set to launch at login.\n", argv[1]);
+        // fprintf(stderr, "%s is currently set to launch at login.\n", argv[1]);
         exit(0);
     }
     else {
-        fprintf(stderr, "%s is not currently set to launch at login.\n", argv[1]);
+        // fprintf(stderr, "%s is not currently set to launch at login.\n", argv[1]);
         exit(2);
     }
 }

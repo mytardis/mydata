@@ -5,21 +5,21 @@ mydata/views/taskbaricon.py
 Provides a system tray icon (Windows)
 or menubar icon (Mac OS X) for MyData.
 """
-
-# pylint: disable=wrong-import-position
-
 import webbrowser
 
 import wx
-if wx.version().startswith("3.0.3.dev"):
+
+from ..events.start import ManuallyTriggerScanFoldersAndUpload
+from ..events.settings import OnSettings
+from ..media import MYDATA_ICONS
+from ..logs import logger
+
+if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
     from wx.adv import TaskBarIcon
 else:
     from wx import EmptyIcon
     from wx import TaskBarIcon
-
-from ..media import MYDATA_ICONS
-from ..logs import logger
 
 
 class MyDataTaskBarIcon(TaskBarIcon):
@@ -60,18 +60,18 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.aboutMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "About MyData")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.aboutMyDataMenuItem)
         else:
             self.menu.AppendItem(self.aboutMyDataMenuItem)
-        self.Bind(wx.EVT_MENU, wx.GetApp().OnAbout,
+        self.Bind(wx.EVT_MENU, self.frame.OnAbout,
                   self.aboutMyDataMenuItem, self.aboutMyDataMenuItem.GetId())
 
         self.menu.AppendSeparator()
 
         self.syncNowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Sync Now")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.syncNowMenuItem)
         else:
             self.menu.AppendItem(self.syncNowMenuItem)
@@ -82,7 +82,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisMainWindowMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Main Window")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisMainWindowMenuItem)
         else:
             self.menu.AppendItem(self.myTardisMainWindowMenuItem)
@@ -91,7 +91,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisSettingsMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Settings")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisSettingsMenuItem)
         else:
             self.menu.AppendItem(self.myTardisSettingsMenuItem)
@@ -102,7 +102,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.myTardisHelpMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "MyData Help")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisHelpMenuItem)
         else:
             self.menu.AppendItem(self.myTardisHelpMenuItem)
@@ -113,7 +113,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
 
         self.exitMyDataMenuItem = wx.MenuItem(
             self.menu, wx.NewId(), "Exit MyData")
-        if wx.version().startswith("3.0.3.dev"):
+        if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.exitMyDataMenuItem)
         else:
             self.menu.AppendItem(self.exitMyDataMenuItem)
@@ -125,10 +125,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         """
         Returns the "Sync Now" menu item.
         """
-        if hasattr(self, "syncNowMenuItem"):
-            return self.syncNowMenuItem
-        else:
-            return None
+        return getattr(self, "syncNowMenuItem", None)
 
     def OnMyDataMainWindow(self, event):
         """
@@ -146,7 +143,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         """
         self.frame.Show(True)
         self.frame.Raise()
-        wx.GetApp().OnSettings(event)
+        OnSettings(event)
         event.Skip()
 
     @staticmethod
@@ -156,7 +153,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         selected from MyData's system tray / menu bar icon menu.
         """
         logger.debug("Sync Now called from task bar menu item.")
-        wx.GetApp().ScanFoldersAndUpload(event)
+        ManuallyTriggerScanFoldersAndUpload(event)
 
     @staticmethod
     def OnMyDataHelp(event):

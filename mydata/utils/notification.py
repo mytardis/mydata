@@ -22,7 +22,7 @@ class Notification(object):
         Post notification.
         """
         if sys.platform.startswith("win"):
-            wx.GetApp().taskBarIcon.ShowBalloon(title, message)
+            wx.GetApp().frame.taskBarIcon.ShowBalloon(title, message)
             return
         if sys.platform.startswith("linux"):
             try:
@@ -46,7 +46,7 @@ class Notification(object):
         else:
             args += ["-activate", "org.python.python"]
         if hasattr(sys, "frozen"):
-            path = "../MacOS"
+            path = os.path.dirname(sys.executable)
         else:
             path = "resources/macOS/MyData Notifications.app/Contents/MacOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,
