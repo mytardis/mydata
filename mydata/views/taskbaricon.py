@@ -184,4 +184,4 @@ class MyDataTaskBarIcon(TaskBarIcon):
         okToExit = confirmationDialog.ShowModal()
         if okToExit == wx.ID_YES:
             wx.GetApp().ShutDownCleanlyAndExit(event, confirm=False)
-        event.Skip()
+        event.StopPropagation()
