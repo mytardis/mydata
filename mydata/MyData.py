@@ -138,7 +138,12 @@ class MyData(wx.App):
             else:
                 message = \
                     "Click the MyData system tray icon to access its menu."
-            Notification.Notify(message, title=APPNAME)
+            # Use CallAfter here to ensure this is called after the main loop
+            # has started, because we've occasionally seen errors like this:
+            # wx._core.PyAssertionError: C++ assertion "m_iconAdded" failed at
+            # ..\..\src\msw\taskbar.cpp(255) in wxTaskBarIcon::ShowBalloon():
+            # can't be used before the icon is created
+            wx.CallAfter(Notification.Notify, message, title=APPNAME)
             if 'MYDATA_TESTING' in os.environ:
                 if 'MYDATA_DONT_RUN_SCHEDULE' not in os.environ:
                     self.scheduleController.ApplySchedule(event)

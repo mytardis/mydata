@@ -22,7 +22,15 @@ class Notification(object):
         Post notification.
         """
         if sys.platform.startswith("win"):
-            wx.GetApp().frame.taskBarIcon.ShowBalloon(title, message)
+            # Need a try/except here, because we've occasionally seen errors
+            # like this:
+            # wx._core.PyAssertionError: C++ assertion "m_iconAdded" failed at
+            # ..\..\src\msw\taskbar.cpp(255) in wxTaskBarIcon::ShowBalloon():
+            # can't be used before the icon is created
+            try:
+                wx.GetApp().frame.taskBarIcon.ShowBalloon(title, message)
+            except:
+                sys.stderr.write("%s\n" % message)
             return
         if sys.platform.startswith("linux"):
             try:
