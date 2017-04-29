@@ -92,7 +92,8 @@ class CustomBuildCommand(build):
             # create .pyupdater/config.pyu:
             pyu_settings.GENERIC_APP_NAME = APP_NAME
             pyu_settings.GENERIC_COMPANY_NAME = COMPANY_NAME
-            pyinstallerArgs = ['--windowed', 'run.py']
+            pyinstallerArgs = [
+                '--windowed', 'run.py', '--icon', 'mydata/media/MyData.ico']
             args = Namespace(app_version=APP_VERSION, clean=False,
                              command='build', distpath=None, keep=False,
                              name=None, onedir=False, onefile=False,
