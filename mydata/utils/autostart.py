@@ -112,8 +112,9 @@ End If
         """
         vbScript.write(script)
     cmdList = ['cscript', '//Nologo', vbScript.name]
-    logger.info("Checking for MyData shortcut in common startup items.")
-    proc = subprocess.Popen(cmdList, stdout=subprocess.PIPE,
+    logger.debug("Checking for MyData shortcut in common startup items.")
+    proc = subprocess.Popen(cmdList, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, shell=False,
                             startupinfo=DEFAULT_STARTUP_INFO,
                             creationflags=DEFAULT_CREATION_FLAGS)

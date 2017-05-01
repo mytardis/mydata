@@ -778,8 +778,8 @@ class SettingsDialog(wx.Dialog):
         self.startAutomaticallyCheckBox = \
             wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         if sys.platform.startswith("win"):
-            startAutomatically = IsMyDataShortcutInWinStartupItems()
-            self.startAutomaticallyCheckBox.SetValue(startAutomatically)
+            # On Windows, we use the common startup folder, configured by the
+            # setup wizard, not the user-specific startup folder.
             self.startAutomaticallyCheckBox.Enable(False)
         self.advancedPanelSizer\
             .Add(self.startAutomaticallyCheckBox,
