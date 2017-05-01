@@ -1,17 +1,56 @@
 r"""
 setup.py
 
-Build binary executable with:
-
-    python setup.py build
-
-Build binary distributable (Setup Wizard / DMG / RPM) with:
-
-    python setup.py bdist
-
+RUNNING TESTS
+=============
 Run tests with:
 
     python setup.py nosetests
+
+
+BUILDING BINARIES
+=================
+Build a binary executable with:
+
+    python setup.py build
+
+Build a binary distributable (Setup Wizard / DMG / RPM) with:
+
+    python setup.py bdist
+
+
+SIGNING BINARIES
+================
+
+Windows
+-------
+
+MyData authors don't sign Windows builds themselves, due to a local I.T. policy
+which requires signing to be done by a different I.T. team.
+
+If you have a code-signing certificate, you can sign the resulting build, using
+signtool.exe as described here:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/aa388170.aspx
+
+
+Mac OS X
+--------
+
+Mac builds are signed automatically, provided that you have a valid
+"Develper ID: Application" certificate in your KeyChain.  For further
+information, see: setup_helpers/mac_signing.py
+
+
+Linux
+-----
+
+Linux builds are not signed at present, but they can be signed by modifying the
+rpmbuild command in linux/package_centos_version.sh to use the --sign option,
+as described here:
+
+    http://ftp.rpm.org/max-rpm/rpmbuild.8.html
+
 """
 from argparse import Namespace
 import os
@@ -45,9 +84,6 @@ APP_NAME = "MyData"
 APP_VERSION = mydata.__version__
 COMPANY_NAME = "Monash University"
 PACKAGE_NAME = "mydata"
-
-INSTALL_REQUIRES = ['appdirs', 'lxml', 'poster', 'psutil',
-                    'requests', 'validate_email']
 
 SETUP_REQUIRES = ["nose", "coverage"]
 
@@ -240,6 +276,10 @@ class CustomBuildCommand(build):
                         "dist/MyData.app/Contents/MacOS/")
             shutil.copy("resources/macOS/ObjectiveC/bin/loginitem-exists",
                         "dist/MyData.app/Contents/MacOS/")
+
+            from setup_helpers.mac_signing import MAC_SIGNING
+            MAC_SIGNING.SignApp("dist/MyData.app")
+            MAC_SIGNING.VerifySignature("dist/MyData.app")
 
         elif sys.platform.startswith("linux"):
             os.system("cd linux; ./package_linux_version.sh")
