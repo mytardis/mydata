@@ -23,7 +23,7 @@ else:
     LATEST_COMMIT = LINE.split(" ")[1]
     GIT = distutils.spawn.find_executable("git")
     LATEST_COMMIT_DATETIME = subprocess.check_output(
-        [GIT, "log", "-1", "--pretty=format:%cI"])
+        [GIT, "log", "-1", "--pretty=format:%ci"])
     with open("mydata/commitdef.py", 'w') as commitdef:
         commitdef.write('"""\n')
         commitdef.write('commitdef.py\n')
