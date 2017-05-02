@@ -94,7 +94,7 @@ class CustomBuildCommand(build):
 
     On Windows, create dist/MyData/*.*, including dist/MyData/MyData.exe
     On macOS, create dist/MyData.app/*
-    On macOS, copy "MyData Notifications", add-loginitem, delete-loginitem,
+    On macOS, copy "MyData Notifications.app", add-loginitem, delete-loginitem,
         and loginitem-exists binaries into MyData.app bundle.
     """
     def run(self):
@@ -263,13 +263,9 @@ class CustomBuildCommand(build):
                     os.makedirs(targetDir)
                 shutil.copy(resourceFile[0], targetDir)
 
-            shutil.copy(
-                "resources/macOS/MyData Notifications.app/Contents/MacOS"
-                "/MyData Notifications", "dist/MyData.app/Contents/MacOS/")
-            distutils.dir_util\
-                .copy_tree("resources/macOS/MyData Notifications.app/Contents"
-                           "/Resources/en.lproj",
-                           "dist/MyData.app/Contents/Resources/en.lproj")
+            shutil.copytree(
+                "resources/macOS/MyData Notifications.app",
+                "dist/MyData.app/Contents/MacOS/MyData Notifications.app")
             shutil.copy("resources/macOS/ObjectiveC/bin/add-loginitem",
                         "dist/MyData.app/Contents/MacOS/")
             shutil.copy("resources/macOS/ObjectiveC/bin/delete-loginitem",

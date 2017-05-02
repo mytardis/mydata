@@ -66,7 +66,7 @@ class MacSigning(object):
             'add-loginitem',
             'delete-loginitem',
             'loginitem-exists',
-            'MyData Notifications',
+            'MyData Notifications.app/Contents/MacOS/MyData Notifications',
             'MyData'
         ]
         for thing in thingsToSign:

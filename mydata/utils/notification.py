@@ -45,7 +45,8 @@ class Notification(object):
             except:
                 sys.stderr.write(message + "\n")
             return
-        executable = "MyData Notifications"
+        executable = \
+            "MyData Notifications.app/Contents/MacOS/MyData Notifications"
         args = ["-message", message, "-title", title]
         if subtitle:
             args += ["-subtitle", subtitle]
@@ -56,7 +57,7 @@ class Notification(object):
         if hasattr(sys, "frozen"):
             path = os.path.dirname(sys.executable)
         else:
-            path = "resources/macOS/MyData Notifications.app/Contents/MacOS"
+            path = "resources/macOS"
         proc = subprocess.Popen([os.path.join(path, executable)] + args,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
