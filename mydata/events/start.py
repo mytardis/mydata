@@ -64,6 +64,7 @@ def StartScansAndUploads(
     not yet available on MyTardis.
     """
     from .stop import CheckIfShouldAbort
+    from .stop import RestoreUserInterfaceForAbort
     app = wx.GetApp()
     LogStartScansAndUploadsCaller(event, jobId)
     if CheckIfShouldAbort():
@@ -147,7 +148,7 @@ def StartScansAndUploads(
                     PostEvent(event)
                     wx.CallAfter(EndBusyCursorIfRequired)
                 except UserAbortedSettingsValidation:
-                    app.RestoreUserInterfaceForAbort()
+                    RestoreUserInterfaceForAbort()
                     return
                 except InvalidSettings as invalidSettings:
                     # If settings validation is run automatically shortly
@@ -161,7 +162,7 @@ def StartScansAndUploads(
                             "Displaying result from settings validation.")
                         message = invalidSettings.message
                         logger.error(message)
-                        app.RestoreUserInterfaceForAbort()
+                        RestoreUserInterfaceForAbort()
                         app.frame.SetStatusMessage(
                             "Settings validation failed.")
                         if testRun:
@@ -246,7 +247,7 @@ def StartScansAndUploads(
             return
 
         if CheckIfShouldAbort():
-            app.RestoreUserInterfaceForAbort()
+            RestoreUserInterfaceForAbort()
             if testRun:
                 logger.testrun("Data scans and uploads were canceled.")
                 FLAGS.testRunRunning = False
@@ -271,7 +272,7 @@ def StartScansAndUploads(
             if testRun:
                 logger.testrun(message)
             wx.CallAfter(app.frame.SetStatusMessage, message)
-            app.RestoreUserInterfaceForAbort()
+            RestoreUserInterfaceForAbort()
         wx.CallAfter(EndBusyCursorIfRequired)
 
     if wx.PyApp.IsMainLoopRunning():

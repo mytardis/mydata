@@ -39,7 +39,7 @@ def UpdateMacAutostartFile():
     """
     appBundlePath = "/Applications/MyData.app"
     if hasattr(sys, "frozen"):
-        objectivecDir = "../MacOS"
+        objectivecDir = os.path.dirname(sys.executable)
     else:
         objectivecDir = "resources/macOS/ObjectiveC/bin"
     loginItemExistsBinary = os.path.join(objectivecDir, "loginitem-exists")
