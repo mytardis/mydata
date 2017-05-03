@@ -18,7 +18,6 @@ from ..models.group import GroupModel
 from ..logs import logger
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import DoesNotExist
-from ..utils import EndBusyCursorIfRequired
 from ..utils import Compare
 from ..threads.flags import FLAGS
 from ..events import MYDATA_EVENTS
