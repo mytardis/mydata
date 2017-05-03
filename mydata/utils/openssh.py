@@ -218,6 +218,7 @@ class KeyPair(object):
             cmdList = [OPENSSH.sshKeyGen, "-yl", "-f", self.privateKeyFilePath]
         logger.debug(" ".join(cmdList))
         proc = subprocess.Popen(cmdList,
+                                stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
                                 startupinfo=DEFAULT_STARTUP_INFO,
@@ -299,6 +300,7 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     cmd = " ".join(cmdList)
     logger.debug(cmd)
     proc = subprocess.Popen(cmd,
+                            stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             shell=True,
@@ -344,6 +346,7 @@ def SshServerIsReady(username, privateKeyFilePath,
     logger.debug(cmdString)
     proc = subprocess.Popen(cmdString,
                             shell=OPENSSH.preferToUseShellInSubprocess,
+                            stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             startupinfo=DEFAULT_STARTUP_INFO,
@@ -468,6 +471,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             mkdirProcess = \
                 subprocess.Popen(mkdirCmdString,
                                  shell=OPENSSH.preferToUseShellInSubprocess,
+                                 stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  startupinfo=DEFAULT_STARTUP_INFO,
@@ -510,6 +514,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         scpUploadProcess = subprocess.Popen(
             scpCommandString,
             shell=OPENSSH.preferToUseShellInSubprocess,
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
@@ -590,6 +595,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
         mkdirProcess = \
             subprocess.Popen(mkdirCmdString,
                              shell=OPENSSH.preferToUseShellInSubprocess,
+                             stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT,
                              startupinfo=DEFAULT_STARTUP_INFO,
@@ -624,6 +630,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
     logger.debug(scpCommandString)
     scpUploadProcess = subprocess.Popen(
         scpCommandString,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         startupinfo=DEFAULT_STARTUP_INFO,
