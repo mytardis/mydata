@@ -164,7 +164,7 @@ class MyData(wx.App):
         self.instance = wx.SingleInstanceChecker("MyData", path=appdirPath)
         if self.instance.IsAnotherRunning():
             message = "MyData is already running!"
-            if wx.PyApp.IsMainLoopRunning():
+            if 'MYDATA_TESTING' not in os.environ:
                 wx.MessageBox("MyData is already running!", "MyData",
                               wx.ICON_ERROR)
                 sys.exit(1)
