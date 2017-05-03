@@ -25,7 +25,6 @@ from . import HandleHttpError
 class DataFileModel(object):
     """
     Model class for MyTardis API v1's DataFileResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     # pylint: disable=too-many-instance-attributes
     def __init__(self, dataset, dataFileJson):
@@ -70,8 +69,7 @@ class DataFileModel(object):
             "&directory=" + urllib.quote(directory.encode('utf-8'))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code < 200 or response.status_code >= 300:
-            logger.debug("Failed to look up datafile \"%s\" "
-                         "in dataset \"%s\"."
+            logger.error("Failed to look up datafile \"%s\" in dataset \"%s\"."
                          % (filename, dataset.description))
             HandleHttpError(response)
         dataFilesJson = response.json()
@@ -100,10 +98,11 @@ class DataFileModel(object):
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code == 404:
             raise DoesNotExist(
-                message="Datafile ID \"%s\" was not found in MyTardis" % dataFileId,
+                message="Datafile ID %s was not found in MyTardis"
+                % dataFileId,
                 response=response)
         elif response.status_code < 200 or response.status_code >= 300:
-            logger.debug("Failed to look up datafile ID \"%s\"." % dataFileId)
+            logger.error("Failed to look up datafile ID \"%s\"." % dataFileId)
             HandleHttpError(response)
         dataFileJson = response.json()
         return DataFileModel(dataset=None, dataFileJson=dataFileJson)

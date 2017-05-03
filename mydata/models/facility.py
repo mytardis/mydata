@@ -13,7 +13,6 @@ from . import HandleHttpError
 class FacilityModel(object):
     """
     Model class for MyTardis API v1's FacilityResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, name=None, facilityJson=None):
         self.facilityId = None

@@ -18,7 +18,6 @@ from ..models.group import GroupModel
 from ..logs import logger
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import DoesNotExist
-from ..utils import EndBusyCursorIfRequired
 from ..utils import Compare
 from ..threads.flags import FLAGS
 from ..events import MYDATA_EVENTS
@@ -217,9 +216,6 @@ class FoldersModel(MyDataDataViewModel):
         numUserFoldersScanned = 0
         for userFolderName in userFolderNames:
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if folderStructure.startswith("Username"):
                 logger.debug("Found folder assumed to be username: " +
@@ -237,9 +233,6 @@ class FoldersModel(MyDataDataViewModel):
             except DoesNotExist:
                 userRecord = None
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             usersDataViewId = usersModel.GetMaxDataViewId() + 1
             if not userRecord:
@@ -289,9 +282,6 @@ class FoldersModel(MyDataDataViewModel):
                                               userRecord,
                                               userFolderName)
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
 
             numUserFoldersScanned += 1
@@ -317,9 +307,6 @@ class FoldersModel(MyDataDataViewModel):
         numGroupFoldersScanned = 0
         for groupFolderName in groupFolderNames:
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             logger.debug("Found folder assumed to be user group name: " +
                          groupFolderName)
@@ -339,9 +326,6 @@ class FoldersModel(MyDataDataViewModel):
                                    "setting is not checked." % groupFolderName)
                     continue
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             if groupRecord:
                 groupRecord.dataViewId = groupsDataViewId
@@ -359,9 +343,6 @@ class FoldersModel(MyDataDataViewModel):
             else:
                 raise InvalidFolderStructure("Unknown folder structure.")
             if FLAGS.shouldAbort:
-                wx.CallAfter(wx.GetApp().frame.SetStatusMessage,
-                             "Data scans and uploads were canceled.")
-                wx.CallAfter(EndBusyCursorIfRequired)
                 return
             numGroupFoldersScanned += 1
             if threading.current_thread().name == "MainThread":

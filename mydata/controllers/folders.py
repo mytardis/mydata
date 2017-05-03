@@ -25,6 +25,8 @@ from ..models.dataset import DatasetModel
 from ..logs import logger
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..utils.exceptions import HttpException
+from ..utils.exceptions import InternalServerError
 from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
 from .uploads import UploadMethod
@@ -247,14 +249,14 @@ class FoldersController(object):
         the same message.
         """
         if self.IsShowingErrorDialog():
-            logger.warning("Refusing to show message dialog for message "
-                           "\"%s\" because we are already showing an error "
-                           "dialog." % event.message)
+            logger.debug("Refusing to show message dialog for message "
+                         "\"%s\" because we are already showing an error "
+                         "dialog." % event.message)
             return
         elif event.message == self.GetLastErrorMessage():
-            logger.warning("Refusing to show message dialog for message "
-                           "\"%s\" because we already showed an error "
-                           "dialog with the same message." % event.message)
+            logger.debug("Refusing to show message dialog for message "
+                         "\"%s\" because we already showed an error "
+                         "dialog with the same message." % event.message)
             return
         self.SetLastErrorMessage(event.message)
         if event.icon == wx.ICON_ERROR:
@@ -490,12 +492,46 @@ class FoldersController(object):
                     experimentModel = ExperimentModel\
                         .GetOrCreateExperimentForFolder(folderModel)
                 except Exception as err:
-                    logger.error(traceback.format_exc())
-                    mde.PostEvent(
-                        self.ShowMessageDialogEvent(
-                            title="MyData",
-                            message=str(err),
-                            icon=wx.ICON_ERROR))
+                    if self.failed:
+                        return
+                    message = str(err)
+                    if isinstance(err, InternalServerError):
+                        logger.error(err.response.request.url)
+                        try:
+                            error = ("Internal Server Error: %s"
+                                     % err.response.json()['error_message'])
+                            logger.error(error)
+                            info = "See the Log for more information."
+                            logger.error(err.response.json()['traceback'])
+                        except:
+                            error = "An Internal Server Error occurred."
+                            info = (
+                                "For more information, set DEBUG to True in "
+                                "MyTardis's settings.")
+                            logger.error(info)
+                        message = ("%s\n\n%s\n\n%s"
+                                   % (error, err.response.request.url, info))
+                        mde.PostEvent(
+                            self.ShowMessageDialogEvent(
+                                title="MyData", message=message,
+                                icon=wx.ICON_ERROR))
+                    elif isinstance(err, HttpException) and not message:
+                        message = ("Received %s (%s) response from server."
+                                   % (type(err).__name__,
+                                      err.response.status_code))
+                        message = ("%s\n\n%s"
+                                   % (message, err.response.request.url))
+                        logger.error(message)
+                    else:
+                        logger.error(traceback.format_exc())
+                    if not self.failed:
+                        self.failed = True
+                        FLAGS.shouldAbort = True
+                        mde.PostEvent(
+                            self.ShowMessageDialogEvent(
+                                title="MyData", message=message,
+                                icon=wx.ICON_ERROR))
+                        mde.PostEvent(self.ShutdownUploadsEvent(failed=True))
                     return
                 finally:
                     self.getOrCreateExpThreadingLock.release()

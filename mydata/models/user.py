@@ -15,11 +15,11 @@ from . import HandleHttpError
 class UserModel(object):
     """
     Model class for MyTardis API v1's UserResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     userNotFoundString = "USER NOT FOUND IN MYTARDIS"
 
-    def __init__(self, dataViewId=None, username=None, fullName=None, email=None,
+    def __init__(self, dataViewId=None, username=None,
+                 fullName=None, email=None,
                  userRecordJson=None, userNotFoundInMyTardis=False):
         self.userId = None
         self.dataViewId = dataViewId
