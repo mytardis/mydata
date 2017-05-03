@@ -201,15 +201,6 @@ class KeyPair(object):
         Requests because of the fingerprint mismatches.
         See the UploaderModel class's ExistingUploadToStagingRequest
         method in mydata.models.uploader
-
-        On Mac OS X, passing the entire command string (with arguments)
-        to subprocess, rather than a list requires using "shell=True",
-        otherwise Python will check whether the "file", e.g.
-        "/usr/bin/ssh-keygen -yl -f ~/.ssh/MyData" exists
-        which of course it doesn't.  Passing a command list on the
-        other hand is problematic on Windows where Python's automatic
-        quoting to convert the command list to a command doesn't always
-        work as desired.
         """
         if not os.path.exists(self.privateKeyFilePath):
             raise PrivateKeyDoesNotExist("Couldn't find valid private key in "
@@ -221,22 +212,14 @@ class KeyPair(object):
                 pubKeyFile.write(self.publicKey)
 
         if sys.platform.startswith('win'):
-            quotedPrivateKeyFilePath = \
-                OpenSSH.DoubleQuote(GetCygwinPath(self.privateKeyFilePath))
-            cmdList = [OpenSSH.DoubleQuote(OPENSSH.sshKeyGen), "-E", "md5",
-                       "-yl", "-f", quotedPrivateKeyFilePath]
+            cmdList = [OPENSSH.sshKeyGen, "-E", "md5",
+                       "-yl", "-f", self.privateKeyFilePath]
         else:
-            quotedPrivateKeyFilePath = \
-                OpenSSH.DoubleQuote(self.privateKeyFilePath)
-            cmdList = [OpenSSH.DoubleQuote(OPENSSH.sshKeyGen),
-                       "-yl", "-f", quotedPrivateKeyFilePath]
-        cmd = " ".join(cmdList)
-        logger.debug(cmd)
-        proc = subprocess.Popen(cmd,
+            cmdList = [OPENSSH.sshKeyGen, "-yl", "-f", self.privateKeyFilePath]
+        logger.debug(" ".join(cmdList))
+        proc = subprocess.Popen(cmdList,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
-                                universal_newlines=True,
-                                shell=True,
                                 startupinfo=DEFAULT_STARTUP_INFO,
                                 creationflags=DEFAULT_CREATION_FLAGS)
         stdout, _ = proc.communicate()
