@@ -20,7 +20,6 @@ from . import HandleHttpError
 class ExperimentModel(object):
     """
     Model class for MyTardis API v1's ExperimentResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, experimentJson):
         self.json = experimentJson
@@ -233,14 +232,16 @@ class ExperimentModel(object):
             description = ("Uploader: %s\n"
                            "User folder name: %s\n"
                            "Uploaded from: %s:%s"
-                           % (uploaderName, userFolderName, hostname, location))
+                           % (uploaderName, userFolderName, hostname,
+                              location))
             if groupFolderName:
                 description += "\nGroup folder name: %s" % groupFolderName
         else:
             description = ("Uploader: %s\n"
                            "Group folder name: %s\n"
                            "Uploaded from: %s:%s"
-                           % (uploaderName, groupFolderName, hostname, location))
+                           % (uploaderName, groupFolderName, hostname,
+                              location))
 
         if testRun:
             message = "CREATING NEW EXPERIMENT FOR FOLDER: %s\n" \

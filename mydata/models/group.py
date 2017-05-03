@@ -14,7 +14,6 @@ from . import HandleHttpError
 class GroupModel(object):
     """
     Model class for MyTardis API v1's GroupResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, name=None, groupJson=None):
         self.groupId = None

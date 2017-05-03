@@ -9,7 +9,6 @@ from ..utils import UnderscoreToCamelcase
 class StorageBox(object):
     """
     Model class for MyTardis API v1's StorageBoxResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, storageBoxJson):
         self.json = storageBoxJson
@@ -40,7 +39,6 @@ class StorageBox(object):
 class StorageBoxOption(object):
     """
     Model class for MyTardis API v1's StorageBoxOptionResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, optionJson):
         self.json = optionJson
@@ -59,7 +57,6 @@ class StorageBoxOption(object):
 class StorageBoxAttribute(object):
     """
     Model class for MyTardis API v1's StorageBoxAttributeResource.
-    See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
     """
     def __init__(self, attrJson):
         self.json = attrJson

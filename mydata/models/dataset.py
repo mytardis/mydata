@@ -111,6 +111,7 @@ class DatasetModel(object):
                 message = (
                     "Couldn't create dataset \"%s\" for folder \"%s\"."
                     % (description, folderModel.folderName))
+                logger.error(message)
                 HandleHttpError(response)
 
     @staticmethod
