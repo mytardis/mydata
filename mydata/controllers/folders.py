@@ -340,6 +340,9 @@ class FoldersController(object):
         self.numVerificationWorkerThreads = \
             SETTINGS.miscellaneous.maxVerificationThreads
         self.verificationWorkerThreads = []
+        self.finishedScanningForDatasetFolders = threading.Event()
+        self.numVerificationsToBePerformed = 0
+        self.finishedCountingVerifications = dict()
 
         if wx.PyApp.IsMainLoopRunning():
             for i in range(self.numVerificationWorkerThreads):
@@ -414,10 +417,6 @@ class FoldersController(object):
                     target=self.UploadWorker, args=())
                 self.uploadWorkerThreads.append(thread)
                 thread.start()
-
-        self.finishedScanningForDatasetFolders = threading.Event()
-        self.numVerificationsToBePerformed = 0
-        self.finishedCountingVerifications = dict()
 
     def ClearStatusFlags(self):
         """
