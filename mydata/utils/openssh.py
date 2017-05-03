@@ -441,7 +441,8 @@ def MonitorProgress(foldersController, progressPollInterval, uploadModel,
             # If this file already has a partial upload in staging,
             # progress and speed estimates can be misleading.
             uploadModel.SetLatestTime(latestUpdateTime)
-            uploadModel.SetBytesUploaded(bytesUploaded)
+            if bytesUploaded > uploadModel.bytesUploaded:
+                uploadModel.SetBytesUploaded(bytesUploaded)
             progressCallback(bytesUploaded, fileSize)
         except requests.exceptions.RequestException:
             timer.cancel()

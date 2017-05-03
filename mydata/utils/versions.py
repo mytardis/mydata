@@ -5,6 +5,7 @@ the latest official version, an older version, or a newer version.
 from datetime import datetime
 import json
 import os
+import pickle
 
 import dateutil.parser
 import pytz
@@ -32,6 +33,7 @@ class MyDataVersions(object):
     def __init__(self):
         self._latestOfficialRelease = None
         self._latestReleases = None
+        self._tagsCache = None
 
     @property
     def latestOfficialRelease(self):
@@ -215,6 +217,76 @@ class MyDataVersions(object):
         else:
             isPreRelease = None
         return isPreRelease
+
+    @property
+    def tagsCachePath(self):
+        """
+        Responses from
+        https://api.github.com/repos/mytardis/mydata/git/refs/tags/[tag]
+        are cached to avoid throttling (only 60 requests are allowed
+        per hour from the same IP address).
+        """
+        assert SETTINGS.configPath
+        return os.path.join(
+            os.path.dirname(SETTINGS.configPath), "tags.pkl")
+
+    @property
+    def tagsCache(self):
+        """
+        We use a serialized dictionary to cache DataFile lookup results.
+        We'll use a separate cache file for each MyTardis server we connect to.
+        """
+        if not self._tagsCache:
+            if os.path.exists(self.tagsCachePath):
+                try:
+                    with open(self.tagsCachePath, 'rb') as cacheFile:
+                        self._tagsCache = pickle.load(cacheFile)
+                except:
+                    self._tagsCache = dict()
+            else:
+                self._tagsCache = dict()
+        return self._tagsCache
+
+    def SaveTagsCache(self):
+        """
+        Save tags cache to disk
+        """
+        with open(self.tagsCachePath, 'wb') as cacheFile:
+            pickle.dump(self._tagsCache, cacheFile)
+
+    def GetTag(self, tagName):
+        """
+        Gets the latest official release's tag from the GitHub API.
+        """
+        if tagName in self.tagsCache:
+            return self.tagsCache[tagName]
+        url = "%s/git/refs/tags/%s" % (GITHUB_API_BASE_URL, tagName)
+        logger.debug(url)
+        response = requests.get(url)
+        if response.status_code != 200:
+            HandleHttpError(response)
+        tag = response.json()
+        self.tagsCache[tagName] = tag
+        self.SaveTagsCache()
+        return tag
+
+    @property
+    def latestOfficialReleaseCommitHash(self):
+        """
+        Return the SHA-1 commit hash for the latest official release.
+        """
+        tagName = self.latestOfficialReleaseTagName
+        tag = self.GetTag(tagName)
+        return tag['object']['sha']
+
+    @property
+    def latestReleaseCommitHash(self):
+        """
+        Return the SHA-1 commit hash for the latest release.
+        """
+        tagName = self.latestReleaseTagName
+        tag = self.GetTag(tagName)
+        return tag['object']['sha']
 
 
 MYDATA_VERSIONS = MyDataVersions()

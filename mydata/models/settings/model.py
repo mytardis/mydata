@@ -296,7 +296,7 @@ class SettingsModel(object):
         parsed = urlparse.urlparse(self.general.myTardisUrl)
         return os.path.join(
             os.path.dirname(self.configPath),
-            "verified-files-%s-%s" %
+            "verified-files-%s-%s.pkl" %
             (parsed.scheme, parsed.netloc))
 
     @property
