@@ -29,9 +29,19 @@ def VersionCheck():
         else:
             from .. import LATEST_COMMIT as VERSION
         try:
+            if VERSION == MYDATA_VERSIONS.latestOfficialReleaseCommitHash:
+                logger.info(
+                    "The version you are running (%s) is the latest "
+                    "official release." % VERSION)
+                return
+            elif VERSION == MYDATA_VERSIONS.latestReleaseCommitHash:
+                logger.info(
+                    "The version you are running (%s) is the latest "
+                    "release." % VERSION)
+                return
             currentCommitDateTime = \
                 dateutil.parser.parse(LATEST_COMMIT_DATETIME)
-            if currentCommitDateTime <= \
+            if currentCommitDateTime < \
                     MYDATA_VERSIONS.latestOfficialReleaseDateTime:
                 # Latest official release is newer or equal to current version:
                 latest = MYDATA_VERSIONS.latestOfficialReleaseTagName
@@ -61,10 +71,6 @@ def VersionCheck():
                         None, "New MyData Version Available", latest, changes)
                     dlg.ShowModal()
                 wx.CallAfter(ShowUpdateDialog)
-            elif currentCommitDateTime == latestTime:
-                logger.info(
-                    "The version you are running (%s) is the latest "
-                    "%s (%s)." % (VERSION, releaseType, latest))
             else:
                 logger.info(
                     "The version you are running (%s) is newer than the "
