@@ -83,6 +83,7 @@ class ExperimentModel(object):
             url += "&group_folder_name=%s" \
                 % urllib.quote(groupFolderName.encode('utf-8'))
 
+        logger.debug(url)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         if response.status_code == 200:
             experimentsJson = response.json()
