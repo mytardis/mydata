@@ -4,13 +4,13 @@ New version alert dialog
 import sys
 import wx
 
+from ..media import MYDATA_ICONS
+from ..utils.versions import MYDATA_VERSIONS
+
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
 else:
     from wx import EmptyIcon
-
-from ..media import MYDATA_ICONS
-from ..utils.versions import MYDATA_VERSIONS
 
 UPDATE_URL = "https://github.com/mytardis/mydata/releases/latest"
 CONTACT_EMAIL = "store.star.help@monash.edu"
