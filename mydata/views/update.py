@@ -54,7 +54,7 @@ class NewVersionAlertDialog(wx.Dialog):
         newVersionAlertPanel = NewVersionAlertPanel(
             mainPanel, latestVersionTagName, latestVersionChanges)
         horizSizer.Add(
-            newVersionAlertPanel, flag=wx.EXPAND | wx.LEFT | wx.TOP | wx.RIGHT,
+            newVersionAlertPanel, flag=wx.EXPAND | wx.TOP | wx.RIGHT,
             border=10)
 
         horizSizer.Fit(mainPanel)
@@ -76,7 +76,7 @@ class IconPanel(wx.Panel):
     def __init__(self, parent):
         super(IconPanel, self).__init__(parent)
         iconAsBitmap = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
-        wx.StaticBitmap(self, bitmap=iconAsBitmap, size=wx.Size(32, 32))
+        wx.StaticBitmap(self, bitmap=iconAsBitmap, size=wx.Size(64, 64))
 
 
 class ContactPanel(wx.Panel):
