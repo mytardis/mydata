@@ -4,7 +4,6 @@ New version alert dialog
 import sys
 import wx
 
-from .. import __version__ as VERSION
 from ..media import MYDATA_ICONS
 from ..utils.versions import MYDATA_VERSIONS
 
@@ -106,6 +105,10 @@ class NewVersionAlertPanel(wx.Panel):
     New version alert panel
     """
     def __init__(self, parent, latestVersionTagName, latestVersionChanges):
+        if hasattr(sys, "frozen"):
+            from .. import __version__ as VERSION
+        else:
+            from .. import LATEST_COMMIT as VERSION
         super(NewVersionAlertPanel, self).__init__(parent)
         sizer = wx.FlexGridSizer(rows=5, cols=1, vgap=5, hgap=5)
         self.SetSizer(sizer)
