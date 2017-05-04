@@ -4,6 +4,11 @@ New version alert dialog
 import sys
 import wx
 
+if 'phoenix' in wx.PlatformInfo:
+    from wx import Icon as EmptyIcon
+else:
+    from wx import EmptyIcon
+
 from ..media import MYDATA_ICONS
 from ..utils.versions import MYDATA_VERSIONS
 
@@ -20,6 +25,11 @@ class NewVersionAlertDialog(wx.Dialog):
 
         super(NewVersionAlertDialog, self).__init__(
             parent, wx.ID_ANY, title, size=(680, 290), pos=(200, 150))
+
+        bmp = MYDATA_ICONS.GetIcon("favicon", vendor="MyTardis")
+        icon = EmptyIcon()
+        icon.CopyFromBitmap(bmp)
+        self.SetIcon(icon)
 
         # Panels placed vertically
         verticalSizer = wx.BoxSizer(wx.VERTICAL)
