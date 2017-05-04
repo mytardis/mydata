@@ -29,12 +29,14 @@ def VersionCheck():
         else:
             from .. import LATEST_COMMIT as VERSION
         try:
-            if VERSION == MYDATA_VERSIONS.latestOfficialReleaseCommitHash:
+            if VERSION == MYDATA_VERSIONS.latestOfficialReleaseCommitHash or \
+                    VERSION == MYDATA_VERSIONS.latestOfficialReleaseTagName:
                 logger.info(
                     "The version you are running (%s) is the latest "
                     "official release." % VERSION)
                 return
-            elif VERSION == MYDATA_VERSIONS.latestReleaseCommitHash:
+            elif VERSION == MYDATA_VERSIONS.latestReleaseCommitHash or \
+                    VERSION == MYDATA_VERSIONS.latestReleaseTagName:
                 logger.info(
                     "The version you are running (%s) is the latest "
                     "release." % VERSION)
