@@ -116,8 +116,8 @@ class MyDataFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
 
-        self.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
-        self.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_ICONIZE, self.OnMinimize)
 
     def AddDataViews(self):
         """
@@ -269,7 +269,7 @@ class MyDataFrame(wx.Frame):
             sys.stderr.write("\n%s\n" % msg)
         event.Skip()
 
-    def OnCloseFrame(self, event):
+    def OnClose(self, event):
         """
         Don't actually close it, just hide it.
         """
@@ -278,14 +278,14 @@ class MyDataFrame(wx.Frame):
             self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.Hide()
 
-    def OnMinimizeFrame(self, event):
+    def OnMinimize(self, event):
         """
         When minimizing, hide the frame so it "minimizes to tray"
         """
         if event.Iconized():
-            self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
-            self.frame.Hide()
+            self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
+            self.Hide()
         else:
-            self.frame.Show(True)
-            self.frame.Raise()
+            self.Show(True)
+            self.Raise()
         # event.Skip()
