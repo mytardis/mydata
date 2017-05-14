@@ -64,7 +64,7 @@ install:
 
   - "%CMD_IN_ENV% pip install codacy-coverage"
 
-  - "%CMD_IN_ENV% pip install --pre -f https://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix"
+  - "%CMD_IN_ENV% pip install --pre wxPython"
 
   - "git submodule update --init --recursive"
 
