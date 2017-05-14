@@ -444,6 +444,7 @@ class FoldersController(object):
         earlier in tests where we want to ensure that the status flags are
         set (or reset) before we test canceling the scans and uploads.
         """
+        FLAGS.shouldAbort = False
         self.started = True
         self.canceled = False
         self.failed = False
