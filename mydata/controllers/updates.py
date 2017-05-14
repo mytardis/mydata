@@ -12,6 +12,7 @@ import wx
 from ..utils.versions import MYDATA_VERSIONS
 from ..logs import logger
 from .. import LATEST_COMMIT_DATETIME
+from ..threads.locks import LOCKS
 from ..views.update import NewVersionAlertDialog
 
 
@@ -72,10 +73,17 @@ def VersionCheck():
                     """
                     Show new version alert dialog
                     """
-                    dlg = NewVersionAlertDialog(
-                        None, "New MyData Version Available", latest, changes)
-                    dlg.ShowModal()
-                wx.CallAfter(ShowUpdateDialog)
+                    if LOCKS.displayModalDialog.acquire(False):
+                        dlg = NewVersionAlertDialog(
+                            None, "New MyData Version Available",
+                            latest, changes)
+                        dlg.ShowModal()
+                        LOCKS.displayModalDialog.release()
+                    else:
+                        sys.stderr.write(
+                            "Not displaying new version alert, because "
+                            "another modal dialog is already being shown.\n")
+                    wx.CallAfter(ShowUpdateDialog)
             else:
                 logger.info(
                     "The version you are running (%s) is newer than the "

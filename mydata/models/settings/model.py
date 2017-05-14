@@ -7,7 +7,7 @@ import pickle
 import traceback
 import urlparse
 
-from ...constants import APPNAME, APPAUTHOR
+from ...constants import APPNAME
 from ...logs import logger
 from ...threads.locks import LOCKS
 from ...utils import CreateConfigPathIfNecessary
@@ -344,7 +344,7 @@ class SettingsModel(object):
         "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
         """
         if not self._configPath:
-            appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
+            appdirPath = CreateConfigPathIfNecessary()
             self._configPath = os.path.join(appdirPath, APPNAME + '.cfg')
         return self._configPath
 

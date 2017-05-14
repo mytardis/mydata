@@ -19,4 +19,8 @@ class ThreadingLocks(object):
         self.updateCacheLock = threading.Lock()
         self.closeCacheLock = threading.Lock()
 
+        # Display modal dialog lock:
+        self.displayModalDialog = threading.Lock()
+
+
 LOCKS = ThreadingLocks()

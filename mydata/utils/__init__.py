@@ -2,6 +2,7 @@
 """
 Miscellaneous utility functions.
 """
+import distutils.spawn
 import os
 import pkgutil
 import sys
@@ -15,7 +16,9 @@ import psutil
 import requests
 import wx
 
+from ..constants import APPNAME, APPAUTHOR
 from ..logs import logger
+from ..threads.locks import LOCKS
 
 
 def PidIsRunning(pid):
@@ -201,15 +204,7 @@ def HandleGenericErrorWithDialog(err):
             "window instead.\n" \
             "\n" \
             "See: https://bugs.python.org/issue3905"
-
-        def ShowErrorDialog(message):
-            """
-            Needs to run in the main thread.
-            """
-            dlg = wx.MessageDialog(None, message, "MyData",
-                                   wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-        wx.CallAfter(ShowErrorDialog, message)
+        wx.CallAfter(DisplayError, message)
     else:
         raise err
 
@@ -225,7 +220,7 @@ def OpenUrl(url, new=0, autoraise=True):
         assert response.status_code == 200
 
 
-def CreateConfigPathIfNecessary(appname, appauthor):
+def CreateConfigPathIfNecessary():
     """
     Create path for saving MyData.cfg if it doesn't already exist.
     """
@@ -234,11 +229,11 @@ def CreateConfigPathIfNecessary(appname, appauthor):
         # privileges, so we can ensure that the appdirPath below,
         # i.e. C:\ProgramData\Monash University\MyData\ is
         # writeable by all users.
-        appdirPath = appdirs.site_config_dir(appname, appauthor)
+        appdirPath = appdirs.site_config_dir(APPNAME, APPAUTHOR)
     else:
         # On Mac, we currently use a DMG drag-and-drop installation, so
         # we can't create a system-wide MyData.cfg writeable by all users.
-        appdirPath = appdirs.user_data_dir(appname, appauthor)
+        appdirPath = appdirs.user_data_dir(APPNAME, APPAUTHOR)
     if not os.path.exists(appdirPath):
         os.makedirs(appdirPath)
     return appdirPath
@@ -259,7 +254,7 @@ def InitializeTrustedCertsPath():
             os.path.join(certPath, 'cacert.pem')
 
 
-def CheckIfSystemTrayFunctionalityMissing(appname):
+def CheckIfSystemTrayFunctionalityMissing():
     """
     Recent Linux desktop envrionments have removed the system tray icon
     functionality and replaced it with an indicator panel.  wxPython doesn't
@@ -279,8 +274,51 @@ def CheckIfSystemTrayFunctionalityMissing(appname):
                 "indicator-systemtray-unity package: " \
                 "https://github.com/GGleb/" \
                 "indicator-systemtray-unity"
-            wx.MessageBox(message, appname, wx.ICON_ERROR)
+            DisplayError(message)
             sys.exit(1)
+    elif distutils.spawn.find_executable("gnome-shell"):
+        # We are running GNOME Shell which has removed the
+        # system tray funcionality found in GNOME v2.
+        # For now, we'll assume a RHEL / CentOS system with rpm:
+        proc = subprocess.Popen(['rpm', '-q',
+                                 'gnome-shell-extension-top-icons'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        _ = proc.communicate()
+        if proc.returncode != 0:
+            message = "Running MyData in GNOME Shell " \
+                "requires the gnome-shell-extension-top-icons package."
+            DisplayError(message)
+            sys.exit(1)
+        proc = subprocess.Popen(
+            ['gsettings', 'get', 'org.gnome.shell', 'enabled-extensions'],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        stdout, _ = proc.communicate()
+        if 'top-icons' not in stdout:
+            sys.stderr.write("Enabling the TopIcons GNOME shell extension\n")
+            proc = subprocess.Popen(
+                ['gnome-shell-extension-tool', '-e',
+                 'top-icons@gnome-shell-extensions.gcampax.github.com'],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            _ = proc.communicate()
+            if proc.returncode != 0:
+                message = "Failed to enable the TopIcons GNOME shell extension."
+                DisplayError(message)
+                sys.exit(1)
+    else:
+        logger.info(
+            "Assuming desktop environment supports system tray icons.\n")
+
+
+def DisplayError(message):
+    """
+    Display a modal error dialog
+    """
+    if LOCKS.displayModalDialog.acquire(False):
+        wx.MessageBox(message, APPNAME, wx.ICON_ERROR)
+        LOCKS.displayModalDialog.release()
+    else:
+        sys.stderr.write("%s\n" % message)
 
 
 def MyDataInstallLocation():
