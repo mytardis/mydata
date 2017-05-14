@@ -138,6 +138,9 @@ class FoldersModel(MyDataDataViewModel):
         """
         super(FoldersModel, self).AddRow(folderModel)
 
+        if FLAGS.shouldAbort:
+            return
+
         startDataUploadsForFolderEvent = \
             MYDATA_EVENTS.StartUploadsForFolderEvent(
                 folderModel=folderModel)

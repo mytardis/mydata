@@ -647,8 +647,7 @@ def StartDataUploadsForFolder(event):
     """
     Start the data uploads.
     """
-    app = wx.GetApp()
-    if hasattr(app, "ShouldAbort") and app.ShouldAbort():
+    if FLAGS.shouldAbort:
         return
 
     def StartDataUploadsForFolderWorker():

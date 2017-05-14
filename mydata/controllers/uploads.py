@@ -23,6 +23,7 @@ from ..models.settings.miscellaneous import MiscellaneousSettingsModel
 from ..models.upload import UploadModel
 from ..models.upload import UploadStatus
 from ..models.datafile import DataFileModel
+from ..threads.flags import FLAGS
 from ..utils import SafeStr
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import Unauthorized
@@ -342,6 +343,8 @@ class UploadDatafileRunnable(object):
             username = uploadToStagingRequest.scpUsername
         except StorageBoxAttributeNotFound as err:
             self.uploadModel.traceback = traceback.format_exc()
+            self.foldersController.failed = True
+            FLAGS.shouldAbort = True
             PostEvent(
                 self.foldersController.ShutdownUploadsEvent(
                     failed=True))
