@@ -87,7 +87,7 @@ class DatasetModel(object):
             myTardisUrl = SETTINGS.general.myTardisUrl
             experimentUri = experiment.resourceUri if experiment else None
             datasetJson = {
-                "instrument": SETTINGS.instrument.resourceUri,
+                "instrument": SETTINGS.general.instrument.resourceUri,
                 "description": description,
                 "experiments": [experimentUri],
                 "immutable": SETTINGS.miscellaneous.immutableDatasets}

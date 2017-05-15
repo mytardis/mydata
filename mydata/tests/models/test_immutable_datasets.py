@@ -28,7 +28,7 @@ class ImmutableDatasetsTester(MyDataTester):
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
 
-        owner = SETTINGS.defaultOwner
+        owner = SETTINGS.general.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"

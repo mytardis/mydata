@@ -285,7 +285,7 @@ class ExperimentModel(object):
                 message += " and group folder \"%s\"" % groupFolderName
             logger.debug(message)
 
-            facilityManagersGroup = SETTINGS.facility.managerGroup
+            facilityManagersGroup = SETTINGS.general.facility.managerGroup
             ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                     facilityManagersGroup)
             # Avoid creating a duplicate ObjectACL if the user folder's

@@ -133,35 +133,6 @@ class SettingsModel(object):
             raise KeyError(key)
 
     @property
-    def facility(self):
-        """
-        Return the FacilityModel for the specified facility name
-        """
-        return self.general.facility
-
-    @property
-    def instrument(self):
-        """
-        Return the InstrumentModel for the specified instrument name
-        """
-        return self.general.instrument
-
-    @property
-    def defaultOwner(self):
-        """
-        Get user model for the specified MyTardis username
-        """
-        return self.general.defaultOwner
-
-    @defaultOwner.setter
-    def defaultOwner(self, defaultOwner):
-        """
-        Set default user model for assigning experiment ACLs.
-        Only used by tests.
-        """
-        self.general.defaultOwner = defaultOwner
-
-    @property
     def uploaderModel(self):
         """
         Get the uploader (MyData instance) model
@@ -271,9 +242,6 @@ class SettingsModel(object):
         self.filters.SetDefaults()
         self.advanced.SetDefaults()
         self.miscellaneous.SetDefaults()
-        self._defaultOwner = None
-        self._instrument = None
-        self._facility = None
 
     @property
     def defaultHeaders(self):
