@@ -30,6 +30,7 @@ from ..utils.exceptions import Unauthorized
 from ..utils.exceptions import InternalServerError
 from ..utils.exceptions import SshException
 from ..utils.exceptions import StorageBoxAttributeNotFound
+from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..logs import logger
 
@@ -310,7 +311,7 @@ class UploadDatafileRunnable(object):
                     "multiple MyData instances could be trying to create " \
                     "the same DataFile records concurrently."
             PostEvent(
-                self.foldersController.ShowMessageDialogEvent(
+                MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData", message=message, icon=wx.ICON_ERROR))
 
     def UploadFileToStaging(self, dataFileDict):
@@ -351,7 +352,7 @@ class UploadDatafileRunnable(object):
             message = SafeStr(err)
             logger.error(message)
             PostEvent(
-                self.foldersController.ShowMessageDialogEvent(
+                MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData", message=message, icon=wx.ICON_ERROR))
             return
         privateKeyFilePath = sshKeyPair.privateKeyFilePath

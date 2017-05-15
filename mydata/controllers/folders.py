@@ -18,6 +18,7 @@ import wx.dataview
 
 import mydata.events as mde
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
+from ..events import MYDATA_EVENTS
 from ..events.stop import CheckIfShouldAbort
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
@@ -26,7 +27,6 @@ from ..logs import logger
 from ..utils import EndBusyCursorIfRequired
 from ..utils.exceptions import HttpException
 from ..utils.exceptions import InternalServerError
-from ..utils.messages import ShowMessageDialog
 from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
 from .uploads import UploadMethod
@@ -80,8 +80,6 @@ class FoldersController(object):
         self.uploadWorkerThreads = []
 
         # pylint: disable=invalid-name
-        self.ShowMessageDialogEvent, self.EVT_SHOW_MESSAGE_DIALOG = \
-            mde.NewEvent(self.notifyWindow, ShowMessageDialog)
         self.ShutdownUploadsEvent, self.EVT_SHUTDOWN_UPLOADS = \
             mde.NewEvent(self.notifyWindow,
                          self.ShutDownUploadThreads)
@@ -293,7 +291,7 @@ class FoldersController(object):
             # MyData app could be missing from MyTardis server.
             logger.error(traceback.format_exc())
             mde.PostEvent(
-                self.ShowMessageDialogEvent(
+                MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData",
                     message=str(err),
                     icon=wx.ICON_ERROR))
@@ -319,7 +317,7 @@ class FoldersController(object):
         if message:
             logger.warning(message)
             mde.PostEvent(
-                self.ShowMessageDialogEvent(
+                MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData",
                     message=message,
                     icon=wx.ICON_WARNING))
@@ -435,7 +433,7 @@ class FoldersController(object):
                         message = ("%s\n\n%s\n\n%s"
                                    % (error, err.response.request.url, info))
                         mde.PostEvent(
-                            self.ShowMessageDialogEvent(
+                            MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
                     elif isinstance(err, HttpException) and not message:
@@ -451,7 +449,7 @@ class FoldersController(object):
                         self.failed = True
                         FLAGS.shouldAbort = True
                         mde.PostEvent(
-                            self.ShowMessageDialogEvent(
+                            MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
                         mde.PostEvent(self.ShutdownUploadsEvent(failed=True))
@@ -465,7 +463,7 @@ class FoldersController(object):
                 except Exception as err:
                     logger.error(traceback.format_exc())
                     mde.PostEvent(
-                        self.ShowMessageDialogEvent(
+                        MYDATA_EVENTS.ShowMessageDialogEvent(
                             title="MyData",
                             message=str(err),
                             icon=wx.ICON_ERROR))

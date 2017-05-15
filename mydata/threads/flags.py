@@ -9,18 +9,20 @@ class ThreadSafeFlags(object):
     Thread-safe flags
     """
     def __init__(self):
-        self._scanningFolders = threading.Event()
-        self._performingLookupsAndUploads = threading.Event()
-        self._testRunRunning = threading.Event()
-        self._shouldAbort = threading.Event()
-        self._showingErrorDialog = threading.Event()
+        self._flags = dict()
+        self._flags['scanningFolders'] = threading.Event()
+        self._flags['performingLookupsAndUploads'] = threading.Event()
+        self._flags['testRunRunning'] = threading.Event()
+        self._flags['shouldAbort'] = threading.Event()
+        self._flags['showingErrorDialog'] = threading.Event()
+        self._flags['showingConfirmationDialog'] = threading.Event()
 
     @property
     def scanningFolders(self):
         """
         Returns True if MyData is currently scanning data folders.
         """
-        return self._scanningFolders.isSet()
+        return self._flags['scanningFolders'].isSet()
 
     @scanningFolders.setter
     def scanningFolders(self, value):
@@ -28,9 +30,9 @@ class ThreadSafeFlags(object):
         Records whether MyData is currently scanning data folders.
         """
         if value:
-            self._scanningFolders.set()
+            self._flags['scanningFolders'].set()
         else:
-            self._scanningFolders.clear()
+            self._flags['scanningFolders'].clear()
 
     @property
     def performingLookupsAndUploads(self):
@@ -39,7 +41,7 @@ class ThreadSafeFlags(object):
         datafile lookups (verifications) and uploading
         datafiles.
         """
-        return self._performingLookupsAndUploads.isSet()
+        return self._flags['performingLookupsAndUploads'].isSet()
 
     @performingLookupsAndUploads.setter
     def performingLookupsAndUploads(self, value):
@@ -49,9 +51,9 @@ class ThreadSafeFlags(object):
         datafiles.
         """
         if value:
-            self._performingLookupsAndUploads.set()
+            self._flags['performingLookupsAndUploads'].set()
         else:
-            self._performingLookupsAndUploads.clear()
+            self._flags['performingLookupsAndUploads'].clear()
 
     @property
     def testRunRunning(self):
@@ -61,7 +63,7 @@ class ThreadSafeFlags(object):
         be aborted.  If not, we need to be careful to avoid
         aborting a real uploads run.
         """
-        return self._testRunRunning.isSet()
+        return self._flags['testRunRunning'].isSet()
 
     @testRunRunning.setter
     def testRunRunning(self, value):
@@ -69,9 +71,9 @@ class ThreadSafeFlags(object):
         Records whether MyData is currently performing a test run.
         """
         if value:
-            self._testRunRunning.set()
+            self._flags['testRunRunning'].set()
         else:
-            self._testRunRunning.clear()
+            self._flags['testRunRunning'].clear()
 
     @property
     def shouldAbort(self):
@@ -79,7 +81,7 @@ class ThreadSafeFlags(object):
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
         """
-        return self._shouldAbort.isSet()
+        return self._flags['shouldAbort'].isSet()
 
     @shouldAbort.setter
     def shouldAbort(self, shouldAbort):
@@ -88,16 +90,16 @@ class ThreadSafeFlags(object):
         datafile lookups (verifications) and/or uploads.
         """
         if shouldAbort:
-            self._shouldAbort.set()
+            self._flags['shouldAbort'].set()
         else:
-            self._shouldAbort.clear()
+            self._flags['shouldAbort'].clear()
 
     @property
     def showingErrorDialog(self):
         """
         Returns True if an error dialog is currently being displayed.
         """
-        return self._showingErrorDialog.isSet()
+        return self._flags['showingErrorDialog'].isSet()
 
     @showingErrorDialog.setter
     def showingErrorDialog(self, showingErrorDialog):
@@ -105,8 +107,25 @@ class ThreadSafeFlags(object):
         Set this to True when displaying an error dialog.
         """
         if showingErrorDialog:
-            self._showingErrorDialog.set()
+            self._flags['showingErrorDialog'].set()
         else:
-            self._showingErrorDialog.clear()
+            self._flags['showingErrorDialog'].clear()
+
+    @property
+    def showingConfirmationDialog(self):
+        """
+        Returns True if a confirmation dialog is currently being displayed.
+        """
+        return self._flags['showingConfirmationDialog'].isSet()
+
+    @showingConfirmationDialog.setter
+    def showingConfirmationDialog(self, showingConfirmationDialog):
+        """
+        Set this to True when displaying a confirmation dialog.
+        """
+        if showingConfirmationDialog:
+            self._flags['showingConfirmationDialog'].set()
+        else:
+            self._flags['showingConfirmationDialog'].clear()
 
 FLAGS = ThreadSafeFlags()

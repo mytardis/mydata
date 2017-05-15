@@ -19,6 +19,7 @@ from ..utils.exceptions import UserAbortedSettingsValidation
 from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..views.messages import ShowMessageDialog
 from ..threads.flags import FLAGS
 from ..logs import logger
 
@@ -127,6 +128,8 @@ class MyDataEvents(object):
         self.EVT_SETTINGS_VALIDATION_COMPLETE = None
         self.StartUploadsForFolderEvent = None
         self.EVT_START_UPLOADS_FOR_FOLDER = None
+        self.ShowMessageDialogEvent = None
+        self.EVT_SHOW_MESSAGE_DIALOG = None
 
     def InitializeWithNotifyWindow(self, notifyWindow):
         """
@@ -165,6 +168,9 @@ class MyDataEvents(object):
         self.StartUploadsForFolderEvent, \
             self.EVT_START_UPLOADS_FOR_FOLDER = \
             NewEvent(notifyWindow, StartDataUploadsForFolder)
+        self.ShowMessageDialogEvent, \
+            self.EVT_SHOW_MESSAGE_DIALOG = \
+            NewEvent(notifyWindow, ShowMessageDialog)
 
     def GetNotifyWindow(self):
         """

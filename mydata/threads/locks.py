@@ -25,4 +25,7 @@ class ThreadingLocks(object):
         # Update last error message lock:
         self.updateLastErrorMessage = threading.Lock()
 
+        # Update last confirmation question lock:
+        self.updateLastConfirmationQuestion = threading.Lock()
+
 LOCKS = ThreadingLocks()

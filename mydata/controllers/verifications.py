@@ -32,6 +32,7 @@ from ..models.datafile import DataFileModel
 from ..threads.locks import LOCKS
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
+from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..logs import logger
 from .uploads import UploadMethod
@@ -46,7 +47,6 @@ class VerifyDatafileRunnable(object):
     verified, and if not, whether they have been completely or
     partially uploaded.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, foldersController, foldersModel, folderModel,
                  dataFileIndex, testRun=False):
         self.foldersController = foldersController
@@ -194,7 +194,7 @@ class VerifyDatafileRunnable(object):
                 "Please ask your MyTardis administrator to "
                 "upgrade the mytardis-app-mydata app to include "
                 "the /api/v1/mydata_replica/ API endpoint.")
-            PostEvent(self.foldersController.ShowMessageDialogEvent(
+            PostEvent(MYDATA_EVENTS.ShowMessageDialogEvent(
                 title="MyData", message=message, icon=wx.ICON_ERROR))
             return
         if bytesUploadedPreviously == int(existingDatafile.size):
