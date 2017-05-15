@@ -65,7 +65,6 @@ class OpenSSH(object):
     module which contains paths to SSH binaries and quoting methods used for
     running remote commands over SSH via subprocesses.
     """
-    # pylint: disable=too-many-instance-attributes
     def __init__(self):
         """
         Locate the SSH binaries on various systems. On Windows we bundle a

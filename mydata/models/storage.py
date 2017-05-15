@@ -5,7 +5,6 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 from ..utils import UnderscoreToCamelcase
 
 
-# pylint: disable=too-many-instance-attributes
 class StorageBox(object):
     """
     Model class for MyTardis API v1's StorageBoxResource.
