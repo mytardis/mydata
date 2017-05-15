@@ -15,6 +15,14 @@ LAST_ERROR_MESSAGE = None
 LAST_CONFIRMATION_QUESTION = None
 
 
+def ResetDialogSemaphores():
+    """
+    Reset dialog semaphores, so new dialogs can be displayed without them
+    being vetoed because MyData thinks a dialog is already being displayed.
+    """
+    FLAGS.showingErrorDialog = False
+    FLAGS.showingConfirmationDialog = False
+
 def ShowMessageDialog(event):
     """
     Display a message dialog.
@@ -62,7 +70,7 @@ def ShowMessageDialog(event):
             and FLAGS.performingLookupsAndUploads:
         BeginBusyCursorIfRequired()
     if event.icon == wx.ICON_ERROR:
-        FLAGS.showingErrorDialog = False
+        ResetDialogSemaphores()
 
 
 def ShowConfirmationDialog(event):
@@ -101,7 +109,7 @@ def ShowConfirmationDialog(event):
     else:
         sys.stderr.write("%s\n" % event.question)
         result = wx.ID_LOWEST  # Anything except for wx.ID_YES and wx.ID_NO
-    FLAGS.showingConfirmationDialog = False
+    ResetDialogSemaphores()
 
     if result == wx.ID_YES:
         if hasattr(event, "onYes"):
