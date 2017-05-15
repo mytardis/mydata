@@ -13,7 +13,7 @@ class ThreadSafeFlags(object):
         self._performingLookupsAndUploads = threading.Event()
         self._testRunRunning = threading.Event()
         self._shouldAbort = threading.Event()
-        self._isShowingErrorDialog = threading.Event()
+        self._showingErrorDialog = threading.Event()
 
     @property
     def scanningFolders(self):
@@ -93,20 +93,20 @@ class ThreadSafeFlags(object):
             self._shouldAbort.clear()
 
     @property
-    def isShowingErrorDialog(self):
+    def showingErrorDialog(self):
         """
         Returns True if an error dialog is currently being displayed.
         """
-        return self._isShowingErrorDialog.isSet()
+        return self._showingErrorDialog.isSet()
 
-    @isShowingErrorDialog.setter
-    def isShowingErrorDialog(self, isShowingErrorDialog):
+    @showingErrorDialog.setter
+    def showingErrorDialog(self, showingErrorDialog):
         """
         Set this to True when displaying an error dialog.
         """
-        if isShowingErrorDialog:
-            self._isShowingErrorDialog.set()
+        if showingErrorDialog:
+            self._showingErrorDialog.set()
         else:
-            self._isShowingErrorDialog.clear()
+            self._showingErrorDialog.clear()
 
 FLAGS = ThreadSafeFlags()

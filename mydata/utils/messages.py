@@ -25,7 +25,7 @@ def ShowMessageDialog(event):
     In this case, we check if we already showed an error dialog with
     the same message.
     """
-    if FLAGS.isShowingErrorDialog:
+    if FLAGS.showingErrorDialog:
         logger.debug("Refusing to show message dialog for message "
                      "\"%s\" because we are already showing an error "
                      "dialog." % event.message)
