@@ -17,6 +17,7 @@ import wx.lib.newevent
 import wx.dataview
 
 import mydata.events as mde
+import mydata.views.messages
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events import MYDATA_EVENTS
 from ..events.stop import CheckIfShouldAbort
@@ -255,6 +256,8 @@ class FoldersController(object):
         """
         # pylint: disable=too-many-branches
         self.InitializeStatusFlags()
+        mydata.views.messages.LAST_ERROR_MESSAGE = None
+        mydata.views.messages.LAST_CONFIRMATION_QUESTION = None
         self.verificationsModel.DeleteAllRows()
         self.uploadsModel.DeleteAllRows()
         self.uploadsModel.SetStartTime(datetime.datetime.now())
@@ -590,7 +593,7 @@ class FoldersController(object):
                 message = "Looked up %d of %d files on server." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
-            wx.GetApp().frame.SetStatusMessage(message)
+            wx.CallAfter(wx.GetApp().frame.SetStatusMessage, message)
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
@@ -642,13 +645,13 @@ class FoldersController(object):
                     FLAGS.testRunFrame.saveButton.Enable()
             logger.info(message)
             if hasattr(app, "frame"):
-                app.frame.SetStatusMessage(message)
+                app.frame.SetStatusMessage(message, force=True)
             self.SetShuttingDown(False)
             return
         message = "Shutting down upload threads..."
         logger.info(message)
         if hasattr(app, "frame"):
-            app.frame.SetStatusMessage(message)
+            app.frame.SetStatusMessage(message, force=True)
         if hasattr(event, "failed") and event.failed:
             self.failed = True
             self.uploadsModel.CancelRemaining()
@@ -711,7 +714,7 @@ class FoldersController(object):
                 "completed successfully."
         logger.info(message)
         if hasattr(app, "frame"):
-            app.frame.SetStatusMessage(message)
+            app.frame.SetStatusMessage(message, force=True)
         if FLAGS.testRunRunning:
             logger.testrun(message)
 
@@ -721,6 +724,7 @@ class FoldersController(object):
             if FLAGS.testRunRunning:
                 app.testRunFrame.saveButton.Enable()
         FLAGS.performingLookupsAndUploads = False
+        FLAGS.scanningFolders = False
         self.SetShuttingDown(False)
         FLAGS.testRunRunning = False
 

@@ -195,6 +195,8 @@ def StartScansAndUploads(
             numUserOrGroupFoldersScanned,
             UsersModel.GetNumUserOrGroupFolders(),
             SETTINGS.advanced.userOrGroupString)
+        if FLAGS.shouldAbort or not FLAGS.scanningFolders:
+            return
         app.frame.SetStatusMessage(message)
         if numUserOrGroupFoldersScanned == \
                 UsersModel.GetNumUserOrGroupFolders():

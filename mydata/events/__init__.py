@@ -20,6 +20,7 @@ from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..views.messages import ShowMessageDialog
+from ..views.messages import ShowConfirmationDialog
 from ..threads.flags import FLAGS
 from ..logs import logger
 
@@ -130,6 +131,8 @@ class MyDataEvents(object):
         self.EVT_START_UPLOADS_FOR_FOLDER = None
         self.ShowMessageDialogEvent = None
         self.EVT_SHOW_MESSAGE_DIALOG = None
+        self.ShowConfirmationDialogEvent = None
+        self.EVT_SHOW_CONFIRMATION_DIALOG = None
 
     def InitializeWithNotifyWindow(self, notifyWindow):
         """
@@ -171,6 +174,9 @@ class MyDataEvents(object):
         self.ShowMessageDialogEvent, \
             self.EVT_SHOW_MESSAGE_DIALOG = \
             NewEvent(notifyWindow, ShowMessageDialog)
+        self.ShowConfirmationDialogEvent, \
+            self.EVT_SHOW_CONFIRMATION_DIALOG = \
+            NewEvent(notifyWindow, ShowConfirmationDialog)
 
     def GetNotifyWindow(self):
         """
@@ -653,7 +659,7 @@ def StartDataUploadsForFolder(event):
     """
     Start the data uploads.
     """
-    if FLAGS.shouldAbort:
+    if FLAGS.shouldAbort or not FLAGS.scanningFolders:
         return
 
     def StartDataUploadsForFolderWorker():
@@ -664,6 +670,8 @@ def StartDataUploadsForFolder(event):
                      % threading.current_thread().name)
         logger.debug("StartDataUploadsForFolderWorker")
         wx.CallAfter(BeginBusyCursorIfRequired)
+        if FLAGS.shouldAbort or not FLAGS.scanningFolders:
+            return
         message = "Checking for data files on MyTardis and uploading " \
             "if necessary for folder: %s" % event.folderModel.folderName
         logger.info(message)
