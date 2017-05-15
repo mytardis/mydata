@@ -4,6 +4,7 @@ mydata/views/mydata.py
 Main window for MyData.
 """
 import sys
+import threading
 import traceback
 
 import wx
@@ -11,6 +12,7 @@ import wx
 from ..constants import APPNAME
 from ..logs import logger
 from ..media import MYDATA_ICONS
+from ..threads.flags import FLAGS
 from ..utils import OpenUrl
 from ..events.docs import OnHelp
 from ..events.docs import OnWalkthrough
@@ -148,10 +150,13 @@ class MyDataFrame(wx.Frame):
             self.tabbedView, DATAVIEW_MODELS['tasks'])
         self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
 
-    def SetStatusMessage(self, msg):
+    def SetStatusMessage(self, msg, force=False):
         """
         Update status bar's message.
         """
+        assert threading.current_thread().name == "MainThread"
+        if FLAGS.shouldAbort and not force:
+            return
         if sys.platform.startswith("win"):
             # On Windows, a tab can be used to center status text,
             # which look similar to the old EnhancedStatusBar.
