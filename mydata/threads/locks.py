@@ -22,5 +22,7 @@ class ThreadingLocks(object):
         # Display modal dialog lock:
         self.displayModalDialog = threading.Lock()
 
+        # Update last error message lock:
+        self.updateLastErrorMessage = threading.Lock()
 
 LOCKS = ThreadingLocks()

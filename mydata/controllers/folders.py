@@ -23,10 +23,10 @@ from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
 from ..models.dataset import DatasetModel
 from ..logs import logger
-from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..utils.exceptions import HttpException
 from ..utils.exceptions import InternalServerError
+from ..utils.messages import ShowMessageDialog
 from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
 from .uploads import UploadMethod
@@ -53,9 +53,6 @@ class FoldersController(object):
         self.uploadsModel = DATAVIEW_MODELS['uploads']
 
         self.shuttingDown = threading.Event()
-        self.showingErrorDialog = threading.Event()
-        self.lastErrorMessage = None
-        self.showingWarningDialog = threading.Event()
         self._canceled = threading.Event()
         self._failed = threading.Event()
         self._started = threading.Event()
@@ -65,7 +62,6 @@ class FoldersController(object):
         self.finishedCountingThreadingLock = threading.Lock()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
-        self.lastErrorMessageThreadingLock = threading.Lock()
         self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
@@ -85,7 +81,7 @@ class FoldersController(object):
 
         # pylint: disable=invalid-name
         self.ShowMessageDialogEvent, self.EVT_SHOW_MESSAGE_DIALOG = \
-            mde.NewEvent(self.notifyWindow, self.ShowMessageDialog)
+            mde.NewEvent(self.notifyWindow, ShowMessageDialog)
         self.ShutdownUploadsEvent, self.EVT_SHUTDOWN_UPLOADS = \
             mde.NewEvent(self.notifyWindow,
                          self.ShutDownUploadThreads)
@@ -207,77 +203,6 @@ class FoldersController(object):
         else:
             self.shuttingDown.clear()
 
-    def IsShowingErrorDialog(self):
-        """
-        Return True if MyData is showing an error dialog
-        """
-        return self.showingErrorDialog.isSet()
-
-    def SetShowingErrorDialog(self, showingErrorDialog=True):
-        """
-        Set to True if MyData is showing an error dialog
-        """
-        if showingErrorDialog:
-            self.showingErrorDialog.set()
-        else:
-            self.showingErrorDialog.clear()
-
-    def GetLastErrorMessage(self):
-        """
-        Return last error message
-        """
-        return self.lastErrorMessage
-
-    def SetLastErrorMessage(self, message):
-        """
-        Set last error message
-        """
-        self.lastErrorMessageThreadingLock.acquire()
-        self.lastErrorMessage = message
-        self.lastErrorMessageThreadingLock.release()
-
-    def ShowMessageDialog(self, event):
-        """
-        Display a message dialog.
-
-        Sometimes multiple threads can encounter the same exception
-        at around the same time.  The first thread's exception leads
-        to a modal error dialog, which blocks the events queue, so
-        the next thread's (identical) show message dialog event doesn't
-        get caught until after the first message dialog has been closed.
-        In this case, we check if we already showed an error dialog with
-        the same message.
-        """
-        if self.IsShowingErrorDialog():
-            logger.debug("Refusing to show message dialog for message "
-                         "\"%s\" because we are already showing an error "
-                         "dialog." % event.message)
-            return
-        elif event.message == self.GetLastErrorMessage():
-            logger.debug("Refusing to show message dialog for message "
-                         "\"%s\" because we already showed an error "
-                         "dialog with the same message." % event.message)
-            return
-        self.SetLastErrorMessage(event.message)
-        if event.icon == wx.ICON_ERROR:
-            self.SetShowingErrorDialog(True)
-        dlg = wx.MessageDialog(None, event.message, event.title,
-                               wx.OK | event.icon)
-        try:
-            wx.EndBusyCursor()
-            needToRestartBusyCursor = True
-        except:
-            needToRestartBusyCursor = False
-        if wx.PyApp.IsMainLoopRunning():
-            dlg.ShowModal()
-        else:
-            sys.stderr.write("%s\n" % event.message)
-        if needToRestartBusyCursor and not self.IsShuttingDown() \
-                and FLAGS.performingLookupsAndUploads:
-            BeginBusyCursorIfRequired()
-        if event.icon == wx.ICON_ERROR:
-            self.SetShowingErrorDialog(False)
-
     def UploadDatafile(self, event):
         """
         Called in response to DidntFindDatafileOnServerEvent or
@@ -356,8 +281,6 @@ class FoldersController(object):
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
         self.getOrCreateExpThreadingLock = threading.Lock()
-        self.lastErrorMessage = None
-        self.SetShowingErrorDialog(False)
 
         if sys.platform.startswith("linux"):
             StartErrandBoy()

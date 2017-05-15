@@ -13,6 +13,7 @@ class ThreadSafeFlags(object):
         self._performingLookupsAndUploads = threading.Event()
         self._testRunRunning = threading.Event()
         self._shouldAbort = threading.Event()
+        self._isShowingErrorDialog = threading.Event()
 
     @property
     def scanningFolders(self):
@@ -81,7 +82,7 @@ class ThreadSafeFlags(object):
         return self._shouldAbort.isSet()
 
     @shouldAbort.setter
-    def shouldAbort(self, shouldAbort=True):
+    def shouldAbort(self, shouldAbort):
         """
         The user has requested aborting the data folder scans and/or
         datafile lookups (verifications) and/or uploads.
@@ -90,5 +91,22 @@ class ThreadSafeFlags(object):
             self._shouldAbort.set()
         else:
             self._shouldAbort.clear()
+
+    @property
+    def isShowingErrorDialog(self):
+        """
+        Returns True if an error dialog is currently being displayed.
+        """
+        return self._isShowingErrorDialog.isSet()
+
+    @isShowingErrorDialog.setter
+    def isShowingErrorDialog(self, isShowingErrorDialog):
+        """
+        Set this to True when displaying an error dialog.
+        """
+        if isShowingErrorDialog:
+            self._isShowingErrorDialog.set()
+        else:
+            self._isShowingErrorDialog.clear()
 
 FLAGS = ThreadSafeFlags()
