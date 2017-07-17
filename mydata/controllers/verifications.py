@@ -87,7 +87,9 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.message = \
             "Looking for matching file on MyTardis server..."
         self.verificationModel.status = VerificationStatus.IN_PROGRESS
-        self.verificationsModel.MessageUpdated(self.verificationModel)
+        # Don't call MessageUpdated yet, because if this file is in the
+        # cache, we don't want to send too many GUI update requests per
+        # unit time.
 
         try:
             dataset = self.folderModel.datasetModel
@@ -101,9 +103,12 @@ class VerifyDatafileRunnable(object):
                     "Found datafile in verified-files cache."
                 self.verificationModel.status = \
                     VerificationStatus.FOUND_VERIFIED
-                self.verificationsModel.MessageUpdated(self.verificationModel)
-                self.HandleExistingVerifiedDatafile()
+                # Don't call MessageUpdated - avoid having too many GUI
+                # update requests per cache hit.
+                self.HandleExistingVerifiedDatafile(cacheHit=True)
                 return
+            else:
+                self.verificationsModel.MessageUpdated(self.verificationModel)
             existingDatafile = DataFileModel.GetDataFile(
                 dataset=dataset, filename=dataFileName,
                 directory=dataFileDirectory)
@@ -292,18 +297,20 @@ class VerifyDatafileRunnable(object):
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
 
-    def HandleExistingVerifiedDatafile(self):
+    def HandleExistingVerifiedDatafile(self, cacheHit=False):
         """
         Found existing verified file on server.
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
-                              dataFilePath.encode('utf8'))
-        if SETTINGS.miscellaneous.cacheDataFileLookups:
-            with LOCKS.updateCacheLock:
-                SETTINGS.verifiedDatafilesCache[cacheKey] = True
+        if not cacheHit:
+            cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
+                                  dataFilePath.encode('utf8'))
+            if SETTINGS.miscellaneous.cacheDataFileLookups:
+                with LOCKS.updateCacheLock:
+                    SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
-        self.foldersModel.FolderStatusUpdated(self.folderModel)
+        if not cacheHit:
+            self.foldersModel.FolderStatusUpdated(self.folderModel)
         self.verificationsModel.SetComplete(self.verificationModel)
         PostEvent(self.foldersController.FoundVerifiedDatafileEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
