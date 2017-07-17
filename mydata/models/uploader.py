@@ -262,7 +262,7 @@ class UploaderModel(object):
 
             "hostname": self.sysInfo['hostname'],
 
-            "instruments": [self.settings.instrument.resourceUri]
+            "instruments": [self.settings.general.instrument.resourceUri]
         }
 
         data = json.dumps(uploaderJson, indent=4)
