@@ -625,7 +625,8 @@ class FoldersController(object):
         self.SetShuttingDown(True)
         app = wx.GetApp()
         if SETTINGS.miscellaneous.cacheDataFileLookups:
-            SETTINGS.CloseVerifiedDatafilesCache()
+            threading.Thread(
+                target=SETTINGS.CloseVerifiedDatafilesCache).start()
         # Reset self.started so that scheduled tasks know that's OK to start
         # new scan-and-upload tasks:
         self.started = False
