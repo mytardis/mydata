@@ -24,6 +24,7 @@ from ..models.upload import UploadModel
 from ..models.upload import UploadStatus
 from ..models.datafile import DataFileModel
 from ..threads.flags import FLAGS
+from ..threads.locks import LOCKS
 from ..utils import SafeStr
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import Unauthorized
@@ -65,7 +66,6 @@ class UploadDatafileRunnable(object):
         self.verificationModel = verificationModel
         self.bytesUploadedPreviously = bytesUploadedPreviously
         self.mimeTypes = mimetypes.MimeTypes()
-        self.uploadsThreadingLock = threading.Lock()
 
     def Run(self):
         """
@@ -74,16 +74,15 @@ class UploadDatafileRunnable(object):
         """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
-        self.uploadsThreadingLock.acquire()
-        uploadDataViewId = self.uploadsModel.GetMaxDataViewId() + 1
-        self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
-                                       folderModel=self.folderModel,
-                                       dataFileIndex=self.dataFileIndex)
-        if self.verificationModel:
-            self.uploadModel.existingUnverifiedDatafile = \
-                self.verificationModel.existingUnverifiedDatafile
-        self.uploadsModel.AddRow(self.uploadModel)
-        self.uploadsThreadingLock.release()
+        with LOCKS.addUpload:
+            uploadDataViewId = self.uploadsModel.GetMaxDataViewId() + 1
+            self.uploadModel = UploadModel(dataViewId=uploadDataViewId,
+                                           folderModel=self.folderModel,
+                                           dataFileIndex=self.dataFileIndex)
+            if self.verificationModel:
+                self.uploadModel.existingUnverifiedDatafile = \
+                    self.verificationModel.existingUnverifiedDatafile
+            self.uploadsModel.AddRow(self.uploadModel)
         self.uploadModel.bytesUploadedPreviously = self.bytesUploadedPreviously
 
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)

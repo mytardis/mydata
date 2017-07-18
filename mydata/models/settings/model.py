@@ -144,11 +144,11 @@ class SettingsModel(object):
         if self._uploaderModel:
             return self._uploaderModel
         try:
-            LOCKS.createUploaderThreadingLock.acquire()
+            LOCKS.createUploader.acquire()
             self._uploaderModel = UploaderModel(self)
             return self._uploaderModel
         finally:
-            LOCKS.createUploaderThreadingLock.release()
+            LOCKS.createUploader.release()
 
     @uploaderModel.setter
     def uploaderModel(self, uploaderModel):

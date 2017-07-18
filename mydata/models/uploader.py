@@ -380,7 +380,7 @@ class UploaderModel(object):
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        with LOCKS.requestStagingAccessThreadLock:
+        with LOCKS.requestStagingAccess:
             try:
                 try:
                     self.UploadUploaderInfo()

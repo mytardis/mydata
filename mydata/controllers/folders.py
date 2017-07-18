@@ -30,6 +30,7 @@ from ..utils.exceptions import HttpException
 from ..utils.exceptions import InternalServerError
 from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
+from ..threads.locks import LOCKS
 from .uploads import UploadMethod
 from .uploads import UploadDatafileRunnable
 from .verifications import VerifyDatafileRunnable
@@ -60,15 +61,12 @@ class FoldersController(object):
         self._completed = threading.Event()
 
         self.finishedCountingVerifications = dict()
-        self.finishedCountingThreadingLock = threading.Lock()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
-        self.getOrCreateExpThreadingLock = threading.Lock()
         self.verifyDatafileRunnable = None
         self.uploadsQueue = None
         self.uploadDatafileRunnable = None
         self.numVerificationsToBePerformed = 0
-        self.numVerificationsToBePerformedLock = threading.Lock()
         self.uploadsAcknowledged = 0
         self.uploadMethod = UploadMethod.HTTP_POST
 
@@ -281,7 +279,6 @@ class FoldersController(object):
         self.uploadsQueue = Queue()
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
-        self.getOrCreateExpThreadingLock = threading.Lock()
 
         if sys.platform.startswith("linux"):
             StartErrandBoy()
@@ -397,14 +394,13 @@ class FoldersController(object):
         if CheckIfShouldAbort():
             return
         try:
-            self.finishedCountingThreadingLock.acquire()
-            self.finishedCountingVerifications[folderModel] = threading.Event()
-            self.finishedCountingThreadingLock.release()
+            with LOCKS.finishedCounting:
+                self.finishedCountingVerifications[folderModel] = \
+                    threading.Event()
             if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
-            self.numVerificationsToBePerformedLock.acquire()
-            self.numVerificationsToBePerformed += folderModel.GetNumFiles()
-            self.numVerificationsToBePerformedLock.release()
+            with LOCKS.numVerificationsToBePerformed:
+                self.numVerificationsToBePerformed += folderModel.GetNumFiles()
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " + folderModel.folderName)
@@ -412,9 +408,9 @@ class FoldersController(object):
                 return
             try:
                 try:
-                    self.getOrCreateExpThreadingLock.acquire()
-                    experimentModel = ExperimentModel\
-                        .GetOrCreateExperimentForFolder(folderModel)
+                    with LOCKS.getOrCreateExp:
+                        experimentModel = ExperimentModel\
+                            .GetOrCreateExperimentForFolder(folderModel)
                 except Exception as err:
                     if self.failed:
                         return
@@ -457,8 +453,6 @@ class FoldersController(object):
                                 icon=wx.ICON_ERROR))
                         mde.PostEvent(self.ShutdownUploadsEvent(failed=True))
                     return
-                finally:
-                    self.getOrCreateExpThreadingLock.release()
                 folderModel.experimentModel = experimentModel
                 try:
                     folderModel.datasetModel = DatasetModel\
@@ -487,9 +481,8 @@ class FoldersController(object):
                 return
             if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
-            self.finishedCountingThreadingLock.acquire()
-            self.finishedCountingVerifications[folderModel].set()
-            self.finishedCountingThreadingLock.release()
+            with LOCKS.finishedCounting:
+                self.finishedCountingVerifications[folderModel].set()
             if self.foldersModel.GetRowCount() == 0 or \
                     self.numVerificationsToBePerformed == 0:
                 # For the case of zero folders or zero files, we

@@ -18,7 +18,6 @@ class VerifyDatafileRunnable(object):
           Post FoundUnverifiedUnstagedEvent
 """
 import os
-import threading
 import traceback
 
 import wx
@@ -70,11 +69,7 @@ class VerifyDatafileRunnable(object):
         dataFileDirectory = \
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
-        fc = self.foldersController  # pylint: disable=invalid-name
-        if not hasattr(fc, "verificationsThreadingLock"):
-            fc.verificationsThreadingLock = threading.Lock()
-        fc.verificationsThreadingLock.acquire()
-        try:
+        with LOCKS.addVerification:
             verificationDataViewId = \
                 self.verificationsModel.GetMaxDataViewId() + 1
             self.verificationModel = \
@@ -82,8 +77,6 @@ class VerifyDatafileRunnable(object):
                                   folderModel=self.folderModel,
                                   dataFileIndex=self.dataFileIndex)
             self.verificationsModel.AddRow(self.verificationModel)
-        finally:
-            fc.verificationsThreadingLock.release()
         self.verificationModel.message = \
             "Looking for matching file on MyTardis server..."
         self.verificationModel.status = VerificationStatus.IN_PROGRESS
@@ -306,7 +299,7 @@ class VerifyDatafileRunnable(object):
             cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
                                   dataFilePath.encode('utf8'))
             if SETTINGS.miscellaneous.cacheDataFileLookups:
-                with LOCKS.updateCacheLock:
+                with LOCKS.updateCache:
                     SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         if not cacheHit:
