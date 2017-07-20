@@ -274,7 +274,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if not self._verifiedDatafilesCache:
-            with LOCKS.initializeCacheLock:
+            with LOCKS.initializeCache:
                 try:
                     if os.path.exists(self.verifiedDatafilesCachePath):
                         with open(self.verifiedDatafilesCachePath,
@@ -294,7 +294,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if self._verifiedDatafilesCache:
-            with LOCKS.closeCacheLock:
+            with LOCKS.closeCache:
                 try:
                     with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
