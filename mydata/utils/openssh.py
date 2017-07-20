@@ -28,6 +28,7 @@ import pkgutil
 import struct
 
 import psutil
+import wx
 
 from ..settings import SETTINGS
 from ..logs import logger
@@ -356,7 +357,7 @@ def SshServerIsReady(username, privateKeyFilePath,
 
 def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                host, port, remoteFilePath, progressCallback,
-               foldersController, uploadModel):
+               uploadModel):
     """
     Upload a file to staging using SCP.
 
@@ -371,17 +372,17 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         UploadFileFromWindows(filePath, fileSize, username,
                               privateKeyFilePath, host, port,
                               remoteFilePath, progressCallback,
-                              foldersController, uploadModel)
+                              uploadModel)
     else:
         UploadFileFromPosixSystem(filePath, fileSize, username,
                                   privateKeyFilePath, host, port,
                                   remoteFilePath, progressCallback,
-                                  foldersController, uploadModel)
+                                  uploadModel)
 
 
 def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               host, port, remoteFilePath, progressCallback,
-                              foldersController, uploadModel):
+                              uploadModel):
     """
     Upload file using SCP.
     """
@@ -428,7 +429,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if foldersController.canceled or uploadModel.canceled:
+    if wx.GetApp().foldersController.canceled or uploadModel.canceled:
         logger.debug("UploadFileFromPosixSystem: Aborting upload "
                      "for %s" % filePath)
         return
@@ -506,7 +507,7 @@ REMOTE_DIRS_CREATED = dict()
 
 def UploadFileFromWindows(filePath, fileSize, username,
                           privateKeyFilePath, host, port, remoteFilePath,
-                          progressCallback, foldersController, uploadModel):
+                          progressCallback, uploadModel):
     """
     Upload file using SCP.
     """
@@ -547,7 +548,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if foldersController.canceled or uploadModel.canceled:
+    if wx.GetApp().foldersController.canceled or uploadModel.canceled:
         logger.debug("UploadFileFromWindows: Aborting upload "
                      "for %s" % filePath)
         return

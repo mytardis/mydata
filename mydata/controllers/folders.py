@@ -236,11 +236,9 @@ class FoldersController(object):
             getattr(event, "bytesUploadedPreviously", None)
         verificationModel = getattr(event, "verificationModel", None)
         self.uploadDatafileRunnable[folderModel][dfi] = \
-            UploadDatafileRunnable(self, self.foldersModel, folderModel,
-                                   dfi, self.uploadsModel,
-                                   existingUnverifiedDatafile,
-                                   verificationModel,
-                                   bytesUploadedPreviously)
+            UploadDatafileRunnable(
+                folderModel, dfi, existingUnverifiedDatafile,
+                verificationModel, bytesUploadedPreviously)
         if wx.PyApp.IsMainLoopRunning():
             self.uploadsQueue.put(
                 self.uploadDatafileRunnable[folderModel][dfi])
@@ -766,8 +764,7 @@ class FoldersController(object):
             if self.IsShuttingDown():
                 return
             self.verifyDatafileRunnable[folderModel].append(
-                VerifyDatafileRunnable(
-                    self, self.foldersModel, folderModel, dfi))
+                VerifyDatafileRunnable(folderModel, dfi))
             if wx.PyApp.IsMainLoopRunning():
                 self.verificationsQueue\
                     .put(self.verifyDatafileRunnable[folderModel][dfi])
