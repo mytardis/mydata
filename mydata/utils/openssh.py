@@ -28,22 +28,18 @@ import pkgutil
 import struct
 
 import psutil
-import requests
 
 from ..settings import SETTINGS
 from ..logs import logger
-from ..models.datafile import DataFileModel
-from ..models.replica import ReplicaModel
 from ..models.upload import UploadStatus
 from ..utils.exceptions import SshException
 from ..utils.exceptions import ScpException
 from ..utils.exceptions import PrivateKeyDoesNotExist
-from ..utils.exceptions import DoesNotExist
-
-from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
+
+from .progress import MonitorProgress
 
 if sys.platform.startswith("win"):
     import win32process
@@ -383,59 +379,6 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                                   foldersController, uploadModel)
 
 
-def MonitorProgress(foldersController, progressPollInterval, uploadModel,
-                    fileSize, monitoringProgress, progressCallback):
-    """
-    Monitor progress via RESTful queries.
-    """
-    if foldersController.canceled or uploadModel.canceled or \
-            (uploadModel.status != UploadStatus.IN_PROGRESS and
-             uploadModel.status != UploadStatus.NOT_STARTED):
-        return
-
-    timer = threading.Timer(progressPollInterval, MonitorProgress,
-                            args=[foldersController, progressPollInterval,
-                                  uploadModel, fileSize, monitoringProgress,
-                                  progressCallback])
-    timer.start()
-    if uploadModel.status == UploadStatus.NOT_STARTED:
-        return
-    if monitoringProgress.isSet():
-        return
-    monitoringProgress.set()
-    if uploadModel.dfoId is None:
-        if uploadModel.dataFileId is not None:
-            try:
-                dataFile = DataFileModel.GetDataFileFromId(
-                    uploadModel.dataFileId)
-                uploadModel.dfoId = dataFile.replicas[0].dfoId
-            except DoesNotExist:
-                # If the DataFile ID reported in the location header
-                # after POSTing to the API doesn't exist yet, don't
-                # worry, just check again later.
-                pass
-            except IndexError:
-                # If the dataFile.replicas[0] DFO doesn't exist yet,
-                # don't worry, just check again later.
-                pass
-    if uploadModel.dfoId:
-        try:
-            bytesUploaded = \
-                ReplicaModel.CountBytesUploadedToStaging(uploadModel.dfoId)
-            latestUpdateTime = datetime.now()
-            # If this file already has a partial upload in staging,
-            # progress and speed estimates can be misleading.
-            uploadModel.SetLatestTime(latestUpdateTime)
-            if bytesUploaded > uploadModel.bytesUploaded:
-                uploadModel.SetBytesUploaded(bytesUploaded)
-            progressCallback(bytesUploaded, fileSize)
-        except requests.exceptions.RequestException:
-            timer.cancel()
-        except MissingMyDataReplicaApiEndpoint:
-            timer.cancel()
-    monitoringProgress.clear()
-
-
 def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               host, port, remoteFilePath, progressCallback,
                               foldersController, uploadModel):
@@ -449,7 +392,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     uploadModel.startTime = datetime.now()
-    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+    MonitorProgress(progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
@@ -573,7 +516,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
     maxThreads = SETTINGS.advanced.maxUploadThreads
     progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
-    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+    MonitorProgress(progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     cipher = SETTINGS.miscellaneous.cipher
     remoteDir = os.path.dirname(remoteFilePath)
