@@ -28,22 +28,19 @@ import pkgutil
 import struct
 
 import psutil
-import requests
 
+from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
-from ..models.datafile import DataFileModel
-from ..models.replica import ReplicaModel
 from ..models.upload import UploadStatus
 from ..utils.exceptions import SshException
 from ..utils.exceptions import ScpException
 from ..utils.exceptions import PrivateKeyDoesNotExist
-from ..utils.exceptions import DoesNotExist
-
-from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
+
+from .progress import MonitorProgress
 
 if sys.platform.startswith("win"):
     import win32process
@@ -360,7 +357,7 @@ def SshServerIsReady(username, privateKeyFilePath,
 
 def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                host, port, remoteFilePath, progressCallback,
-               foldersController, uploadModel):
+               uploadModel):
     """
     Upload a file to staging using SCP.
 
@@ -375,70 +372,17 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         UploadFileFromWindows(filePath, fileSize, username,
                               privateKeyFilePath, host, port,
                               remoteFilePath, progressCallback,
-                              foldersController, uploadModel)
+                              uploadModel)
     else:
         UploadFileFromPosixSystem(filePath, fileSize, username,
                                   privateKeyFilePath, host, port,
                                   remoteFilePath, progressCallback,
-                                  foldersController, uploadModel)
-
-
-def MonitorProgress(foldersController, progressPollInterval, uploadModel,
-                    fileSize, monitoringProgress, progressCallback):
-    """
-    Monitor progress via RESTful queries.
-    """
-    if foldersController.canceled or uploadModel.canceled or \
-            (uploadModel.status != UploadStatus.IN_PROGRESS and
-             uploadModel.status != UploadStatus.NOT_STARTED):
-        return
-
-    timer = threading.Timer(progressPollInterval, MonitorProgress,
-                            args=[foldersController, progressPollInterval,
-                                  uploadModel, fileSize, monitoringProgress,
-                                  progressCallback])
-    timer.start()
-    if uploadModel.status == UploadStatus.NOT_STARTED:
-        return
-    if monitoringProgress.isSet():
-        return
-    monitoringProgress.set()
-    if uploadModel.dfoId is None:
-        if uploadModel.dataFileId is not None:
-            try:
-                dataFile = DataFileModel.GetDataFileFromId(
-                    uploadModel.dataFileId)
-                uploadModel.dfoId = dataFile.replicas[0].dfoId
-            except DoesNotExist:
-                # If the DataFile ID reported in the location header
-                # after POSTing to the API doesn't exist yet, don't
-                # worry, just check again later.
-                pass
-            except IndexError:
-                # If the dataFile.replicas[0] DFO doesn't exist yet,
-                # don't worry, just check again later.
-                pass
-    if uploadModel.dfoId:
-        try:
-            bytesUploaded = \
-                ReplicaModel.CountBytesUploadedToStaging(uploadModel.dfoId)
-            latestUpdateTime = datetime.now()
-            # If this file already has a partial upload in staging,
-            # progress and speed estimates can be misleading.
-            uploadModel.SetLatestTime(latestUpdateTime)
-            if bytesUploaded > uploadModel.bytesUploaded:
-                uploadModel.SetBytesUploaded(bytesUploaded)
-            progressCallback(bytesUploaded, fileSize)
-        except requests.exceptions.RequestException:
-            timer.cancel()
-        except MissingMyDataReplicaApiEndpoint:
-            timer.cancel()
-    monitoringProgress.clear()
+                                  uploadModel)
 
 
 def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                               host, port, remoteFilePath, progressCallback,
-                              foldersController, uploadModel):
+                              uploadModel):
     """
     Upload file using SCP.
     """
@@ -449,7 +393,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
     progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     uploadModel.startTime = datetime.now()
-    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+    MonitorProgress(progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     remoteDir = os.path.dirname(remoteFilePath)
     quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
@@ -485,7 +429,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if foldersController.canceled or uploadModel.canceled:
+    if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFileFromPosixSystem: Aborting upload "
                      "for %s" % filePath)
         return
@@ -563,7 +507,7 @@ REMOTE_DIRS_CREATED = dict()
 
 def UploadFileFromWindows(filePath, fileSize, username,
                           privateKeyFilePath, host, port, remoteFilePath,
-                          progressCallback, foldersController, uploadModel):
+                          progressCallback, uploadModel):
     """
     Upload file using SCP.
     """
@@ -573,7 +517,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
     maxThreads = SETTINGS.advanced.maxUploadThreads
     progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
-    MonitorProgress(foldersController, progressPollInterval, uploadModel,
+    MonitorProgress(progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
     cipher = SETTINGS.miscellaneous.cipher
     remoteDir = os.path.dirname(remoteFilePath)
@@ -604,7 +548,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if foldersController.canceled or uploadModel.canceled:
+    if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFileFromWindows: Aborting upload "
                      "for %s" % filePath)
         return

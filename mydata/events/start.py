@@ -225,7 +225,7 @@ def StartScansAndUploads(
         if testRun:
             logger.testrun(message)
         try:
-            LOCKS.scanningFoldersThreadingLock.acquire()
+            LOCKS.scanningFolders.acquire()
             FLAGS.scanningFolders = True
             logger.debug("Just set scanningFolders to True")
             wx.CallAfter(
@@ -234,7 +234,7 @@ def StartScansAndUploads(
                 WriteProgressUpdateToStatusBar)
             app.foldersController.FinishedScanningForDatasetFolders()
             FLAGS.scanningFolders = False
-            LOCKS.scanningFoldersThreadingLock.release()
+            LOCKS.scanningFolders.release()
             logger.debug("Just set scanningFolders to False")
         except InvalidFolderStructure as ifs:
             def ShowMessageDialog():

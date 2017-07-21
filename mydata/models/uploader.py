@@ -262,7 +262,7 @@ class UploaderModel(object):
 
             "hostname": self.sysInfo['hostname'],
 
-            "instruments": [self.settings.instrument.resourceUri]
+            "instruments": [self.settings.general.instrument.resourceUri]
         }
 
         data = json.dumps(uploaderJson, indent=4)
@@ -380,7 +380,7 @@ class UploaderModel(object):
         This could be called from multiple threads simultaneously,
         so it requires locking.
         """
-        with LOCKS.requestStagingAccessThreadLock:
+        with LOCKS.requestStagingAccess:
             try:
                 try:
                     self.UploadUploaderInfo()

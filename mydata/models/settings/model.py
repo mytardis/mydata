@@ -144,11 +144,11 @@ class SettingsModel(object):
         if self._uploaderModel:
             return self._uploaderModel
         try:
-            LOCKS.createUploaderThreadingLock.acquire()
+            LOCKS.createUploader.acquire()
             self._uploaderModel = UploaderModel(self)
             return self._uploaderModel
         finally:
-            LOCKS.createUploaderThreadingLock.release()
+            LOCKS.createUploader.release()
 
     @uploaderModel.setter
     def uploaderModel(self, uploaderModel):
@@ -274,7 +274,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if not self._verifiedDatafilesCache:
-            with LOCKS.initializeCacheLock:
+            with LOCKS.initializeCache:
                 try:
                     if os.path.exists(self.verifiedDatafilesCachePath):
                         with open(self.verifiedDatafilesCachePath,
@@ -294,7 +294,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if self._verifiedDatafilesCache:
-            with LOCKS.closeCacheLock:
+            with LOCKS.closeCache:
                 try:
                     with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
