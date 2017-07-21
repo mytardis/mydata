@@ -225,3 +225,6 @@ class GeneralSettingsModel(object):
         self.mydataConfig['mytardis_url'] = ""
         self.mydataConfig['username'] = ""
         self.mydataConfig['api_key'] = ""
+        self._defaultOwner = None
+        self._instrument = None
+        self._facility = None

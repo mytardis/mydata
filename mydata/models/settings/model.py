@@ -7,7 +7,7 @@ import pickle
 import traceback
 import urlparse
 
-from ...constants import APPNAME, APPAUTHOR
+from ...constants import APPNAME
 from ...logs import logger
 from ...threads.locks import LOCKS
 from ...utils import CreateConfigPathIfNecessary
@@ -133,35 +133,6 @@ class SettingsModel(object):
             raise KeyError(key)
 
     @property
-    def facility(self):
-        """
-        Return the FacilityModel for the specified facility name
-        """
-        return self.general.facility
-
-    @property
-    def instrument(self):
-        """
-        Return the InstrumentModel for the specified instrument name
-        """
-        return self.general.instrument
-
-    @property
-    def defaultOwner(self):
-        """
-        Get user model for the specified MyTardis username
-        """
-        return self.general.defaultOwner
-
-    @defaultOwner.setter
-    def defaultOwner(self, defaultOwner):
-        """
-        Set default user model for assigning experiment ACLs.
-        Only used by tests.
-        """
-        self.general.defaultOwner = defaultOwner
-
-    @property
     def uploaderModel(self):
         """
         Get the uploader (MyData instance) model
@@ -173,11 +144,11 @@ class SettingsModel(object):
         if self._uploaderModel:
             return self._uploaderModel
         try:
-            LOCKS.createUploaderThreadingLock.acquire()
+            LOCKS.createUploader.acquire()
             self._uploaderModel = UploaderModel(self)
             return self._uploaderModel
         finally:
-            LOCKS.createUploaderThreadingLock.release()
+            LOCKS.createUploader.release()
 
     @uploaderModel.setter
     def uploaderModel(self, uploaderModel):
@@ -271,9 +242,6 @@ class SettingsModel(object):
         self.filters.SetDefaults()
         self.advanced.SetDefaults()
         self.miscellaneous.SetDefaults()
-        self._defaultOwner = None
-        self._instrument = None
-        self._facility = None
 
     @property
     def defaultHeaders(self):
@@ -306,7 +274,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if not self._verifiedDatafilesCache:
-            with LOCKS.initializeCacheLock:
+            with LOCKS.initializeCache:
                 try:
                     if os.path.exists(self.verifiedDatafilesCachePath):
                         with open(self.verifiedDatafilesCachePath,
@@ -326,7 +294,7 @@ class SettingsModel(object):
         We'll use a separate cache file for each MyTardis server we connect to.
         """
         if self._verifiedDatafilesCache:
-            with LOCKS.closeCacheLock:
+            with LOCKS.closeCache:
                 try:
                     with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
@@ -344,7 +312,7 @@ class SettingsModel(object):
         "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
         """
         if not self._configPath:
-            appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
+            appdirPath = CreateConfigPathIfNecessary()
             self._configPath = os.path.join(appdirPath, APPNAME + '.cfg')
         return self._configPath
 

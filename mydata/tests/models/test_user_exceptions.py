@@ -27,7 +27,7 @@ class UserExceptionsTester(MyDataTester):
 
         # Test retrieving default owner's user record (using UserModel's
         # GetUserByUsername method) and ensure that no exception is raised:
-        owner = SETTINGS.defaultOwner
+        owner = SETTINGS.general.defaultOwner
 
         # Test retrieving default owner's user record (using UserModel's
         # GetUserByEmail method) and ensure that no exception is raised:

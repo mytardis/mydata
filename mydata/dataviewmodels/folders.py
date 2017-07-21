@@ -138,6 +138,9 @@ class FoldersModel(MyDataDataViewModel):
         """
         super(FoldersModel, self).AddRow(folderModel)
 
+        if FLAGS.shouldAbort:
+            return
+
         startDataUploadsForFolderEvent = \
             MYDATA_EVENTS.StartUploadsForFolderEvent(
                 folderModel=folderModel)
@@ -168,7 +171,7 @@ class FoldersModel(MyDataDataViewModel):
         if groupsModel.GetCount() > 0:
             groupsModel.DeleteAllRows()
         dataDir = SETTINGS.general.dataDirectory
-        defaultOwner = SETTINGS.defaultOwner
+        defaultOwner = SETTINGS.general.defaultOwner
         folderStructure = SETTINGS.advanced.folderStructure
         self.ignoreOldDatasets = SETTINGS.filters.ignoreOldDatasets
         if self.ignoreOldDatasets:
@@ -335,7 +338,7 @@ class FoldersModel(MyDataDataViewModel):
                     'User Group / Instrument / Full Name / Dataset':
                 self.ImportGroupFolders(groupFolderPath, groupRecord)
             elif folderStructure == 'User Group / Experiment / Dataset':
-                defaultOwner = SETTINGS.defaultOwner
+                defaultOwner = SETTINGS.general.defaultOwner
                 self.ScanForExperimentFolders(groupFolderPath,
                                               owner=defaultOwner,
                                               groupRecord=groupRecord,
@@ -542,7 +545,7 @@ class FoldersModel(MyDataDataViewModel):
                 logger.warning("Path %s doesn't exist." % instrumentFolderPath)
                 return
 
-            owner = SETTINGS.defaultOwner
+            owner = SETTINGS.general.defaultOwner
 
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")

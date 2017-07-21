@@ -23,4 +23,4 @@ class NewInstrumentTester(MyDataTester):
             "testdataNewInstrument",
             dataFolderName="testdataDataset")
         ValidateSettings()
-        self.assertEqual(SETTINGS.instrument.name, "New Instrument")
+        self.assertEqual(SETTINGS.general.instrument.name, "New Instrument")

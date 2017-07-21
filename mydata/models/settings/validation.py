@@ -379,7 +379,7 @@ def CheckFacility(setStatusMessage):
         except:
             logger.error(traceback.format_exc())
             raise InvalidSettings(message, "facility_name")
-    if SETTINGS.facility is None:
+    if SETTINGS.general.facility is None:
         facilities = FacilityModel.GetMyFacilities()
         message = "Facility \"%s\" was not found in MyTardis." \
             % SETTINGS.general.facilityName
@@ -414,7 +414,7 @@ def CheckInstrument(setStatusMessage):
         setStatusMessage(message)
     try:
         # Try to get the InstrumentModel from the instrument name:
-        _ = SETTINGS.instrument
+        _ = SETTINGS.general.instrument
     except Unauthorized as err:
         message = str(err)
         raise InvalidSettings(message, "instrument_name")

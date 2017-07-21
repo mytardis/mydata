@@ -13,6 +13,7 @@ import requests
 # poster will soon be replaced by requests-toolbelt:
 import poster
 
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..settings import SETTINGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
@@ -139,14 +140,14 @@ class DataFileModel(object):
 
     @staticmethod
     def UploadDataFileWithPost(dataFilePath, dataFileDict,
-                               uploadsModel, uploadModel, posterCallback):
+                               uploadModel, posterCallback):
         """
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
         """
         url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         message = "Initializing buffered reader..."
-        uploadsModel.SetMessage(uploadModel, message)
+        DATAVIEW_MODELS['uploads'].SetMessage(uploadModel, message)
         datafileBufferedReader = io.open(dataFilePath, 'rb')
         uploadModel.bufferedReader = datafileBufferedReader
 

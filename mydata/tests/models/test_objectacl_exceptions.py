@@ -31,7 +31,7 @@ class ObjectAclExceptionsTester(MyDataTester):
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
 
-        owner = SETTINGS.defaultOwner
+        owner = SETTINGS.general.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
@@ -73,7 +73,7 @@ class ObjectAclExceptionsTester(MyDataTester):
         # Try to create a user ObjectACL record with
         # a user without a UserProfile, which should give 404 (DoesNotExist)
         userWithoutProfile = UserModel.GetUserByUsername("userwithoutprofile")
-        SETTINGS.defaultOwner = userWithoutProfile
+        SETTINGS.general.defaultOwner = userWithoutProfile
         SETTINGS.general.username = "userwithoutprofile"
         with self.assertRaises(DoesNotExist):
             ObjectAclModel.ShareExperimentWithUser(experimentModel,

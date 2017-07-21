@@ -25,7 +25,7 @@ class InstrumentExceptionsTester(MyDataTester):
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
 
-        facility = SETTINGS.facility
+        facility = SETTINGS.general.facility
         self.assertIsNotNone(facility)
 
         apiKey = SETTINGS.general.apiKey
@@ -44,7 +44,7 @@ class InstrumentExceptionsTester(MyDataTester):
             _ = InstrumentModel.CreateInstrument(facility, "Instrument name")
 
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        instrument = SETTINGS.instrument
+        instrument = SETTINGS.general.instrument
         SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
         with self.assertRaises(InternalServerError):

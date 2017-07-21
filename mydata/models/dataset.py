@@ -4,7 +4,6 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 import urllib
 import json
-import threading
 import requests
 
 from ..settings import SETTINGS
@@ -20,8 +19,6 @@ class DatasetModel(object):
     """
     def __init__(self, datasetJson):
         self.json = datasetJson
-        self.datafiles = None
-        self.getDatasetFilesThreadingLock = threading.Lock()
 
     @property
     def datasetId(self):
@@ -87,7 +84,7 @@ class DatasetModel(object):
             myTardisUrl = SETTINGS.general.myTardisUrl
             experimentUri = experiment.resourceUri if experiment else None
             datasetJson = {
-                "instrument": SETTINGS.instrument.resourceUri,
+                "instrument": SETTINGS.general.instrument.resourceUri,
                 "description": description,
                 "experiments": [experimentUri],
                 "immutable": SETTINGS.miscellaneous.immutableDatasets}

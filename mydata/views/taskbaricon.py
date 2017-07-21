@@ -27,8 +27,6 @@ class MyDataTaskBarIcon(TaskBarIcon):
     Provides a system tray icon (Windows)
     or menubar icon (Mac OS X) for MyData.
     """
-
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, frame):
         """Constructor"""
         TaskBarIcon.__init__(self)

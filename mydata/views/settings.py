@@ -107,6 +107,9 @@ class SettingsDialog(wx.Dialog):
         # Default vertical spacing between settings fields:
         defaultVgap = 5
         if sys.platform.startswith("linux"):
+            sys.stderr.write(
+                "MyData: Gtk-CRITICAL errors about IA__gtk_widget_set_size_request "
+                "are harmless: http://trac.wxwidgets.org/ticket/15891\n")
             self.SetMinSize(wx.Size(-1, 490))
             distroName, distroVersion, _ = platform.linux_distribution()
             if (distroName.startswith("Red Hat") or

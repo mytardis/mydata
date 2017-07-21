@@ -13,7 +13,7 @@ import wx
 
 from . import __version__ as VERSION
 from . import LATEST_COMMIT
-from .constants import APPNAME, APPAUTHOR
+from .constants import APPNAME
 from .settings import SETTINGS
 
 from .dataviewmodels.dataview import DATAVIEW_MODELS
@@ -92,7 +92,7 @@ class MyData(wx.App):
         from .utils import InitializeTrustedCertsPath
         from .utils import CheckIfSystemTrayFunctionalityMissing
         self.SetAppName(APPNAME)
-        appdirPath = CreateConfigPathIfNecessary(APPNAME, APPAUTHOR)
+        appdirPath = CreateConfigPathIfNecessary()
         InitializeTrustedCertsPath()
         if 'MYDATA_TESTING' not in os.environ:
             # Load settings from MyData.cfg, stored in INI format:
@@ -121,6 +121,9 @@ class MyData(wx.App):
 
         self.SetTopWindow(self.frame)
 
+        if sys.platform.startswith("linux"):
+            CheckIfSystemTrayFunctionalityMissing()
+
         event = None
         if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ and \
                 SETTINGS.RequiredFieldIsBlank():
@@ -129,8 +132,6 @@ class MyData(wx.App):
         else:
             self.frame.SetTitle(
                 "%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
-            if sys.platform.startswith("linux"):
-                CheckIfSystemTrayFunctionalityMissing(APPNAME)
             self.frame.Hide()
             if sys.platform.startswith("darwin"):
                 message = \

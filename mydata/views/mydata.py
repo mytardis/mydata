@@ -4,6 +4,7 @@ mydata/views/mydata.py
 Main window for MyData.
 """
 import sys
+import threading
 import traceback
 
 import wx
@@ -11,6 +12,7 @@ import wx
 from ..constants import APPNAME
 from ..logs import logger
 from ..media import MYDATA_ICONS
+from ..threads.flags import FLAGS
 from ..utils import OpenUrl
 from ..events.docs import OnHelp
 from ..events.docs import OnWalkthrough
@@ -116,8 +118,8 @@ class MyDataFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.taskBarIcon.OnExit, id=wx.ID_EXIT)
 
-        self.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
-        self.Bind(wx.EVT_ICONIZE, self.OnMinimizeFrame)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_ICONIZE, self.OnMinimize)
 
     def AddDataViews(self):
         """
@@ -148,10 +150,13 @@ class MyDataFrame(wx.Frame):
             self.tabbedView, DATAVIEW_MODELS['tasks'])
         self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
 
-    def SetStatusMessage(self, msg):
+    def SetStatusMessage(self, msg, force=False):
         """
         Update status bar's message.
         """
+        assert threading.current_thread().name == "MainThread"
+        if FLAGS.shouldAbort and not force:
+            return
         if sys.platform.startswith("win"):
             # On Windows, a tab can be used to center status text,
             # which look similar to the old EnhancedStatusBar.
@@ -269,7 +274,7 @@ class MyDataFrame(wx.Frame):
             sys.stderr.write("\n%s\n" % msg)
         event.Skip()
 
-    def OnCloseFrame(self, event):
+    def OnClose(self, event):
         """
         Don't actually close it, just hide it.
         """
@@ -278,14 +283,14 @@ class MyDataFrame(wx.Frame):
             self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.Hide()
 
-    def OnMinimizeFrame(self, event):
+    def OnMinimize(self, event):
         """
         When minimizing, hide the frame so it "minimizes to tray"
         """
         if event.Iconized():
-            self.frame.Show()  # See: http://trac.wxwidgets.org/ticket/10426
-            self.frame.Hide()
+            self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
+            self.Hide()
         else:
-            self.frame.Show(True)
-            self.frame.Raise()
+            self.Show(True)
+            self.Raise()
         # event.Skip()

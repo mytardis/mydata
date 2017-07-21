@@ -92,9 +92,7 @@ def StartScansAndUploads(
         app.frame.SetStatusMessage(message)
 
         shutdownForRefreshEvent = \
-            MYDATA_EVENTS.ShutdownForRefreshEvent(
-                foldersController=app.foldersController,
-                testRun=testRun)
+            MYDATA_EVENTS.ShutdownForRefreshEvent(testRun=testRun)
         logger.debug("Posting shutdownForRefreshEvent")
         PostEvent(shutdownForRefreshEvent)
         return
@@ -195,6 +193,8 @@ def StartScansAndUploads(
             numUserOrGroupFoldersScanned,
             UsersModel.GetNumUserOrGroupFolders(),
             SETTINGS.advanced.userOrGroupString)
+        if FLAGS.shouldAbort or not FLAGS.scanningFolders:
+            return
         app.frame.SetStatusMessage(message)
         if numUserOrGroupFoldersScanned == \
                 UsersModel.GetNumUserOrGroupFolders():
@@ -223,7 +223,7 @@ def StartScansAndUploads(
         if testRun:
             logger.testrun(message)
         try:
-            LOCKS.scanningFoldersThreadingLock.acquire()
+            LOCKS.scanningFolders.acquire()
             FLAGS.scanningFolders = True
             logger.debug("Just set scanningFolders to True")
             wx.CallAfter(
@@ -232,7 +232,7 @@ def StartScansAndUploads(
                 WriteProgressUpdateToStatusBar)
             app.foldersController.FinishedScanningForDatasetFolders()
             FLAGS.scanningFolders = False
-            LOCKS.scanningFoldersThreadingLock.release()
+            LOCKS.scanningFolders.release()
             logger.debug("Just set scanningFolders to False")
         except InvalidFolderStructure as ifs:
             def ShowMessageDialog():
@@ -282,6 +282,7 @@ def StartScansAndUploads(
     else:
         ScanDataDirs()
 
+
 def LogStartScansAndUploadsCaller(event, jobId):
     """
     Called by StartScansAndUploads (the main method for starting the
@@ -328,6 +329,7 @@ def LogStartScansAndUploadsCaller(event, jobId):
     else:
         logger.debug("StartScansAndUploads: event.GetEventType() = %s"
                      % event.GetEventType())
+
 
 def OnTestRunFromToolbar(event):
     """

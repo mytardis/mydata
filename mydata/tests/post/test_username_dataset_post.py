@@ -63,12 +63,12 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         verificationsModel = VerificationsModel()
         DATAVIEW_MODELS['verifications'] = verificationsModel
         DATAVIEW_MODELS['uploads'] = uploadsModel
-        foldersController = FoldersController(self.frame)
-        foldersController.InitForUploads()
+        self.app.foldersController = FoldersController(self.frame)
+        self.app.foldersController.InitForUploads()
         for row in range(foldersModel.GetRowCount()):
             folderModel = foldersModel.GetFolderRecord(row)
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
+            self.app.foldersController.StartUploadsForFolder(folderModel)
+        self.app.foldersController.FinishedScanningForDatasetFolders()
 
         numVerificationsCompleted = verificationsModel.GetCompletedCount()
         uploadsCompleted = uploadsModel.GetCompletedCount()
@@ -89,16 +89,16 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             """
             Start Uploads worker
             """
-            foldersController.InitForUploads()
+            self.app.foldersController.InitForUploads()
             for row in range(foldersModel.GetRowCount()):
                 folderModel = foldersModel.GetFolderRecord(row)
-                foldersController.StartUploadsForFolder(folderModel)
-            foldersController.FinishedScanningForDatasetFolders()
+                self.app.foldersController.StartUploadsForFolder(folderModel)
+            self.app.foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
         # Do this synchronously to ensure that the completed flag is reset:
-        foldersController.InitializeStatusFlags()
+        self.app.foldersController.InitializeStatusFlags()
         startUploadsThread.start()
         sys.stderr.write("Waiting for uploads to start...\n")
         while uploadsModel.GetCount() == 0:
@@ -107,7 +107,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             time.sleep(0.05)
         sys.stderr.write("\nCanceling uploads...\n")
         FLAGS.shouldAbort = True
-        foldersController.ShutDownUploadThreads(event=wx.PyEvent())
+        self.app.foldersController.ShutDownUploadThreads(event=wx.PyEvent())
         startUploadsThread.join()
         FLAGS.shouldAbort = False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
@@ -122,7 +122,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         event = wx.PyEvent()
         event.folderModel = foldersModel.GetFolderRecord(0)
         event.dataFileIndex = 0
-        foldersController.UploadDatafile(event)
+        self.app.foldersController.UploadDatafile(event)
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         # We should see some sort of connection error in the log, but we don't
         # know which one it will be.

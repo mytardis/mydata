@@ -6,7 +6,7 @@
 # when the only problem was that coverage decreased slightly,
 # so we use target: 80%, instead of the default target:auto
 #
-# The patch target is set to 70%, meaning that 70% of lines
+# The patch target is set to 60%, meaning that 60% of lines
 # changed in a commit or pull request should be covered by tests.
 # Commits which only modify files excluded from coverage in .coveragerc
 # are not subject to this check.
@@ -25,7 +25,7 @@ coverage:
         target: 80%
     patch:
       default:
-        target: 70%
+        target: 0%
     changes: false
 
 comment:

@@ -139,6 +139,7 @@ class StorageBoxAttributeNotFound(Exception):
     def __init__(self, storageBox, key):
         message = "Key '%s' not found in attributes for storage box '%s'" \
             % (key, storageBox.name)
+        self.key = key
         super(StorageBoxAttributeNotFound, self).__init__(message)
 
 

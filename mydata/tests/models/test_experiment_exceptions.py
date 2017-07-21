@@ -37,7 +37,7 @@ class ExperimentExceptionsTester(MyDataTester):
         ValidateSettings()
 
         uploaderName = SETTINGS.uploaderModel.name
-        owner = SETTINGS.defaultOwner
+        owner = SETTINGS.general.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
         expFolderName = "Exp1"
