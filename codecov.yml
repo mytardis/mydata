@@ -23,9 +23,6 @@ coverage:
     project:
       default:
         target: 80%
-    patch:
-      default:
-        target: 60%
     changes: false
 
 comment:
