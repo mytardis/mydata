@@ -70,6 +70,7 @@ def OnStop(event):
     if event:
         event.Skip()
 
+
 def ShouldCancelUpload(uploadModel):
     """
     Return True if the upload should be canceled

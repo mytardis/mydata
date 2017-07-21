@@ -92,9 +92,7 @@ def StartScansAndUploads(
         app.frame.SetStatusMessage(message)
 
         shutdownForRefreshEvent = \
-            MYDATA_EVENTS.ShutdownForRefreshEvent(
-                foldersController=app.foldersController,
-                testRun=testRun)
+            MYDATA_EVENTS.ShutdownForRefreshEvent(testRun=testRun)
         logger.debug("Posting shutdownForRefreshEvent")
         PostEvent(shutdownForRefreshEvent)
         return
@@ -284,6 +282,7 @@ def StartScansAndUploads(
     else:
         ScanDataDirs()
 
+
 def LogStartScansAndUploadsCaller(event, jobId):
     """
     Called by StartScansAndUploads (the main method for starting the
@@ -330,6 +329,7 @@ def LogStartScansAndUploadsCaller(event, jobId):
     else:
         logger.debug("StartScansAndUploads: event.GetEventType() = %s"
                      % event.GetEventType())
+
 
 def OnTestRunFromToolbar(event):
     """

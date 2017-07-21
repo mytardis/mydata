@@ -45,7 +45,7 @@ def ShutdownForRefresh(event):
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
             app.scheduleController.ApplySchedule(event)
-            event.foldersController.ShutDownUploadThreads()
+            app.foldersController.ShutDownUploadThreads()
             shutdownForRefreshCompleteEvent = \
                 MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
                     shutdownSuccessful=True)
