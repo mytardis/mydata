@@ -55,12 +55,13 @@ def OnStop(event):
     """
     The user pressed the stop button on the main toolbar.
     """
+    from . import MYDATA_EVENTS
     from . import PostEvent
     app = wx.GetApp()
     FLAGS.shouldAbort = True
     if app.foldersController.started:
         BeginBusyCursorIfRequired()
-        PostEvent(app.foldersController.ShutdownUploadsEvent(canceled=True))
+        PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(canceled=True))
     else:
         RestoreUserInterfaceForAbort()
         message = "Data scans and uploads were canceled."
@@ -68,3 +69,17 @@ def OnStop(event):
         app.frame.SetStatusMessage(message)
     if event:
         event.Skip()
+
+def ShouldCancelUpload(uploadModel):
+    """
+    Return True if the upload should be canceled
+    """
+    app = wx.GetApp()
+    if hasattr(app, "foldersController"):
+        return wx.GetApp().foldersController.canceled or uploadModel.canceled
+
+    # This code would only run in tests where a scheduled progress query
+    # from one test attempts to run in a subsequent test, but the subsequent
+    # test doesn't create a folders controller instance.  (See the use of
+    # threading.Timer in mydata.utils.progress.)
+    return True

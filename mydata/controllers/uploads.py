@@ -1,8 +1,5 @@
 """
 The main controller class for managing datafile uploads.
-
-Most of this content used to be part of the FoldersController
-class.
 """
 import os
 # urllib2 is not available in Python 3, but it is only used
@@ -98,7 +95,7 @@ class UploadDatafileRunnable(object):
             uploadsModel.SetMessage(self.uploadModel, message)
             uploadsModel.SetStatus(self.uploadModel, UploadStatus.FAILED)
             PostEvent(
-                foldersController.UploadFailedEvent(
+                MYDATA_EVENTS.UploadFailedEvent(
                     folderModel=self.folderModel,
                     dataFileIndex=self.dataFileIndex,
                     uploadModel=self.uploadModel))
@@ -293,8 +290,7 @@ class UploadDatafileRunnable(object):
             logger.error(traceback.format_exc())
             errorResponse = err.read()
             logger.error(errorResponse)
-            PostEvent(
-                wx.GetApp().foldersController.ShutdownUploadsEvent(failed=True))
+            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
             message = "An error occured while trying to POST data to " \
                 "the MyTardis server.\n\n"
             try:
@@ -346,14 +342,11 @@ class UploadDatafileRunnable(object):
             self.uploadModel.traceback = traceback.format_exc()
             foldersController.failed = True
             FLAGS.shouldAbort = True
-            PostEvent(
-                foldersController.ShutdownUploadsEvent(
-                    failed=True))
+            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
             message = SafeStr(err)
             logger.error(message)
-            PostEvent(
-                MYDATA_EVENTS.ShowMessageDialogEvent(
-                    title="MyData", message=message, icon=wx.ICON_ERROR))
+            PostEvent(MYDATA_EVENTS.ShowMessageDialogEvent(
+                title="MyData", message=message, icon=wx.ICON_ERROR))
             return
         privateKeyFilePath = sshKeyPair.privateKeyFilePath
         if self.existingUnverifiedDatafile:
@@ -531,7 +524,7 @@ class UploadDatafileRunnable(object):
         self.folderModel.SetDataFileUploaded(
             self.dataFileIndex, uploaded=uploadSuccess)
         foldersModel.FolderStatusUpdated(self.folderModel)
-        event = foldersController.UploadCompleteEvent(
+        event = MYDATA_EVENTS.UploadCompleteEvent(
             folderModel=self.folderModel,
             dataFileIndex=self.dataFileIndex,
             uploadModel=self.uploadModel)

@@ -123,7 +123,7 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.status = VerificationStatus.NOT_FOUND
         verificationsModel.MessageUpdated(self.verificationModel)
         verificationsModel.SetComplete(self.verificationModel)
-        event = wx.GetApp().foldersController.DidntFindDatafileOnServerEvent(
+        event = MYDATA_EVENTS.DidntFindDatafileOnServerEvent(
             folderModel=self.folderModel,
             dataFileIndex=self.dataFileIndex,
             verificationModel=self.verificationModel)
@@ -222,7 +222,7 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(existingDatafile.datafileId)
         verificationsModel.SetComplete(self.verificationModel)
-        PostEvent(wx.GetApp().foldersController.FoundFullSizeStagedEvent(
+        PostEvent(MYDATA_EVENTS.FoundFullSizeStagedEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
         if self.testRun:
@@ -248,7 +248,7 @@ class VerifyDatafileRunnable(object):
                      % (dataFilePath, bytesUploadedPreviously,
                         existingDatafile.size))
         verificationsModel.SetComplete(self.verificationModel)
-        PostEvent(wx.GetApp().foldersController.FoundIncompleteStagedEvent(
+        PostEvent(MYDATA_EVENTS.FoundIncompleteStagedEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             existingUnverifiedDatafile=existingDatafile,
             bytesUploadedPreviously=bytesUploadedPreviously,
@@ -282,7 +282,7 @@ class VerifyDatafileRunnable(object):
             else:
                 DataFileModel.Verify(existingDatafile.datafileId)
         verificationsModel.SetComplete(self.verificationModel)
-        PostEvent(wx.GetApp().foldersController.FoundUnverifiedUnstagedEvent(
+        PostEvent(MYDATA_EVENTS.FoundUnverifiedUnstagedEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
         if self.testRun:
@@ -306,7 +306,7 @@ class VerifyDatafileRunnable(object):
         if not cacheHit:
             DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)
-        PostEvent(wx.GetApp().foldersController.FoundVerifiedDatafileEvent(
+        PostEvent(MYDATA_EVENTS.FoundVerifiedDatafileEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
         if self.testRun:

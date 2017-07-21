@@ -28,8 +28,8 @@ import pkgutil
 import struct
 
 import psutil
-import wx
 
+from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.upload import UploadStatus
@@ -429,7 +429,7 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
                 raise SshException(stderr, returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if wx.GetApp().foldersController.canceled or uploadModel.canceled:
+    if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFileFromPosixSystem: Aborting upload "
                      "for %s" % filePath)
         return
@@ -548,7 +548,7 @@ def UploadFileFromWindows(filePath, fileSize, username,
             raise SshException(stdout, mkdirProcess.returncode)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
-    if wx.GetApp().foldersController.canceled or uploadModel.canceled:
+    if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFileFromWindows: Aborting upload "
                      "for %s" % filePath)
         return

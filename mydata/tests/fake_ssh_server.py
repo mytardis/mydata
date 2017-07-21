@@ -505,6 +505,9 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 self.chan.send_exit_status(proc.returncode)
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
+                # Closing channel too quickly after sending exit status can
+                # sometimes leed to "Connection reset by peer" errors.
+                time.sleep(0.05)
                 self.chan.close()
                 logger.info("")
                 self.close_transport(success=True)

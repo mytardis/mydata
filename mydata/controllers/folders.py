@@ -16,10 +16,10 @@ import wx
 import wx.lib.newevent
 import wx.dataview
 
-import mydata.events as mde
 import mydata.views.messages
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events import MYDATA_EVENTS
+from ..events import PostEvent
 from ..events.stop import CheckIfShouldAbort
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
@@ -77,45 +77,6 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
-
-        # pylint: disable=invalid-name
-        self.ShutdownUploadsEvent, self.EVT_SHUTDOWN_UPLOADS = \
-            mde.NewEvent(self.notifyWindow,
-                         self.ShutDownUploadThreads)
-
-        # The event type IDs (EVT_...) are used for logging in
-        # mydata/events/__init__.py's PostEvent method:
-        self.DidntFindDatafileOnServerEvent, \
-                self.EVT_DIDNT_FIND_FILE_ON_SERVER = \
-            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
-        self.FoundIncompleteStagedEvent, self.EVT_FOUND_INCOMPLETE_STAGED = \
-            mde.NewEvent(self.notifyWindow, self.UploadDatafile)
-
-        self.FoundVerifiedDatafileEvent, self.EVT_FOUND_VERIFIED = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
-        self.FoundFullSizeStagedEvent, self.EVT_FOUND_FULLSIZE_STAGED = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
-        self.FoundUnverifiedNoDfosDatafileEvent, \
-                self.EVT_FOUND_UNVERIFIED_NO_DFOS = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
-        # If we're not using staged uploads, we can't retry the upload, because
-        # the DataFile has already been created and we don't want to trigger
-        # a Duplicate Key error, so we just need to wait for the file to be
-        # verified:
-        self.FoundUnverifiedUnstagedEvent, \
-                self.EVT_FOUND_UNVERIFIED_UNSTAGED = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
-
-        self.UploadCompleteEvent, self.EVT_UPLOAD_COMPLETE = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
-        self.UploadFailedEvent, self.EVT_UPLOAD_FAILED = \
-            mde.NewEvent(self.notifyWindow,
-                         self.CountCompletedUploadsAndVerifications)
 
     @property
     def started(self):
@@ -288,7 +249,7 @@ class FoldersController(object):
         except Exception as err:
             # MyData app could be missing from MyTardis server.
             logger.error(traceback.format_exc())
-            mde.PostEvent(
+            PostEvent(
                 MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData",
                     message=str(err),
@@ -314,7 +275,7 @@ class FoldersController(object):
                 "files (up to 100 MB each)."
         if message:
             logger.warning(message)
-            mde.PostEvent(
+            PostEvent(
                 MYDATA_EVENTS.ShowMessageDialogEvent(
                     title="MyData",
                     message=message,
@@ -429,7 +390,7 @@ class FoldersController(object):
                             logger.error(info)
                         message = ("%s\n\n%s\n\n%s"
                                    % (error, err.response.request.url, info))
-                        mde.PostEvent(
+                        PostEvent(
                             MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
@@ -445,11 +406,11 @@ class FoldersController(object):
                     if not self.failed:
                         self.failed = True
                         FLAGS.shouldAbort = True
-                        mde.PostEvent(
+                        PostEvent(
                             MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
-                        mde.PostEvent(self.ShutdownUploadsEvent(failed=True))
+                        PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
                     return
                 folderModel.experimentModel = experimentModel
                 try:
@@ -457,7 +418,7 @@ class FoldersController(object):
                         .CreateDatasetIfNecessary(folderModel)
                 except Exception as err:
                     logger.error(traceback.format_exc())
-                    mde.PostEvent(
+                    PostEvent(
                         MYDATA_EVENTS.ShowMessageDialogEvent(
                             title="MyData",
                             message=str(err),
@@ -601,10 +562,10 @@ class FoldersController(object):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
-            mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
+            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
         elif not wx.PyApp.IsMainLoopRunning() and FLAGS.testRunRunning and \
                 finishedVerificationCounting:
-            mde.PostEvent(self.ShutdownUploadsEvent(completed=True))
+            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
 
     def ShutDownUploadThreads(self, event=None):
         """

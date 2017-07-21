@@ -5,8 +5,8 @@ from datetime import datetime
 import threading
 
 import requests
-import wx
 
+from ..events.stop import ShouldCancelUpload
 from ..models.datafile import DataFileModel
 from ..models.replica import ReplicaModel
 from ..models.upload import UploadStatus
@@ -19,7 +19,7 @@ def MonitorProgress(progressPollInterval, uploadModel,
     """
     Monitor progress via RESTful queries.
     """
-    if wx.GetApp().foldersController.canceled or uploadModel.canceled or \
+    if ShouldCancelUpload(uploadModel) or \
             (uploadModel.status != UploadStatus.IN_PROGRESS and
              uploadModel.status != UploadStatus.NOT_STARTED):
         return
