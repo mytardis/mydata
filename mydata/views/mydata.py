@@ -196,7 +196,7 @@ class MyDataFrame(wx.Frame):
             wx.EVT_MENU, OnWalkthrough, id=walkthroughMenuItemID)
 
         helpMenu.Append(wx.ID_ABOUT, "&About MyData")
-        self.Bind(wx.EVT_MENU, MyDataFrame.OnAbout, id=wx.ID_ABOUT)
+        self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
         menuBar.Append(helpMenu, "&Help")
         self.SetMenuBar(menuBar)
 
