@@ -3,11 +3,16 @@ On Linux, running subprocess the usual way can be inefficient, due to
 its use of os.fork().  So on Linux, we can use errand_boy to run our
 subprocesses for us.
 """
+import logging
 import multiprocessing
 import time
+import uuid
 
 # pylint: disable=import-error
 from errand_boy.transports.unixsocket import UNIXSocketTransport
+
+from .logs import logger
+
 
 ERRAND_BOY_PROCESS = None
 ERRAND_BOY_TRANSPORT = None
@@ -21,11 +26,17 @@ def StartErrandBoy():
     """
     Start errand boy.
     """
+    errandBoyLogger = logging.getLogger("errand_boy.transports.unixsocket")
+    errandBoyLogger.addHandler(logger.streamHandler)
+    errandBoyLogger.addHandler(logger.fileHandler)
+    errandBoyLogger.addHandler(logger.logWindowHandler)
+
     if ERRAND_BOY_PROCESS:
         StopErrandBoy()
 
     if not ERRAND_BOY_TRANSPORT:
-        globals()['ERRAND_BOY_TRANSPORT'] = UNIXSocketTransport()
+        globals()['ERRAND_BOY_TRANSPORT'] = UNIXSocketTransport(
+            socket_path='/tmp/errand-boy-%s' % str(uuid.uuid1()))
 
     def RunErrandBoyServer():
         """
