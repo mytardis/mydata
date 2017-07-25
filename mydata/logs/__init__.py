@@ -25,6 +25,26 @@ from .wxloghandler import EVT_WX_LOG_EVENT
 TIMEOUT = 3
 
 
+class MyDataFormatter(logging.Formatter):
+    """
+    Can be used to handle logging messages coming from non-MyData modules
+    which lack the extra attributes.
+    """
+    def format(self, record):
+        """
+        Overridden from logging.Formatter class
+        """
+        if not hasattr(record, 'moduleName'):
+            record.moduleName = ''
+        if not hasattr(record, 'functionName'):
+            record.functionName = ''
+        if not hasattr(record, 'currentThreadName'):
+            record.currentThreadName = ''
+        if not hasattr(record, 'lineNumber'):
+            record.lineNumber = 0
+        return super(MyDataFormatter, self).format(record)
+
+
 class Logger(object):
     """
     Allows logger.debug(...), logger.info(...) etc. to write to MyData's
@@ -35,9 +55,10 @@ class Logger(object):
         self.name = name
         self.loggerObject = logging.getLogger(self.name)
         self.formatString = ""
-        self.streamHandler = None
         self.loggerOutput = None
+        self.streamHandler = None
         self.fileHandler = None
+        self.logWindowHandler = None
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
@@ -54,13 +75,13 @@ class Logger(object):
         Send log messages to debug window text control
         """
         self.logTextCtrl = logTextCtrl
-        logWindowHandler = WxLogHandler(self.logTextCtrl)
-        logWindowHandler.setLevel(self.level)
+        self.logWindowHandler = WxLogHandler(self.logTextCtrl)
+        self.logWindowHandler.setLevel(self.level)
         formatString = "%(asctime)s - %(moduleName)s - %(lineNumber)d - " \
             "%(functionName)s - %(currentThreadName)s - %(levelname)s - " \
             "%(message)s"
-        logWindowHandler.setFormatter(logging.Formatter(formatString))
-        self.loggerObject.addHandler(logWindowHandler)
+        self.logWindowHandler.setFormatter(MyDataFormatter(formatString))
+        self.loggerObject.addHandler(self.logWindowHandler)
 
         self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
@@ -80,7 +101,7 @@ class Logger(object):
         self.loggerOutput = StringIO()
         self.streamHandler = logging.StreamHandler(stream=self.loggerOutput)
         self.streamHandler.setLevel(self.level)
-        self.streamHandler.setFormatter(logging.Formatter(self.formatString))
+        self.streamHandler.setFormatter(MyDataFormatter(self.formatString))
         self.loggerObject.addHandler(self.streamHandler)
 
         # Finally, send all log messages to a log file.
@@ -94,7 +115,7 @@ class Logger(object):
                                        ".MyData_debug_log.txt")
         self.fileHandler = logging.FileHandler(logFilePath)
         self.fileHandler.setLevel(self.level)
-        self.fileHandler.setFormatter(logging.Formatter(self.formatString))
+        self.fileHandler.setFormatter(MyDataFormatter(self.formatString))
         self.loggerObject.addHandler(self.fileHandler)
 
     def GetLevel(self):
