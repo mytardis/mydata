@@ -297,7 +297,7 @@ class ExperimentModel(object):
                 ObjectAclModel.ShareExperimentWithUser(createdExperiment,
                                                        owner)
             if folderModel.group is not None and \
-                    folderModel.group.groupId() != \
+                    folderModel.group.groupId != \
                     facilityManagersGroup.groupId:
                 ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
                                                         folderModel.group)
