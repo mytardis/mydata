@@ -2,7 +2,6 @@
 """
 Miscellaneous utility functions.
 """
-import distutils.spawn
 import os
 import pkgutil
 import sys
@@ -254,6 +253,18 @@ def InitializeTrustedCertsPath():
             os.path.join(certPath, 'cacert.pem')
 
 
+def GnomeShellIsRunning():
+    """
+    Check if the GNOME Shell desktop environment is running.
+    Helper function for CheckIfSystemTrayFunctionalityMissing.
+    """
+    for pid in psutil.pids():
+        proc = psutil.Process(pid)
+        if 'gnome-shell' in proc.name():
+            return True
+    return False
+
+
 def CheckIfSystemTrayFunctionalityMissing():
     """
     Recent Linux desktop envrionments have removed the system tray icon
@@ -276,7 +287,7 @@ def CheckIfSystemTrayFunctionalityMissing():
                 "indicator-systemtray-unity"
             DisplayError(message)
             sys.exit(1)
-    elif distutils.spawn.find_executable("gnome-shell"):
+    elif GnomeShellIsRunning():
         # We are running GNOME Shell which has removed the
         # system tray funcionality found in GNOME v2.
         # For now, we'll assume a RHEL / CentOS system with rpm:
