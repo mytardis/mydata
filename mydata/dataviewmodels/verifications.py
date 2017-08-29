@@ -25,26 +25,85 @@ class VerificationsModel(MyDataDataViewModel):
         self.columnKeys = ["dataViewId", "folderName", "subdirectory",
                            "filename", "message"]
         self.defaultColumnWidths = [40, 170, 170, 200, 500]
-        self.completedCount = 0
-        self.completedCountLock = threading.Lock()
+
+        self.totals = dict(
+            completed=0,
+            notFound=0,
+            foundVerified=0,
+            foundUnverifiedFullSize=0,
+            foundUnverifiedNotFullSize=0,
+            failed=0)
+
+        self.countLocks = dict(
+            completed=threading.Lock(),
+            notFound=threading.Lock(),
+            foundVerified=threading.Lock(),
+            foundUnverifiedFullSize=threading.Lock(),
+            foundUnverifiedNotFullSize=threading.Lock(),
+            failed=threading.Lock())
 
     def DeleteAllRows(self):
         """
         Delete all rows
         """
         super(VerificationsModel, self).DeleteAllRows()
-        self.completedCount = 0
+        self.totals = dict(
+            completed=0,
+            notFound=0,
+            foundVerified=0,
+            foundUnverifiedFullSize=0,
+            foundUnverifiedNotFullSize=0,
+            failed=0)
 
     def SetComplete(self, verificationModel):
         """
         Set verificationModel's status to complete
         """
         verificationModel.complete = True
-        self.completedCountLock.acquire()
-        try:
-            self.completedCount += 1
-        finally:
-            self.completedCountLock.release()
+        with self.countLocks['completed']:
+            self.totals['completed'] += 1
+
+    def SetNotFound(self, verificationModel):
+        """
+        Set verificationModel's status to not found
+        """
+        verificationModel.status = VerificationStatus.NOT_FOUND
+        with self.countLocks['notFound']:
+            self.totals['notFound'] += 1
+
+    def SetFoundVerified(self, verificationModel):
+        """
+        Set verificationModel's status to found verified
+        """
+        verificationModel.status = VerificationStatus.FOUND_VERIFIED
+        with self.countLocks['foundVerified']:
+            self.totals['foundVerified'] += 1
+
+    def SetFoundUnverifiedFullSize(self, verificationModel):
+        """
+        Set verificationModel's status to found unverified full size
+        """
+        verificationModel.status = \
+            VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE
+        with self.countLocks['foundUnverifiedFullSize']:
+            self.totals['foundUnverifiedFullSize'] += 1
+
+    def SetFoundUnverifiedNotFullSize(self, verificationModel):
+        """
+        Set verificationModel's status to found unverified not full size
+        """
+        verificationModel.status = \
+            VerificationStatus.FOUND_UNVERIFIED_NOT_FULL_SIZE
+        with self.countLocks['foundUnverifiedNotFullSize']:
+            self.totals['foundUnverifiedNotFullSize'] += 1
+
+    def SetFailed(self, verificationModel):
+        """
+        Set verificationModel's status to failed
+        """
+        verificationModel.status = VerificationStatus.FAILED
+        with self.countLocks['failed']:
+            self.totals['failed'] += 1
 
     def MessageUpdated(self, verificationModel):
         """
@@ -61,62 +120,37 @@ class VerificationsModel(MyDataDataViewModel):
         Return the number of files which were found on the MyTardis server
         and were verified by MyTardis
         """
-        foundVerifiedCount = 0
-        for row in reversed(range(0, self.GetRowCount())):
-            if self.rowsData[row].status == \
-                    VerificationStatus.FOUND_VERIFIED:
-                foundVerifiedCount += 1
-        return foundVerifiedCount
+        return self.totals['foundVerified']
 
     def GetNotFoundCount(self):
         """
         Return the number of files which were not found on the MyTardis server
         """
-        notFoundCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].status == \
-                    VerificationStatus.NOT_FOUND:
-                notFoundCount += 1
-        return notFoundCount
+        return self.totals['notFound']
 
     def GetFoundUnverifiedFullSizeCount(self):
         """
         Return the number of files which were found on the MyTardis server
         which are unverified on MyTardis but full size
         """
-        foundUnverifiedFullSizeCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].status == \
-                    VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE:
-                foundUnverifiedFullSizeCount += 1
-        return foundUnverifiedFullSizeCount
+        return self.totals['foundUnverifiedFullSize']
 
     def GetFoundUnverifiedNotFullSizeCount(self):
         """
         Return the number of files which were found on the MyTardis server
         which are unverified on MyTardis and incomplete
         """
-        foundUnverifiedNotFullSizeCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].status == \
-                    VerificationStatus.FOUND_UNVERIFIED_NOT_FULL_SIZE:
-                foundUnverifiedNotFullSizeCount += 1
-        return foundUnverifiedNotFullSizeCount
+        return self.totals['foundUnverifiedNotFullSize']
 
     def GetFailedCount(self):
         """
         Return the number of files whose MyTardis lookups failed
         """
-        failedCount = 0
-        for row in range(0, self.GetRowCount()):
-            if self.rowsData[row].status == \
-                    VerificationStatus.FAILED:
-                failedCount += 1
-        return failedCount
+        return self.totals['failed']
 
     def GetCompletedCount(self):
         """
         Return the number of files which MyData has finished looking
         up on the MyTardis server.
         """
-        return self.completedCount
+        return self.totals['completed']
