@@ -1,12 +1,14 @@
 To profile MyData, yappi is recommended:
 https://pypi.python.org/pypi/yappi
 
-Make the following patch (#1) to mydata/MyData.py:
+Make the following patch (#1) to mydata/views/mydata.py:
 
-At the end of the "OnCloseFrame" method, add:
+At the end of the "OnClose" method, add:
 
         event.Skip()
         self.taskBarIcon.Destroy()
+
+and comment out the "event.StopPropagation()" earlier in the "OnClose" method.
 
 which will allow the EVT_CLOSE event to propagate to the point where wxPython
 knows that all of its top level windows have been closed, so it can end its
