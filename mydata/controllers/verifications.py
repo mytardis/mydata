@@ -78,9 +78,7 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.message = \
             "Looking for matching file on MyTardis server..."
         self.verificationModel.status = VerificationStatus.IN_PROGRESS
-        # Don't call MessageUpdated yet, because if this file is in the
-        # cache, we don't want to send too many GUI update requests per
-        # unit time.
+        verificationsModel.MessageUpdated(self.verificationModel)
 
         try:
             dataset = self.folderModel.datasetModel
@@ -94,8 +92,7 @@ class VerifyDatafileRunnable(object):
                     "Found datafile in verified-files cache."
                 verificationsModel.SetFoundVerified(
                     self.verificationModel)
-                # Don't call MessageUpdated - avoid having too many GUI
-                # update requests per cache hit.
+                verificationsModel.MessageUpdated(self.verificationModel)
                 self.HandleExistingVerifiedDatafile(cacheHit=True)
                 return
             else:
@@ -302,10 +299,10 @@ class VerifyDatafileRunnable(object):
                                   dataFilePath.encode('utf8'))
             if SETTINGS.miscellaneous.cacheDataFileLookups:
                 with LOCKS.updateCache:
-                    SETTINGS.verifiedDatafilesCache[cacheKey] = True
+                    if SETTINGS.verifiedDatafilesCache:
+                        SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
-        if not cacheHit:
-            DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
+        DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)
         PostEvent(MYDATA_EVENTS.FoundVerifiedDatafileEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,

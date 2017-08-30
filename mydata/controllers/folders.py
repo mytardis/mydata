@@ -226,6 +226,7 @@ class FoldersController(object):
         self.finishedScanningForDatasetFolders = threading.Event()
         self.numVerificationsToBePerformed = 0
         self.finishedCountingVerifications = dict()
+        SETTINGS.InitializeVerifiedDatafilesCache()
 
         if wx.PyApp.IsMainLoopRunning():
             for i in range(self.numVerificationWorkerThreads):
@@ -549,10 +550,12 @@ class FoldersController(object):
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
-        for folder in self.finishedCountingVerifications:
-            if not self.finishedCountingVerifications[folder]:
-                finishedVerificationCounting = False
-                break
+        # Use lock to avoid "dictionary changed size during iteration" error:
+        with LOCKS.finishedCounting:
+            for folder in self.finishedCountingVerifications:
+                if not self.finishedCountingVerifications[folder]:
+                    finishedVerificationCounting = False
+                    break
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
@@ -578,7 +581,7 @@ class FoldersController(object):
         app = wx.GetApp()
         if SETTINGS.miscellaneous.cacheDataFileLookups:
             threading.Thread(
-                target=SETTINGS.CloseVerifiedDatafilesCache).start()
+                target=SETTINGS.SaveVerifiedDatafilesCache).start()
         # Reset self.started so that scheduled tasks know that's OK to start
         # new scan-and-upload tasks:
         self.started = False

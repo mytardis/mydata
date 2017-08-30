@@ -42,7 +42,7 @@ class SettingsModel(object):
         # "/Users/jsmith/Library/Application Support/MyData/MyData.cfg":
         self._configPath = configPath
 
-        self._verifiedDatafilesCache = None
+        self.verifiedDatafilesCache = dict()
 
         self._uploaderModel = None
 
@@ -267,39 +267,32 @@ class SettingsModel(object):
             "verified-files-%s-%s.pkl" %
             (parsed.scheme, parsed.netloc))
 
-    @property
-    def verifiedDatafilesCache(self):
+    def InitializeVerifiedDatafilesCache(self):
         """
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        if not self._verifiedDatafilesCache:
-            with LOCKS.initializeCache:
-                try:
-                    if os.path.exists(self.verifiedDatafilesCachePath):
-                        with open(self.verifiedDatafilesCachePath,
-                                  'rb') as cacheFile:
-                            self._verifiedDatafilesCache = \
-                                pickle.load(cacheFile)
-                    else:
-                        self._verifiedDatafilesCache = dict()
-                except:
-                    self._verifiedDatafilesCache = dict()
-                    logger.warning(traceback.format_exc())
-        return self._verifiedDatafilesCache
+        try:
+            if os.path.exists(self.verifiedDatafilesCachePath):
+                with open(self.verifiedDatafilesCachePath, 'rb') as cacheFile:
+                    self.verifiedDatafilesCache = pickle.load(cacheFile)
+            else:
+                self.verifiedDatafilesCache = dict()
+        except:
+            self.verifiedDatafilesCache = dict()
+            logger.warning(traceback.format_exc())
 
-    def CloseVerifiedDatafilesCache(self):
+    def SaveVerifiedDatafilesCache(self):
         """
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        if self._verifiedDatafilesCache:
+        if self.verifiedDatafilesCache:
             with LOCKS.closeCache:
                 try:
                     with open(self.verifiedDatafilesCachePath,
                               'wb') as cacheFile:
-                        pickle.dump(self._verifiedDatafilesCache, cacheFile)
-                    self._verifiedDatafilesCache = None
+                        pickle.dump(self.verifiedDatafilesCache, cacheFile)
                 except:
                     logger.warning("Couldn't save verified datafiles cache.")
                     logger.warning(traceback.format_exc())
