@@ -310,6 +310,7 @@ class FoldersController(object):
                                 time.sleep(0.1)
                     else:
                         StopUploadsAsFailed(showError=True)
+                        return
                 else:
                     StopUploadsAsFailed(showError=True)
                     return
@@ -323,7 +324,6 @@ class FoldersController(object):
                 "only upload one file at a time.\n\n" \
                 "HTTP POST is generally only suitable for small " \
                 "files (up to 100 MB each)."
-        if message:
             logger.warning(message)
             PostEvent(
                 MYDATA_EVENTS.ShowMessageDialogEvent(
