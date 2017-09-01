@@ -161,7 +161,8 @@ def StartScansAndUploads(
                         message = invalidSettings.message
                         logger.error(message)
                         RestoreUserInterfaceForAbort()
-                        wx.CallAfter(app.frame.SetStatusMessage,
+                        wx.CallAfter(
+                            app.frame.SetStatusMessage,
                             "Settings validation failed.")
                         if testRun:
                             wx.CallAfter(app.testRunFrame.Hide)
