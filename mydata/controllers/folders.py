@@ -63,9 +63,7 @@ class FoldersController(object):
         self.finishedCountingVerifications = dict()
         self.finishedScanningForDatasetFolders = threading.Event()
         self.verificationsQueue = None
-        self.verifyDatafileRunnable = None
         self.uploadsQueue = None
-        self.uploadDatafileRunnable = None
         self.numVerificationsToBePerformed = 0
         self.uploadsAcknowledged = 0
         self.uploadMethod = UploadMethod.HTTP_POST
@@ -190,21 +188,16 @@ class FoldersController(object):
             self.CountCompletedUploadsAndVerifications(event=None)
             return
 
-        if folderModel not in self.uploadDatafileRunnable:
-            self.uploadDatafileRunnable[folderModel] = {}
-
         bytesUploadedPreviously = \
             getattr(event, "bytesUploadedPreviously", None)
         verificationModel = getattr(event, "verificationModel", None)
-        self.uploadDatafileRunnable[folderModel][dfi] = \
-            UploadDatafileRunnable(
-                folderModel, dfi, existingUnverifiedDatafile,
-                verificationModel, bytesUploadedPreviously)
+        uploadDatafileRunnable = UploadDatafileRunnable(
+            folderModel, dfi, existingUnverifiedDatafile,
+            verificationModel, bytesUploadedPreviously)
         if wx.PyApp.IsMainLoopRunning():
-            self.uploadsQueue.put(
-                self.uploadDatafileRunnable[folderModel][dfi])
+            self.uploadsQueue.put(uploadDatafileRunnable)
         else:
-            self.uploadDatafileRunnable[folderModel][dfi].Run()
+            uploadDatafileRunnable.Run()
         self.CountCompletedUploadsAndVerifications(event=None)
 
     def InitForUploads(self):
@@ -218,7 +211,6 @@ class FoldersController(object):
         self.verificationsModel.DeleteAllRows()
         self.uploadsModel.DeleteAllRows()
         self.uploadsModel.SetStartTime(datetime.datetime.now())
-        self.verifyDatafileRunnable = {}
         self.verificationsQueue = Queue()
         self.numVerificationWorkerThreads = \
             SETTINGS.miscellaneous.maxVerificationThreads
@@ -226,6 +218,7 @@ class FoldersController(object):
         self.finishedScanningForDatasetFolders = threading.Event()
         self.numVerificationsToBePerformed = 0
         self.finishedCountingVerifications = dict()
+        SETTINGS.InitializeVerifiedDatafilesCache()
 
         if wx.PyApp.IsMainLoopRunning():
             for i in range(self.numVerificationWorkerThreads):
@@ -234,7 +227,6 @@ class FoldersController(object):
                     target=self.VerificationWorker)
                 self.verificationWorkerThreads.append(thread)
                 thread.start()
-        self.uploadDatafileRunnable = {}
         self.uploadsQueue = Queue()
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
@@ -549,10 +541,12 @@ class FoldersController(object):
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
-        for folder in self.finishedCountingVerifications:
-            if not self.finishedCountingVerifications[folder]:
-                finishedVerificationCounting = False
-                break
+        # Use lock to avoid "dictionary changed size during iteration" error:
+        with LOCKS.finishedCounting:
+            for folder in self.finishedCountingVerifications:
+                if not self.finishedCountingVerifications[folder]:
+                    finishedVerificationCounting = False
+                    break
 
         if numVerificationsCompleted == self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
@@ -578,7 +572,7 @@ class FoldersController(object):
         app = wx.GetApp()
         if SETTINGS.miscellaneous.cacheDataFileLookups:
             threading.Thread(
-                target=SETTINGS.CloseVerifiedDatafilesCache).start()
+                target=SETTINGS.SaveVerifiedDatafilesCache).start()
         # Reset self.started so that scheduled tasks know that's OK to start
         # new scan-and-upload tasks:
         self.started = False
@@ -631,9 +625,6 @@ class FoldersController(object):
             self.verificationsQueue.put(None)
         for thread in self.verificationWorkerThreads:
             thread.join()
-
-        self.verifyDatafileRunnable = {}
-        self.uploadDatafileRunnable = {}
 
         if FLAGS.testRunRunning:
             self.LogTestRunSummary()
@@ -719,15 +710,11 @@ class FoldersController(object):
         """
         Verify datafiles in the specified folder
         """
-        if folderModel not in self.verifyDatafileRunnable:
-            self.verifyDatafileRunnable[folderModel] = []
         for dfi in range(0, folderModel.numFiles):
             if self.IsShuttingDown():
                 return
-            self.verifyDatafileRunnable[folderModel].append(
-                VerifyDatafileRunnable(folderModel, dfi))
+            verifyDatafileRunnable = VerifyDatafileRunnable(folderModel, dfi)
             if wx.PyApp.IsMainLoopRunning():
-                self.verificationsQueue\
-                    .put(self.verifyDatafileRunnable[folderModel][dfi])
+                self.verificationsQueue.put(verifyDatafileRunnable)
             else:
-                self.verifyDatafileRunnable[folderModel][dfi].Run()
+                verifyDatafileRunnable.Run()

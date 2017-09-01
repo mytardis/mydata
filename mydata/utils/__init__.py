@@ -259,9 +259,12 @@ def GnomeShellIsRunning():
     Helper function for CheckIfSystemTrayFunctionalityMissing.
     """
     for pid in psutil.pids():
-        proc = psutil.Process(pid)
-        if 'gnome-shell' in proc.name():
-            return True
+        try:
+            proc = psutil.Process(pid)
+            if 'gnome-shell' in proc.name():
+                return True
+        except psutil.NoSuchProcess:
+            pass
     return False
 
 

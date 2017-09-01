@@ -5,7 +5,7 @@ import threading
 
 LOCK_NAMES = [
     'scanningFolders', 'createUploader', 'requestStagingAccess',
-    'initializeCache', 'updateCache', 'closeCache', 'displayModalDialog',
+    'updateCache', 'closeCache', 'displayModalDialog',
     'updateLastErrorMessage', 'updateLastConfirmationQuestion',
     'addVerification', 'addUpload', 'finishedCounting', 'getOrCreateExp',
     'numVerificationsToBePerformed']

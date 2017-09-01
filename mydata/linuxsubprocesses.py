@@ -29,7 +29,6 @@ def StartErrandBoy():
     errandBoyLogger = logging.getLogger("errand_boy.transports.unixsocket")
     errandBoyLogger.addHandler(logger.streamHandler)
     errandBoyLogger.addHandler(logger.fileHandler)
-    errandBoyLogger.addHandler(logger.logWindowHandler)
 
     if ERRAND_BOY_PROCESS:
         StopErrandBoy()

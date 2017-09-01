@@ -78,9 +78,7 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.message = \
             "Looking for matching file on MyTardis server..."
         self.verificationModel.status = VerificationStatus.IN_PROGRESS
-        # Don't call MessageUpdated yet, because if this file is in the
-        # cache, we don't want to send too many GUI update requests per
-        # unit time.
+        verificationsModel.MessageUpdated(self.verificationModel)
 
         try:
             dataset = self.folderModel.datasetModel
@@ -92,10 +90,9 @@ class VerifyDatafileRunnable(object):
                     cacheKey in SETTINGS.verifiedDatafilesCache:
                 self.verificationModel.message = \
                     "Found datafile in verified-files cache."
-                self.verificationModel.status = \
-                    VerificationStatus.FOUND_VERIFIED
-                # Don't call MessageUpdated - avoid having too many GUI
-                # update requests per cache hit.
+                verificationsModel.SetFoundVerified(
+                    self.verificationModel)
+                verificationsModel.MessageUpdated(self.verificationModel)
                 self.HandleExistingVerifiedDatafile(cacheHit=True)
                 return
             else:
@@ -105,12 +102,14 @@ class VerifyDatafileRunnable(object):
                 directory=dataFileDirectory)
             self.verificationModel.message = \
                 "Found datafile on MyTardis server."
-            self.verificationModel.status = VerificationStatus.FOUND_VERIFIED
+            verificationsModel.SetFoundVerified(self.verificationModel)
             verificationsModel.MessageUpdated(self.verificationModel)
             self.HandleExistingDatafile(existingDatafile)
         except DoesNotExist:
             self.HandleNonExistentDataFile()
         except:
+            verificationsModel.SetFailed(self.verificationModel)
+            verificationsModel.SetComplete(self.verificationModel)
             logger.error(traceback.format_exc())
 
     def HandleNonExistentDataFile(self):
@@ -120,7 +119,7 @@ class VerifyDatafileRunnable(object):
         verificationsModel = DATAVIEW_MODELS['verifications']
         self.verificationModel.message = \
             "Didn't find datafile on MyTardis server."
-        self.verificationModel.status = VerificationStatus.NOT_FOUND
+        verificationsModel.SetNotFound(self.verificationModel)
         verificationsModel.MessageUpdated(self.verificationModel)
         verificationsModel.SetComplete(self.verificationModel)
         event = MYDATA_EVENTS.DidntFindDatafileOnServerEvent(
@@ -209,8 +208,7 @@ class VerifyDatafileRunnable(object):
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         self.verificationModel.message = \
             "Found unverified full-size datafile on staging server."
-        self.verificationModel.status = \
-            VerificationStatus.FOUND_UNVERIFIED_FULL_SIZE
+        verificationsModel.SetFoundUnverifiedFullSize(self.verificationModel)
         verificationsModel.MessageUpdated(self.verificationModel)
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
@@ -239,8 +237,8 @@ class VerifyDatafileRunnable(object):
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         self.verificationModel.message = \
             "Found partially uploaded datafile on staging server."
-        self.verificationModel.status = \
-            VerificationStatus.FOUND_UNVERIFIED_NOT_FULL_SIZE
+        verificationsModel.SetFoundUnverifiedNotFullSize(
+            self.verificationModel)
         verificationsModel.MessageUpdated(self.verificationModel)
         logger.debug("Re-uploading \"%s\" to staging, because "
                      "the file size is %s bytes in staging, "
@@ -301,10 +299,10 @@ class VerifyDatafileRunnable(object):
                                   dataFilePath.encode('utf8'))
             if SETTINGS.miscellaneous.cacheDataFileLookups:
                 with LOCKS.updateCache:
-                    SETTINGS.verifiedDatafilesCache[cacheKey] = True
+                    if SETTINGS.verifiedDatafilesCache:
+                        SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
-        if not cacheHit:
-            DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
+        DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)
         PostEvent(MYDATA_EVENTS.FoundVerifiedDatafileEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
