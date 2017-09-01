@@ -43,6 +43,7 @@ class UploadMethod(object):
     # pylint: disable=invalid-name
     HTTP_POST = 0
     VIA_STAGING = 1
+    LOCAL_COPY = 2  # includes copying to mounted file share
 
 
 def AddUploaderInfo(dataFileDict):
