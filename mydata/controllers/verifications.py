@@ -67,6 +67,8 @@ class VerifyDatafileRunnable(object):
             self.folderModel.GetDataFileDirectory(self.dataFileIndex)
         dataFileName = os.path.basename(dataFilePath)
         verificationsModel = DATAVIEW_MODELS['verifications']
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         with LOCKS.addVerification:
             verificationDataViewId = \
                 verificationsModel.GetMaxDataViewId() + 1
@@ -116,6 +118,8 @@ class VerifyDatafileRunnable(object):
         """
         If file doesn't exist on the server, it needs to be uploaded.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         verificationsModel = DATAVIEW_MODELS['verifications']
         self.verificationModel.message = \
             "Didn't find datafile on MyTardis server."
@@ -132,6 +136,8 @@ class VerifyDatafileRunnable(object):
         """
         Check if existing DataFile is verified.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         if not existingDatafile.replicas or \
                 not existingDatafile.replicas[0].verified:
             self.HandleExistingUnverifiedDatafile(existingDatafile)
@@ -144,6 +150,8 @@ class VerifyDatafileRunnable(object):
         need to wait for it to be verified.  But if it was uploaded via
         staging, we might be able to resume a partial upload.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         self.verificationModel.existingUnverifiedDatafile = existingDatafile
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         message = "Found datafile record for %s " \
@@ -178,6 +186,8 @@ class VerifyDatafileRunnable(object):
         on the MyTardis server, which is provided by the
         mytardis-app-mydata app.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         try:
             bytesUploadedPreviously = ReplicaModel.CountBytesUploadedToStaging(
                 existingDatafile.replicas[0].dfoId)
@@ -204,6 +214,8 @@ class VerifyDatafileRunnable(object):
         in staging, then we can request its verification, but no upload
         is needed.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         self.verificationModel.message = \
@@ -233,6 +245,8 @@ class VerifyDatafileRunnable(object):
         """
         Re-upload file (resuming partial uploads is not supported).
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         self.verificationModel.message = \
@@ -262,6 +276,8 @@ class VerifyDatafileRunnable(object):
         Or we could be using the STAGING method but failed to find any
         DataFileObjects on the server for the datafile.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         logger.debug("Found unverified datafile record for \"%s\" "
@@ -292,6 +308,8 @@ class VerifyDatafileRunnable(object):
         """
         Found existing verified file on server.
         """
+        if wx.GetApp().foldersController.IsShuttingDown():
+            return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         if not cacheHit:
@@ -299,8 +317,7 @@ class VerifyDatafileRunnable(object):
                                   dataFilePath.encode('utf8'))
             if SETTINGS.miscellaneous.cacheDataFileLookups:
                 with LOCKS.updateCache:
-                    if SETTINGS.verifiedDatafilesCache:
-                        SETTINGS.verifiedDatafilesCache[cacheKey] = True
+                    SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)

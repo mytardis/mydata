@@ -57,6 +57,7 @@ def ShutdownForRefresh(event):
                 "to start another one.\n\n" \
                 "See the Log tab for details of the error."
             logger.error(message)
+            logger.error(traceback.format_exc())
 
             def ShowDialog():
                 """
