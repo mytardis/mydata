@@ -287,15 +287,14 @@ class SettingsModel(object):
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        if self.verifiedDatafilesCache:
-            with LOCKS.closeCache:
-                try:
-                    with open(self.verifiedDatafilesCachePath,
-                              'wb') as cacheFile:
-                        pickle.dump(self.verifiedDatafilesCache, cacheFile)
-                except:
-                    logger.warning("Couldn't save verified datafiles cache.")
-                    logger.warning(traceback.format_exc())
+        with LOCKS.closeCache:
+            try:
+                with open(self.verifiedDatafilesCachePath,
+                          'wb') as cacheFile:
+                    pickle.dump(self.verifiedDatafilesCache, cacheFile)
+            except:
+                logger.warning("Couldn't save verified datafiles cache.")
+                logger.warning(traceback.format_exc())
 
     @property
     def configPath(self):
