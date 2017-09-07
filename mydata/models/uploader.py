@@ -98,7 +98,7 @@ from ..threads.locks import LOCKS
 from . import HandleHttpError
 from .storage import StorageBox
 
-DEFAULT_TIMEOUT = 3
+DEFAULT_TIMEOUT = 5
 
 
 class UploaderModel(object):
