@@ -19,7 +19,7 @@ from ..models.settings import LastSettingsUpdateTrigger
 from ..logs import logger
 
 
-def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
+def ScanAndUploadTask(event, needToValidateSettings, jobId):
     """
     Task to be run according to the schedule.
     """
@@ -29,11 +29,11 @@ def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
         while not app.Processing():
             time.sleep(0.01)
         wx.CallAfter(StartScansAndUploads, event, needToValidateSettings,
-                     jobId, testRun)
+                     jobId)
         while app.Processing():
             time.sleep(0.01)
     else:
-        StartScansAndUploads(event, needToValidateSettings, jobId, testRun)
+        StartScansAndUploads(event, needToValidateSettings, jobId)
 
 
 def HandleValueError(err):
@@ -54,7 +54,7 @@ class ScheduleController(object):
         self.tasksModel = DATAVIEW_MODELS['tasks']
 
     def ApplySchedule(self, event, runManually=False,
-                      needToValidateSettings=True, testRun=False):
+                      needToValidateSettings=True):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -76,7 +76,7 @@ class ScheduleController(object):
                 # Wait for user to manually click Refresh on MyData's toolbar.
                 logger.debug("Finished processing schedule type.")
                 return
-            self.CreateManualTask(event, needToValidateSettings, testRun)
+            self.CreateManualTask(event, needToValidateSettings)
         elif scheduleType == "Once":
             self.CreateOnceTask(event, needToValidateSettings)
         elif scheduleType == "Daily":
@@ -144,8 +144,7 @@ class ScheduleController(object):
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateManualTask(self, event, needToValidateSettings=True,
-                         testRun=False):
+    def CreateManualTask(self, event, needToValidateSettings=True):
         """
         Create a task to run when the user manually asks MyData to being
         the data folder scans and uploads, usually by clicking the
@@ -165,7 +164,7 @@ class ScheduleController(object):
         else:
             sys.stderr.write("%s\n" % msg)
         taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId, testRun]
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:

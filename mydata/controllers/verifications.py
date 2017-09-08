@@ -23,6 +23,7 @@ import traceback
 import wx
 
 from ..settings import SETTINGS
+from ..threads.flags import FLAGS
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..models.settings.miscellaneous import MiscellaneousSettingsModel
 from ..models.replica import ReplicaModel
@@ -47,11 +48,10 @@ class VerifyDatafileRunnable(object):
     verified, and if not, whether they have been completely or
     partially uploaded.
     """
-    def __init__(self, folderModel, dataFileIndex, testRun=False):
+    def __init__(self, folderModel, dataFileIndex):
         self.folderModel = folderModel
         self.dataFileIndex = dataFileIndex
         self.verificationModel = None
-        self.testRun = testRun
 
     def Run(self):
         """
@@ -224,7 +224,7 @@ class VerifyDatafileRunnable(object):
         verificationsModel.MessageUpdated(self.verificationModel)
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
-        if existingDatafile and not self.testRun:
+        if existingDatafile and not FLAGS.testRunRunning:
             if existingDatafile.md5sum == \
                     MiscellaneousSettingsModel.GetFakeMd5Sum():
                 logger.warning("MD5(%s): %s" %
@@ -235,7 +235,7 @@ class VerifyDatafileRunnable(object):
         PostEvent(MYDATA_EVENTS.FoundFullSizeStagedEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
-        if self.testRun:
+        if FLAGS.testRunRunning:
             message = "FOUND UNVERIFIED UPLOAD FOR: %s" \
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
@@ -288,7 +288,7 @@ class VerifyDatafileRunnable(object):
         self.verificationModel.status = \
             VerificationStatus.FOUND_UNVERIFIED_UNSTAGED
         verificationsModel.MessageUpdated(self.verificationModel)
-        if existingDatafile and not self.testRun:
+        if existingDatafile and not FLAGS.testRunRunning:
             if existingDatafile.md5sum == \
                     MiscellaneousSettingsModel.GetFakeMd5Sum():
                 logger.warning("MD5(%s): %s" %
@@ -299,7 +299,7 @@ class VerifyDatafileRunnable(object):
         PostEvent(MYDATA_EVENTS.FoundUnverifiedUnstagedEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
-        if self.testRun:
+        if FLAGS.testRunRunning:
             message = "FOUND UNVERIFIED UPLOAD FOR: %s" \
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
@@ -324,7 +324,7 @@ class VerifyDatafileRunnable(object):
         PostEvent(MYDATA_EVENTS.FoundVerifiedDatafileEvent(
             folderModel=self.folderModel, dataFileIndex=self.dataFileIndex,
             dataFilePath=dataFilePath))
-        if self.testRun:
+        if FLAGS.testRunRunning:
             message = "FOUND VERIFIED UPLOAD FOR: %s" \
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)

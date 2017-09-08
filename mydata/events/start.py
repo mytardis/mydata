@@ -55,8 +55,7 @@ def ManuallyTriggerScanFoldersAndUpload(event):
     app.scheduleController.ApplySchedule(event, runManually=True)
 
 
-def StartScansAndUploads(
-        event, needToValidateSettings=True, jobId=None, testRun=False):
+def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     """
     Shut down any existing data folder scan and upload threads,
     validate settings, and begin scanning data folders, checking
@@ -78,8 +77,6 @@ def StartScansAndUploads(
         needToValidateSettings = False
     if hasattr(event, "shutdownSuccessful") and event.shutdownSuccessful:
         shutdownForRefreshComplete = True
-    if hasattr(event, "testRun") and event.testRun:
-        testRun = True
 
     if (FLAGS.scanningFolders or FLAGS.performingLookupsAndUploads) \
             and not shutdownForRefreshComplete:
@@ -91,8 +88,7 @@ def StartScansAndUploads(
         logger.debug(message)
         app.frame.SetStatusMessage(message)
 
-        shutdownForRefreshEvent = \
-            MYDATA_EVENTS.ShutdownForRefreshEvent(testRun=testRun)
+        shutdownForRefreshEvent = MYDATA_EVENTS.ShutdownForRefreshEvent()
         logger.debug("Posting shutdownForRefreshEvent")
         PostEvent(shutdownForRefreshEvent)
         return
@@ -106,8 +102,7 @@ def StartScansAndUploads(
     if needToValidateSettings:
         validateSettingsForRefreshEvent = \
             MYDATA_EVENTS.ValidateSettingsForRefreshEvent(
-                needToValidateSettings=needToValidateSettings,
-                testRun=testRun)
+                needToValidateSettings=needToValidateSettings)
         if CONNECTIVITY.CheckForRefresh(
                 nextEvent=validateSettingsForRefreshEvent):
             # Wait for the event to be handled, which will result
@@ -118,7 +113,7 @@ def StartScansAndUploads(
         message = "Validating settings..."
         app.frame.SetStatusMessage(message)
         logger.info(message)
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
         def ValidateSettingsWorker():
@@ -140,9 +135,8 @@ def StartScansAndUploads(
                     return
 
                 try:
-                    ValidateSettings(testRun=testRun)
-                    event = MYDATA_EVENTS.SettingsValidationCompleteEvent(
-                        testRun=testRun)
+                    ValidateSettings()
+                    event = MYDATA_EVENTS.SettingsValidationCompleteEvent()
                     PostEvent(event)
                     wx.CallAfter(EndBusyCursorIfRequired)
                 except UserAbortedSettingsValidation:
@@ -164,7 +158,7 @@ def StartScansAndUploads(
                         wx.CallAfter(
                             app.frame.SetStatusMessage,
                             "Settings validation failed.")
-                        if testRun:
+                        if FLAGS.testRunRunning:
                             wx.CallAfter(app.testRunFrame.Hide)
                         wx.CallAfter(OnSettings, None,
                                      validationMessage=message)
@@ -200,7 +194,7 @@ def StartScansAndUploads(
         if numUserOrGroupFoldersScanned == \
                 UsersModel.GetNumUserOrGroupFolders():
             logger.info(message)
-            if testRun:
+            if FLAGS.testRunRunning:
                 logger.testrun(message)
 
     # Start FoldersModel.ScanFolders()
@@ -221,7 +215,7 @@ def StartScansAndUploads(
         message = "Scanning data folders in %s..." \
             % SETTINGS.general.dataDirectory
         logger.info(message)
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
         try:
             LOCKS.scanningFolders.acquire()
@@ -249,7 +243,7 @@ def StartScansAndUploads(
 
         if CheckIfShouldAbort():
             RestoreUserInterfaceForAbort()
-            if testRun:
+            if FLAGS.testRunRunning:
                 logger.testrun("Data scans and uploads were canceled.")
                 FLAGS.testRunRunning = False
             return
@@ -270,7 +264,7 @@ def StartScansAndUploads(
             else:
                 message = "No valid folders were found to upload from."
             logger.warning(message)
-            if testRun:
+            if FLAGS.testRunRunning:
                 logger.testrun(message)
             wx.CallAfter(app.frame.SetStatusMessage, message)
             RestoreUserInterfaceForAbort()
@@ -346,8 +340,7 @@ def OnTestRunFromToolbar(event):
     app.testRunFrame.saveButton.Disable()
     ResetShouldAbortStatus()
     app.scheduleController.ApplySchedule(event, runManually=True,
-                                         needToValidateSettings=True,
-                                         testRun=True)
+                                         needToValidateSettings=True)
     app.testRunFrame.Show()
     app.testRunFrame.Clear()
     app.testRunFrame.SetTitle("%s - Test Run" % app.frame.GetTitle())

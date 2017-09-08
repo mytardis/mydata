@@ -75,7 +75,6 @@ class MyDataTester(unittest.TestCase):
     def setUp(self):
         os.environ['MYDATA_TESTING'] = 'True'
         os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
-        FLAGS.testRunRunning = False
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
@@ -149,7 +148,11 @@ class MyDataTester(unittest.TestCase):
         for row in range(foldersModel.GetRowCount()):
             folderNames.append(
                 foldersModel.GetFolderRecord(row).folderName)
-        self.assertEqual(sorted(folderNames), folders)
+        import unicodedata
+        found = [repr(unicodedata.normalize('NFC', unicode(f))) for f in sorted(folderNames)]
+        expected = [repr(unicodedata.normalize('NFC', unicode(f))) for f in folders]
+        # self.assertEqual(sorted(folderNames), folders)
+        self.assertEqual(found, expected)
 
     def AssertNumFiles(self, numFiles):
         """
