@@ -82,6 +82,7 @@ class MyDataTester(unittest.TestCase):
         self.fakeMyTardisUrl = \
             "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
         WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
+        InitializeModels()
 
     def InitializeAppAndFrame(self, title):
         """
@@ -97,6 +98,7 @@ class MyDataTester(unittest.TestCase):
         if self.frame:
             self.frame.Hide()
             self.frame.Destroy()
+
         if self.httpd:
             self.httpd.shutdown()
         if self.fakeMyTardisServerThread:
@@ -136,19 +138,18 @@ class MyDataTester(unittest.TestCase):
         """
         Check the users in self.usersModel
         """
-        usersModel = DATAVIEW_MODELS['users']
         self.assertEqual(
-            sorted(usersModel.GetValuesForColname("Username")), users)
+            sorted(DATAVIEW_MODELS['users'].GetValuesForColname("Username")),
+            users)
 
     def AssertFolders(self, folders):
         """
         Check the folders in DATAVIEW_MODELS['folders']
         """
         folderNames = []
-        foldersModel = DATAVIEW_MODELS['folders']
-        for row in range(foldersModel.GetRowCount()):
+        for row in range(DATAVIEW_MODELS['folders'].GetRowCount()):
             folderNames.append(
-                foldersModel.GetFolderRecord(row).folderName)
+                DATAVIEW_MODELS['folders'].GetFolderRecord(row).folderName)
         self.assertEqual(sorted(folderNames), folders)
 
     def AssertNumFiles(self, numFiles):
@@ -156,9 +157,8 @@ class MyDataTester(unittest.TestCase):
         Check the number of files found in DATAVIEW_MODELS['folders']
         """
         totalFiles = 0
-        foldersModel = DATAVIEW_MODELS['folders']
-        for row in range(foldersModel.GetRowCount()):
-            totalFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
+        for row in range(DATAVIEW_MODELS['folders'].GetRowCount()):
+            totalFiles += DATAVIEW_MODELS['folders'].GetFolderRecord(row).GetNumFiles()
         self.assertEqual(totalFiles, numFiles)
 
 
@@ -177,9 +177,9 @@ class MyDataSettingsTester(MyDataTester):
             self.tempFilePath = tempConfig.name
 
     def tearDown(self):
-        super(MyDataSettingsTester, self).tearDown()
         if os.path.exists(self.tempFilePath):
             os.remove(self.tempFilePath)
+        super(MyDataSettingsTester, self).tearDown()
 
     def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
         """
@@ -211,9 +211,18 @@ def InitializeModels():
 
     Should be called after loading valid settings.
     """
-    DATAVIEW_MODELS['users'] = UsersModel()
-    DATAVIEW_MODELS['groups'] = GroupsModel()
-    DATAVIEW_MODELS['folders'] = FoldersModel()
+    if 'users' in DATAVIEW_MODELS:
+        DATAVIEW_MODELS['users'].DeleteAllRows()
+    else:
+        DATAVIEW_MODELS['users'] = UsersModel()
+    if 'groups' in DATAVIEW_MODELS:
+        DATAVIEW_MODELS['groups'].DeleteAllRows()
+    else:
+        DATAVIEW_MODELS['groups'] = GroupsModel()
+    if 'folders' in DATAVIEW_MODELS:
+        DATAVIEW_MODELS['folders'].DeleteAllRows()
+    else:
+        DATAVIEW_MODELS['folders'] = FoldersModel()
 
 
 def ValidateSettingsAndScanFolders():
@@ -221,6 +230,4 @@ def ValidateSettingsAndScanFolders():
     Collecting some common code needed by multiple "scan folders" tests
     """
     ValidateSettings()
-    InitializeModels()
-    foldersModel = DATAVIEW_MODELS['folders']
-    foldersModel.ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+    DATAVIEW_MODELS['folders'].ScanFolders(MyDataScanFoldersTester.ProgressCallback)

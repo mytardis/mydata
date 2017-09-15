@@ -44,13 +44,13 @@ def ShutdownForRefresh(event):
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             app = wx.GetApp()
-            app.scheduleController.ApplySchedule(event)
             app.foldersController.ShutDownUploadThreads()
             shutdownForRefreshCompleteEvent = \
                 MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
                     shutdownSuccessful=True)
             PostEvent(shutdownForRefreshCompleteEvent)
             wx.CallAfter(EndBusyCursorIfRequired, event)
+            app.scheduleController.ApplySchedule(event)
         except:
             message = "An error occurred while trying to shut down " \
                 "the existing data-scan-and-upload process in order " \

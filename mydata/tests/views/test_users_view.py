@@ -5,6 +5,7 @@ import unittest
 
 import wx
 
+from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.users import UsersModel
 from ...models.user import UserModel
 from ...views.dataview import MyDataDataView
@@ -18,48 +19,50 @@ class UsersViewTester(unittest.TestCase):
         self.app = wx.App(redirect=False)
         self.app.SetAppName('UsersViewTester')
         self.frame = wx.Frame(None, title='UsersViewTester')
-        self.usersModel = UsersModel()
-        self.usersView = MyDataDataView(self.frame, self.usersModel)
+        DATAVIEW_MODELS['users'] = UsersModel()
+        self.usersView = MyDataDataView(self.frame, 'users')
         self.frame.Show()
 
     def test_users_view(self):
         """
         Test ability to open users view.
         """
-        dataViewId = self.usersModel.GetMaxDataViewId() + 1
+        usersModel = DATAVIEW_MODELS['users']
+
+        dataViewId = usersModel.GetMaxDataViewId() + 1
         testuser1 = UserModel(
             username="testuser1",
             fullName="Test User1",
             email="testuser1@example.com",
             dataViewId=dataViewId)
-        self.usersModel.AddRow(testuser1)
-        dataViewId = self.usersModel.GetMaxDataViewId() + 1
+        usersModel.AddRow(testuser1)
+        dataViewId = usersModel.GetMaxDataViewId() + 1
         testuser2 = UserModel(
             username="testuser2",
             fullName="Test User2",
             email="testuser2@example.com",
             dataViewId=dataViewId)
-        self.usersModel.AddRow(testuser2)
+        usersModel.AddRow(testuser2)
 
-        self.usersModel.Compare(testuser1, testuser2, col=1, ascending=True)
+        usersModel.Compare(testuser1, testuser2, col=1, ascending=True)
 
-        self.assertEqual(self.usersModel.GetValueByRow(0, 1), "testuser1")
-        self.assertEqual(self.usersModel.GetValueByRow(1, 1), "testuser2")
-        self.assertEqual(self.usersModel.GetRowCount(), 2)
-        self.assertEqual(self.usersModel.GetUnfilteredRowCount(), 2)
-        self.assertEqual(self.usersModel.GetFilteredRowCount(), 0)
-        self.usersModel.Filter("testuser2")
-        self.assertEqual(self.usersModel.GetUnfilteredRowCount(), 2)
-        self.assertEqual(self.usersModel.GetFilteredRowCount(), 1)
-        self.usersModel.Filter("notfound")
-        self.assertEqual(self.usersModel.GetUnfilteredRowCount(), 2)
-        self.assertEqual(self.usersModel.GetFilteredRowCount(), 2)
-        self.usersModel.Filter("")
-        self.assertEqual(self.usersModel.GetUnfilteredRowCount(), 2)
-        self.assertEqual(self.usersModel.GetFilteredRowCount(), 0)
-        self.usersModel.DeleteAllRows()
-        self.assertEqual(self.usersModel.GetUnfilteredRowCount(), 0)
-        self.assertEqual(self.usersModel.GetFilteredRowCount(), 0)
+        self.assertEqual(usersModel.GetValueByRow(0, 1), "testuser1")
+        self.assertEqual(usersModel.GetValueByRow(1, 1), "testuser2")
+        self.assertEqual(usersModel.GetRowCount(), 2)
+        self.assertEqual(usersModel.GetUnfilteredRowCount(), 2)
+        self.assertEqual(usersModel.GetFilteredRowCount(), 0)
+        usersModel.Filter("testuser2")
+        self.assertEqual(usersModel.GetUnfilteredRowCount(), 2)
+        self.assertEqual(usersModel.GetFilteredRowCount(), 1)
+        usersModel.Filter("notfound")
+        self.assertEqual(usersModel.GetUnfilteredRowCount(), 2)
+        self.assertEqual(usersModel.GetFilteredRowCount(), 2)
+        usersModel.Filter("")
+        self.assertEqual(usersModel.GetUnfilteredRowCount(), 2)
+        self.assertEqual(usersModel.GetFilteredRowCount(), 0)
+        usersModel.DeleteAllRows()
+        self.assertEqual(usersModel.GetUnfilteredRowCount(), 0)
+        self.assertEqual(usersModel.GetFilteredRowCount(), 0)
 
     def tearDown(self):
         self.frame.Hide()

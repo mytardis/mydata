@@ -125,29 +125,24 @@ class MyDataFrame(wx.Frame):
         """
         Create data views and add them to tabbed view.
         """
-        self.dataViews['folders'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['folders'])
+        self.dataViews['folders'] = MyDataDataView(self.tabbedView, "folders")
         self.tabbedView.AddPage(self.dataViews['folders'], "Folders")
 
-        self.dataViews['users'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['users'])
+        self.dataViews['users'] = MyDataDataView(self.tabbedView, "users")
         self.tabbedView.AddPage(self.dataViews['users'], "Users")
 
-        self.dataViews['groups'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['groups'])
+        self.dataViews['groups'] = MyDataDataView(self.tabbedView, "groups")
         self.tabbedView.AddPage(self.dataViews['groups'], "Groups")
 
         self.dataViews['verifications'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['verifications'])
+            self.tabbedView, "verifications")
         self.tabbedView.AddPage(
             self.dataViews['verifications'], "Verifications")
 
-        self.dataViews['uploads'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['uploads'])
+        self.dataViews['uploads'] = MyDataDataView(self.tabbedView, "uploads")
         self.tabbedView.AddPage(self.dataViews['uploads'], "Uploads")
 
-        self.dataViews['tasks'] = MyDataDataView(
-            self.tabbedView, DATAVIEW_MODELS['tasks'])
+        self.dataViews['tasks'] = MyDataDataView(self.tabbedView, "tasks")
         self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
 
     def SetStatusMessage(self, msg, force=False):
