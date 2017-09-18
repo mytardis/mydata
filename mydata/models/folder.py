@@ -328,11 +328,11 @@ class FolderModel(object):
         Reset counts of uploaded files etc.
         """
         self.dataFileUploaded = []
-        for i in range(0, self.numFiles):
+        for _ in range(0, self.numFiles):
             self.dataFileUploaded.append(False)
 
         self.dataFileVerified = []
-        for i in range(0, self.numFiles):
+        for _ in range(0, self.numFiles):
             self.dataFileVerified.append(False)
 
         self.numFilesUploaded = 0
