@@ -277,8 +277,8 @@ class FoldersModel(MyDataDataViewModel):
                 if not myTardisFolderName:
                     message = 'Didn\'t find "MyTardis" folder in ' \
                         '"%s"' % userFolderPath
-                    logger.error(message)
-                    raise InvalidFolderStructure(message)
+                    logger.warning(message)
+                    return
                 myTardisFolderPath = os.path.join(userFolderPath,
                                                   myTardisFolderName)
                 self.ScanForExperimentFolders(myTardisFolderPath,

@@ -172,6 +172,8 @@ def RespondToUserRequest(mytardis):
         testuser1Email="%s&email__iexact=testuser1%%40example.com",
         testuser2Username="%s&username=testuser2",
         testuser2Email="%s&email__iexact=testuser2%%40example.com",
+        testuser3Username="%s&username=testuser3",
+        testuser3Email="%s&email__iexact=testuser3%%40example.com",
         invalidUserUsername="%s&username=INVALID_USER",
         invalidUserEmail="%s&email__iexact=invalid%%40email.com",
         userWithoutProfile="%s&username=userwithoutprofile"
@@ -229,6 +231,19 @@ def RespondToUserRequest(mytardis):
                 "groups": [],
                 "id": 149,
                 "resource_uri": "/api/v1/user/149/"
+            }
+        ]
+    elif mytardis.path == supportedRequests['testuser3Username'] or \
+            mytardis.path == supportedRequests['testuser3Email']:
+        usersJson['objects'] = [
+            {
+                "username": "testuser3",
+                "first_name": "Test",
+                "last_name": "User3",
+                "email": "testuser3@example.com",
+                "groups": [],
+                "id": 150,
+                "resource_uri": "/api/v1/user/150/"
             }
         ]
     elif mytardis.path == supportedRequests['invalidUserUsername'] or \
