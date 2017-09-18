@@ -19,9 +19,9 @@ from ..logs import logger
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import DoesNotExist
 from ..utils import Compare
-from ..threads.flags import FLAGS
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
+from ..events.stop import CheckIfShouldAbort
 from .dataview import MyDataDataViewModel
 from .dataview import DATAVIEW_MODELS
 
@@ -136,10 +136,9 @@ class FoldersModel(MyDataDataViewModel):
         """
         Add folder model to folders model and notify view.
         """
-        super(FoldersModel, self).AddRow(folderModel)
-
-        if FLAGS.shouldAbort:
+        if CheckIfShouldAbort():
             return
+        super(FoldersModel, self).AddRow(folderModel)
 
         startDataUploadsForFolderEvent = \
             MYDATA_EVENTS.StartUploadsForFolderEvent(
@@ -218,7 +217,7 @@ class FoldersModel(MyDataDataViewModel):
         userFolderNames = [os.path.basename(d) for d in dirsDepth1]
         numUserFoldersScanned = 0
         for userFolderName in userFolderNames:
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
             if folderStructure.startswith("Username"):
                 logger.debug("Found folder assumed to be username: " +
@@ -235,7 +234,7 @@ class FoldersModel(MyDataDataViewModel):
                     userRecord = None
             except DoesNotExist:
                 userRecord = None
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
             usersDataViewId = usersModel.GetMaxDataViewId() + 1
             if not userRecord:
@@ -278,13 +277,13 @@ class FoldersModel(MyDataDataViewModel):
                     message = 'Didn\'t find "MyTardis" folder in ' \
                         '"%s"' % userFolderPath
                     logger.warning(message)
-                    return
+                    continue
                 myTardisFolderPath = os.path.join(userFolderPath,
                                                   myTardisFolderName)
                 self.ScanForExperimentFolders(myTardisFolderPath,
                                               userRecord,
                                               userFolderName)
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
 
             numUserFoldersScanned += 1
@@ -309,7 +308,7 @@ class FoldersModel(MyDataDataViewModel):
             SETTINGS.advanced.uploadInvalidUserOrGroupFolders
         numGroupFoldersScanned = 0
         for groupFolderName in groupFolderNames:
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
             logger.debug("Found folder assumed to be user group name: " +
                          groupFolderName)
@@ -328,7 +327,7 @@ class FoldersModel(MyDataDataViewModel):
                                    "'Upload invalid user group folders' "
                                    "setting is not checked." % groupFolderName)
                     continue
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
             if groupRecord:
                 groupRecord.dataViewId = groupsDataViewId
@@ -345,7 +344,7 @@ class FoldersModel(MyDataDataViewModel):
                                               groupFolderName=groupFolderName)
             else:
                 raise InvalidFolderStructure("Unknown folder structure.")
-            if FLAGS.shouldAbort:
+            if CheckIfShouldAbort():
                 return
             numGroupFoldersScanned += 1
             if threading.current_thread().name == "MainThread":
@@ -391,6 +390,8 @@ class FoldersModel(MyDataDataViewModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=None,
                                 owner=owner)
+                if CheckIfShouldAbort():
+                    return
                 folderModel.SetCreatedDate()
                 if not owner.userNotFoundInMyTardis:
                     if owner.fullName.strip() != "":
@@ -466,6 +467,8 @@ class FoldersModel(MyDataDataViewModel):
                                 userFolderName=userFolderName,
                                 groupFolderName=groupFolderName,
                                 owner=owner)
+                if CheckIfShouldAbort():
+                    return
                 if folderStructure.startswith("Username") or \
                         folderStructure.startswith("Email") or \
                         folderStructure.startswith("Experiment"):
@@ -494,6 +497,8 @@ class FoldersModel(MyDataDataViewModel):
                                 groupFolderName=groupFolderName,
                                 owner=owner,
                                 isExperimentFilesFolder=True)
+                if CheckIfShouldAbort():
+                    return
                 folderModel.experimentTitle = expFolderName
                 folderModel.SetCreatedDate()
                 self.AddRow(folderModel)
@@ -550,6 +555,8 @@ class FoldersModel(MyDataDataViewModel):
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")
             userFolders = os.walk(instrumentFolderPath).next()[1]
+            if CheckIfShouldAbort():
+                return
             for userFolderName in userFolders:
                 userFolderPath = os.path.join(instrumentFolderPath,
                                               userFolderName)
@@ -584,6 +591,8 @@ class FoldersModel(MyDataDataViewModel):
                                     userFolderName=userFolderName,
                                     groupFolderName=groupFolderName,
                                     owner=owner)
+                    if CheckIfShouldAbort():
+                        return
                     folderModel.group = groupModel
                     folderModel.SetCreatedDate()
                     folderModel.experimentTitle = \

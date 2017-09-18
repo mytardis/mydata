@@ -22,6 +22,7 @@ from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..events.stop import CheckIfShouldAbort
+from ..events import MYDATA_THREADS
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
 from ..models.dataset import DatasetModel
@@ -617,9 +618,11 @@ class FoldersController(object):
         # updated only when a changed was made to the underlying data, but
         # because changes coming from the cache are two quick, we can't use
         # these changes as the trigger to update the view any longer:
-        wx.CallAfter(DATAVIEW_MODELS['folders'].Cleared)
+        DATAVIEW_MODELS['folders'].Reset(
+            DATAVIEW_MODELS['folders'].GetCount())
 
-        numVerificationsCompleted = DATAVIEW_MODELS['verifications'].GetCompletedCount()
+        numVerificationsCompleted = \
+            DATAVIEW_MODELS['verifications'].GetCompletedCount()
 
         uploadsToBePerformed = DATAVIEW_MODELS['uploads'].GetRowCount() + \
             self.uploadsQueue.qsize()
@@ -727,6 +730,10 @@ class FoldersController(object):
             self.verificationsQueue.put(None)
         for thread in self.verificationWorkerThreads:
             thread.join()
+
+        logger.debug("Joining remaining threads...")
+        MYDATA_THREADS.Join()
+        logger.debug("Joined remaining threads.")
 
         if FLAGS.testRunRunning:
             LogTestRunSummary()

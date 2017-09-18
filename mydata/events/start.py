@@ -33,6 +33,7 @@ from ..utils.connectivity import GetActiveNetworkInterfaces
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from ..views.connectivity import ReportNoActiveInterfaces
+from . import MYDATA_THREADS
 
 
 def OnScanAndUploadFromToolbar(event):
@@ -175,6 +176,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                 name="StartScansAndUploadsValidateSettingsThread")
             logger.debug("Starting thread %s" % thread.name)
             thread.start()
+            MYDATA_THREADS.Add(thread)
             logger.debug("Started thread %s" % thread.name)
         else:
             ValidateSettingsWorker()
@@ -218,16 +220,15 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
         if FLAGS.testRunRunning:
             logger.testrun(message)
         try:
-            LOCKS.scanningFolders.acquire()
-            FLAGS.scanningFolders = True
-            logger.debug("Just set scanningFolders to True")
-            wx.CallAfter(
-                app.frame.toolbar.DisableTestAndUploadToolbarButtons)
-            DATAVIEW_MODELS['folders'].ScanFolders(
-                WriteProgressUpdateToStatusBar)
-            app.foldersController.FinishedScanningForDatasetFolders()
-            FLAGS.scanningFolders = False
-            LOCKS.scanningFolders.release()
+            with LOCKS.scanningFolders:
+                FLAGS.scanningFolders = True
+                logger.debug("Just set scanningFolders to True")
+                wx.CallAfter(
+                    app.frame.toolbar.DisableTestAndUploadToolbarButtons)
+                DATAVIEW_MODELS['folders'].ScanFolders(
+                    WriteProgressUpdateToStatusBar)
+                app.foldersController.FinishedScanningForDatasetFolders()
+                FLAGS.scanningFolders = False
             logger.debug("Just set scanningFolders to False")
         except InvalidFolderStructure as ifs:
             def ShowMessageDialog():
@@ -274,6 +275,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
         thread = threading.Thread(target=ScanDataDirs,
                                   name="ScanDataDirectoriesThread")
         thread.start()
+        MYDATA_THREADS.Add(thread)
     else:
         ScanDataDirs()
 
