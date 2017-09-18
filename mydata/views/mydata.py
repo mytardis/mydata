@@ -17,6 +17,7 @@ from ..utils import OpenUrl
 from ..events.docs import OnHelp
 from ..events.docs import OnWalkthrough
 from .dataview import MyDataDataView
+from .verifications import VerificationsDataView
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from .log import LogView
 from .taskbaricon import MyDataTaskBarIcon
@@ -134,8 +135,8 @@ class MyDataFrame(wx.Frame):
         self.dataViews['groups'] = MyDataDataView(self.tabbedView, "groups")
         self.tabbedView.AddPage(self.dataViews['groups'], "Groups")
 
-        self.dataViews['verifications'] = MyDataDataView(
-            self.tabbedView, "verifications")
+        self.dataViews['verifications'] = \
+            VerificationsDataView(self.tabbedView)
         self.tabbedView.AddPage(
             self.dataViews['verifications'], "Verifications")
 

@@ -69,6 +69,25 @@ class VerifyDatafileRunnable(object):
         verificationsModel = DATAVIEW_MODELS['verifications']
         if wx.GetApp().foldersController.IsShuttingDown():
             return
+
+        dataset = self.folderModel.datasetModel
+        if not dataset:  # test runs don't create required datasets
+            self.HandleNonExistentDataFile()
+            return
+
+        try:
+            cacheKey = \
+                "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+            if SETTINGS.miscellaneous.cacheDataFileLookups and \
+                    cacheKey in SETTINGS.verifiedDatafilesCache:
+                verificationsModel.IncrementCacheHits()
+                self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+                return
+        except:
+            # If an unhandled exception occurs during a cache lookup,
+            # don't bail out - we can look it up on the MyTardis server instead.
+            logger.debug(traceback.format_exc())
+
         with LOCKS.addVerification:
             verificationDataViewId = \
                 verificationsModel.GetMaxDataViewId() + 1
@@ -77,28 +96,12 @@ class VerifyDatafileRunnable(object):
                                   folderModel=self.folderModel,
                                   dataFileIndex=self.dataFileIndex)
             verificationsModel.AddRow(self.verificationModel)
-        self.verificationModel.message = \
-            "Looking for matching file on MyTardis server..."
-        self.verificationModel.status = VerificationStatus.IN_PROGRESS
-        verificationsModel.MessageUpdated(self.verificationModel)
 
         try:
-            dataset = self.folderModel.datasetModel
-            if not dataset:  # test runs don't create required datasets
-                raise DoesNotExist("Dataset doesn't exist.")
-            cacheKey = \
-                "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
-            if SETTINGS.miscellaneous.cacheDataFileLookups and \
-                    cacheKey in SETTINGS.verifiedDatafilesCache:
-                self.verificationModel.message = \
-                    "Found datafile in verified-files cache."
-                verificationsModel.SetFoundVerified(
-                    self.verificationModel)
-                verificationsModel.MessageUpdated(self.verificationModel)
-                self.HandleExistingVerifiedDatafile(cacheHit=True)
-                return
-            else:
-                verificationsModel.MessageUpdated(self.verificationModel)
+            self.verificationModel.message = \
+                "Looking for matching file on MyTardis server..."
+            self.verificationModel.status = VerificationStatus.IN_PROGRESS
+            verificationsModel.MessageUpdated(self.verificationModel)
             existingDatafile = DataFileModel.GetDataFile(
                 dataset=dataset, filename=dataFileName,
                 directory=dataFileDirectory)

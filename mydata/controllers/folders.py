@@ -51,8 +51,8 @@ class FoldersController(object):
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
-    def __init__(self, notifyWindow):
-        self.notifyWindow = notifyWindow
+    def __init__(self, parent):
+        self.parent = parent
 
         self.shuttingDown = threading.Event()
         self._canceled = threading.Event()
@@ -75,6 +75,8 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
+
+        self.countCompletedTimer = None
 
     @property
     def started(self):
@@ -234,6 +236,8 @@ class FoldersController(object):
         if sys.platform.startswith("linux"):
             StartErrandBoy()
 
+        self.InitializeTimers()
+
         try:
             SETTINGS.uploaderModel.RequestStagingAccess()
             uploadToStagingRequest = \
@@ -345,6 +349,42 @@ class FoldersController(object):
                 self.uploadWorkerThreads.append(thread)
                 thread.start()
 
+    def InitializeTimers(self):
+        """
+        These timers control how often components of the GUI are updated
+        which can't be updated every time the underlying data changes,
+        because it changes too quickly.
+
+        Timers do not run in unit tests.
+
+        This method is usually run from a worker thread, hence the use of
+        wx.CallAfter
+        """
+        self.countCompletedTimer = wx.Timer(self.parent)
+        self.parent.Bind(wx.EVT_TIMER, self.CountCompletedUploadsAndVerifications,
+                         self.countCompletedTimer)
+        if 'MYDATA_TESTING' not in os.environ:
+            wx.CallAfter(self.countCompletedTimer.Start, 500)
+            wx.CallAfter(self.parent.dataViews['verifications'] \
+                    .updateCacheHitSummaryTimer.Start, 500)
+
+    def StopTimers(self):
+        """
+        These timers control how often components of the GUI are updated
+        which can't be updated every time the underlying data changes,
+        because it changes too quickly.
+
+        Timers do not run in unit tests.
+
+        This method is currently run from the main thread, hence the lack of
+        wx.CallAfter when stopping the timers.
+        """
+        if 'MYDATA_TESTING' not in os.environ:
+            self.parent.dataViews['verifications'] \
+                .updateCacheHitSummaryTimer.Stop()
+            self.parent.dataViews['verifications'].UpdateCacheHitSummary(None)
+            self.countCompletedTimer.Stop()
+
     def ClearStatusFlags(self):
         """
         Clear flags which indicate the status of the scans and uploads
@@ -383,13 +423,13 @@ class FoldersController(object):
         ScanFolders method has finished populating
         DATAVIEW_MODELS['folders'] with dataset folders.
         """
-        self.finishedScanningForDatasetFolders.set()
-        logger.debug("Finished scanning for dataset folders.")
         while len(self.finishedCountingVerifications.keys()) < \
                 DATAVIEW_MODELS['folders'].GetCount():
             if self.IsShuttingDown() or CheckIfShouldAbort():
                 break
             time.sleep(0.01)
+        logger.debug("Finished scanning for dataset folders.")
+        self.finishedScanningForDatasetFolders.set()
         self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
@@ -496,7 +536,6 @@ class FoldersController(object):
                 # upload complete) to determine when to check if
                 # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
-            # End: for row in range(0, DATAVIEW_MODELS['folders'].GetRowCount())
         except:
             logger.error(traceback.format_exc())
 
@@ -573,6 +612,12 @@ class FoldersController(object):
         if self.completed or self.canceled:
             return
 
+        # Tell the folders view to refresh its data.  (It was previously
+        # updated only when a changed was made to the underlying data, but
+        # because changes coming from the cache are two quick, we can't use
+        # these changes as the trigger to update the view any longer:
+        wx.CallAfter(DATAVIEW_MODELS['folders'].Cleared)
+
         numVerificationsCompleted = DATAVIEW_MODELS['verifications'].GetCompletedCount()
 
         uploadsToBePerformed = DATAVIEW_MODELS['uploads'].GetRowCount() + \
@@ -589,7 +634,7 @@ class FoldersController(object):
                 message = "Uploaded %d of %d files." % \
                     (uploadsCompleted, uploadsToBePerformed)
             else:
-                message = "Looked up %d of %d files on server." % \
+                message = "Looked up %d of %d files." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
             wx.CallAfter(wx.GetApp().frame.SetStatusMessage, message)
@@ -652,6 +697,7 @@ class FoldersController(object):
             return
         message = "Shutting down upload threads..."
         logger.info(message)
+        self.StopTimers()
         if hasattr(app, "frame"):
             app.frame.SetStatusMessage(message, force=True)
         if hasattr(event, "failed") and event.failed:
