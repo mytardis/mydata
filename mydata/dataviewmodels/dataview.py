@@ -1,6 +1,5 @@
 """
-MyData classes can import DataViewIndexListModel from here, and automatically
-get the right the module, which depends on the wxPython version.
+Shared functionality for MyData's dataview model classes.
 """
 import threading
 import traceback
@@ -10,10 +9,11 @@ import wx
 from ..logs import logger
 
 if 'phoenix' in wx.PlatformInfo:
-    from wx.dataview import DataViewIndexListModel
+    from wx.dataview import DataViewVirtualListModel
 else:
-    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
+    from wx.dataview import PyDataViewVirtualListModel as DataViewVirtualListModel
 
+itemsAdded = list()
 
 class ColumnRenderer(object):
     """
@@ -24,7 +24,7 @@ class ColumnRenderer(object):
     PROGRESS = 2
 
 
-class MyDataDataViewModel(DataViewIndexListModel):
+class MyDataDataViewModel(DataViewVirtualListModel):
     """
     Generic base class to inherit from
     """
