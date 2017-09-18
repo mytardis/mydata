@@ -13,11 +13,6 @@ class GroupExceptionsTester(MyDataTester):
     """
     Test ability to handle group-related exceptions.
     """
-    def setUp(self):
-        super(GroupExceptionsTester, self).setUp()
-        super(GroupExceptionsTester, self).InitializeAppAndFrame(
-            'GroupExceptionsTester')
-
     def test_group_exceptions(self):
         """
         Test ability to handle group-related exceptions.

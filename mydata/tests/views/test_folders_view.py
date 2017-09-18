@@ -14,8 +14,6 @@ class FoldersViewTester(MyDataSettingsTester):
     """
     def setUp(self):
         super(FoldersViewTester, self).setUp()
-        super(FoldersViewTester, self).InitializeAppAndFrame(
-            'FoldersViewTester')
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
@@ -26,7 +24,7 @@ class FoldersViewTester(MyDataSettingsTester):
         """
         foldersModel = DATAVIEW_MODELS['folders']
         # Create folders view:
-        dataView = MyDataDataView(self.frame, 'folders')
+        dataView = MyDataDataView(self.app.frame, 'folders')
         testuser1 = UserModel.GetUserByUsername("testuser1")
         dataViewId = 1
         folder = "Flowers"

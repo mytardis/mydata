@@ -19,11 +19,6 @@ class ObjectAclExceptionsTester(MyDataTester):
     """
     Test ability to handle ObjectACL-related exceptions.
     """
-    def setUp(self):
-        super(ObjectAclExceptionsTester, self).setUp()
-        super(ObjectAclExceptionsTester, self).InitializeAppAndFrame(
-            'ObjectAclExceptionsTester')
-
     def test_objectacl_exceptions(self):
         """
         Test ability to handle ObjectACL-related exceptions.

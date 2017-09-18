@@ -20,11 +20,6 @@ class ExperimentExceptionsTester(MyDataTester):
     """
     Test ability to handle experiment-related exceptions.
     """
-    def setUp(self):
-        super(ExperimentExceptionsTester, self).setUp()
-        super(ExperimentExceptionsTester, self).InitializeAppAndFrame(
-            'ExperimentExceptionsTester')
-
     def test_experiment_exceptions(self):
         """
         Test ability to handle experiment-related exceptions.

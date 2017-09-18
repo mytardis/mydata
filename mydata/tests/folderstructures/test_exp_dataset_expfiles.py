@@ -10,11 +10,6 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
     """
     Test ability to upload files at the Experiment level.
     """
-    def setUp(self):
-        super(UploadExpFilesTester, self).setUp()
-        super(UploadExpFilesTester, self).InitializeAppAndFrame(
-            'UploadExpFilesTester')
-
     def test_upload_exp_files(self):
         """
         Test ability to upload files at the Experiment level.

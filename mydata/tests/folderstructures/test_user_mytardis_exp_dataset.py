@@ -11,11 +11,6 @@ class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
     Test ability to scan the Username / MyTardis / Experiment / Dataset folder
     structure.
     """
-    def setUp(self):
-        super(ScanUserMyTardisExpDatasetTester, self).setUp()
-        super(ScanUserMyTardisExpDatasetTester, self).InitializeAppAndFrame(
-            'ScanUserMyTardisExpDatasetTester')
-
     def test_scan_folders(self):
         """
         Test ability to scan the Username / MyTardis / Experiment / Dataset

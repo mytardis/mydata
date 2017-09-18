@@ -58,6 +58,39 @@ class MyDataMinimalTester(unittest.TestCase):
         del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
 
 
+class MockToolbar(object):
+    """
+    Mock toolbar for unit tests
+    """
+    def EnableTestAndUploadToolbarButtons(self):
+        """
+        Mock method for unit tests
+        """
+        assert self  # Avoid no-self-use complaints from Pylint
+        sys.stderr.write("Enabling Test and Upload Toolbar Buttons.\n")
+
+
+class TestFrame(wx.Frame):
+    """
+    Simple main window class for unit tests.
+    """
+    def __init__(self, parent, title):
+        self.parent = parent
+        self.title = title
+        self.toolbar = MockToolbar()
+        super(TestFrame, self).__init__(parent=parent, title=title)
+
+    def SetStatusMessage(self, msg, force=False):
+        """
+        Mock status bar updating method for unit tests.
+        """
+        if force:
+            suffix = " (forcefully updated)"
+        else:
+            suffix = ""
+        sys.stderr.write("%s STATUS: %s%s\n" % (self.GetTitle(), msg, suffix))
+
+
 class MyDataTester(unittest.TestCase):
     """
     Base class for inheriting from for tests requiring a fake MyTardis server
@@ -65,7 +98,6 @@ class MyDataTester(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(MyDataTester, self).__init__(*args, **kwargs)
         self.app = None
-        self.frame = None
         self.httpd = None
         self.fakeMyTardisHost = "127.0.0.1"
         self.fakeMyTardisPort = None
@@ -73,10 +105,16 @@ class MyDataTester(unittest.TestCase):
         self.fakeMyTardisUrl = None
 
     def setUp(self):
+        """
+        Initialize generic wxPython app and main frame
+        """
         os.environ['MYDATA_TESTING'] = 'True'
         os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
+        self.app = wx.App()
+        self.app.frame = TestFrame(parent=None, title=self.shortDescription())
+        FLAGS.shouldAbort = False
         FLAGS.testRunRunning = False
-        MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.app.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
@@ -84,20 +122,12 @@ class MyDataTester(unittest.TestCase):
         WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
         InitializeModels()
 
-    def InitializeAppAndFrame(self, title):
-        """
-        Initialize generic wxPython app and main frame
-        """
-        self.app = wx.App()
-        self.frame = wx.Frame(parent=None, title=title)
-        FLAGS.shouldAbort = False
-
     def tearDown(self):
         del os.environ['MYDATA_TESTING']
         del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
-        if self.frame:
-            self.frame.Hide()
-            self.frame.Destroy()
+        if self.app.frame:
+            self.app.frame.Hide()
+            self.app.frame.Destroy()
 
         if self.httpd:
             self.httpd.shutdown()

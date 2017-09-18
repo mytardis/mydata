@@ -12,11 +12,6 @@ class SchedulingConfigTester(MyDataTester):
     """
     Test ability to read and validate scheduling config.
     """
-    def setUp(self):
-        super(SchedulingConfigTester, self).setUp()
-        super(SchedulingConfigTester, self).InitializeAppAndFrame(
-            'SchedulingConfigTester')
-
     def test_read_timer_cfg(self):
         """
         Test ability to read Timer settings from MyData.cfg

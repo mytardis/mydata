@@ -41,8 +41,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
 
     def setUp(self):
         super(ScanUsernameDatasetScpTester, self).setUp()
-        super(ScanUsernameDatasetScpTester, self).InitializeAppAndFrame(
-            'ScanUsernameDatasetScpTester')
         logger.SetLevel(logging.DEBUG)
         # The fake SSH server needs to know the public
         # key so it can authenticate the test client.
@@ -110,7 +108,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         verificationsModel = DATAVIEW_MODELS['verifications']
         DATAVIEW_MODELS['uploads'] = UploadsModel()
         uploadsModel = DATAVIEW_MODELS['uploads']
-        foldersController = FoldersController(self.frame)
+        foldersController = FoldersController(self.app.frame)
         # This helps with PostEvent's logging in mydata/events/__init__.py:
         self.app.foldersController = foldersController
 
@@ -235,10 +233,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.miscellaneous.uuid = "1234567891"
         loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
+        self.assertEqual(uploadsModel.GetCompletedCount(), 0)
+        self.assertTrue(foldersController.failed)
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn(
             "Key 'scp_username' not found in attributes for storage box",

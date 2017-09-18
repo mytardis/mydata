@@ -10,11 +10,6 @@ class NewInstrumentTester(MyDataTester):
     """
     Test ability to create a new instrument when required.
     """
-    def setUp(self):
-        super(NewInstrumentTester, self).setUp()
-        super(NewInstrumentTester, self).InitializeAppAndFrame(
-            'NewInstrumentTester')
-
     def test_create_new_instrument(self):
         """
         Test ability to create a new instrument when required.

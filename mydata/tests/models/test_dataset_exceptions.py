@@ -18,11 +18,6 @@ class DatasetExceptionsTester(MyDataTester):
     """
     Test ability to handle dataset-related exceptions.
     """
-    def setUp(self):
-        super(DatasetExceptionsTester, self).setUp()
-        super(DatasetExceptionsTester, self).InitializeAppAndFrame(
-            'DatasetExceptionsTester')
-
     def test_dataset_exceptions(self):
         """
         Test ability to handle dataset-related exceptions.

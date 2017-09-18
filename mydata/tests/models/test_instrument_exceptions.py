@@ -13,11 +13,6 @@ class InstrumentExceptionsTester(MyDataTester):
     """
     Test ability to handle instrument-related exceptions.
     """
-    def setUp(self):
-        super(InstrumentExceptionsTester, self).setUp()
-        super(InstrumentExceptionsTester, self).InitializeAppAndFrame(
-            'InstrumentExceptionsTester')
-
     def test_instrument_exceptions(self):
         """
         Test ability to handle instrument-related exceptions.

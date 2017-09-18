@@ -10,11 +10,6 @@ class ScanFoldersTester(MyDataTester):
     """
     Test ability to detect invalid email addresses in the Email / Dataset structure.
     """
-    def setUp(self):
-        super(ScanFoldersTester, self).setUp()
-        super(ScanFoldersTester, self).InitializeAppAndFrame(
-            'ScanFoldersTester')
-
     def test_scan_folders(self):
         """
         Test ability to detect invalid email addresses in the Email / Dataset structure.
