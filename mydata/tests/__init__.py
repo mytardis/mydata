@@ -188,7 +188,8 @@ class MyDataTester(unittest.TestCase):
         """
         totalFiles = 0
         for row in range(DATAVIEW_MODELS['folders'].GetRowCount()):
-            totalFiles += DATAVIEW_MODELS['folders'].GetFolderRecord(row).GetNumFiles()
+            totalFiles += DATAVIEW_MODELS['folders'] \
+                .GetFolderRecord(row).GetNumFiles()
         self.assertEqual(totalFiles, numFiles)
 
 
@@ -260,4 +261,5 @@ def ValidateSettingsAndScanFolders():
     Collecting some common code needed by multiple "scan folders" tests
     """
     ValidateSettings()
-    DATAVIEW_MODELS['folders'].ScanFolders(MyDataScanFoldersTester.ProgressCallback)
+    DATAVIEW_MODELS['folders'].ScanFolders(
+        MyDataScanFoldersTester.ProgressCallback)
