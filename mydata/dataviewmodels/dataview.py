@@ -13,7 +13,6 @@ if 'phoenix' in wx.PlatformInfo:
 else:
     from wx.dataview import PyDataViewVirtualListModel as DataViewVirtualListModel
 
-itemsAdded = list()
 
 class ColumnRenderer(object):
     """
