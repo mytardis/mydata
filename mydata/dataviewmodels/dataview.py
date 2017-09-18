@@ -9,9 +9,9 @@ import wx
 from ..logs import logger
 
 if 'phoenix' in wx.PlatformInfo:
-    from wx.dataview import DataViewVirtualListModel
+    from wx.dataview import DataViewIndexListModel
 else:
-    from wx.dataview import PyDataViewVirtualListModel as DataViewVirtualListModel
+    from wx.dataview import PyDataViewIndexListModel as DataViewIndexListModel
 
 
 class ColumnRenderer(object):
@@ -23,7 +23,7 @@ class ColumnRenderer(object):
     PROGRESS = 2
 
 
-class MyDataDataViewModel(DataViewVirtualListModel):
+class MyDataDataViewModel(DataViewIndexListModel):
     """
     Generic base class to inherit from
     """
@@ -244,9 +244,8 @@ class MyDataDataViewModel(DataViewVirtualListModel):
         self.filteredData = list()
         self.Filter(self.searchString)
 
-        self.maxDataViewIdLock.acquire()
-        self.maxDataViewId = value.dataViewId
-        self.maxDataViewIdLock.release()
+        with self.maxDataViewIdLock:
+            self.maxDataViewId = value.dataViewId
 
     def DeleteAllRows(self):
         """
