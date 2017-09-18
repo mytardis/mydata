@@ -322,3 +322,18 @@ class FolderModel(object):
                 if progressCallback:
                     progressCallback(bytesProcessed)
         return md5.hexdigest()
+
+    def ResetCounts(self):
+        """
+        Reset counts of uploaded files etc.
+        """
+        self.dataFileUploaded = []
+        for i in range(0, self.numFiles):
+            self.dataFileUploaded.append(False)
+
+        self.dataFileVerified = []
+        for i in range(0, self.numFiles):
+            self.dataFileVerified.append(False)
+
+        self.numFilesUploaded = 0
+        self.numFilesVerified = 0

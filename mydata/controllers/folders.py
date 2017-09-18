@@ -210,6 +210,7 @@ class FoldersController(object):
         self.InitializeStatusFlags()
         mydata.views.messages.LAST_ERROR_MESSAGE = None
         mydata.views.messages.LAST_CONFIRMATION_QUESTION = None
+        DATAVIEW_MODELS['folders'].ResetCounts()
         DATAVIEW_MODELS['verifications'].DeleteAllRows()
         DATAVIEW_MODELS['uploads'].DeleteAllRows()
         DATAVIEW_MODELS['uploads'].SetStartTime(datetime.datetime.now())

@@ -603,3 +603,10 @@ class FoldersModel(MyDataDataViewModel):
         for folderModel in self.rowsData:
             total += folderModel.GetNumFiles()
         return total
+
+    def ResetCounts(self):
+        """
+        Reset counts of uploaded files etc.
+        """
+        for folderModel in self.rowsData:
+            folderModel.ResetCounts()
