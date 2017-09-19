@@ -93,14 +93,15 @@ def CheckConnectivity(event):
     Checks network connectivity.
     """
     from . import MYDATA_THREADS
+    nextEvent = getattr(event, "nextEvent", None)
     if wx.PyApp.IsMainLoopRunning():
         checkConnectivityThread = threading.Thread(
             target=CONNECTIVITY.Check,
-            name="CheckConnectivityThread", args=[event])
+            name="CheckConnectivityThread", args=[nextEvent])
         MYDATA_THREADS.Add(checkConnectivityThread)
         checkConnectivityThread.start()
     else:
-        CONNECTIVITY.Check(event)
+        CONNECTIVITY.Check(nextEvent)
 
 
 def InstrumentNameMismatch(event):
@@ -479,7 +480,7 @@ def StartDataUploadsForFolder(event):
     if FLAGS.shouldAbort or not FLAGS.scanningFolders:
         return
 
-    def StartDataUploadsForFolderWorker():
+    def StartDataUploadsForFolderWorker(folderModel):
         """
         Start the data uploads in a dedicated thread.
         """
@@ -490,7 +491,7 @@ def StartDataUploadsForFolder(event):
         if FLAGS.shouldAbort or not FLAGS.scanningFolders:
             return
         message = "Checking for data files on MyTardis and uploading " \
-            "if necessary for folder: %s" % event.folderModel.folderName
+            "if necessary for folder: %s" % folderModel.folderName
         logger.info(message)
         app = wx.GetApp()
         if FLAGS.testRunRunning:
@@ -498,13 +499,13 @@ def StartDataUploadsForFolder(event):
         if type(app).__name__ == "MyData":
             app.frame.toolbar.DisableTestAndUploadToolbarButtons()
             FLAGS.performingLookupsAndUploads = True
-            app.foldersController.StartUploadsForFolder(
-                event.folderModel)
+            app.foldersController.StartUploadsForFolder(folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
     if wx.PyApp.IsMainLoopRunning():
         startDataUploadsForFolderThread = \
-            threading.Thread(target=StartDataUploadsForFolderWorker)
+            threading.Thread(target=StartDataUploadsForFolderWorker,
+                             args=[event.folderModel])
         threadName = startDataUploadsForFolderThread.name
         threadName = \
             threadName.replace("Thread", "StartDataUploadsForFolderThread")
@@ -512,7 +513,7 @@ def StartDataUploadsForFolder(event):
         MYDATA_THREADS.Add(startDataUploadsForFolderThread)
         startDataUploadsForFolderThread.start()
     else:
-        StartDataUploadsForFolderWorker()
+        StartDataUploadsForFolderWorker(event.folderModel)
 
 
 def DidntFindDatafileOnServer(event):

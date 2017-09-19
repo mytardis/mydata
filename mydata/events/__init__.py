@@ -54,7 +54,10 @@ def NewEvent(defaultTarget=None, defaultHandler=None):
         def __init__(self, **kw):
             wx.PyEvent.__init__(self)
             self.SetEventType(eventType)
-            self.__dict__.update(kw)
+            if 'phoenix' in wx.PlatformInfo:
+                self._getAttrDict().update(kw)
+            else:
+                self.__dict__.update(kw)
 
     eventBinder = wx.PyEventBinder(eventType)
 
