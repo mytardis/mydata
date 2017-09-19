@@ -381,6 +381,7 @@ class FoldersController(object):
         This method is currently run from the main thread, hence the lack of
         wx.CallAfter when stopping the timers.
         """
+        assert threading.current_thread().name == "MainThread"
         if 'MYDATA_TESTING' not in os.environ:
             self.parent.dataViews['verifications'] \
                 .updateCacheHitSummaryTimer.Stop()
@@ -432,7 +433,7 @@ class FoldersController(object):
             time.sleep(0.01)
         logger.debug("Finished scanning for dataset folders.")
         self.finishedScanningForDatasetFolders.set()
-        self.CountCompletedUploadsAndVerifications(event=None)
+        wx.CallAfter(self.CountCompletedUploadsAndVerifications, event=None)
 
     def StartUploadsForFolder(self, folderModel):
         """
@@ -614,6 +615,8 @@ class FoldersController(object):
         if self.completed or self.canceled:
             return
 
+        assert threading.current_thread().name == "MainThread"
+
         # Tell the folders view to refresh its data.  (It was previously
         # updated only when a changed was made to the underlying data, but
         # because changes coming from the cache are two quick, we can't use
@@ -672,6 +675,9 @@ class FoldersController(object):
         # pylint: disable=too-many-branches
         if self.IsShuttingDown() or self.completed or self.canceled:
             return
+
+        assert threading.current_thread().name == "MainThread"
+
         self.SetShuttingDown(True)
         app = wx.GetApp()
         if SETTINGS.miscellaneous.cacheDataFileLookups:
