@@ -433,7 +433,10 @@ class FoldersController(object):
             time.sleep(0.01)
         logger.debug("Finished scanning for dataset folders.")
         self.finishedScanningForDatasetFolders.set()
-        wx.CallAfter(self.CountCompletedUploadsAndVerifications, event=None)
+        if wx.PyApp.IsMainLoopRunning():
+            wx.CallAfter(self.CountCompletedUploadsAndVerifications, event=None)
+        else:
+            self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
         """
