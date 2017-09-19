@@ -10,11 +10,6 @@ class ScanGroupExpDatasetTester(MyDataScanFoldersTester):
     """
     Test ability to scan the User Group / Experiment / Dataset folder structure.
     """
-    def setUp(self):
-        super(ScanGroupExpDatasetTester, self).setUp()
-        super(ScanGroupExpDatasetTester, self).InitializeAppAndFrame(
-            'ScanGroupExpDatasetTester')
-
     def test_scan_folders(self):
         """
         Test ability to scan the User Group / Experiment / Dataset folder structure.

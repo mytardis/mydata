@@ -6,7 +6,6 @@ from ...models.folder import FolderModel
 from ...models.user import UserModel
 from ...views.dataview import MyDataDataView
 from .. import MyDataSettingsTester
-from .. import InitializeModels
 
 
 class FoldersViewTester(MyDataSettingsTester):
@@ -15,12 +14,9 @@ class FoldersViewTester(MyDataSettingsTester):
     """
     def setUp(self):
         super(FoldersViewTester, self).setUp()
-        super(FoldersViewTester, self).InitializeAppAndFrame(
-            'FoldersViewTester')
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
-        InitializeModels()
 
     def test_folders_view(self):
         """
@@ -28,7 +24,7 @@ class FoldersViewTester(MyDataSettingsTester):
         """
         foldersModel = DATAVIEW_MODELS['folders']
         # Create folders view:
-        _ = MyDataDataView(self.frame, foldersModel)
+        dataView = MyDataDataView(self.app.frame, 'folders')
         testuser1 = UserModel.GetUserByUsername("testuser1")
         dataViewId = 1
         folder = "Flowers"
@@ -59,3 +55,4 @@ class FoldersViewTester(MyDataSettingsTester):
         foldersModel.DeleteAllRows()
         self.assertEqual(foldersModel.GetUnfilteredRowCount(), 0)
         self.assertEqual(foldersModel.GetFilteredRowCount(), 0)
+        dataView.Destroy()

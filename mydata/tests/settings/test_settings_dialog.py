@@ -35,13 +35,11 @@ class SettingsDialogTester(MyDataSettingsTester):
         will only be called once, so only one app will be created.
         """
         super(SettingsDialogTester, self).setUp()
-        super(SettingsDialogTester, self).InitializeAppAndFrame(
-            "Settings Dialog test")
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
-        self.settingsDialog = SettingsDialog(self.frame)
+        self.settingsDialog = SettingsDialog(self.app.frame)
 
     def tearDown(self):
         self.settingsDialog.Hide()

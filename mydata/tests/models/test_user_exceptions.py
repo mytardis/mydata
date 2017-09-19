@@ -13,11 +13,6 @@ class UserExceptionsTester(MyDataTester):
     """
     Test ability to handle user-related exceptions.
     """
-    def setUp(self):
-        super(UserExceptionsTester, self).setUp()
-        super(UserExceptionsTester, self).InitializeAppAndFrame(
-            'UserExceptionsTester')
-
     def test_user_exceptions(self):
         """
         Test ability to handle user-related exceptions.

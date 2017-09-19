@@ -32,7 +32,8 @@ class VerificationsModel(MyDataDataViewModel):
             foundVerified=0,
             foundUnverifiedFullSize=0,
             foundUnverifiedNotFullSize=0,
-            failed=0)
+            failed=0,
+            foundInCache=0)
 
         self.countLocks = dict(
             completed=threading.Lock(),
@@ -40,7 +41,8 @@ class VerificationsModel(MyDataDataViewModel):
             foundVerified=threading.Lock(),
             foundUnverifiedFullSize=threading.Lock(),
             foundUnverifiedNotFullSize=threading.Lock(),
-            failed=threading.Lock())
+            failed=threading.Lock(),
+            foundInCache=threading.Lock())
 
     def DeleteAllRows(self):
         """
@@ -53,7 +55,8 @@ class VerificationsModel(MyDataDataViewModel):
             foundVerified=0,
             foundUnverifiedFullSize=0,
             foundUnverifiedNotFullSize=0,
-            failed=0)
+            failed=0,
+            foundInCache=0)
 
     def SetComplete(self, verificationModel):
         """
@@ -78,6 +81,13 @@ class VerificationsModel(MyDataDataViewModel):
         verificationModel.status = VerificationStatus.FOUND_VERIFIED
         with self.countLocks['foundVerified']:
             self.totals['foundVerified'] += 1
+
+    def IncrementCacheHits(self):
+        """
+        Increment the number of cache hits
+        """
+        with self.countLocks['foundInCache']:
+            self.totals['foundInCache'] += 1
 
     def SetFoundUnverifiedFullSize(self, verificationModel):
         """
@@ -122,6 +132,13 @@ class VerificationsModel(MyDataDataViewModel):
         """
         return self.totals['foundVerified']
 
+    def GetFoundInCacheCount(self):
+        """
+        Return the number of files which were found in the local cache
+        and are known to have been previously verified by MyTardis.
+        """
+        return self.totals['foundInCache']
+
     def GetNotFoundCount(self):
         """
         Return the number of files which were not found on the MyTardis server
@@ -153,4 +170,4 @@ class VerificationsModel(MyDataDataViewModel):
         Return the number of files which MyData has finished looking
         up on the MyTardis server.
         """
-        return self.totals['completed']
+        return self.totals['completed'] + self.totals['foundInCache']

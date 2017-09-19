@@ -22,7 +22,7 @@ from .SubmitDebugReportDialog import SubmitDebugReportDialog
 from .wxloghandler import WxLogHandler
 from .wxloghandler import EVT_WX_LOG_EVENT
 
-TIMEOUT = 3
+TIMEOUT = 5
 
 
 class MyDataFormatter(logging.Formatter):

@@ -7,6 +7,7 @@ import tempfile
 
 import mydata.models.settings.validation
 from ...settings import SETTINGS
+from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
 from ..utils import StartFakeMyTardisServer
@@ -45,10 +46,12 @@ class SettingsValidationTester(MyDataSettingsTester):
         SETTINGS.advanced.uploadInvalidUserOrGroupFolders = False
         folderStructure = SETTINGS.advanced.folderStructure
         self.assertEqual(folderStructure, 'Username / Dataset')
-        ValidateSettings(testRun=True)
+        FLAGS.testRunRunning = True
+        ValidateSettings()
         SETTINGS.advanced.folderStructure = 'User Group / Dataset'
-        ValidateSettings(testRun=True)
+        ValidateSettings()
         SETTINGS.advanced.folderStructure = folderStructure
+        FLAGS.testRunRunning = False
 
         # Now let's make some settings invalid and test validation:
 
@@ -222,8 +225,10 @@ class SettingsValidationTester(MyDataSettingsTester):
             includesFile.write("*.tif\n")
         SETTINGS.filters.useIncludesFile = True
         SETTINGS.filters.includesFile = includesFilePath
-        ValidateSettings(testRun=True)
+        FLAGS.testRunRunning = True
+        ValidateSettings()
         os.remove(includesFilePath)
+        FLAGS.testRunRunning = False
 
         # Test globs validation for non-existent includes file:
         SETTINGS.filters.useIncludesFile = True
@@ -280,11 +285,15 @@ class SettingsValidationTester(MyDataSettingsTester):
         with open(excludesFilePath, 'w') as excludesFile:
             excludesFile.write("*.tif\n")
         SETTINGS.filters.excludesFile = excludesFilePath
-        ValidateSettings(testRun=True)
+        FLAGS.testRunRunning = True
+        ValidateSettings()
+        FLAGS.testRunRunning = False
 
         # Test "Test Run" warnings triggered when use_includes_file
         # and/or use_excludes_file are activated.  The warning should
         # appear in STDERR output of this test.
         SETTINGS.filters.useIncludesFile = False
         SETTINGS.filters.useExcludesFile = True
-        ValidateSettings(testRun=True)
+        FLAGS.testRunRunning = True
+        ValidateSettings()
+        FLAGS.testRunRunning = False

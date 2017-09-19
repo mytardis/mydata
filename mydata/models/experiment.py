@@ -7,6 +7,7 @@ import urllib
 import requests
 
 from ..settings import SETTINGS
+from ..threads.flags import FLAGS
 from ..logs import logger
 from ..utils.exceptions import Unauthorized
 from ..utils.exceptions import DoesNotExist
@@ -25,14 +26,14 @@ class ExperimentModel(object):
         self.json = experimentJson
 
     @staticmethod
-    def GetOrCreateExperimentForFolder(folderModel, testRun=False):
+    def GetOrCreateExperimentForFolder(folderModel):
         """
         See also GetExperimentForFolder, CreateExperimentForFolder
         """
         try:
             existingExperiment = \
                 ExperimentModel.GetExperimentForFolder(folderModel)
-            if testRun:
+            if FLAGS.testRunRunning:
                 message = "ADDING TO EXISTING EXPERIMENT FOR FOLDER: %s\n" \
                     "    URL: %s/%s\n" \
                     "    Title: %s\n" \
@@ -46,8 +47,7 @@ class ExperimentModel(object):
             return existingExperiment
         except DoesNotExist as err:
             if err.GetModelClass() == ExperimentModel:
-                return ExperimentModel.CreateExperimentForFolder(folderModel,
-                                                                 testRun)
+                return ExperimentModel.CreateExperimentForFolder(folderModel)
             else:
                 raise
 
@@ -193,7 +193,7 @@ class ExperimentModel(object):
             raise MultipleObjectsReturned(message)
 
     @staticmethod
-    def CreateExperimentForFolder(folderModel, testRun=False):
+    def CreateExperimentForFolder(folderModel):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
@@ -244,7 +244,7 @@ class ExperimentModel(object):
                            % (uploaderName, groupFolderName, hostname,
                               location))
 
-        if testRun:
+        if FLAGS.testRunRunning:
             message = "CREATING NEW EXPERIMENT FOR FOLDER: %s\n" \
                 "    Title: %s\n" \
                 "    Description: \n" \

@@ -53,7 +53,7 @@ if sys.platform.startswith("linux"):
 # interval of SLEEP_FACTOR * maxThreads.
 SLEEP_FACTOR = 0.01
 
-CONNECTION_TIMEOUT = 3
+CONNECTION_TIMEOUT = 5
 
 
 class OpenSSH(object):

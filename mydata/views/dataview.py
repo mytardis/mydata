@@ -8,6 +8,7 @@ import wx
 import wx.dataview as dv
 
 from ..dataviewmodels.dataview import ColumnRenderer
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 
 
 class MyDataDataView(wx.Panel):
@@ -17,7 +18,7 @@ class MyDataDataView(wx.Panel):
 
       Folders, Users, Groups, Tasks, Verifications, Uploads
     """
-    def __init__(self, parent, dataViewModel):
+    def __init__(self, parent, dataViewModelName):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
 
         # Create a dataview control
@@ -30,7 +31,8 @@ class MyDataDataView(wx.Panel):
             smallFont.SetPointSize(11)
         self.dataViewControl.SetFont(smallFont)
 
-        self.dataViewControl.AssociateModel(dataViewModel)
+        self.dataViewControl.AssociateModel(DATAVIEW_MODELS[dataViewModelName])
+        dataViewModel = DATAVIEW_MODELS[dataViewModelName]
 
         for col in range(0, dataViewModel.GetColumnCount()):
             renderer = dataViewModel.GetColumnRenderer(col)

@@ -9,11 +9,6 @@ class ScanDatasetTester(MyDataScanFoldersTester):
     """
     Test ability to scan the Dataset folder structure.
     """
-    def setUp(self):
-        super(ScanDatasetTester, self).setUp()
-        super(ScanDatasetTester, self).InitializeAppAndFrame(
-            'ScanDatasetTester')
-
     def test_scan_folders(self):
         """
         Test ability to scan the Dataset folder structure.

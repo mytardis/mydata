@@ -25,11 +25,6 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
     """
     Test scanning the Username / Dataset structure and upload using POST.
     """
-    def setUp(self):
-        super(ScanUsernameDatasetPostTester, self).setUp()
-        super(ScanUsernameDatasetPostTester, self).InitializeAppAndFrame(
-            'ScanUsernameDatasetPostTester')
-
     def test_scan_folders(self):
         """
         Test scanning the Username / Dataset structure and upload using POST.
@@ -63,7 +58,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         verificationsModel = VerificationsModel()
         DATAVIEW_MODELS['verifications'] = verificationsModel
         DATAVIEW_MODELS['uploads'] = uploadsModel
-        self.app.foldersController = FoldersController(self.frame)
+        self.app.foldersController = FoldersController(self.app.frame)
         self.app.foldersController.InitForUploads()
         for row in range(foldersModel.GetRowCount()):
             folderModel = foldersModel.GetFolderRecord(row)

@@ -44,7 +44,7 @@ class Connectivity(object):
             return True
         return False
 
-    def Check(self, event):
+    def Check(self, nextEvent=None):
         """
         Check network connectivity
         """
@@ -54,15 +54,15 @@ class Connectivity(object):
             activeNetworkInterfaces = GetActiveNetworkInterfaces()
         except Exception as err:
             HandleGenericErrorWithDialog(err)
-        wx.CallAfter(EndBusyCursorIfRequired, event)
+        wx.CallAfter(EndBusyCursorIfRequired)
         if activeNetworkInterfaces:
             logger.debug("Found at least one active network interface: %s."
                          % activeNetworkInterfaces[0])
             self.lastCheckSuccess = True
             self.lastCheckTime = datetime.now()
             self.activeNetworkInterface = activeNetworkInterfaces[0]
-            if hasattr(event, "nextEvent") and event.nextEvent:
-                PostEvent(event.nextEvent)
+            if nextEvent:
+                PostEvent(nextEvent)
         else:
             self.lastCheckSuccess = False
             self.lastCheckTime = datetime.now()

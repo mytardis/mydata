@@ -19,7 +19,7 @@ from ..models.settings import LastSettingsUpdateTrigger
 from ..logs import logger
 
 
-def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
+def ScanAndUploadTask(event, needToValidateSettings, jobId):
     """
     Task to be run according to the schedule.
     """
@@ -29,11 +29,11 @@ def ScanAndUploadTask(event, needToValidateSettings, jobId, testRun=False):
         while not app.Processing():
             time.sleep(0.01)
         wx.CallAfter(StartScansAndUploads, event, needToValidateSettings,
-                     jobId, testRun)
+                     jobId)
         while app.Processing():
             time.sleep(0.01)
     else:
-        StartScansAndUploads(event, needToValidateSettings, jobId, testRun)
+        StartScansAndUploads(event, needToValidateSettings, jobId)
 
 
 def HandleValueError(err):
@@ -50,11 +50,9 @@ class ScheduleController(object):
     """
     Functionality for scheduling tasks.
     """
-    def __init__(self):
-        self.tasksModel = DATAVIEW_MODELS['tasks']
 
-    def ApplySchedule(self, event, runManually=False,
-                      needToValidateSettings=True, testRun=False):
+    @staticmethod
+    def ApplySchedule(event, runManually=False, needToValidateSettings=True):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -65,29 +63,30 @@ class ScheduleController(object):
         if scheduleType == "On Startup" and \
                 SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
-            self.CreateOnStartupTask(event, needToValidateSettings)
+            ScheduleController.CreateOnStartupTask(event, needToValidateSettings)
         elif scheduleType == "On Settings Saved" and \
                 SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE:
-            self.CreateOnSettingsSavedTask(event)
+            ScheduleController.CreateOnSettingsSavedTask(event)
         elif scheduleType == "Manually":
             logger.debug("Schedule type is Manually.")
             if not runManually:
                 # Wait for user to manually click Refresh on MyData's toolbar.
                 logger.debug("Finished processing schedule type.")
                 return
-            self.CreateManualTask(event, needToValidateSettings, testRun)
+            ScheduleController.CreateManualTask(event, needToValidateSettings)
         elif scheduleType == "Once":
-            self.CreateOnceTask(event, needToValidateSettings)
+            ScheduleController.CreateOnceTask(event, needToValidateSettings)
         elif scheduleType == "Daily":
-            self.CreateDailyTask(event, needToValidateSettings)
+            ScheduleController.CreateDailyTask(event, needToValidateSettings)
         elif scheduleType == "Weekly":
-            self.CreateWeeklyTask(event, needToValidateSettings)
+            ScheduleController.CreateWeeklyTask(event, needToValidateSettings)
         elif scheduleType == "Timer":
-            self.CreateTimerTask(event, needToValidateSettings)
+            ScheduleController.CreateTimerTask(event, needToValidateSettings)
         logger.debug("Finished processing schedule type.")
 
-    def CreateOnStartupTask(self, event, needToValidateSettings):
+    @staticmethod
+    def CreateOnStartupTask(event, needToValidateSettings):
         """
         Create a task to be run automatically when MyData is launched.
         """
@@ -107,16 +106,17 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateOnSettingsSavedTask(self, event):
+    @staticmethod
+    def CreateOnSettingsSavedTask(event):
         """
         Create a task to run after the Settings dialog's OK button has been
         pressed and settings have been validated.
@@ -134,18 +134,18 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         needToValidateSettings = False
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateManualTask(self, event, needToValidateSettings=True,
-                         testRun=False):
+    @staticmethod
+    def CreateManualTask(event, needToValidateSettings=True):
         """
         Create a task to run when the user manually asks MyData to being
         the data folder scans and uploads, usually by clicking the
@@ -164,16 +164,17 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId, testRun]
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateOnceTask(self, event, needToValidateSettings):
+    @staticmethod
+    def CreateOnceTask(event, needToValidateSettings):
         """
         Create a task to be run once, on the date and time configured in
         the Schedule tab of the Settings dialog.
@@ -205,16 +206,17 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateDailyTask(self, event, needToValidateSettings):
+    @staticmethod
+    def CreateDailyTask(event, needToValidateSettings):
         """
         Create a task to be run every day at the time specified
         in the Schedule tab of the Settings dialog.
@@ -237,16 +239,17 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateWeeklyTask(self, event, needToValidateSettings):
+    @staticmethod
+    def CreateWeeklyTask(event, needToValidateSettings):
         """
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
@@ -279,17 +282,18 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType,
                          days=days)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)
 
-    def CreateTimerTask(self, event, needToValidateSettings):
+    @staticmethod
+    def CreateTimerTask(event, needToValidateSettings):
         """
         Create a task to be run every n minutes, where n is the interval
         specified in the Schedule tab of the Settings dialog.
@@ -314,12 +318,12 @@ class ScheduleController(object):
             wx.GetApp().frame.SetStatusMessage(msg)
         else:
             sys.stderr.write("%s\n" % msg)
-        taskDataViewId = self.tasksModel.GetMaxDataViewId() + 1
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
         jobArgs = [event, needToValidateSettings, taskDataViewId]
         task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
                          startTime, scheduleType=scheduleType,
                          intervalMinutes=intervalMinutes)
         try:
-            self.tasksModel.AddRow(task)
+            DATAVIEW_MODELS['tasks'].AddRow(task)
         except ValueError as err:
             HandleValueError(err)

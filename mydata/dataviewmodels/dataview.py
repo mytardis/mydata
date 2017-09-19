@@ -1,6 +1,5 @@
 """
-MyData classes can import DataViewIndexListModel from here, and automatically
-get the right the module, which depends on the wxPython version.
+Shared functionality for MyData's dataview model classes.
 """
 import threading
 import traceback
@@ -245,9 +244,8 @@ class MyDataDataViewModel(DataViewIndexListModel):
         self.filteredData = list()
         self.Filter(self.searchString)
 
-        self.maxDataViewIdLock.acquire()
-        self.maxDataViewId = value.dataViewId
-        self.maxDataViewIdLock.release()
+        with self.maxDataViewIdLock:
+            self.maxDataViewId = value.dataViewId
 
     def DeleteAllRows(self):
         """

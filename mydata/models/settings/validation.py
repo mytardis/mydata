@@ -15,6 +15,7 @@ from validate_email import validate_email
 import wx
 
 from ...logs import logger
+from ...threads.flags import FLAGS
 from ...utils.autostart import UpdateAutostartFile
 from ...utils.exceptions import InvalidSettings
 from ...utils.exceptions import Unauthorized
@@ -25,7 +26,7 @@ from .miscellaneous import LastSettingsUpdateTrigger
 DEFAULT_TIMEOUT = 5
 
 
-def ValidateSettings(setStatusMessage=None, testRun=False):
+def ValidateSettings(setStatusMessage=None):
     """
     Validate SETTINGS (an instance of SettingsModel)
     """
@@ -37,7 +38,7 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         """
         Log message if this is a Test Run
         """
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
     try:
@@ -45,13 +46,13 @@ def ValidateSettings(setStatusMessage=None, testRun=False):
         CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
                      % SETTINGS.advanced.folderStructure)
-        WarnIfIgnoringInvalidUserFolders(testRun)
-        CheckFilters(setStatusMessage, testRun)
+        WarnIfIgnoringInvalidUserFolders()
+        CheckFilters(setStatusMessage)
         CheckIfUserAborted(setStatusMessage)
         if SETTINGS.advanced.validateFolderStructure:
             datasetCount = CheckStructureAndCountDatasets(setStatusMessage)
         CheckIfUserAborted(setStatusMessage)
-        CheckMyTardisUrl(setStatusMessage, testRun)
+        CheckMyTardisUrl(setStatusMessage)
         CheckIfUserAborted(setStatusMessage)
         CheckMyTardisCredentials(setStatusMessage)
         CheckIfUserAborted(setStatusMessage)
@@ -131,7 +132,7 @@ def CheckForMissingRequiredField():
         raise InvalidSettings(message, "data_directory")
 
 
-def WarnIfIgnoringInvalidUserFolders(testRun):
+def WarnIfIgnoringInvalidUserFolders():
     """
     Warn if ignoring invalid user (or group) folders
     """
@@ -141,7 +142,7 @@ def WarnIfIgnoringInvalidUserFolders(testRun):
         """
         Log message if this is a Test Run
         """
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
     if not SETTINGS.advanced.uploadInvalidUserOrGroupFolders:
@@ -156,7 +157,7 @@ def WarnIfIgnoringInvalidUserFolders(testRun):
             LogIfTestRun("WARNING: %s" % message)
 
 
-def CheckFilters(setStatusMessage, testRun):
+def CheckFilters(setStatusMessage):
     """
     Check filter-related fields
     """
@@ -166,7 +167,7 @@ def CheckFilters(setStatusMessage, testRun):
         """
         Log message if this is a Test Run
         """
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
     if SETTINGS.filters.userFilter.strip() != "":
@@ -242,7 +243,7 @@ def CheckDataFileGlobFiles(setStatusMessage):
                                    "Excludes", "excludes", "excludes_file")
 
 
-def CheckMyTardisUrl(setStatusMessage, testRun):
+def CheckMyTardisUrl(setStatusMessage):
     """
     Check MyTardis URL
     """
@@ -252,7 +253,7 @@ def CheckMyTardisUrl(setStatusMessage, testRun):
         """
         Log message if this is a Test Run
         """
-        if testRun:
+        if FLAGS.testRunRunning:
             logger.testrun(message)
 
     try:

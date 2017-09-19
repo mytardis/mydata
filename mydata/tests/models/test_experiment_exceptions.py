@@ -4,6 +4,7 @@ Test ability to handle experiment-related exceptions.
 import os
 
 from ...settings import SETTINGS
+from ...threads.flags import FLAGS
 from .. import MyDataTester
 from ...models.experiment import ExperimentModel
 from ...models.folder import FolderModel
@@ -19,11 +20,6 @@ class ExperimentExceptionsTester(MyDataTester):
     """
     Test ability to handle experiment-related exceptions.
     """
-    def setUp(self):
-        super(ExperimentExceptionsTester, self).setUp()
-        super(ExperimentExceptionsTester, self).InitializeAppAndFrame(
-            'ExperimentExceptionsTester')
-
     def test_experiment_exceptions(self):
         """
         Test ability to handle experiment-related exceptions.
@@ -361,37 +357,37 @@ class ExperimentExceptionsTester(MyDataTester):
 
         # Try to create an experiment with a title specified manually
         # and check that the title is correct:
-        testRun = False
+        FLAGS.testRunRunning = False
         folderModel.experimentTitle = expFolderName
         experimentModel = \
-            ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
+            ExperimentModel.CreateExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, expFolderName)
 
         # Try to create an experiment with a title specified manually,
-        # and with testRun activated:
-        testRun = True
+        # during a test run
+        FLAGS.testRunRunning = True
         folderModel.experimentTitle = expFolderName
         experimentModel = \
-            ExperimentModel.GetOrCreateExperimentForFolder(folderModel, testRun)
+            ExperimentModel.GetOrCreateExperimentForFolder(folderModel)
         self.assertEqual(experimentModel, None)
-        testRun = False
+        FLAGS.testRunRunning = False
 
         # Get or create an experiment with a title specified manually,
-        # which already exists and with testRun activated:
-        testRun = True
+        # which already exists during a test run
+        FLAGS.testRunRunning = True
         folderModel.experimentTitle = "Existing Experiment"
         experimentModel = \
-            ExperimentModel.GetOrCreateExperimentForFolder(folderModel, testRun)
+            ExperimentModel.GetOrCreateExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment")
         folderModel.experimentTitle = expFolderName
-        testRun = False
+        FLAGS.testRunRunning = False
 
         # Try to create an experiment record with
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
-            _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
+            _ = ExperimentModel.CreateExperimentForFolder(folderModel)
         SETTINGS.general.apiKey = apiKey
 
         # Now let's test experiment creation with the experiment's
@@ -408,4 +404,4 @@ class ExperimentExceptionsTester(MyDataTester):
         # requested Experiment Schema can't be found.
         folderModel.experimentTitle = "Request 404 from Fake MyTardis Server"
         with self.assertRaises(DoesNotExist):
-            _ = ExperimentModel.CreateExperimentForFolder(folderModel, testRun)
+            _ = ExperimentModel.CreateExperimentForFolder(folderModel)

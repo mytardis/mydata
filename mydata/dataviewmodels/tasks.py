@@ -63,11 +63,12 @@ class TasksModel(MyDataDataViewModel):
         """
         super(TasksModel, self).AddRow(taskModel)
 
-        def JobFunc(taskModel, tasksModel, row, col):
+        def JobFunc(taskModel, row, col):
             """
             Runs TaskJobFunc in a thread.
             """
             # pylint: disable=too-many-statements
+            tasksModel = self
 
             def TaskJobFunc():
                 """
@@ -186,7 +187,7 @@ class TasksModel(MyDataDataViewModel):
             else:
                 raise Exception("Scheduled time for task ID %d "
                                 "is in the past." % taskModel.dataViewId)
-        args = [taskModel, self, row, col]
+        args = [taskModel, row, col]
 
         def ScheduleTask():
             """

@@ -4,6 +4,7 @@ Test ability to handle dataset-related exceptions.
 import os
 
 from ...settings import SETTINGS
+from ...threads.flags import FLAGS
 from .. import MyDataTester
 from ...models.dataset import DatasetModel
 from ...models.experiment import ExperimentModel
@@ -17,11 +18,6 @@ class DatasetExceptionsTester(MyDataTester):
     """
     Test ability to handle dataset-related exceptions.
     """
-    def setUp(self):
-        super(DatasetExceptionsTester, self).setUp()
-        super(DatasetExceptionsTester, self).InitializeAppAndFrame(
-            'DatasetExceptionsTester')
-
     def test_dataset_exceptions(self):
         """
         Test ability to handle dataset-related exceptions.
@@ -46,31 +42,31 @@ class DatasetExceptionsTester(MyDataTester):
         experimentModel = ExperimentModel.GetExperimentForFolder(folderModel)
         self.assertEqual(experimentModel.title, "Existing Experiment")
         folderModel.experimentModel = experimentModel
-        testRun = False
-        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+        FLAGS.testRunRunning = False
+        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel)
         self.assertEqual(datasetModel.description, datasetFolderName)
 
-        # Simulate creating dataset record with testRun True
+        # Simulate creating dataset record during test run
         # and ensure that no exception is raised:
-        testRun = True
-        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+        FLAGS.testRunRunning = True
+        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel)
         self.assertEqual(datasetModel, None)
-        testRun = False
+        FLAGS.testRunRunning = False
 
-        # Simulate retrieving existing dataset record with testRun True
+        # Simulate retrieving existing dataset record during test run
         # and ensure that no exception is raised:
-        testRun = True
+        FLAGS.testRunRunning = True
         folderModel.folderName = "Existing Dataset"
-        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+        datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel)
+        FLAGS.testRunRunning = False
         self.assertEqual(datasetModel.description, "Existing Dataset")
-        testRun = False
 
         # Try to look up dataset record with
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(Unauthorized):
-            _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+            _ = DatasetModel.CreateDatasetIfNecessary(folderModel)
         SETTINGS.general.apiKey = apiKey
 
         # Try to create a new dataset record with the Fake MyTardis
@@ -78,11 +74,11 @@ class DatasetExceptionsTester(MyDataTester):
         # permission to do so.
         folderModel.folderName = "New Dataset Folder Without Permission"
         with self.assertRaises(Unauthorized):
-            _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+            _ = DatasetModel.CreateDatasetIfNecessary(folderModel)
 
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where an Internal Server Error
         # occurs.
         folderModel.folderName = "New Dataset Folder With Internal Server Error"
         with self.assertRaises(InternalServerError):
-            _ = DatasetModel.CreateDatasetIfNecessary(folderModel, testRun)
+            _ = DatasetModel.CreateDatasetIfNecessary(folderModel)

@@ -11,11 +11,6 @@ class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
     Test ability to scan the Username / MyTardis / Experiment / Dataset folder
     structure.
     """
-    def setUp(self):
-        super(ScanUserMyTardisExpDatasetTester, self).setUp()
-        super(ScanUserMyTardisExpDatasetTester, self).InitializeAppAndFrame(
-            'ScanUserMyTardisExpDatasetTester')
-
     def test_scan_folders(self):
         """
         Test ability to scan the Username / MyTardis / Experiment / Dataset
@@ -23,6 +18,6 @@ class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
         """
         self.UpdateSettingsFromCfg("testdataUserMyTardisExpDataset")
         ValidateSettingsAndScanFolders()
-        self.AssertUsers(["testuser1", "testuser2"])
+        self.AssertUsers(["testuser1", "testuser2", "testuser3"])
         self.AssertFolders(["Birds", "Flowers"])
         self.AssertNumFiles(5)

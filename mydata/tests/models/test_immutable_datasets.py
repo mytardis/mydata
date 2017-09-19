@@ -16,11 +16,6 @@ class ImmutableDatasetsTester(MyDataTester):
     """
     Test ability to handle dataset-related exceptions.
     """
-    def setUp(self):
-        super(ImmutableDatasetsTester, self).setUp()
-        super(ImmutableDatasetsTester, self).InitializeAppAndFrame(
-            'ImmutableDatasetsTester')
-
     def test_immutable_datasets(self):
         """
         Test ability to create immutable datasets.

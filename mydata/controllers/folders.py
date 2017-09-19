@@ -22,10 +22,12 @@ from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..events.stop import CheckIfShouldAbort
+from ..events import MYDATA_THREADS
 from ..settings import SETTINGS
 from ..models.experiment import ExperimentModel
 from ..models.dataset import DatasetModel
 from ..logs import logger
+from ..logs.testrun import LogTestRunSummary
 from ..utils import EndBusyCursorIfRequired
 from ..utils import SafeStr
 from ..utils.exceptions import HttpException
@@ -50,12 +52,8 @@ class FoldersController(object):
     The main controller class for managing datafile verifications
     and uploads from each of the folders in the Folders view.
     """
-    def __init__(self, notifyWindow):
-        self.notifyWindow = notifyWindow
-        self.foldersModel = DATAVIEW_MODELS['folders']
-        self.usersModel = DATAVIEW_MODELS['users']
-        self.verificationsModel = DATAVIEW_MODELS['verifications']
-        self.uploadsModel = DATAVIEW_MODELS['uploads']
+    def __init__(self, parent):
+        self.parent = parent
 
         self.shuttingDown = threading.Event()
         self._canceled = threading.Event()
@@ -78,6 +76,8 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.numUploadWorkerThreads = 0
         self.uploadWorkerThreads = []
+
+        self.countCompletedTimer = None
 
     @property
     def started(self):
@@ -211,9 +211,10 @@ class FoldersController(object):
         self.InitializeStatusFlags()
         mydata.views.messages.LAST_ERROR_MESSAGE = None
         mydata.views.messages.LAST_CONFIRMATION_QUESTION = None
-        self.verificationsModel.DeleteAllRows()
-        self.uploadsModel.DeleteAllRows()
-        self.uploadsModel.SetStartTime(datetime.datetime.now())
+        DATAVIEW_MODELS['folders'].ResetCounts()
+        DATAVIEW_MODELS['verifications'].DeleteAllRows()
+        DATAVIEW_MODELS['uploads'].DeleteAllRows()
+        DATAVIEW_MODELS['uploads'].SetStartTime(datetime.datetime.now())
         self.verificationsQueue = Queue()
         self.numVerificationWorkerThreads = \
             SETTINGS.miscellaneous.maxVerificationThreads
@@ -236,6 +237,8 @@ class FoldersController(object):
 
         if sys.platform.startswith("linux"):
             StartErrandBoy()
+
+        self.InitializeTimers()
 
         try:
             SETTINGS.uploaderModel.RequestStagingAccess()
@@ -348,6 +351,43 @@ class FoldersController(object):
                 self.uploadWorkerThreads.append(thread)
                 thread.start()
 
+    def InitializeTimers(self):
+        """
+        These timers control how often components of the GUI are updated
+        which can't be updated every time the underlying data changes,
+        because it changes too quickly.
+
+        Timers do not run in unit tests.
+
+        This method is usually run from a worker thread, hence the use of
+        wx.CallAfter
+        """
+        self.countCompletedTimer = wx.Timer(self.parent)
+        self.parent.Bind(wx.EVT_TIMER, self.CountCompletedUploadsAndVerifications,
+                         self.countCompletedTimer)
+        if 'MYDATA_TESTING' not in os.environ:
+            wx.CallAfter(self.countCompletedTimer.Start, 500)
+            wx.CallAfter(self.parent.dataViews['verifications'] \
+                    .updateCacheHitSummaryTimer.Start, 500)
+
+    def StopTimers(self):
+        """
+        These timers control how often components of the GUI are updated
+        which can't be updated every time the underlying data changes,
+        because it changes too quickly.
+
+        Timers do not run in unit tests.
+
+        This method is currently run from the main thread, hence the lack of
+        wx.CallAfter when stopping the timers.
+        """
+        assert threading.current_thread().name == "MainThread"
+        if 'MYDATA_TESTING' not in os.environ:
+            self.parent.dataViews['verifications'] \
+                .updateCacheHitSummaryTimer.Stop()
+            self.parent.dataViews['verifications'].UpdateCacheHitSummary(None)
+            self.countCompletedTimer.Stop()
+
     def ClearStatusFlags(self):
         """
         Clear flags which indicate the status of the scans and uploads
@@ -384,16 +424,19 @@ class FoldersController(object):
         """
         At this point, we know that FoldersModel's
         ScanFolders method has finished populating
-        self.foldersModel with dataset folders.
+        DATAVIEW_MODELS['folders'] with dataset folders.
         """
-        self.finishedScanningForDatasetFolders.set()
-        logger.debug("Finished scanning for dataset folders.")
         while len(self.finishedCountingVerifications.keys()) < \
-                self.foldersModel.GetCount():
+                DATAVIEW_MODELS['folders'].GetCount():
             if self.IsShuttingDown() or CheckIfShouldAbort():
                 break
             time.sleep(0.01)
-        self.CountCompletedUploadsAndVerifications(event=None)
+        logger.debug("Finished scanning for dataset folders.")
+        self.finishedScanningForDatasetFolders.set()
+        if wx.PyApp.IsMainLoopRunning():
+            wx.CallAfter(self.CountCompletedUploadsAndVerifications, event=None)
+        else:
+            self.CountCompletedUploadsAndVerifications(event=None)
 
     def StartUploadsForFolder(self, folderModel):
         """
@@ -492,14 +535,13 @@ class FoldersController(object):
                 return
             with LOCKS.finishedCounting:
                 self.finishedCountingVerifications[folderModel].set()
-            if self.foldersModel.GetRowCount() == 0 or \
+            if DATAVIEW_MODELS['folders'].GetRowCount() == 0 or \
                     self.numVerificationsToBePerformed == 0:
                 # For the case of zero folders or zero files, we
                 # can't use the usual triggers (e.g. datafile
                 # upload complete) to determine when to check if
                 # we have finished:
                 self.CountCompletedUploadsAndVerifications(event=None)
-            # End: for row in range(0, self.foldersModel.GetRowCount())
         except:
             logger.error(traceback.format_exc())
 
@@ -576,13 +618,23 @@ class FoldersController(object):
         if self.completed or self.canceled:
             return
 
-        numVerificationsCompleted = self.verificationsModel.GetCompletedCount()
+        assert threading.current_thread().name == "MainThread"
 
-        uploadsToBePerformed = self.uploadsModel.GetRowCount() + \
+        # Tell the folders view to refresh its data.  (It was previously
+        # updated only when a changed was made to the underlying data, but
+        # because changes coming from the cache are two quick, we can't use
+        # these changes as the trigger to update the view any longer:
+        DATAVIEW_MODELS['folders'].Reset(
+            DATAVIEW_MODELS['folders'].GetCount())
+
+        numVerificationsCompleted = \
+            DATAVIEW_MODELS['verifications'].GetCompletedCount()
+
+        uploadsToBePerformed = DATAVIEW_MODELS['uploads'].GetRowCount() + \
             self.uploadsQueue.qsize()
 
-        uploadsCompleted = self.uploadsModel.GetCompletedCount()
-        uploadsFailed = self.uploadsModel.GetFailedCount()
+        uploadsCompleted = DATAVIEW_MODELS['uploads'].GetCompletedCount()
+        uploadsFailed = DATAVIEW_MODELS['uploads'].GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
         if hasattr(wx.GetApp(), "frame"):
@@ -592,7 +644,7 @@ class FoldersController(object):
                 message = "Uploaded %d of %d files." % \
                     (uploadsCompleted, uploadsToBePerformed)
             else:
-                message = "Looked up %d of %d files on server." % \
+                message = "Looked up %d of %d files." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
             wx.CallAfter(wx.GetApp().frame.SetStatusMessage, message)
@@ -626,6 +678,9 @@ class FoldersController(object):
         # pylint: disable=too-many-branches
         if self.IsShuttingDown() or self.completed or self.canceled:
             return
+
+        assert threading.current_thread().name == "MainThread"
+
         self.SetShuttingDown(True)
         app = wx.GetApp()
         if SETTINGS.miscellaneous.cacheDataFileLookups:
@@ -655,16 +710,17 @@ class FoldersController(object):
             return
         message = "Shutting down upload threads..."
         logger.info(message)
+        self.StopTimers()
         if hasattr(app, "frame"):
             app.frame.SetStatusMessage(message, force=True)
         if hasattr(event, "failed") and event.failed:
             self.failed = True
-            self.uploadsModel.CancelRemaining()
+            DATAVIEW_MODELS['uploads'].CancelRemaining()
         elif hasattr(event, "completed") and event.completed:
             self.completed = True
         else:
             self.canceled = True
-            self.uploadsModel.CancelRemaining()
+            DATAVIEW_MODELS['uploads'].CancelRemaining()
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
@@ -684,24 +740,28 @@ class FoldersController(object):
         for thread in self.verificationWorkerThreads:
             thread.join()
 
+        logger.debug("Joining remaining threads...")
+        MYDATA_THREADS.Join()
+        logger.debug("Joined remaining threads.")
+
         if FLAGS.testRunRunning:
-            self.LogTestRunSummary()
+            LogTestRunSummary()
 
         if self.failed:
             message = "Data scans and uploads failed."
         elif self.canceled:
             message = "Data scans and uploads were canceled."
-        elif self.uploadsModel.GetFailedCount() > 0:
+        elif DATAVIEW_MODELS['uploads'].GetFailedCount() > 0:
             message = \
                 "Data scans and uploads completed with " \
-                "%d failed upload(s)." % self.uploadsModel.GetFailedCount()
+                "%d failed upload(s)." % DATAVIEW_MODELS['uploads'].GetFailedCount()
         elif self.completed:
-            if self.uploadsModel.GetCompletedCount() > 0:
+            if DATAVIEW_MODELS['uploads'].GetCompletedCount() > 0:
                 message = "Data scans and uploads completed successfully."
-                elapsedTime = self.uploadsModel.GetElapsedTime()
+                elapsedTime = DATAVIEW_MODELS['uploads'].GetElapsedTime()
                 if elapsedTime and not FLAGS.testRunRunning:
                     averageSpeedMBs = \
-                        (float(self.uploadsModel.GetCompletedSize()) /
+                        (float(DATAVIEW_MODELS['uploads'].GetCompletedSize()) /
                          1000000.0 / elapsedTime.total_seconds())
                     if averageSpeedMBs >= 1.0:
                         averageSpeed = "%3.1f MB/s" % averageSpeedMBs
@@ -733,36 +793,6 @@ class FoldersController(object):
         EndBusyCursorIfRequired()
 
         logger.debug("")
-
-    def LogTestRunSummary(self):
-        """
-        Log summary of test run to display in Test Run frame
-        """
-        numVerificationsCompleted = \
-            self.verificationsModel.GetCompletedCount()
-        numVerifiedUploads = \
-            self.verificationsModel.GetFoundVerifiedCount()
-        numFilesNotFoundOnServer = \
-            self.verificationsModel.GetNotFoundCount()
-        numFullSizeUnverifiedUploads = \
-            self.verificationsModel.GetFoundUnverifiedFullSizeCount()
-        numIncompleteUploads = \
-            self.verificationsModel.GetFoundUnverifiedNotFullSizeCount()
-        numFailedLookups = self.verificationsModel.GetFailedCount()
-        logger.testrun("")
-        logger.testrun("SUMMARY")
-        logger.testrun("")
-        logger.testrun("Files looked up on server: %s"
-                       % numVerificationsCompleted)
-        logger.testrun("Files verified on server: %s" % numVerifiedUploads)
-        logger.testrun("Files not found on server: %s"
-                       % numFilesNotFoundOnServer)
-        logger.testrun("Files unverified (but full size) on server: %s"
-                       % numFullSizeUnverifiedUploads)
-        logger.testrun("Files unverified (and incomplete) on server: %s"
-                       % numIncompleteUploads)
-        logger.testrun("Failed lookups: %s" % numFailedLookups)
-        logger.testrun("")
 
     def VerifyDatafiles(self, folderModel):
         """

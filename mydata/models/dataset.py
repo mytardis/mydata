@@ -7,6 +7,7 @@ import json
 import requests
 
 from ..settings import SETTINGS
+from ..threads.flags import FLAGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
 from . import HandleHttpError
@@ -58,7 +59,7 @@ class DatasetModel(object):
         return "dataset/%s" % self.json['id']
 
     @staticmethod
-    def CreateDatasetIfNecessary(folderModel, testRun=False):
+    def CreateDatasetIfNecessary(folderModel):
         """
         Create a dataset if we don't already have one for this folder.
 
@@ -67,7 +68,7 @@ class DatasetModel(object):
         experiment = folderModel.experimentModel
         try:
             existingDataset = DatasetModel.GetDataset(folderModel)
-            if testRun:
+            if FLAGS.testRunRunning:
                 message = "ADDING TO EXISTING DATASET FOR FOLDER: %s\n" \
                     "    URL: %s/%s\n" \
                     "    Description: %s\n" \
@@ -90,7 +91,7 @@ class DatasetModel(object):
                 "immutable": SETTINGS.miscellaneous.immutableDatasets}
             data = json.dumps(datasetJson)
             url = "%s/api/v1/dataset/" % myTardisUrl
-            if testRun:
+            if FLAGS.testRunRunning:
                 message = "CREATING NEW DATASET FOR FOLDER: %s\n" \
                     "    Description: %s" \
                     % (folderModel.GetRelPath(), description)

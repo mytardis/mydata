@@ -19,11 +19,6 @@ class ReplicaExceptionsTester(MyDataTester):
     'replica' is the name of the MyTardis API resource
     endpoint for DataFileObjects (DFOs).
     """
-    def setUp(self):
-        super(ReplicaExceptionsTester, self).setUp()
-        super(ReplicaExceptionsTester, self).InitializeAppAndFrame(
-            'ReplicaExceptionsTester')
-
     def test_replica_exceptions(self):
         """
         Test ability to handle replica-related exceptions.
