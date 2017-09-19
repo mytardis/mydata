@@ -164,8 +164,8 @@ class VerifyDatafileRunnable(object):
             "Found unverified datafile record on MyTardis."
         uploadToStagingRequest = SETTINGS.uploaderModel.uploadToStagingRequest
 
-        if wx.GetApp().foldersController.uploadMethod == \
-                UploadMethod.VIA_STAGING and \
+        if wx.GetApp().foldersController.uploadMethod != \
+                UploadMethod.HTTP_POST and \
                 uploadToStagingRequest is not None and \
                 uploadToStagingRequest.approved and \
                 existingDatafile.replicas:
@@ -286,7 +286,13 @@ class VerifyDatafileRunnable(object):
         logger.debug("Found unverified datafile record for \"%s\" "
                      "on MyTardis." % dataFilePath)
         self.verificationModel.message = "Found unverified datafile record."
-        self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+        # If there's an existing DFO, we probably just need to wait until
+        # MyTardis verifies the file, but if there are no DFOs, MyData
+        # shouldn't mark this file as uploaded:
+        if existingDatafile.replicas:
+            self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+        else:
+            self.folderModel.SetDataFileUploaded(self.dataFileIndex, False)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         self.verificationModel.status = \
             VerificationStatus.FOUND_UNVERIFIED_UNSTAGED
