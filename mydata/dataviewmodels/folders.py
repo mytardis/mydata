@@ -2,6 +2,7 @@
 Represents the Folders tab of MyData's main window,
 and the tabular data displayed on that tab view.
 """
+import collections
 import threading
 import os
 import sys
@@ -22,6 +23,7 @@ from ..utils import Compare
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..events.stop import CheckIfShouldAbort
+from ..threads.locks import LOCKS
 from .dataview import MyDataDataViewModel
 from .dataview import DATAVIEW_MODELS
 
@@ -58,6 +60,14 @@ class FoldersModel(MyDataDataViewModel):
 
         self.filterFields = \
             ["folderName", "location", "owner.username", "experimentTitle"]
+
+        # When processing cached datafile lookups, attempting to update the
+        # status field for every cache lookup would result in too many GUI
+        # update events, so we avoid requesting folders view updates for every
+        # datafile lookup, and instead use a timer.  "self.foldersToUpdate"
+        # keeps track of which folder rows need to be refreshed for each timer
+        # event:
+        self.foldersToUpdate = collections.deque()
 
     def GetFolderRecord(self, row):
         """
@@ -145,10 +155,14 @@ class FoldersModel(MyDataDataViewModel):
                 folderModel=folderModel)
         PostEvent(startDataUploadsForFolderEvent)
 
-    def FolderStatusUpdated(self, folderModel):
+    def FolderStatusUpdated(self, folderModel, delay=False):
         """
         Ensure that updated folder status is reflected in the view.
         """
+        if delay:
+            if folderModel not in self.foldersToUpdate:
+                with LOCKS.foldersToUpdate:
+                    self.foldersToUpdate.append(folderModel)
         for row in range(0, self.GetCount()):
             if self.rowsData[row] == folderModel:
                 col = self.columnNames.index("Status")
@@ -165,6 +179,7 @@ class FoldersModel(MyDataDataViewModel):
         groupsModel = DATAVIEW_MODELS['groups']
         if self.GetCount() > 0:
             self.DeleteAllRows()
+            self.foldersToUpdate.clear()
         if usersModel.GetCount() > 0:
             usersModel.DeleteAllRows()
         if groupsModel.GetCount() > 0:
