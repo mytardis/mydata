@@ -168,7 +168,9 @@ def RenameInstrument(event):
     from . import PostEvent
     from . import MYDATA_THREADS
 
-    def RenameInstrumentWorker(event):
+    def RenameInstrumentWorker(
+            facilityName, oldInstrumentName, newInstrumentName,
+            nextEvent, settingsDialog):
         """
         Renames instrument in separate thread.
         """
@@ -177,13 +179,11 @@ def RenameInstrument(event):
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             InstrumentModel.RenameInstrument(
-                event.facilityName,
-                event.oldInstrumentName,
-                event.newInstrumentName)
+                facilityName, oldInstrumentName, newInstrumentName)
 
             wx.CallAfter(EndBusyCursorIfRequired, event)
-            if hasattr(event, "nextEvent") and event.nextEvent:
-                PostEvent(event.nextEvent)
+            if nextEvent:
+                PostEvent(nextEvent)
         except DuplicateKey:
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
@@ -193,14 +193,14 @@ def RenameInstrument(event):
                 """
                 message = "Instrument name \"%s\" already exists in " \
                     "facility \"%s\"." \
-                    % (event.newInstrumentName,
-                       event.facilityName)
+                    % (newInstrumentName,
+                       facilityName)
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
                 if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                     dlg.ShowModal()
-                event.settingsDialog.instrumentNameField.SetFocus()
-                event.settingsDialog.instrumentNameField.SelectAll()
+                settingsDialog.instrumentNameField.SetFocus()
+                settingsDialog.instrumentNameField.SelectAll()
                 if not wx.PyApp.IsMainLoopRunning():
                     raise DuplicateKey(message)
             if wx.PyApp.IsMainLoopRunning():
@@ -216,17 +216,20 @@ def RenameInstrument(event):
     # running, even if the spawned thread is still running.  A better
     # option could be to just pass the required attributes as separate
     # arguments to RenameInstrumentWorker.
+    args = [
+        event.facilityName, event.oldInstrumentName, event.newInstrumentName,
+        getattr(event, "nextEvent", None), event.settingsDialog]
     if wx.PyApp.IsMainLoopRunning():
         renameInstrumentThread = \
             threading.Thread(target=RenameInstrumentWorker,
                              name="RenameInstrumentThread",
-                             args=[event.Clone()])
+                             args=args)
         MYDATA_THREADS.Add(renameInstrumentThread)
         logger.debug("Starting thread %s" % renameInstrumentThread.name)
         renameInstrumentThread.start()
         logger.debug("Started thread %s" % renameInstrumentThread.name)
     else:
-        RenameInstrumentWorker(event.Clone())
+        RenameInstrumentWorker(*args)
 
 
 def SettingsDialogValidation(event):
