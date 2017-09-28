@@ -389,7 +389,6 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
              host,
              "mkdir -p %s" % quotedRemoteDir]
         mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
-        mkdirCmdString = " ".join(mkdirCmdAndArgs)
         logger.debug(" ".join(mkdirCmdAndArgs))
         if not sys.platform.startswith("linux"):
             mkdirProcess = \
@@ -441,8 +440,8 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
         filePath,
         "%s@%s:%s" % (username, host,
                       remoteDir
-            .replace('`', r'\\`')
-            .replace('$', r'\\$'))]
+                      .replace('`', r'\\`')
+                      .replace('$', r'\\$'))]
     scpCommandList[2:2] = cipherOptions
     scpCommandList[2:2] = OpenSSH.DefaultSshOptions()
     scpCommandString = " ".join(scpCommandList)
