@@ -256,11 +256,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
-        elif sys.platform.startswith("darwin"):
-            self.assertRegexpMatches(
-                newLogs, (".*scp_INVALID: No such file or directory.*"))
         else:
-            self.assertRegexpMatches(newLogs, (".*ScpException.*"))
+            self.assertRegexpMatches(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting handling of invalid path to SSH binary...\n")
@@ -282,11 +280,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
-        elif sys.platform.startswith("darwin"):
-            self.assertRegexpMatches(
-                newLogs, (".*ssh_INVALID: No such file or directory.*"))
         else:
-            self.assertRegexpMatches(newLogs, (".*SshException.*"))
+            self.assertRegexpMatches(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting attempted uploads with invalid file paths...\n")
