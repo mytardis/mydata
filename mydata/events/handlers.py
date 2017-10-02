@@ -501,6 +501,7 @@ def StartDataUploadsForFolder(event):
         wx.CallAfter(BeginBusyCursorIfRequired)
         if FLAGS.shouldAbort or not FLAGS.scanningFolders:
             return
+        FLAGS.performingLookupsAndUploads = True
         message = "Checking for data files on MyTardis and uploading " \
             "if necessary for folder: %s" % folderModel.folderName
         logger.info(message)
@@ -509,7 +510,6 @@ def StartDataUploadsForFolder(event):
             logger.testrun(message)
         if type(app).__name__ == "MyData":
             app.frame.toolbar.DisableTestAndUploadToolbarButtons()
-            FLAGS.performingLookupsAndUploads = True
             app.foldersController.StartUploadsForFolder(folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
