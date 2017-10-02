@@ -168,7 +168,9 @@ def RenameInstrument(event):
     from . import PostEvent
     from . import MYDATA_THREADS
 
-    def RenameInstrumentWorker():
+    def RenameInstrumentWorker(
+            facilityName, oldInstrumentName, newInstrumentName,
+            nextEvent, settingsDialog):
         """
         Renames instrument in separate thread.
         """
@@ -177,13 +179,11 @@ def RenameInstrument(event):
         try:
             wx.CallAfter(BeginBusyCursorIfRequired)
             InstrumentModel.RenameInstrument(
-                event.facilityName,
-                event.oldInstrumentName,
-                event.newInstrumentName)
+                facilityName, oldInstrumentName, newInstrumentName)
 
             wx.CallAfter(EndBusyCursorIfRequired, event)
-            if hasattr(event, "nextEvent") and event.nextEvent:
-                PostEvent(event.nextEvent)
+            if nextEvent:
+                PostEvent(nextEvent)
         except DuplicateKey:
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
@@ -193,14 +193,14 @@ def RenameInstrument(event):
                 """
                 message = "Instrument name \"%s\" already exists in " \
                     "facility \"%s\"." \
-                    % (event.newInstrumentName,
-                       event.facilityName)
+                    % (newInstrumentName,
+                       facilityName)
                 dlg = wx.MessageDialog(None, message, "MyData",
                                        wx.OK | wx.ICON_ERROR)
                 if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
                     dlg.ShowModal()
-                event.settingsDialog.instrumentNameField.SetFocus()
-                event.settingsDialog.instrumentNameField.SelectAll()
+                settingsDialog.instrumentNameField.SetFocus()
+                settingsDialog.instrumentNameField.SelectAll()
                 if not wx.PyApp.IsMainLoopRunning():
                     raise DuplicateKey(message)
             if wx.PyApp.IsMainLoopRunning():
@@ -210,16 +210,26 @@ def RenameInstrument(event):
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
 
+    # event.Clone() is used below because in wxPython 4 (which we will
+    # migrate to soon), the event attributes (e.g. event.newInstrumentName)
+    # are deleted when this event handler (RenameInstrument) finishes
+    # running, even if the spawned thread is still running.  A better
+    # option could be to just pass the required attributes as separate
+    # arguments to RenameInstrumentWorker.
+    args = [
+        event.facilityName, event.oldInstrumentName, event.newInstrumentName,
+        getattr(event, "nextEvent", None), event.settingsDialog]
     if wx.PyApp.IsMainLoopRunning():
         renameInstrumentThread = \
             threading.Thread(target=RenameInstrumentWorker,
-                             name="RenameInstrumentThread")
+                             name="RenameInstrumentThread",
+                             args=args)
         MYDATA_THREADS.Add(renameInstrumentThread)
         logger.debug("Starting thread %s" % renameInstrumentThread.name)
         renameInstrumentThread.start()
         logger.debug("Started thread %s" % renameInstrumentThread.name)
     else:
-        RenameInstrumentWorker()
+        RenameInstrumentWorker(*args)
 
 
 def SettingsDialogValidation(event):
@@ -229,7 +239,7 @@ def SettingsDialogValidation(event):
     from . import MYDATA_EVENTS
     from . import PostEvent
 
-    def ValidateWorker():
+    def ValidateWorker(settingsDialog):
         """
         Performs settings validation in separate thread.
         """
@@ -237,24 +247,24 @@ def SettingsDialogValidation(event):
                      % threading.current_thread().name)
         try:
             wx.CallAfter(BeginBusyCursorIfRequired, event)
-            wx.CallAfter(event.settingsDialog.okButton.Disable)
-            wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Disable)
+            wx.CallAfter(settingsDialog.okButton.Disable)
+            wx.CallAfter(settingsDialog.lockOrUnlockButton.Disable)
 
             app = wx.GetApp()
             if hasattr(app, "connectivity"):
                 if CONNECTIVITY.NeedToCheck():
                     settingsDialogValidationEvent = \
                         MYDATA_EVENTS.SettingsDialogValidationEvent(
-                            settingsDialog=event.settingsDialog,
+                            settingsDialog=settingsDialog,
                             okEvent=event)
                     checkConnectivityEvent = \
                         MYDATA_EVENTS.CheckConnectivityEvent(
-                            settingsDialog=event.settingsDialog,
+                            settingsDialog=settingsDialog,
                             nextEvent=settingsDialogValidationEvent)
                     PostEvent(checkConnectivityEvent)
                     return
             try:
-                SaveFieldsFromDialog(event.settingsDialog, saveToDisk=False)
+                SaveFieldsFromDialog(settingsDialog, saveToDisk=False)
             except:
                 logger.error(traceback.format_exc())
 
@@ -268,20 +278,20 @@ def SettingsDialogValidation(event):
             try:
                 datasetCount = ValidateSettings(SetStatusMessage)
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
-                    settingsDialog=event.settingsDialog,
+                    settingsDialog=settingsDialog,
                     datasetCount=datasetCount))
             except UserAbortedSettingsValidation:
                 SETTINGS.RollBack()
                 return
             except InvalidSettings as invalidSettings:
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
-                    settingsDialog=event.settingsDialog,
+                    settingsDialog=settingsDialog,
                     invalidSettings=invalidSettings))
             finally:
                 wx.CallAfter(EndBusyCursorIfRequired, event)
         finally:
-            wx.CallAfter(event.settingsDialog.okButton.Enable)
-            wx.CallAfter(event.settingsDialog.lockOrUnlockButton.Enable)
+            wx.CallAfter(settingsDialog.okButton.Enable)
+            wx.CallAfter(settingsDialog.lockOrUnlockButton.Enable)
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
         logger.debug("Finishing run() method for thread %s"
@@ -289,12 +299,13 @@ def SettingsDialogValidation(event):
 
     if wx.PyApp.IsMainLoopRunning():
         thread = threading.Thread(target=ValidateWorker,
-                                  name="SettingsModelValidationThread")
+                                  name="SettingsModelValidationThread",
+                                  args=[event.settingsDialog])
         logger.debug("Starting thread %s" % thread.name)
         thread.start()
         logger.debug("Started thread %s" % thread.name)
     else:
-        ValidateWorker()
+        ValidateWorker(event.settingsDialog)
 
 
 def ProvideSettingsValidationResults(event):

@@ -624,8 +624,11 @@ class FoldersController(object):
         # updated only when a changed was made to the underlying data, but
         # because changes coming from the cache are two quick, we can't use
         # these changes as the trigger to update the view any longer:
-        DATAVIEW_MODELS['folders'].Reset(
-            DATAVIEW_MODELS['folders'].GetCount())
+        # The lock prevents RuntimeError: deque mutated during iteration
+        with LOCKS.foldersToUpdate:
+            for folder in DATAVIEW_MODELS['folders'].foldersToUpdate:
+                DATAVIEW_MODELS['folders'].FolderStatusUpdated(folder)
+            DATAVIEW_MODELS['folders'].foldersToUpdate.clear()
 
         numVerificationsCompleted = \
             DATAVIEW_MODELS['verifications'].GetCompletedCount()

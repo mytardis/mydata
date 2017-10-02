@@ -41,7 +41,7 @@ class DailyScheduleTester(MyDataSettingsTester):
 
         self.assertTrue(SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
         uploadsModel = DATAVIEW_MODELS['uploads']
-        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
+        self.assertEqual(uploadsModel.GetCompletedCount(), 8)
         self.assertIn(
             "CreateDailyTask - MainThread - DEBUG - Schedule type is Daily",
             logger.loggerOutput.getvalue())

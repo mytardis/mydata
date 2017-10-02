@@ -93,12 +93,13 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).folderName)
-        self.assertEqual(sorted(folders), ["Birds", "Flowers"])
+        self.assertEqual(sorted(folders),
+                         ["Birds", "Dataset with spaces", "Flowers"])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        self.assertEqual(numFiles, 10)
+        self.assertEqual(numFiles, 11)
 
         numExistingVerifiedFiles = 1
         numUnverifiedFullSizeFiles = 1
@@ -198,7 +199,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             for row in range(foldersModel.GetRowCount()):
                 folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
-            foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
@@ -256,11 +256,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
-        elif sys.platform.startswith("darwin"):
-            self.assertRegexpMatches(
-                newLogs, (".*scp_INVALID: No such file or directory.*"))
         else:
-            self.assertRegexpMatches(newLogs, (".*ScpException.*"))
+            self.assertRegexpMatches(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting handling of invalid path to SSH binary...\n")
@@ -282,11 +280,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         if sys.platform.startswith("win"):
             self.assertRegexpMatches(
                 newLogs, (".*The system cannot find the file specified.*"))
-        elif sys.platform.startswith("darwin"):
-            self.assertRegexpMatches(
-                newLogs, (".*ssh_INVALID: No such file or directory.*"))
         else:
-            self.assertRegexpMatches(newLogs, (".*SshException.*"))
+            self.assertRegexpMatches(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting attempted uploads with invalid file paths...\n")

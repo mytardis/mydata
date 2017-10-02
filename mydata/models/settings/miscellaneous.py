@@ -144,6 +144,15 @@ class MiscellaneousSettingsModel(object):
         self.mydataConfig['use_none_cipher'] = useNoneCipher
 
     @property
+    def cipherOptions(self):
+        """
+        SSH Cipher Options for SCP uploads.
+        """
+        if self.mydataConfig['use_none_cipher']:
+            return ["-oNoneEnabled=yes", "-oNoneSwitch=yes"]
+        return ["-c", self.mydataConfig['cipher']]
+
+    @property
     def progressPollInterval(self):
         """
         Stored as an int in MyData.cfg, but used

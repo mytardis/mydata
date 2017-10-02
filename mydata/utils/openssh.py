@@ -1,19 +1,6 @@
 """
 Methods for using OpenSSH functionality from MyData.
 On Windows, we bundle a Cygwin build of OpenSSH.
-
-subprocess is used extensively throughout this module.
-
-Given the complex quoting requirements when running remote
-commands over ssh, I don't trust Python's
-automatic quoting which is done when converting a list of arguments
-to a command string in subprocess.Popen.  Furthermore, formatting
-the command string ourselves, rather than leaving it to Python
-means that we are restricted to using shell=True in subprocess on
-POSIX systems.  shell=False seems to work better on Windows,
-otherwise we need to worry about escaping special characters like
-'>' with carets (i.e. '^>').
-
 """
 import sys
 from datetime import datetime
@@ -36,6 +23,7 @@ from ..models.upload import UploadStatus
 from ..utils.exceptions import SshException
 from ..utils.exceptions import ScpException
 from ..utils.exceptions import PrivateKeyDoesNotExist
+from ..threads.locks import LOCKS
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
 from ..subprocesses import DEFAULT_CREATION_FLAGS
@@ -54,6 +42,8 @@ if sys.platform.startswith("linux"):
 SLEEP_FACTOR = 0.01
 
 CONNECTION_TIMEOUT = 5
+
+REMOTE_DIRS_CREATED = dict()
 
 
 class OpenSSH(object):
@@ -83,17 +73,13 @@ class OpenSSH(object):
             winOpensshDir = os.path.join("resources", winOpensshDir)
         if sys.platform.startswith("win"):
             baseDir = os.path.join(baseDir, winOpensshDir)
-            self.preferToUseShellInSubprocess = False
             binarySuffix = ".exe"
             dotSshDir = os.path.join(
                 baseDir, "home", getpass.getuser(), ".ssh")
             if not os.path.exists(dotSshDir):
                 os.makedirs(dotSshDir)
         else:
-            # Using subprocess's shell=True below should be reviewed.
-            # Don't change it without testing quoting of special characters.
             baseDir = "/usr/"
-            self.preferToUseShellInSubprocess = True
             binarySuffix = ""
 
         binBaseDir = os.path.join(baseDir, "bin")
@@ -269,6 +255,12 @@ def FindKeyPair(keyName="MyData", keyPath=None):
 def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     """
     Create an RSA key-pair in ~/.ssh for use with SSH and SCP.
+
+    We use shell=True with subprocess to allow entering an empty
+    passphrase into ssh-keygen.  Otherwise (at least on macOS),
+    we get:
+        "Saving key ""/Users/james/.ssh/MyData"" failed:
+         passphrase is too short (minimum five characters)
     """
     if keyName is None:
         keyName = "MyData"
@@ -299,7 +291,7 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
-                            shell=True,
+                            shell=True,  # Allows empty passphrase
                             startupinfo=DEFAULT_STARTUP_INFO,
                             creationflags=DEFAULT_CREATION_FLAGS)
     stdout, _ = proc.communicate()
@@ -323,25 +315,17 @@ def SshServerIsReady(username, privateKeyFilePath,
     if sys.platform.startswith("win"):
         privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
 
-    if sys.platform.startswith("win"):
-        cmdAndArgs = [OpenSSH.DoubleQuote(OPENSSH.ssh),
-                      "-p", str(port),
-                      "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
-                      "-l", username,
-                      host,
-                      OpenSSH.DoubleQuote("echo Ready")]
-    else:
-        cmdAndArgs = [OpenSSH.DoubleQuote(OPENSSH.ssh),
-                      "-p", str(port),
-                      "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
-                      "-l", username,
-                      host,
-                      OpenSSH.DoubleQuote("echo Ready")]
+    cmdAndArgs = [
+        OPENSSH.ssh,
+        "-p", str(port),
+        "-i", privateKeyFilePath,
+        "-l", username,
+        host,
+        "echo Ready"
+    ]
     cmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
-    cmdString = " ".join(cmdAndArgs)
-    logger.debug(cmdString)
-    proc = subprocess.Popen(cmdString,
-                            shell=OPENSSH.preferToUseShellInSubprocess,
+    logger.debug(" ".join(cmdAndArgs))
+    proc = subprocess.Popen(cmdAndArgs,
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
@@ -365,55 +349,192 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     chunking files, so with SCP, we will always upload the whole
     file.
     """
-    bytesUploaded = 0
-    progressCallback(bytesUploaded, fileSize, message="Uploading...")
-
     if sys.platform.startswith("win"):
-        UploadFileFromWindows(filePath, fileSize, username,
-                              privateKeyFilePath, host, port,
-                              remoteFilePath, progressCallback,
-                              uploadModel)
-    else:
-        UploadFileFromPosixSystem(filePath, fileSize, username,
-                                  privateKeyFilePath, host, port,
-                                  remoteFilePath, progressCallback,
-                                  uploadModel)
+        filePath = GetCygwinPath(filePath)
+        privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
 
+    progressCallback(current=0, total=fileSize, message="Uploading...")
 
-def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
-                              host, port, remoteFilePath, progressCallback,
-                              uploadModel):
-    """
-    Upload file using SCP.
-    """
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-statements
-    # pylint: disable=too-many-locals
-    cipher = SETTINGS.miscellaneous.cipher
-    progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
     monitoringProgress = threading.Event()
     uploadModel.startTime = datetime.now()
-    MonitorProgress(progressPollInterval, uploadModel,
+    MonitorProgress(SETTINGS.miscellaneous.progressPollInterval, uploadModel,
                     fileSize, monitoringProgress, progressCallback)
+
     remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
+    CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
+
+    if ShouldCancelUpload(uploadModel):
+        logger.debug("UploadFile: Aborting upload for %s" % filePath)
+        return
+
+    scpCommandList = [
+        OPENSSH.scp,
+        "-v",
+        "-P", port,
+        "-i", privateKeyFilePath,
+        filePath,
+        "%s@%s:%s" % (username, host,
+                      remoteDir
+                      .replace('`', r'\\`')
+                      .replace('$', r'\\$'))]
+    scpCommandList[2:2] = SETTINGS.miscellaneous.cipherOptions
+    scpCommandList[2:2] = OpenSSH.DefaultSshOptions()
+
+    if not sys.platform.startswith("linux"):
+        ScpUpload(uploadModel, scpCommandList)
+    else:
+        ScpUploadWithErrandBoy(uploadModel, scpCommandList)
+
+    SetRemotePermissions(remoteDir, username, privateKeyFilePath, host, port)
+
+    uploadModel.SetLatestTime(datetime.now())
+    progressCallback(current=fileSize, total=fileSize)
+
+
+def ScpUpload(uploadModel, scpCommandList):
+    """
+    Perfom an SCP upload using subprocess.Popen
+    """
+    scpCommandString = " ".join(scpCommandList)
+    logger.debug(scpCommandString)
+    try:
+        scpUploadProcess = subprocess.Popen(
+            scpCommandList,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            startupinfo=DEFAULT_STARTUP_INFO,
+            creationflags=DEFAULT_CREATION_FLAGS)
+        uploadModel.scpUploadProcessPid = scpUploadProcess.pid
+        WaitForProcessToComplete(scpUploadProcess)
+        stdout, _ = scpUploadProcess.communicate()
+        if scpUploadProcess.returncode != 0:
+            raise ScpException(
+                stdout, scpCommandString, scpUploadProcess.returncode)
+    except (IOError, OSError) as err:
+        raise ScpException(err, scpCommandString, returncode=255)
+
+
+def ScpUploadWithErrandBoy(uploadModel, scpCommandList):
+    """
+    Perfom an SCP upload using Errand Boy (Linux only), which triggers
+    a subprocess in a separate Python process via a Unix domain socket.
+
+    https://github.com/greyside/errand-boy
+    """
+    scpCommandString = " ".join(scpCommandList)
+    logger.debug(scpCommandString)
+    with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
+        try:
+            scpUploadProcess = session.subprocess.Popen(
+                scpCommandList, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, close_fds=True,
+                preexec_fn=os.setpgrp)
+            uploadModel.status = UploadStatus.IN_PROGRESS
+            uploadModel.scpUploadProcessPid = scpUploadProcess.pid
+
+            WaitForProcessToComplete(scpUploadProcess)
+            stdout, stderr = scpUploadProcess.communicate()
+            if scpUploadProcess.returncode != 0:
+                if stdout and not stderr:
+                    stderr = stdout
+                raise ScpException(
+                    stderr, scpCommandString, scpUploadProcess.returncode)
+        except (IOError, OSError) as err:
+            raise ScpException(err, scpCommandString, returncode=255)
+
+
+def SetRemotePermissions(remoteDir, username, privateKeyFilePath, host, port):
+    """
+    Ensure that the mytardis account (via the mytardis group) has read and
+    write access to the uploaded data so that it can be moved from staging into
+    its permanent location.  With some older versions of OpenSSH (installed on
+    the SCP server), umask settings from ~mydata/.bashrc are respected, but
+    recent versions ignore ~/.bashrc, so we need to explicitly set the
+    permissions.  rsync can do this (copy and set permissions) in a single
+    command, so we could investigate switching from scp to rsync, but rsync is
+    likely to be slower in most cases.
+
+    The command we use to set the permissions is applied to all files in the
+    remote directory - we avoid referring to a specific remote file path
+    (including filename) where possible, because of potential quoting /
+    escaping issues.  Given that we are running the chmod command for the
+    entire remote directory, we could just run it once (after MyData has
+    finished uploading files to that directory), however there's a risk that
+    MyData will terminate before it has finished uploading a directory's files,
+    so we run the chmod after each upload for now.
+    """
+    remotePath = "%s/*" % remoteDir.rstrip('/')
+    chmodCmdAndArgs = \
+        [OPENSSH.ssh,
+         "-p", port,
+         "-n",
+         "-c", SETTINGS.miscellaneous.cipher,
+         "-i", privateKeyFilePath,
+         "-l", username,
+         host,
+         "chmod 660 %s" % remotePath]
+    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+    logger.debug(" ".join(chmodCmdAndArgs))
+    if not sys.platform.startswith("linux"):
+        chmodProcess = \
+            subprocess.Popen(chmodCmdAndArgs,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             startupinfo=DEFAULT_STARTUP_INFO,
+                             creationflags=DEFAULT_CREATION_FLAGS)
+        stdout, _ = chmodProcess.communicate()
+        if chmodProcess.returncode != 0:
+            raise SshException(stdout, chmodProcess.returncode)
+    else:
+        with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
+            try:
+                chmodProcess = session.subprocess.Popen(
+                    chmodCmdAndArgs, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, close_fds=True,
+                    preexec_fn=os.setpgrp)
+                stdout, stderr = chmodProcess.communicate()
+                if chmodProcess.returncode != 0:
+                    if stdout and not stderr:
+                        stderr = stdout
+                    raise SshException(stderr, chmodProcess.returncode)
+            except (IOError, OSError) as err:
+                raise SshException(err, returncode=255)
+
+
+def WaitForProcessToComplete(process):
+    """
+    subprocess's communicate should do this automatically,
+    but sometimes it polls too aggressively, putting unnecessary
+    strain on CPUs (especially when done from multiple threads).
+    """
+    while True:
+        poll = process.poll()
+        if poll is not None:
+            break
+        time.sleep(SLEEP_FACTOR * SETTINGS.advanced.maxUploadThreads)
+
+
+def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
+    """
+    Create a remote directory over SSH
+    """
     if remoteDir not in REMOTE_DIRS_CREATED:
         mkdirCmdAndArgs = \
-            [OpenSSH.DoubleQuote(OPENSSH.ssh),
+            [OPENSSH.ssh,
              "-p", port,
              "-n",
-             "-c", cipher,
-             "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
+             "-c", SETTINGS.miscellaneous.cipher,
+             "-i", privateKeyFilePath,
              "-l", username,
              host,
-             OpenSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
+             "umask 0007; mkdir -p %s" % remoteDir]
         mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
-        mkdirCmdString = " ".join(mkdirCmdAndArgs)
-        logger.debug(mkdirCmdString)
+        logger.debug(" ".join(mkdirCmdAndArgs))
         if not sys.platform.startswith("linux"):
             mkdirProcess = \
-                subprocess.Popen(mkdirCmdString,
-                                 shell=OPENSSH.preferToUseShellInSubprocess,
+                subprocess.Popen(mkdirCmdAndArgs,
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
@@ -423,176 +544,21 @@ def UploadFileFromPosixSystem(filePath, fileSize, username, privateKeyFilePath,
             if mkdirProcess.returncode != 0:
                 raise SshException(stdout, mkdirProcess.returncode)
         else:
-            stdout, stderr, returncode = \
-                linuxsubprocesses.ERRAND_BOY_TRANSPORT.run_cmd(mkdirCmdString)
-            if returncode != 0:
-                raise SshException(stderr, returncode)
-        REMOTE_DIRS_CREATED[remoteDir] = True
-
-    if ShouldCancelUpload(uploadModel):
-        logger.debug("UploadFileFromPosixSystem: Aborting upload "
-                     "for %s" % filePath)
-        return
-
-    maxThreads = SETTINGS.advanced.maxUploadThreads
-    remoteDir = os.path.dirname(remoteFilePath)
-    if SETTINGS.miscellaneous.useNoneCipher:
-        cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
-    else:
-        cipherString = "-c %s" % cipher
-    scpCommandString = \
-        '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s\\""' \
-        % (OpenSSH.DoubleQuote(OPENSSH.scp),
-           " ".join(OpenSSH.DefaultSshOptions()),
-           port,
-           privateKeyFilePath,
-           cipherString,
-           OpenSSH.DoubleQuote(filePath),
-           username, host,
-           remoteDir
-           .replace('`', r'\\`')
-           .replace('$', r'\\$'))
-    logger.debug(scpCommandString)
-    if not sys.platform.startswith("linux"):
-        scpUploadProcess = subprocess.Popen(
-            scpCommandString,
-            shell=OPENSSH.preferToUseShellInSubprocess,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            startupinfo=DEFAULT_STARTUP_INFO,
-            creationflags=DEFAULT_CREATION_FLAGS)
-        uploadModel.scpUploadProcessPid = scpUploadProcess.pid
-        while True:
-            poll = scpUploadProcess.poll()
-            if poll is not None:
-                break
-            time.sleep(SLEEP_FACTOR * maxThreads)
-        stdout, _ = scpUploadProcess.communicate()
-        returncode = scpUploadProcess.returncode
-        if returncode != 0:
-            raise ScpException(stdout, scpCommandString, returncode)
-    else:
-        with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
-            ebSubprocess = session.subprocess
-            if sys.platform.startswith("linux"):
-                preexecFunction = os.setpgrp
-            else:
-                preexecFunction = None
-            scpUploadProcess = \
-                ebSubprocess.Popen(scpCommandString, shell=True,
-                                   close_fds=True, preexec_fn=preexecFunction)
-            uploadModel.status = UploadStatus.IN_PROGRESS
-            uploadModel.scpUploadProcessPid = scpUploadProcess.pid
-
-            while True:
-                poll = scpUploadProcess.poll()
-                if poll is not None:
-                    break
-                time.sleep(SLEEP_FACTOR * maxThreads)
-            stdout, stderr = scpUploadProcess.communicate()
-            returncode = scpUploadProcess.returncode
-            if returncode != 0:
-                raise ScpException(stderr, scpCommandString, returncode)
-
-    latestUpdateTime = datetime.now()
-    uploadModel.SetLatestTime(latestUpdateTime)
-    bytesUploaded = fileSize
-    progressCallback(bytesUploaded, fileSize)
-    return
-
-
-REMOTE_DIRS_CREATED = dict()
-
-
-def UploadFileFromWindows(filePath, fileSize, username,
-                          privateKeyFilePath, host, port, remoteFilePath,
-                          progressCallback, uploadModel):
-    """
-    Upload file using SCP.
-    """
-    # pylint: disable=too-many-statements
-    # pylint: disable=too-many-locals
-    uploadModel.startTime = datetime.now()
-    maxThreads = SETTINGS.advanced.maxUploadThreads
-    progressPollInterval = SETTINGS.miscellaneous.progressPollInterval
-    monitoringProgress = threading.Event()
-    MonitorProgress(progressPollInterval, uploadModel,
-                    fileSize, monitoringProgress, progressCallback)
-    cipher = SETTINGS.miscellaneous.cipher
-    remoteDir = os.path.dirname(remoteFilePath)
-    quotedRemoteDir = OpenSSH.DoubleQuoteRemotePath(remoteDir)
-    if remoteDir not in REMOTE_DIRS_CREATED:
-        mkdirCmdAndArgs = \
-            [OpenSSH.DoubleQuote(OPENSSH.ssh),
-             "-p", port,
-             "-n",
-             "-c", cipher,
-             "-i", OpenSSH.DoubleQuote(privateKeyFilePath),
-             "-l", username,
-             host,
-             OpenSSH.DoubleQuote("mkdir -p %s" % quotedRemoteDir)]
-        mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
-        mkdirCmdString = " ".join(mkdirCmdAndArgs)
-        logger.debug(mkdirCmdString)
-        mkdirProcess = \
-            subprocess.Popen(mkdirCmdString,
-                             shell=OPENSSH.preferToUseShellInSubprocess,
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             startupinfo=DEFAULT_STARTUP_INFO,
-                             creationflags=DEFAULT_CREATION_FLAGS)
-        stdout, _ = mkdirProcess.communicate()
-        if mkdirProcess.returncode != 0:
-            raise SshException(stdout, mkdirProcess.returncode)
-        REMOTE_DIRS_CREATED[remoteDir] = True
-
-    if ShouldCancelUpload(uploadModel):
-        logger.debug("UploadFileFromWindows: Aborting upload "
-                     "for %s" % filePath)
-        return
-
-    remoteDir = os.path.dirname(remoteFilePath)
-    if SETTINGS.miscellaneous.useNoneCipher:
-        cipherString = "-oNoneEnabled=yes -oNoneSwitch=yes"
-    else:
-        cipherString = "-c %s" % cipher
-    scpCommandString = \
-        '%s %s -v -P %s -i %s %s %s "%s@%s:\\"%s/\\""' \
-        % (OpenSSH.DoubleQuote(OPENSSH.scp),
-           " ".join(OpenSSH.DefaultSshOptions()),
-           port,
-           OpenSSH.DoubleQuote(GetCygwinPath(privateKeyFilePath)),
-           cipherString,
-           OpenSSH.DoubleQuote(GetCygwinPath(filePath)),
-           username, host,
-           remoteDir
-           .replace('`', r'\\`')
-           .replace('$', r'\\$'))
-    logger.debug(scpCommandString)
-    scpUploadProcess = subprocess.Popen(
-        scpCommandString,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        startupinfo=DEFAULT_STARTUP_INFO,
-        creationflags=DEFAULT_CREATION_FLAGS)
-    uploadModel.scpUploadProcessPid = scpUploadProcess.pid
-    uploadModel.status = UploadStatus.IN_PROGRESS
-    while True:
-        poll = scpUploadProcess.poll()
-        if poll is not None:
-            break
-        time.sleep(SLEEP_FACTOR * maxThreads)
-    stdout, _ = scpUploadProcess.communicate()
-    if scpUploadProcess.returncode != 0:
-        raise ScpException(stdout, scpCommandString,
-                           scpUploadProcess.returncode)
-    bytesUploaded = fileSize
-    progressCallback(bytesUploaded, fileSize)
-    return
-
+            with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
+                try:
+                    mkdirProcess = session.subprocess.Popen(
+                        mkdirCmdAndArgs, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, close_fds=True,
+                        preexec_fn=os.setpgrp)
+                    stdout, stderr = mkdirProcess.communicate()
+                    if mkdirProcess.returncode != 0:
+                        if stdout and not stderr:
+                            stderr = stdout
+                        raise SshException(stderr, mkdirProcess.returncode)
+                except (IOError, OSError) as err:
+                    raise SshException(err, returncode=255)
+        with LOCKS.remoteDirsCreated:
+            REMOTE_DIRS_CREATED[remoteDir] = True
 
 def GetCygwinPath(path):
     """

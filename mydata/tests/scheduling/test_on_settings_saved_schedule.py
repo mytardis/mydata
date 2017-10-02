@@ -46,7 +46,7 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
         uploadsModel = DATAVIEW_MODELS['uploads']
-        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
+        self.assertEqual(uploadsModel.GetCompletedCount(), 8)
         self.assertIn(
             ("CreateOnSettingsSavedTask - MainThread - DEBUG - "
              "Schedule type is On Settings Saved"),

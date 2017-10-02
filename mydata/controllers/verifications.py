@@ -82,6 +82,8 @@ class VerifyDatafileRunnable(object):
                     cacheKey in SETTINGS.verifiedDatafilesCache:
                 verificationsModel.IncrementCacheHits()
                 self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
+                DATAVIEW_MODELS['folders'].FolderStatusUpdated(
+                    self.folderModel, delay=True)
                 return
         except:
             # If an unhandled exception occurs during a cache lookup,
@@ -313,7 +315,7 @@ class VerifyDatafileRunnable(object):
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
 
-    def HandleExistingVerifiedDatafile(self, cacheHit=False):
+    def HandleExistingVerifiedDatafile(self):
         """
         Found existing verified file on server.
         """
@@ -321,12 +323,11 @@ class VerifyDatafileRunnable(object):
             return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        if not cacheHit:
-            cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
-                                  dataFilePath.encode('utf8'))
-            if SETTINGS.miscellaneous.cacheDataFileLookups:
-                with LOCKS.updateCache:
-                    SETTINGS.verifiedDatafilesCache[cacheKey] = True
+        cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
+                              dataFilePath.encode('utf8'))
+        if SETTINGS.miscellaneous.cacheDataFileLookups:
+            with LOCKS.updateCache:
+                SETTINGS.verifiedDatafilesCache[cacheKey] = True
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)
