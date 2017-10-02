@@ -44,7 +44,7 @@ class TimerScheduleTester(MyDataSettingsTester):
         # so INVALID_USER/InvalidUserDataset1/InvalidUserFile1.txt is included
         # in the uploads completed count:
         uploadsModel = DATAVIEW_MODELS['uploads']
-        self.assertEqual(uploadsModel.GetCompletedCount(), 7)
+        self.assertEqual(uploadsModel.GetCompletedCount(), 8)
         self.assertIn(
             "CreateTimerTask - MainThread - DEBUG - Schedule type is Timer",
             logger.loggerOutput.getvalue())

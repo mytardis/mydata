@@ -8,7 +8,8 @@ LOCK_NAMES = [
     'updateCache', 'closeCache', 'displayModalDialog',
     'updateLastErrorMessage', 'updateLastConfirmationQuestion',
     'addVerification', 'addUpload', 'finishedCounting', 'getOrCreateExp',
-    'numVerificationsToBePerformed', 'createDir', 'foldersToUpdate']
+    'numVerificationsToBePerformed', 'createDir', 'foldersToUpdate',
+    'remoteDirsCreated']
 
 class ThreadingLocks(object):
     """

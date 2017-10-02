@@ -93,12 +93,13 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         folders = []
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).folderName)
-        self.assertEqual(sorted(folders), ["Birds", "Flowers"])
+        self.assertEqual(sorted(folders),
+                         ["Birds", "Dataset with spaces", "Flowers"])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        self.assertEqual(numFiles, 10)
+        self.assertEqual(numFiles, 11)
 
         numExistingVerifiedFiles = 1
         numUnverifiedFullSizeFiles = 1

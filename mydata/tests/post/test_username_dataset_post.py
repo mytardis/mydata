@@ -47,12 +47,13 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         for row in range(foldersModel.GetRowCount()):
             folders.append(foldersModel.GetFolderRecord(row).folderName)
         self.assertEqual(
-            sorted(folders), ['Birds', 'Flowers', 'InvalidUserDataset1'])
+            sorted(folders),
+            ['Birds', 'Dataset with spaces', 'Flowers', 'InvalidUserDataset1'])
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
             numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
-        self.assertEqual(numFiles, 11)
+        self.assertEqual(numFiles, 12)
 
         uploadsModel = UploadsModel()
         verificationsModel = VerificationsModel()
@@ -74,7 +75,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         sys.stderr.write("%d/%d uploads completed.\n" % (uploadsCompleted, uploadsProcessed))
         if uploadsFailed > 0:
             sys.stderr.write("%d/%d uploads failed.\n" % (uploadsFailed, uploadsProcessed))
-        self.assertEqual(uploadsCompleted, 7)
+        self.assertEqual(uploadsCompleted, 8)
 
 
         # Now let's test canceling the uploads:
