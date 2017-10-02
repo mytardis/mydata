@@ -276,6 +276,13 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                     self.server_instance.command = \
                         self.server_instance.command.replace(
                             "umask 0007; mkdir", OpenSSH.OPENSSH.mkdir)
+                if self.server_instance.command.startswith("chmod") \
+                        and sys.platform.startswith("win"):
+                    logger.warning("Ignoring chmod request on Windows.")
+                    self.chan.send_exit_status(0)
+                    self.chan.close()
+                    return
+
                 if self.server_instance.command.startswith("cat"):
                     self.server_instance.command = \
                         self.server_instance.command.replace(
