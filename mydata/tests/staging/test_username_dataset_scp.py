@@ -199,7 +199,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             for row in range(foldersModel.GetRowCount()):
                 folderModel = foldersModel.GetFolderRecord(row)
                 foldersController.StartUploadsForFolder(folderModel)
-            foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")

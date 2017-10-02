@@ -89,7 +89,6 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
             for row in range(foldersModel.GetRowCount()):
                 folderModel = foldersModel.GetFolderRecord(row)
                 self.app.foldersController.StartUploadsForFolder(folderModel)
-            self.app.foldersController.FinishedScanningForDatasetFolders()
 
         startUploadsThread = threading.Thread(
             target=StartUploads, name="StartUploads")
