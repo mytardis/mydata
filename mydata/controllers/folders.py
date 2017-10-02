@@ -705,7 +705,7 @@ class FoldersController(object):
                 app.frame.toolbar.EnableTestAndUploadToolbarButtons()
                 FLAGS.shouldAbort = False
                 if FLAGS.testRunRunning:
-                    FLAGS.testRunFrame.saveButton.Enable()
+                    app.testRunFrame.saveButton.Enable()
             logger.info(message)
             if hasattr(app, "frame"):
                 app.frame.SetStatusMessage(message, force=True)
