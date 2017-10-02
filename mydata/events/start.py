@@ -341,9 +341,9 @@ def OnTestRunFromToolbar(event):
     app.frame.toolbar.DisableTestAndUploadToolbarButtons()
     app.testRunFrame.saveButton.Disable()
     ResetShouldAbortStatus()
+    logger.testrun("Starting Test Run...")
     app.scheduleController.ApplySchedule(event, runManually=True,
                                          needToValidateSettings=True)
     app.testRunFrame.Show()
     app.testRunFrame.Clear()
     app.testRunFrame.SetTitle("%s - Test Run" % app.frame.GetTitle())
-    logger.testrun("Starting Test Run...")
