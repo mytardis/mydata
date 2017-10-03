@@ -221,6 +221,7 @@ class FoldersController(object):
         self.verificationWorkerThreads = []
         self.finishedScanningForDatasetFolders = threading.Event()
         self.numVerificationsToBePerformed = 0
+        self.uploadsAcknowledged = 0
         self.finishedCountingVerifications = dict()
         SETTINGS.InitializeVerifiedDatafilesCache()
 
@@ -773,7 +774,15 @@ class FoldersController(object):
                             "%3.1f KB/s" % (averageSpeedMBs * 1000.0)
                     message += "  Average speed: %s" % averageSpeed
             else:
-                message = "No new files were found to upload."
+                if FLAGS.testRunRunning:
+                    if self.uploadsAcknowledged > 0:
+                        message = \
+                            "Finished scanning with %s files requiring upload." \
+                            % self.uploadsAcknowledged
+                    else:
+                        message = "No new files were found to upload."
+                else:
+                    message = "No new files were found to upload."
         else:
             message = "Data scans and uploads appear to have " \
                 "completed successfully."

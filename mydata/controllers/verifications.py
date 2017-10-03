@@ -71,13 +71,13 @@ class VerifyDatafileRunnable(object):
             return
 
         dataset = self.folderModel.datasetModel
-        if not dataset:  # test runs don't create required datasets
-            self.HandleNonExistentDataFile()
-            return
 
         try:
-            cacheKey = \
-                "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+            if dataset:  # test runs don't create required datasets
+                cacheKey = \
+                    "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+            else:
+                cacheKey = None
             if SETTINGS.miscellaneous.cacheDataFileLookups and \
                     cacheKey in SETTINGS.verifiedDatafilesCache:
                 verificationsModel.IncrementCacheHits()
@@ -98,6 +98,10 @@ class VerifyDatafileRunnable(object):
                                   folderModel=self.folderModel,
                                   dataFileIndex=self.dataFileIndex)
             verificationsModel.AddRow(self.verificationModel)
+
+        if not dataset:  # test runs don't create required datasets
+            self.HandleNonExistentDataFile()
+            return
 
         try:
             self.verificationModel.message = \
