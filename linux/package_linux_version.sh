@@ -21,7 +21,6 @@ pyinstaller --paths=$PATHS --name=MyData --icon=../mydata/media/MyData.ico --win
 
 cp "MyData.desktop" 	dist/MyData/
 cp MyData.sh 		dist/MyData/
-cp README_LINUX dist/MyData/
 
 mkdir dist/MyData/media
 cp -r ../mydata/media/* dist/MyData/media/
@@ -31,6 +30,11 @@ cp $(python -c 'import requests; print requests.certs.where()') dist/MyData/
 mkdir dist/MyData-${VERSION}_${ARCHITECTURE}
 cp MyData.sh    dist/MyData-${VERSION}_${ARCHITECTURE}
 mv dist/MyData dist/MyData-${VERSION}_${ARCHITECTURE}/bin
+
+# PyInstaller picks up the libxcb shared libraries as GTK
+# dependencies, but they change too rapidly, so freezing
+# them is not advisable:
+rm -f dist/MyData-${VERSION}_${ARCHITECTURE}/bin/lib*xcb*.so*
 
 cd dist
 tar zcf MyData_v${VERSION}_${ARCHITECTURE}.tar.gz MyData-${VERSION}_${ARCHITECTURE}
