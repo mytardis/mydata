@@ -78,8 +78,19 @@ class ThreadSafeFlags(object):
     @property
     def shouldAbort(self):
         """
-        The user has requested aborting the data folder scans and/or
-        datafile lookups (verifications) and/or uploads.
+        The most common reason for setting "shouldAbort" to True is when the
+        user has requested aborting the data folder scans and/or datafile
+        lookups (verifications) and/or uploads.
+
+        It is also set when a critical failure / unhandled exception means
+        that MyData needs to shut down the uploads before completion.
+
+        When FoldersController's ShutDownUploadThreads finishes running, it
+        will restore FLAGS.shouldAbort to its default value of False, but
+        foldersController.canceled will remain set to True if the last session
+        was canceled.  foldersController.canceled will be reset in
+        FoldersController's InitializeStatusFlags method the next time we run
+        the scans and uploads.
         """
         return self._flags['shouldAbort'].isSet()
 

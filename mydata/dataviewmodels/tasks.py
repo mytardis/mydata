@@ -9,8 +9,8 @@ from datetime import timedelta
 
 import wx
 
-from ..events.stop import CheckIfShouldAbort
 from ..models.task import TaskModel
+from ..threads.flags import FLAGS
 from ..utils.notification import Notification
 from ..logs import logger
 from .dataview import MyDataDataViewModel
@@ -157,8 +157,7 @@ class TasksModel(MyDataDataViewModel):
                         sys.stderr.write("%s\n" % msg)
 
             app = wx.GetApp()
-            if not CheckIfShouldAbort() and \
-                    not app.foldersController.started:
+            if not FLAGS.shouldAbort and not app.foldersController.started:
                 if wx.PyApp.IsMainLoopRunning():
                     thread = threading.Thread(target=TaskJobFunc)
                     logger.debug("Starting task %s" % taskModel.jobDesc)
@@ -166,7 +165,7 @@ class TasksModel(MyDataDataViewModel):
                 else:
                     TaskJobFunc()
             else:
-                if CheckIfShouldAbort():
+                if FLAGS.shouldAbort:
                     logger.warning(
                         "Not starting task because we are aborting.")
                     message = "Data scans and uploads were canceled."
