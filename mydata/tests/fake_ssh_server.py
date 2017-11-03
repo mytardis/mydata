@@ -271,11 +271,11 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
 
             if sys.platform.startswith("win"):
                 # Use bundled Cygwin binaries for these commands:
-                if self.server_instance.command.startswith("umask 0007; mkdir") \
+                if self.server_instance.command.startswith("mkdir") \
                         and sys.platform.startswith("win"):
                     self.server_instance.command = \
                         self.server_instance.command.replace(
-                            "umask 0007; mkdir", OpenSSH.OPENSSH.mkdir)
+                            "mkdir", OpenSSH.OPENSSH.mkdir)
                 if self.server_instance.command.startswith("chmod") \
                         and sys.platform.startswith("win"):
                     logger.warning("Ignoring chmod request on Windows.")
