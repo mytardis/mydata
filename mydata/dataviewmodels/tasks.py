@@ -184,8 +184,8 @@ class TasksModel(MyDataDataViewModel):
             if millis > -1000:
                 millis = 1
             else:
-                raise Exception("Scheduled time for task ID %d "
-                                "is in the past." % taskModel.dataViewId)
+                logger.error("Scheduled time for task ID %d "
+                             "is in the past." % taskModel.dataViewId)
         args = [taskModel, row, col]
 
         def ScheduleTask():
