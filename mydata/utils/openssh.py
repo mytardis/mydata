@@ -649,6 +649,8 @@ def CleanUpScpAndSshProcesses():
                         proc.kill()
                 except:
                     pass
+        except psutil.NoSuchProcess:
+            pass
         except psutil.AccessDenied:
             pass
         except psutil.ZombieProcess:
