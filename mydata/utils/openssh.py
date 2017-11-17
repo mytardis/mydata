@@ -385,7 +385,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     else:
         ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
-    SetRemotePermissions(remoteDir, username, privateKeyFilePath, host, port)
+    SetRemoteFilePermissions(
+        remoteDir, username, privateKeyFilePath, host, port)
 
     uploadModel.SetLatestTime(datetime.now())
     progressCallback(current=fileSize, total=fileSize)
@@ -444,7 +445,8 @@ def ScpUploadWithErrandBoy(uploadModel, scpCommandList):
             raise ScpException(err, scpCommandString, returncode=255)
 
 
-def SetRemotePermissions(remoteDir, username, privateKeyFilePath, host, port):
+def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
+                             host, port):
     """
     Ensure that the mytardis account (via the mytardis group) has read and
     write access to the uploaded data so that it can be moved from staging into
@@ -503,6 +505,59 @@ def SetRemotePermissions(remoteDir, username, privateKeyFilePath, host, port):
                 raise SshException(err, returncode=255)
 
 
+def SetRemoteDirPermissions(remoteDir, username, privateKeyFilePath,
+                            host, port):
+    """
+    Ensure that the mytardis account (via the mytardis group) has read and
+    write access to the uploaded data so that it can be moved from staging
+    into its permanent location.  With some older versions of OpenSSH
+    (installed on the SCP server), umask settings from ~mydata/.bashrc are
+    respected, but recent versions ignore ~/.bashrc, so we need to explicitly
+    set the permissions.
+
+    The command we use to set the permissions on subdirectories we create
+    with mkdir over ssh is "chmod 2770", where 2 sets the setgid bit, so all
+    child subdirectories should be created with the parent directory's group
+    ("mytardis") rather than the "mydata" group.
+    """
+    chmodCmdAndArgs = \
+        [OPENSSH.ssh,
+         "-p", port,
+         "-n",
+         "-c", SETTINGS.miscellaneous.cipher,
+         "-i", privateKeyFilePath,
+         "-l", username,
+         host,
+         "chmod 2770 %s" % remoteDir]
+    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+    logger.debug(" ".join(chmodCmdAndArgs))
+    if not sys.platform.startswith("linux"):
+        chmodProcess = \
+            subprocess.Popen(chmodCmdAndArgs,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             startupinfo=DEFAULT_STARTUP_INFO,
+                             creationflags=DEFAULT_CREATION_FLAGS)
+        stdout, _ = chmodProcess.communicate()
+        if chmodProcess.returncode != 0:
+            raise SshException(stdout, chmodProcess.returncode)
+    else:
+        with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
+            try:
+                chmodProcess = session.subprocess.Popen(
+                    chmodCmdAndArgs, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, close_fds=True,
+                    preexec_fn=os.setpgrp)
+                stdout, stderr = chmodProcess.communicate()
+                if chmodProcess.returncode != 0:
+                    if stdout and not stderr:
+                        stderr = stdout
+                    raise SshException(stderr, chmodProcess.returncode)
+            except (IOError, OSError) as err:
+                raise SshException(err, returncode=255)
+
+
 def WaitForProcessToComplete(process):
     """
     subprocess's communicate should do this automatically,
@@ -529,7 +584,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
              "-i", privateKeyFilePath,
              "-l", username,
              host,
-             "umask 0007; mkdir -p %s" % remoteDir]
+             "mkdir -p %s" % remoteDir]
         mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
         logger.debug(" ".join(mkdirCmdAndArgs))
         if not sys.platform.startswith("linux"):
@@ -557,6 +612,8 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                         raise SshException(stderr, mkdirProcess.returncode)
                 except (IOError, OSError) as err:
                     raise SshException(err, returncode=255)
+        SetRemoteDirPermissions(
+            remoteDir, username, privateKeyFilePath, host, port)
         with LOCKS.remoteDirsCreated:
             REMOTE_DIRS_CREATED[remoteDir] = True
 
@@ -592,12 +649,9 @@ def CleanUpScpAndSshProcesses():
                         proc.kill()
                 except:
                     pass
-        except psutil.AccessDenied:
+        except psutil.NoSuchProcess:
             pass
-        except psutil.ZombieProcess:
-            # Process has completed execution but hasn't been removed from
-            # the process table yet.  Usually the process will be removed
-            # shortly after this exception is caused, so no action is needed.
+        except psutil.AccessDenied:
             pass
 
 

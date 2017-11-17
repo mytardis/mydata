@@ -144,13 +144,15 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                     RestoreUserInterfaceForAbort()
                     return
                 except InvalidSettings as invalidSettings:
-                    # If settings validation is run automatically shortly
+                    # When settings validation is run automatically shortly
                     # after a scheduled task begins, ignore complaints from
                     # settings validation about the "scheduled_time" being
-                    # in the past.  Any other settings validation failure
-                    # will be reported.
+                    # in the past.  Also ignore complaints about the MyTardis
+                    # URL being invalid if it fails to respond within the
+                    # defined timeout interval.  Any other settings validation
+                    # failure will be reported to the user.
                     field = invalidSettings.field
-                    if field != "scheduled_time":
+                    if field != "scheduled_time" and field != "mytardis_url":
                         logger.debug(
                             "Displaying result from settings validation.")
                         message = invalidSettings.message

@@ -100,6 +100,13 @@ class FoldersController(object):
     def canceled(self):
         """
         Return thread-safe flag indicated whether uploads have been canceled
+
+        When FoldersController's ShutDownUploadThreads finishes running, it
+        will restore FLAGS.shouldAbort to its default value of False, but
+        foldersController.canceled will remain set to True if the last session
+        was canceled.  foldersController.canceled will be reset in
+        FoldersController's InitializeStatusFlags method the next time we run
+        the scans and uploads.
         """
         return self._canceled.isSet()
 

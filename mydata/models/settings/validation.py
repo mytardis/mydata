@@ -434,7 +434,8 @@ def CheckContactEmailAndEmailFolders(setStatusMessage):
     if not validate_email(SETTINGS.general.contactEmail):
         message = "Please enter a valid contact email."
         raise InvalidSettings(message, "contact_email")
-    if SETTINGS.advanced.folderStructure.startswith('Email'):
+    if SETTINGS.advanced.folderStructure.startswith('Email') and \
+            SETTINGS.advanced.validateFolderStructure:
         dataDir = SETTINGS.general.dataDirectory
         folderNames = os.walk(dataDir).next()[1]
         for folderName in folderNames:
