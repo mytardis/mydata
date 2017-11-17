@@ -120,6 +120,16 @@ interface (after adding the public key to the appropriate
 
   .. image:: images/UploaderRegistrationApproval.png
 
+While approving the request, the MyTardis administrator can assign an
+appropriate storage box to the MyData uploader.  In this case, the "staging"
+storage box has been selected.  This storage box has attributes for
+"scp_username" and "scp_hostname" (and optionally "scp_port" which defaults to
+22).  It is the MyTardis administrator's responsibility to paste the public key
+into the appropriate authorized_keys file to allow MyData to upload without a
+password.
+
+  .. image:: images/StagingStorageBox.png
+
 Below is a sample of a MyTardis administrator's notes made
 (in the approval_comments field in MyTardis's UploadRegistrationRequest
 model) when approving one of these upload requests:
@@ -140,15 +150,18 @@ The MyData client will need to create subdirectories within the MyTardis
 staging area, and it will need to be able to write within those subdirectories.
 The "mytardis" web user should have read access to the staging data, but the
 "mydata" user should not have write access to the permanent storage location.
-One way to implement this is to set ownership of the staging directory to
-"mytardis:mytardis", use the "setgid" bit (chmod g+s) on the staging directory
-so that subdirectories inherit the "mytardis" group, and set "umask 0007" in
-the mydata user's ~/.bashrc.  It is important that the umask setting is
-applied when running remote commands without an interactive shell, e.g.
-"ssh -i ~/.ssh/MyData mydata@hostname umask".  Some ~/.bashrc
-files are configured to exit partway through if not running an interactive
-shell, so it may be necessary to insert the umask directive near the
-beginning of the ~/.basrhc file..
+
+To ensure that MyTardis's Celery processes (running under the "mytardis"
+account) have access to the uploaded files via group ownership, we can set
+the "setgid" bit (chmod g+s or chmod 2770) on the staging directory so that all
+files created within staging can inherit the "mytardis" group.
+
+Previous versions of MyData's documentation recommended using "umask" to ensure
+that files uploaded by MyData were group readable (so that MyTardis could
+verify them) and group writeable (so that MyTardis could move them to their
+permanent storage box).  However, from v0.7.0, MyData explicitly sets
+permissions on files it uploads (and on subddirectories it creates), instead of
+assuming that umask has been configured to do this automatically.
 
 N.B.: The test below was only possible because the MyData user submitting the
 request and the MyTardis administrator approving the request were the same
