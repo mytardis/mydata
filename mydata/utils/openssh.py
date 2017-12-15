@@ -361,7 +361,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                     fileSize, monitoringProgress, progressCallback)
 
     remoteDir = os.path.dirname(remoteFilePath)
-    CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
+    with LOCKS.createRemoteDir:
+        CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
 
     if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFile: Aborting upload for %s" % filePath)
@@ -614,8 +615,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                     raise SshException(err, returncode=255)
         SetRemoteDirPermissions(
             remoteDir, username, privateKeyFilePath, host, port)
-        with LOCKS.remoteDirsCreated:
-            REMOTE_DIRS_CREATED[remoteDir] = True
+        REMOTE_DIRS_CREATED[remoteDir] = True
 
 def GetCygwinPath(path):
     """

@@ -9,7 +9,7 @@ LOCK_NAMES = [
     'updateLastErrorMessage', 'updateLastConfirmationQuestion',
     'addVerification', 'addUpload', 'finishedCounting', 'getOrCreateExp',
     'numVerificationsToBePerformed', 'createDir', 'foldersToUpdate',
-    'remoteDirsCreated']
+    'createRemoteDir']
 
 class ThreadingLocks(object):
     """
