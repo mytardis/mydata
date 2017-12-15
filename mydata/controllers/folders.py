@@ -648,7 +648,7 @@ class FoldersController(object):
         uploadsFailed = DATAVIEW_MODELS['uploads'].GetFailedCount()
         uploadsProcessed = uploadsCompleted + uploadsFailed
 
-        if hasattr(wx.GetApp(), "frame"):
+        if hasattr(wx.GetApp(), "frame") and numVerificationsCompleted > 0:
             if numVerificationsCompleted == \
                     self.numVerificationsToBePerformed \
                     and uploadsToBePerformed > 0:
