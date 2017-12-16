@@ -549,7 +549,8 @@ class FoldersController(object):
                 # can't use the usual triggers (e.g. datafile
                 # upload complete) to determine when to check if
                 # we have finished:
-                self.CountCompletedUploadsAndVerifications(event=None)
+                wx.CallAfter(
+                    self.CountCompletedUploadsAndVerifications, event=None)
         except:
             logger.error(traceback.format_exc())
 
@@ -812,6 +813,10 @@ class FoldersController(object):
         EndBusyCursorIfRequired()
 
         logger.debug("")
+
+        if SETTINGS.miscellaneous.autoexit:
+            sys.stdout.write("%s\n" % message)
+            app.ShutDownCleanlyAndExit(event, confirm=False)
 
     def VerifyDatafiles(self, folderModel):
         """

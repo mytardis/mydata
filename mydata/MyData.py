@@ -69,6 +69,8 @@ class MyData(wx.App):
         parser.add_argument("-v", "--version", action="store_true",
                             help="Display MyData version and exit")
         parser.add_argument("-l", "--loglevel", help="set logging verbosity")
+        parser.add_argument("--autoexit", action="store_true",
+                            help="Exit upon completion of scans and uploads")
         args, _ = parser.parse_known_args(argv[1:])
         if args.version:
             sys.stdout.write("MyData %s (%s)\n" % (VERSION, LATEST_COMMIT))
@@ -82,6 +84,7 @@ class MyData(wx.App):
                 logger.SetLevel(logging.WARN)
             elif args.loglevel.upper() == "ERROR":
                 logger.SetLevel(logging.ERROR)
+        SETTINGS.miscellaneous.autoexit = args.autoexit
 
     def OnInit(self):
         """

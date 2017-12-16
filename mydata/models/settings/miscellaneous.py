@@ -70,6 +70,11 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
             cache_datafile_lookups=True,
             connection_timeout=10.0)
 
+        # Settings determined from command-line arguments of the
+        # MyData binary or the run.py entry point which are
+        # not saved in MyData.cfg:
+        self.autoexit = False
+
     @property
     def locked(self):
         """
