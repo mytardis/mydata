@@ -17,7 +17,6 @@ from .constants import APPNAME
 from .settings import SETTINGS
 
 from .dataviewmodels.dataview import DATAVIEW_MODELS
-from .models.settings.serialize import LoadSettings
 
 from .views.mydata import MyDataFrame
 from .views.testrun import TestRunFrame
@@ -94,9 +93,6 @@ class MyData(wx.App):
         self.SetAppName(APPNAME)
         appdirPath = CreateConfigPathIfNecessary()
         InitializeTrustedCertsPath()
-        if 'MYDATA_TESTING' not in os.environ:
-            # Load settings from MyData.cfg, stored in INI format:
-            LoadSettings(SETTINGS)
         InitializeDataViewModels()
         self.frame = MyDataFrame()
 
