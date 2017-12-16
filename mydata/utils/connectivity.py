@@ -3,8 +3,8 @@ Functionality related to checking network connectivity
 """
 from datetime import datetime
 
-import netifaces
 import wx
+import netifaces
 
 from ..constants import CONNECTIVITY_CHECK_INTERVAL as CHECK_INTERVAL
 from ..logs import logger

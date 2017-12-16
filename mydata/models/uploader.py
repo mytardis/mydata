@@ -80,9 +80,9 @@ import traceback
 import uuid
 
 import dateutil.parser
-import netifaces
 import psutil
 import requests
+import netifaces
 
 from .. import __version__ as VERSION
 from ..logs import logger
