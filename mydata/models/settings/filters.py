@@ -2,9 +2,10 @@
 Model class for the settings displayed in the Filters tab
 of the settings dialog and saved to disk in MyData.cfg
 """
+from .base import BaseSettingsModel
 
 
-class FiltersSettingsModel(object):
+class FiltersSettingsModel(BaseSettingsModel):
     """
     Model class for the settings displayed in the Filters tab
     of the settings dialog and saved to disk in MyData.cfg
@@ -28,6 +29,21 @@ class FiltersSettingsModel(object):
             'use_excludes_file',
             'excludes_file'
         ]
+
+        self.default = dict(
+            user_filter="",
+            dataset_filter="",
+            experiment_filter="",
+            ignore_old_datasets=False,
+            ignore_interval_number=0,
+            ignore_interval_unit="months",
+            ignore_new_files=True,
+            ignore_new_files_minutes=1,
+            use_includes_file=False,
+            includes_file="",
+            use_excludes_file=False,
+            excludes_file=""
+        )
 
     @property
     def userFilter(self):
@@ -97,7 +113,8 @@ class FiltersSettingsModel(object):
         """
         Set the number of days/weeks/months used to define an old dataset
         """
-        self.mydataConfig['ignore_interval_number'] = ignoreOldDatasetIntervalNumber
+        self.mydataConfig['ignore_interval_number'] = \
+            ignoreOldDatasetIntervalNumber
 
     @property
     def ignoreOldDatasetIntervalUnit(self):
@@ -113,7 +130,8 @@ class FiltersSettingsModel(object):
         Set the time interval unit (days/weeks/months)
         used to define an old dataset
         """
-        self.mydataConfig['ignore_interval_unit'] = ignoreOldDatasetIntervalUnit
+        self.mydataConfig['ignore_interval_unit'] = \
+            ignoreOldDatasetIntervalUnit
 
     @property
     def ignoreNewFiles(self):
@@ -206,22 +224,3 @@ class FiltersSettingsModel(object):
         glob patterns listed in the excludes file.
         """
         self.mydataConfig['excludes_file'] = excludesFile
-
-    def SetDefaults(self):
-        """
-        Set default values for configuration parameters
-        that will appear in MyData.cfg for fields in the
-        Settings Dialog's Filter tab
-        """
-        self.mydataConfig['user_filter'] = ""
-        self.mydataConfig['dataset_filter'] = ""
-        self.mydataConfig['experiment_filter'] = ""
-        self.mydataConfig['ignore_old_datasets'] = False
-        self.mydataConfig['ignore_interval_number'] = 0
-        self.mydataConfig['ignore_interval_unit'] = "months"
-        self.mydataConfig['ignore_new_files'] = True
-        self.mydataConfig['ignore_new_files_minutes'] = 1
-        self.mydataConfig['use_includes_file'] = False
-        self.mydataConfig['includes_file'] = ""
-        self.mydataConfig['use_excludes_file'] = False
-        self.mydataConfig['excludes_file'] = ""

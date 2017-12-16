@@ -5,8 +5,10 @@ of the settings dialog and saved to disk in MyData.cfg
 from datetime import datetime
 from datetime import timedelta
 
+from .base import BaseSettingsModel
 
-class ScheduleSettingsModel(object):
+
+class ScheduleSettingsModel(BaseSettingsModel):
     """
     Model class for the settings displayed in the Schedule tab
     of the settings dialog and saved to disk in MyData.cfg
@@ -31,6 +33,24 @@ class ScheduleSettingsModel(object):
             'timer_to_time',
             'timer_minutes'
         ]
+
+        self.default = dict(
+            schedule_type="Manually",
+            scheduled_date=datetime.date(datetime.now()),
+            scheduled_time=datetime.time(
+                datetime.now().replace(microsecond=0) + timedelta(minutes=1)),
+            monday_checked=False,
+            tuesday_checked=False,
+            wednesday_checked=False,
+            thursday_checked=False,
+            friday_checked=False,
+            saturday_checked=False,
+            sunday_checked=False,
+            timer_from_time=datetime.time(
+                datetime.strptime("12:00 AM", "%I:%M %p")),
+            timer_to_time=datetime.time(
+                datetime.strptime("11:59 PM", "%I:%M %p")),
+            timer_minutes=15)
 
     @property
     def scheduleType(self):
@@ -215,27 +235,3 @@ class ScheduleSettingsModel(object):
         self.mydataConfig['timer_to_time'] = timerToTime
 
         self.mydataConfig['api_key'] = ""
-
-    def SetDefaults(self):
-        """
-        Set default values for configuration parameters
-        that will appear in MyData.cfg for fields in the
-        Settings Dialog's Schedule tab
-        """
-        self.mydataConfig['schedule_type'] = "Manually"
-        self.mydataConfig['scheduled_date'] = datetime.date(datetime.now())
-        self.mydataConfig['scheduled_time'] = \
-            datetime.time(datetime.now().replace(microsecond=0) +
-                          timedelta(minutes=1))
-        self.mydataConfig['monday_checked'] = False
-        self.mydataConfig['tuesday_checked'] = False
-        self.mydataConfig['wednesday_checked'] = False
-        self.mydataConfig['thursday_checked'] = False
-        self.mydataConfig['friday_checked'] = False
-        self.mydataConfig['saturday_checked'] = False
-        self.mydataConfig['sunday_checked'] = False
-        self.mydataConfig['timer_from_time'] = \
-            datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
-        self.mydataConfig['timer_to_time'] = \
-            datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
-        self.mydataConfig['timer_minutes'] = 15

@@ -2,11 +2,12 @@
 Model class for the settings displayed in the General tab
 of the settings dialog and saved to disk in MyData.cfg
 """
+from .base import BaseSettingsModel
 from ...logs import logger
 from ...utils.exceptions import DoesNotExist
 
 
-class GeneralSettingsModel(object):
+class GeneralSettingsModel(BaseSettingsModel):
     """
     Model class for the settings displayed in the General tab
     of the settings dialog and saved to disk in MyData.cfg
@@ -15,6 +16,7 @@ class GeneralSettingsModel(object):
     def __init__(self):
         # Saved in MyData.cfg:
         self.mydataConfig = dict()
+
         self.fields = [
             'instrument_name',
             'facility_name',
@@ -25,6 +27,17 @@ class GeneralSettingsModel(object):
             'username',
             'api_key'
         ]
+
+        self.default = dict(
+            instrument_name="",
+            facility_name="",
+            contact_name="",
+            contact_email="",
+            data_directory="",
+            mytardis_url="",
+            username="",
+            api_key="")
+
         self._defaultOwner = None
         self._instrument = None
         self._facility = None
@@ -207,24 +220,6 @@ class GeneralSettingsModel(object):
         Set API key
         """
         self.mydataConfig['api_key'] = apiKey
-        self._defaultOwner = None
-        self._instrument = None
-        self._facility = None
-
-    def SetDefaults(self):
-        """
-        Set default values for configuration parameters
-        that will appear in MyData.cfg for fields in the
-        Settings Dialog's General tab
-        """
-        self.mydataConfig['facility_name'] = ""
-        self.mydataConfig['instrument_name'] = ""
-        self.mydataConfig['contact_name'] = ""
-        self.mydataConfig['contact_email'] = ""
-        self.mydataConfig['data_directory'] = ""
-        self.mydataConfig['mytardis_url'] = ""
-        self.mydataConfig['username'] = ""
-        self.mydataConfig['api_key'] = ""
         self._defaultOwner = None
         self._instrument = None
         self._facility = None
