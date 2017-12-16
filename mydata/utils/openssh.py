@@ -642,6 +642,8 @@ def CleanUpScpAndSshProcesses():
     matches MyData's SSH path.  On other platforms, we can use proc.cmdline()
     to ensure that the SSH process we're killing uses MyData's private key.
     """
+    if not SETTINGS.uploaderModel:
+        return
     privateKeyPath = SETTINGS.uploaderModel.sshKeyPair.privateKeyFilePath
     for proc in psutil.process_iter():
         try:
