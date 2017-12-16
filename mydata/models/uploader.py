@@ -97,8 +97,6 @@ from ..utils import MyDataInstallLocation
 from ..threads.locks import LOCKS
 from .storage import StorageBox
 
-DEFAULT_TIMEOUT = 5
-
 
 class UploaderModel(object):
     """
@@ -195,8 +193,9 @@ class UploaderModel(object):
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
         headers = self.settings.defaultHeaders
-        response = requests.get(headers=headers, url=url,
-                                timeout=DEFAULT_TIMEOUT)
+        response = requests.get(
+            headers=headers, url=url,
+            timeout=self.settings.miscellaneous.connectionTimeout)
         response.raise_for_status()
         existingUploaderRecords = response.json()
         numExistingUploaderRecords = \
@@ -261,11 +260,13 @@ class UploaderModel(object):
         logger.debug(data)
         headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
-            response = requests.put(headers=headers, url=url, data=data,
-                                    timeout=DEFAULT_TIMEOUT)
+            response = requests.put(
+                headers=headers, url=url, data=data,
+                timeout=self.settings.miscellaneous.connectionTimeout)
         else:
-            response = requests.post(headers=headers, url=url, data=data,
-                                     timeout=DEFAULT_TIMEOUT)
+            response = requests.post(
+                headers=headers, url=url, data=data,
+                timeout=self.settings.miscellaneous.connectionTimeout)
         response.raise_for_status()
         logger.debug("Upload succeeded for uploader info.")
         self.resourceUri = response.json()['resource_uri']
@@ -449,8 +450,9 @@ class UploaderModel(object):
         url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
             % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
         try:
-            response = requests.get(headers=headers, url=url,
-                                    timeout=DEFAULT_TIMEOUT)
+            response = requests.get(
+                headers=headers, url=url,
+                timeout=self.settings.miscellaneous.connectionTimeout)
         except Exception as err:
             logger.error(str(err))
             raise

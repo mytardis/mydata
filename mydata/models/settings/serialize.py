@@ -218,7 +218,7 @@ def LoadMiscellaneousSettings(settings, configParser):
     fields = ["locked", "uuid", "cipher", "use_none_cipher",
               "max_verification_threads", "verification_delay",
               "fake_md5_sum", "progress_poll_interval", "immutable_datasets",
-              "cache_datafile_lookups"]
+              "cache_datafile_lookups", "connection_timeout"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
@@ -233,7 +233,7 @@ def LoadMiscellaneousSettings(settings, configParser):
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getint(configFileSection, field)
     floatFields = [
-        "verification_delay", "progress_poll_interval"]
+        "verification_delay", "progress_poll_interval", "connection_timeout"]
     for field in floatFields:
         if configParser.has_option(configFileSection, field):
             try:
@@ -348,7 +348,8 @@ def SaveSettingsToDisk(configPath=None):
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
                   "start_automatically_on_login", "immutable_datasets",
-                  "cache_datafile_lookups", "upload_invalid_user_folders"]
+                  "cache_datafile_lookups", "upload_invalid_user_folders",
+                  "connection_timeout"]
         settingsList = []
         for field in fields:
             value = SETTINGS[field]

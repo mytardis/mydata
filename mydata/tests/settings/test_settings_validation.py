@@ -5,7 +5,6 @@ import os
 import sys
 import tempfile
 
-import mydata.models.settings.validation
 from ...settings import SETTINGS
 from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
@@ -89,14 +88,13 @@ class SettingsValidationTester(MyDataSettingsTester):
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Simulate timeout while trying to access MyTardis URL:
-        timeout = mydata.models.settings.validation.DEFAULT_TIMEOUT
-        mydata.models.settings.validation.DEFAULT_TIMEOUT = \
-            sys.float_info.epsilon
+        defaultTimeout = SETTINGS.miscellaneous.connectionTimeout
+        SETTINGS.miscellaneous.connectionTimeout = sys.float_info.epsilon
         with self.assertRaises(InvalidSettings) as contextManager:
             ValidateSettings()
         invalidSettings = contextManager.exception
         self.assertEqual(invalidSettings.field, "mytardis_url")
-        mydata.models.settings.validation.DEFAULT_TIMEOUT = timeout
+        SETTINGS.miscellaneous.connectionTimeout = defaultTimeout
 
         # Simulate ConnectionError while trying to access MyTardis URL:
         sys.stderr.write(

@@ -23,8 +23,6 @@ from ...utils.exceptions import UserAbortedSettingsValidation
 from ..facility import FacilityModel
 from .miscellaneous import LastSettingsUpdateTrigger
 
-DEFAULT_TIMEOUT = 5
-
 
 def ValidateSettings(setStatusMessage=None):
     """
@@ -261,8 +259,9 @@ def CheckMyTardisUrl(setStatusMessage):
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        response = requests.get(SETTINGS.general.myTardisApiUrl,
-                                timeout=DEFAULT_TIMEOUT)
+        response = requests.get(
+            SETTINGS.general.myTardisApiUrl,
+            timeout=SETTINGS.miscellaneous.connectionTimeout)
         history = response.history
         url = response.url
         if history:
@@ -314,7 +313,8 @@ def CheckMyTardisUrl(setStatusMessage):
             raise InvalidSettings(message, "mytardis_url")
     except requests.exceptions.Timeout:
         message = "Attempt to connect to %s timed out after " \
-            "%s seconds." % (SETTINGS.general.myTardisApiUrl, DEFAULT_TIMEOUT)
+            "%s seconds." % (SETTINGS.general.myTardisApiUrl,
+                             SETTINGS.miscellaneous.connectionTimeout)
         LogIfTestRun("ERROR: %s" % message)
         logger.error(traceback.format_exc())
         raise InvalidSettings(message, "mytardis_url")

@@ -53,7 +53,8 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
             'use_none_cipher',
             'progress_poll_interval',
             'immutable_datasets',
-            'cache_datafile_lookups'
+            'cache_datafile_lookups',
+            'connection_timeout'
         ]
 
         self.default = dict(
@@ -66,7 +67,8 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
             use_none_cipher=False,
             progress_poll_interval=1.0,
             immutable_datasets=False,
-            cache_datafile_lookups=True)
+            cache_datafile_lookups=True,
+            connection_timeout=10.0)
 
     @property
     def locked(self):
@@ -215,6 +217,26 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
         datafiles which have been previously found to be verified on MyTardis.
         """
         self.mydataConfig['cache_datafile_lookups'] = cacheDataFileLookups
+
+    @property
+    def connectionTimeout(self):
+        """
+        Timeout (in seconds) used for HTTP responses and SSH connections
+
+        :return: the timeout in seconds
+        :rtype: float
+        """
+        return self.mydataConfig['connection_timeout']
+
+    @connectionTimeout.setter
+    def connectionTimeout(self, connectionTimeout):
+        """
+        Timeout (in seconds) used for HTTP responses and SSH connections
+
+        :param connectionTimeout: the timeout in seconds
+        :type connectionTimeout: float
+        """
+        self.mydataConfig['connection_timeout'] = connectionTimeout
 
     def SetDefaultForField(self, field):
         """

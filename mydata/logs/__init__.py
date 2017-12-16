@@ -7,6 +7,7 @@ via HTTP POST for analysis by developers / sys admins.
 # logger.warning etc. methods to be lowercase:
 # pylint: disable=invalid-name
 import threading
+import traceback
 import logging
 import os
 import sys
@@ -16,13 +17,12 @@ import pkgutil
 from StringIO import StringIO
 
 import requests
+from requests.exceptions import RequestException
 import wx
 
 from .SubmitDebugReportDialog import SubmitDebugReportDialog
 from .wxloghandler import WxLogHandler
 from .wxloghandler import EVT_WX_LOG_EVENT
-
-TIMEOUT = 5
 
 
 class MyDataFormatter(logging.Formatter):
@@ -336,19 +336,16 @@ class Logger(object):
         if submitDebugLogOK:
             self.debug("About to send debug log")
             fileInfo = {"logfile": self.GenerateDebugLogContent(settings)}
-            # If we are running in an installation then we have to use
-            # our packaged cacert.pem file:
-            if os.path.exists('cacert.pem'):
-                response = requests.post(url, files=fileInfo,
-                                         verify="cacert.pem", timeout=TIMEOUT)
-            else:
-                response = requests.post(url, files=fileInfo, timeout=TIMEOUT)
-            if response.status_code == 200:
-                logger.debug("Debug log was submitted successfully!")
-            else:
+            try:
+                response = requests.post(
+                    url, files=fileInfo,
+                    timeout=settings.miscellaneous.connectionTimeout)
+                response.raise_for_status()
+                logger.info("Debug log was submitted successfully!")
+            except RequestException:
                 logger.error("An error occurred while attempting to submit "
                              "the debug log.")
-                logger.error(response.text)
+                logger.error(traceback.format_exc())
 
     def OnWxLogEvent(self, event):
         """
