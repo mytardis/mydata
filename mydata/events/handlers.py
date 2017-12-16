@@ -509,7 +509,7 @@ def StartDataUploadsForFolder(event):
         if FLAGS.testRunRunning:
             logger.testrun(message)
         if type(app).__name__ == "MyData":
-            app.frame.toolbar.DisableTestAndUploadToolbarButtons()
+            wx.CallAfter(app.frame.toolbar.DisableTestAndUploadToolbarButtons)
             app.foldersController.StartUploadsForFolder(folderModel)
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
