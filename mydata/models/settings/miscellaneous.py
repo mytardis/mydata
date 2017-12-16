@@ -115,8 +115,11 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
         """
         Upon a successful upload, MyData will request verification
         after a short delay, defaulting to 3 seconds:
+
+        :return: the delay in seconds
+        :rtype: float
         """
-        return float(self.mydataConfig['verification_delay'])
+        return self.mydataConfig['verification_delay']
 
     @property
     def maxVerificationThreads(self):
@@ -173,13 +176,13 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
     @property
     def progressPollInterval(self):
         """
-        Stored as an int in MyData.cfg, but used
-        as a float in threading.Timer(...)
-
         Upload progress is queried periodically via the MyTardis API.
         Returns the interval in seconds between RESTful progress queries.
+
+        :return: the interval in seconds
+        :rtype: float
         """
-        return float(self.mydataConfig['progress_poll_interval'])
+        return self.mydataConfig['progress_poll_interval']
 
     @property
     def immutableDatasets(self):

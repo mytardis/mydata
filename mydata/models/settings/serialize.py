@@ -213,11 +213,6 @@ def LoadMiscellaneousSettings(settings, configParser):
 
     These settings don't appear in the settings dialog, except for "locked",
     which is visible in the settings dialog, but not within any one tab view.
-
-    verification_delay and progress_poll_interval are stored as strings,
-    but then coverted to floats in:
-    mydata.models.settings.miscellaneous.MiscellaneousSettingsModel's
-    "verificationDelay" and "progressPollInterval" properties.
     """
     configFileSection = "MyData"
     fields = ["locked", "uuid", "cipher", "use_none_cipher",
@@ -237,6 +232,15 @@ def LoadMiscellaneousSettings(settings, configParser):
     for field in intFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getint(configFileSection, field)
+    floatFields = [
+        "verification_delay", "progress_poll_interval"]
+    for field in floatFields:
+        if configParser.has_option(configFileSection, field):
+            try:
+                settings[field] = configParser.getfloat(configFileSection, field)
+            except ValueError:
+                logger.warning("Couldn't read value for %s, using default instead." % field)
+                settings[field] = settings.miscellaneous.default[field]
 
 
 def CheckForUpdatedSettingsOnServer(settings):
@@ -278,10 +282,18 @@ def CheckForUpdatedSettingsOnServer(settings):
                 if setting['key'] in (
                         "timer_minutes", "ignore_interval_number",
                         "ignore_new_files_minutes",
-                        "progress_poll_interval", "verification_delay",
                         "max_verification_threads",
                         "max_upload_threads", "max_upload_retries"):
                     settings[setting['key']] = int(setting['value'])
+                elif setting['key'] in (
+                        "progress_poll_interval", "verification_delay",
+                        "connection_timeout"):
+                    try:
+                        settings[setting['key']] = float(setting['value'])
+                    except ValueError:
+                        field = setting['key']
+                        logger.warning("Couldn't read value for %s, using default instead." % field)
+                        settings[field] = settings.miscellaneous.default[field]
                 if setting['key'] in (
                         "scheduled_date"):
                     settings[setting['key']] = \
