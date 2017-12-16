@@ -4,12 +4,12 @@ Test ability to handle replica-related exceptions.
 'replica' is the name of the MyTardis API resource
 endpoint for DataFileObjects (DFOs).
 """
+from requests.exceptions import HTTPError
+
 from .. import MyDataTester
 from ...settings import SETTINGS
 from ...models.datafile import DataFileModel
 from ...models.replica import ReplicaModel
-from ...utils.exceptions import Unauthorized
-from ...utils.exceptions import MissingMyDataReplicaApiEndpoint
 
 
 class ReplicaExceptionsTester(MyDataTester):
@@ -41,12 +41,14 @@ class ReplicaExceptionsTester(MyDataTester):
 
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = ReplicaModel.CountBytesUploadedToStaging(replica.dfoId)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # This special DFO ID tells the Fake MyTardis server to respond
         # with a 404 error:
         replica.dfoId = 444894
-        with self.assertRaises(MissingMyDataReplicaApiEndpoint):
+        with self.assertRaises(HTTPError) as context:
             _ = ReplicaModel.CountBytesUploadedToStaging(replica.dfoId)
+        self.assertEqual(context.exception.response.status_code, 404)

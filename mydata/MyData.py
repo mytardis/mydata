@@ -17,7 +17,6 @@ from .constants import APPNAME
 from .settings import SETTINGS
 
 from .dataviewmodels.dataview import DATAVIEW_MODELS
-from .models.settings.serialize import LoadSettings
 
 from .views.mydata import MyDataFrame
 from .views.testrun import TestRunFrame
@@ -94,9 +93,6 @@ class MyData(wx.App):
         self.SetAppName(APPNAME)
         appdirPath = CreateConfigPathIfNecessary()
         InitializeTrustedCertsPath()
-        if 'MYDATA_TESTING' not in os.environ:
-            # Load settings from MyData.cfg, stored in INI format:
-            LoadSettings(SETTINGS)
         InitializeDataViewModels()
         self.frame = MyDataFrame()
 
@@ -132,6 +128,10 @@ class MyData(wx.App):
         else:
             self.frame.SetTitle(
                 "%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
+            if SETTINGS.schedule.scheduleType == "Manually":
+                # Don't minimize to system tray in this case
+                self.frame.Show(True)
+                return True
             self.frame.Hide()
             if sys.platform.startswith("darwin"):
                 message = \

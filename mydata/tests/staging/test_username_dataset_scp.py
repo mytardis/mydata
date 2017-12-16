@@ -306,11 +306,11 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         self.sshd.shutdown()
         self.fakeSshServerThread.join()
         self.fakeSshServerStopped = True
-        defaultTimeout = OpenSSH.CONNECTION_TIMEOUT
-        OpenSSH.CONNECTION_TIMEOUT = 1
+        defaultTimeout = SETTINGS.miscellaneous.connectionTimeout
+        SETTINGS.miscellaneous.connectionTimeout = 1
         sys.stderr.write(
             "\tSSH ConnectionTimeout: %s second(s)\n"
-            % OpenSSH.CONNECTION_TIMEOUT)
+            % SETTINGS.miscellaneous.connectionTimeout)
         sys.stderr.write(
             "\tMax upload retries: %s\n" % SETTINGS.advanced.maxUploadRetries)
         sys.stderr.write("\tNumber of uploads: %s\n\n" % uploadsProcessed)
@@ -339,7 +339,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             "|"
             ".*Connection timed out during banner exchange.*" % self.scpPort)
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
-        OpenSSH.CONNECTION_TIMEOUT = defaultTimeout
+        SETTINGS.miscellaneous.connectionTimeout = defaultTimeout
 
     def StartFakeSshServer(self):
         """

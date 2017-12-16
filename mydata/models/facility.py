@@ -7,7 +7,6 @@ import requests
 
 from ..settings import SETTINGS
 from .group import GroupModel
-from . import HandleHttpError
 
 
 class FacilityModel(object):
@@ -39,12 +38,13 @@ class FacilityModel(object):
         """
         Get facilities I have access to (by
         facility managers group membership).
+
+        :raises requests.exceptions.HTTPError:
         """
         facilities = []
         url = "%s/api/v1/facility/?format=json" % SETTINGS.general.myTardisUrl
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         facilitiesJson = response.json()
         for facilityJson in facilitiesJson['objects']:
             facilities.append(FacilityModel(facilityJson=facilityJson))

@@ -9,7 +9,6 @@ from ..settings import SETTINGS
 from ..utils.exceptions import DoesNotExist
 from ..logs import logger
 from .group import GroupModel
-from . import HandleHttpError
 
 
 class UserModel(object):
@@ -116,12 +115,13 @@ class UserModel(object):
     def GetUserByUsername(username):
         """
         Get user by username
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/user/?format=json&username=%s" \
             % (SETTINGS.general.myTardisUrl, username)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         userRecordsJson = response.json()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 
@@ -138,13 +138,14 @@ class UserModel(object):
     def GetUserByEmail(email):
         """
         Get user by email
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
             % (SETTINGS.general.myTardisUrl,
                urllib.quote(email.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         userRecordsJson = response.json()
         numUserRecordsFound = userRecordsJson['meta']['total_count']
 

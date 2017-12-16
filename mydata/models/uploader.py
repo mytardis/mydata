@@ -80,9 +80,9 @@ import traceback
 import uuid
 
 import dateutil.parser
-import netifaces
 import psutil
 import requests
+import netifaces
 
 from .. import __version__ as VERSION
 from ..logs import logger
@@ -95,10 +95,7 @@ from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..utils import BytesToHuman
 from ..utils import MyDataInstallLocation
 from ..threads.locks import LOCKS
-from . import HandleHttpError
 from .storage import StorageBox
-
-DEFAULT_TIMEOUT = 5
 
 
 class UploaderModel(object):
@@ -186,27 +183,21 @@ class UploaderModel(object):
         self.diskUsage = diskUsage.strip()
 
     def UploadUploaderInfo(self):
-        """ Uploads info about the instrument PC to MyTardis via HTTP POST """
+        """
+        Uploads info about the instrument PC to MyTardis via HTTP POST
+
+        :raises requests.exceptions.HTTPError:
+        """
         # pylint: disable=too-many-branches
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
             "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
-        try:
-            headers = self.settings.defaultHeaders
-            response = requests.get(headers=headers, url=url,
-                                    timeout=DEFAULT_TIMEOUT)
-        except Exception as err:
-            logger.error(str(err))
-            raise
-        if response.status_code == 404:
-            message = "The MyData app is missing from the MyTardis server."
-            logger.error(url)
-            logger.error(message)
-            raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code == 200:
-            existingUploaderRecords = response.json()
-        else:
-            HandleHttpError(response)
+        headers = self.settings.defaultHeaders
+        response = requests.get(
+            headers=headers, url=url,
+            timeout=self.settings.miscellaneous.connectionTimeout)
+        response.raise_for_status()
+        existingUploaderRecords = response.json()
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:
@@ -269,16 +260,16 @@ class UploaderModel(object):
         logger.debug(data)
         headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
-            response = requests.put(headers=headers, url=url, data=data,
-                                    timeout=DEFAULT_TIMEOUT)
+            response = requests.put(
+                headers=headers, url=url, data=data,
+                timeout=self.settings.miscellaneous.connectionTimeout)
         else:
-            response = requests.post(headers=headers, url=url, data=data,
-                                     timeout=DEFAULT_TIMEOUT)
-        if response.status_code in (200, 201):
-            logger.debug("Upload succeeded for uploader info.")
-            self.resourceUri = response.json()['resource_uri']
-        else:
-            HandleHttpError(response)
+            response = requests.post(
+                headers=headers, url=url, data=data,
+                timeout=self.settings.miscellaneous.connectionTimeout)
+        response.raise_for_status()
+        logger.debug("Upload succeeded for uploader info.")
+        self.resourceUri = response.json()['resource_uri']
 
     @property
     def name(self):
@@ -313,6 +304,8 @@ class UploaderModel(object):
     def ExistingUploadToStagingRequest(self):
         """
         Look for existing upload to staging request.
+
+        :raises requests.exceptions.HTTPError:
         """
         from mydata.utils.openssh import FindKeyPair, NewKeyPair
 
@@ -330,8 +323,7 @@ class UploaderModel(object):
         logger.debug(url)
         headers = self.settings.defaultHeaders
         response = requests.get(headers=headers, url=url)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         logger.debug(response.text)
         existingUploaderRegReqRecords = response.json()
         if existingUploaderRegReqRecords['meta']['total_count'] > 0:
@@ -349,6 +341,8 @@ class UploaderModel(object):
         """
         Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
+
+        :raises requests.exceptions.HTTPError:
         """
         from mydata.utils.openssh import FindKeyPair, NewKeyPair
 
@@ -369,11 +363,9 @@ class UploaderModel(object):
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=self.settings.defaultHeaders, url=url,
                                  data=data)
-        if response.status_code == 201:
-            return UploaderRegistrationRequest(
-                uploaderRegRequestJson=response.json())
-        else:
-            HandleHttpError(response)
+        response.raise_for_status()
+        return UploaderRegistrationRequest(
+            uploaderRegRequestJson=response.json())
 
     def RequestStagingAccess(self):
         """
@@ -415,6 +407,8 @@ class UploaderModel(object):
         """
         Used to save uploader settings to the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
+
+        :raises requests.exceptions.HTTPError:
         """
         myTardisUrl = self.settings.general.myTardisUrl
         headers = self.settings.defaultHeaders
@@ -422,20 +416,9 @@ class UploaderModel(object):
         if not self.uploaderId:
             url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
                 % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
-            try:
-                response = requests.get(headers=headers, url=url)
-            except Exception as err:
-                logger.error(str(err))
-                raise
-            if response.status_code == 404:
-                message = "The MyData app is missing from the MyTardis server."
-                logger.error(url)
-                logger.error(message)
-                raise MissingMyDataAppOnMyTardisServer(message)
-            if response.status_code == 200:
-                existingUploaderRecords = response.json()
-            else:
-                HandleHttpError(response)
+            response = requests.get(headers=headers, url=url)
+            response.raise_for_status()
+            existingUploaderRecords = response.json()
             numExistingUploaderRecords = \
                 existingUploaderRecords['meta']['total_count']
             if numExistingUploaderRecords > 0:
@@ -453,21 +436,23 @@ class UploaderModel(object):
         }
         response = requests.patch(headers=headers, url=url,
                                   data=json.dumps(patchData))
-        if response.status_code != 202:
-            HandleHttpError(response)
+        response.raise_for_status()
 
     def GetSettings(self):
         """
         Used to retrieve uploader settings from the mytardis-app-mydata's
         UploaderSettings model on the MyTardis server.
+
+        :raises requests.exceptions.HTTPError:
         """
         myTardisUrl = self.settings.general.myTardisUrl
         headers = self.settings.defaultHeaders
         url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
             % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
         try:
-            response = requests.get(headers=headers, url=url,
-                                    timeout=DEFAULT_TIMEOUT)
+            response = requests.get(
+                headers=headers, url=url,
+                timeout=self.settings.miscellaneous.connectionTimeout)
         except Exception as err:
             logger.error(str(err))
             raise
@@ -476,10 +461,8 @@ class UploaderModel(object):
             logger.error(url)
             logger.error(message)
             raise MissingMyDataAppOnMyTardisServer(message)
-        if response.status_code == 200:
-            existingUploaderRecords = response.json()
-        else:
-            HandleHttpError(response)
+        response.raise_for_status()
+        existingUploaderRecords = response.json()
         numExistingUploaderRecords = \
             existingUploaderRecords['meta']['total_count']
         if numExistingUploaderRecords > 0:

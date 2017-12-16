@@ -10,7 +10,6 @@ from ..settings import SETTINGS
 from ..threads.flags import FLAGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
-from . import HandleHttpError
 
 
 class DatasetModel(object):
@@ -102,15 +101,9 @@ class DatasetModel(object):
                 return None
             response = requests.post(headers=SETTINGS.defaultHeaders,
                                      url=url, data=data)
-            if response.status_code == 201:
-                newDatasetJson = response.json()
-                return DatasetModel(newDatasetJson)
-            else:
-                message = (
-                    "Couldn't create dataset \"%s\" for folder \"%s\"."
-                    % (description, folderModel.folderName))
-                logger.error(message)
-                HandleHttpError(response)
+            response.raise_for_status()
+            newDatasetJson = response.json()
+            return DatasetModel(newDatasetJson)
 
     @staticmethod
     def GetDataset(folderModel):
@@ -133,8 +126,7 @@ class DatasetModel(object):
                                     folderModel.experimentModel.experimentId,
                                     description))
         response = requests.get(headers=SETTINGS.defaultHeaders, url=url)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         datasetsJson = response.json()
         numDatasets = datasetsJson['meta']['total_count']
         if numDatasets == 0:
@@ -145,4 +137,4 @@ class DatasetModel(object):
                 "WARNING: Found multiple datasets for folder %s" % description)
         if numDatasets == 1:
             logger.debug("Found existing dataset for folder %s" % description)
-            return DatasetModel(datasetsJson['objects'][0])
+        return DatasetModel(datasetsJson['objects'][0])

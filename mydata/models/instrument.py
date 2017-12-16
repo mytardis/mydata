@@ -10,10 +10,8 @@ import requests
 from ..settings import SETTINGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
-from ..utils.exceptions import Unauthorized
 from ..utils.exceptions import DuplicateKey
 from .facility import FacilityModel
-from . import HandleHttpError
 
 
 class InstrumentModel(object):
@@ -37,6 +35,8 @@ class InstrumentModel(object):
     def CreateInstrument(facility, name):
         """
         Create instrument.
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/instrument/" % SETTINGS.general.myTardisUrl
         instrumentJson = {
@@ -45,31 +45,22 @@ class InstrumentModel(object):
         data = json.dumps(instrumentJson)
         headers = SETTINGS.defaultHeaders
         response = requests.post(headers=headers, url=url, data=data)
-        if response.status_code == 201:
-            instrumentJson = response.json()
-            return InstrumentModel(name=name, instrumentJson=instrumentJson)
-        else:
-            if response.status_code == 401:
-                message = "Couldn't create instrument \"%s\" " \
-                          "in facility \"%s\"." % (name, facility.name)
-                message += "\n\n"
-                message += "Please ask your MyTardis administrator to " \
-                           "check the permissions of the \"%s\" " \
-                           "user account." % SETTINGS.general.username
-                raise Unauthorized(message)
-            HandleHttpError(response)
+        response.raise_for_status()
+        instrumentJson = response.json()
+        return InstrumentModel(name=name, instrumentJson=instrumentJson)
 
     @staticmethod
     def GetInstrument(facility, name):
         """
         Get instrument.
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/instrument/?format=json&facility__id=%s&name=%s" \
             % (SETTINGS.general.myTardisUrl, facility.facilityId,
                urllib.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         instrumentsJson = response.json()
         numInstrumentsFound = \
             instrumentsJson['meta']['total_count']
@@ -114,6 +105,8 @@ class InstrumentModel(object):
     def Rename(self, name):
         """
         Rename instrument.
+
+        :raises requests.exceptions.HTTPError:
         """
         logger.info("Renaming instrument \"%s\" to \"%s\"."
                     % (str(self), name))
@@ -123,7 +116,5 @@ class InstrumentModel(object):
         data = json.dumps(uploaderJson)
         headers = SETTINGS.defaultHeaders
         response = requests.put(headers=headers, url=url, data=data)
-        if response.status_code == 200:
-            logger.info("Renaming instrument succeeded.")
-        else:
-            HandleHttpError(response)
+        response.raise_for_status()
+        logger.info("Renaming instrument succeeded.")

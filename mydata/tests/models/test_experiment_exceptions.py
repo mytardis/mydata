@@ -3,17 +3,16 @@ Test ability to handle experiment-related exceptions.
 """
 import os
 
+from requests.exceptions import HTTPError
+
 from ...settings import SETTINGS
 from ...threads.flags import FLAGS
 from .. import MyDataTester
 from ...models.experiment import ExperimentModel
 from ...models.folder import FolderModel
-from ...models.schema import SchemaModel
 from ...models.settings.validation import ValidateSettings
-from ...models.user import UserProfileModel
 from ...utils.exceptions import DoesNotExist
 from ...utils.exceptions import MultipleObjectsReturned
-from ...utils.exceptions import Unauthorized
 
 
 class ExperimentExceptionsTester(MyDataTester):
@@ -32,7 +31,6 @@ class ExperimentExceptionsTester(MyDataTester):
         SETTINGS.miscellaneous.uuid = "1234567890"
         ValidateSettings()
 
-        uploaderName = SETTINGS.uploaderModel.name
         owner = SETTINGS.general.defaultOwner
         dataViewId = 1
         datasetFolderName = "Flowers"
@@ -56,10 +54,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s, '%s'"
-            % (uploaderName, userFolderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with a user folder
@@ -98,10 +92,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s, '%s'"
-            % (uploaderName, groupFolderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with a group folder
@@ -128,11 +118,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s, '%s', '%s'"
-            % (uploaderName, userFolderName, expFolderName,
-               groupFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with a group folder
@@ -159,10 +144,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', '%s'"
-            % (uploaderName, expFolderName))
 
         # Look up existing experiment record with
         # experiment title set manually, and with neither a user folder
@@ -180,34 +161,32 @@ class ExperimentExceptionsTester(MyDataTester):
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Try to look up experiment record with a missing UserProfile
         # for the authorizing user, which can result in a 404 from the
         # MyTardis API:
         folderModel.experimentTitle = "Missing UserProfile"
-        with self.assertRaises(DoesNotExist) as contextManager:
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        exception = contextManager.exception
-        self.assertEqual(exception.GetModelClass(), UserProfileModel)
+        self.assertEqual(context.exception.response.status_code, 404)
 
         # Try to look up experiment record with a missing Schema,
         # which can result in a 404 from the MyTardis API:
         folderModel.experimentTitle = "Missing Schema"
-        with self.assertRaises(DoesNotExist) as contextManager:
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        exception = contextManager.exception
-        self.assertEqual(exception.GetModelClass(), SchemaModel)
+        self.assertEqual(context.exception.response.status_code, 404)
 
         # Try to look up experiment record and handle a 404 of
         # unknown origin from the MyTardis API:
         folderModel.experimentTitle = "Unknown 404"
-        with self.assertRaises(DoesNotExist) as contextManager:
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
-        exception = contextManager.exception
-        self.assertEqual(exception.GetModelClass(), None)
+        self.assertEqual(context.exception.response.status_code, 404)
 
         # LOOKING UP EXPERIMENTS WITH TITLE SET AUTOMATICALLY
 
@@ -226,9 +205,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s" % (uploaderName, userFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
@@ -271,10 +247,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s"
-            % (uploaderName, groupFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a group folder
@@ -303,10 +275,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message,
-            "Experiment not found for '%s', %s, '%s'"
-            % (uploaderName, userFolderName, groupFolderName))
 
         # Look up existing experiment record with
         # experiment title set automatically, and with a user folder
@@ -335,8 +303,6 @@ class ExperimentExceptionsTester(MyDataTester):
             _ = ExperimentModel.GetExperimentForFolder(folderModel)
         exception = contextManager.exception
         self.assertEqual(exception.GetModelClass(), ExperimentModel)
-        self.assertEqual(
-            exception.message, "Experiment not found for '%s'." % uploaderName)
 
         # Look up existing experiment record with
         # experiment title set automatically, and with neither a user folder
@@ -386,8 +352,9 @@ class ExperimentExceptionsTester(MyDataTester):
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.CreateExperimentForFolder(folderModel)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Now let's test experiment creation with the experiment's
@@ -403,5 +370,6 @@ class ExperimentExceptionsTester(MyDataTester):
         # Test case where MyTardis API returns a 404, e.g. because a
         # requested Experiment Schema can't be found.
         folderModel.experimentTitle = "Request 404 from Fake MyTardis Server"
-        with self.assertRaises(DoesNotExist):
+        with self.assertRaises(HTTPError) as context:
             _ = ExperimentModel.CreateExperimentForFolder(folderModel)
+        self.assertEqual(context.exception.response.status_code, 404)

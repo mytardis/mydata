@@ -41,8 +41,6 @@ if sys.platform.startswith("linux"):
 # interval of SLEEP_FACTOR * maxThreads.
 SLEEP_FACTOR = 0.01
 
-CONNECTION_TIMEOUT = 5
-
 REMOTE_DIRS_CREATED = dict()
 
 
@@ -108,7 +106,7 @@ class OpenSSH(object):
         return '"%s"' % path
 
     @staticmethod
-    def DefaultSshOptions():
+    def DefaultSshOptions(connectionTimeout):
         """
         Returns default SSH options
         """
@@ -116,7 +114,7 @@ class OpenSSH(object):
             "-oPasswordAuthentication=no",
             "-oNoHostAuthenticationForLocalhost=yes",
             "-oStrictHostKeyChecking=no",
-            "-oConnectTimeout=%s" % CONNECTION_TIMEOUT
+            "-oConnectTimeout=%s" % int(connectionTimeout)
         ]
 
 
@@ -323,7 +321,8 @@ def SshServerIsReady(username, privateKeyFilePath,
         host,
         "echo Ready"
     ]
-    cmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+    cmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
+        SETTINGS.miscellaneous.connectionTimeout)
     logger.debug(" ".join(cmdAndArgs))
     proc = subprocess.Popen(cmdAndArgs,
                             stdin=subprocess.PIPE,
@@ -361,7 +360,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                     fileSize, monitoringProgress, progressCallback)
 
     remoteDir = os.path.dirname(remoteFilePath)
-    CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
+    with LOCKS.createRemoteDir:
+        CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
 
     if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFile: Aborting upload for %s" % filePath)
@@ -378,7 +378,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                       .replace('`', r'\\`')
                       .replace('$', r'\\$'))]
     scpCommandList[2:2] = SETTINGS.miscellaneous.cipherOptions
-    scpCommandList[2:2] = OpenSSH.DefaultSshOptions()
+    scpCommandList[2:2] = OpenSSH.DefaultSshOptions(
+        SETTINGS.miscellaneous.connectionTimeout)
 
     if not sys.platform.startswith("linux"):
         ScpUpload(uploadModel, scpCommandList)
@@ -476,7 +477,8 @@ def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
          "-l", username,
          host,
          "chmod 660 %s" % remotePath]
-    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
+        SETTINGS.miscellaneous.connectionTimeout)
     logger.debug(" ".join(chmodCmdAndArgs))
     if not sys.platform.startswith("linux"):
         chmodProcess = \
@@ -529,7 +531,8 @@ def SetRemoteDirPermissions(remoteDir, username, privateKeyFilePath,
          "-l", username,
          host,
          "chmod 2770 %s" % remoteDir]
-    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
+        SETTINGS.miscellaneous.connectionTimeout)
     logger.debug(" ".join(chmodCmdAndArgs))
     if not sys.platform.startswith("linux"):
         chmodProcess = \
@@ -585,7 +588,8 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
              "-l", username,
              host,
              "mkdir -p %s" % remoteDir]
-        mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions()
+        mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
+            SETTINGS.miscellaneous.connectionTimeout)
         logger.debug(" ".join(mkdirCmdAndArgs))
         if not sys.platform.startswith("linux"):
             mkdirProcess = \
@@ -614,8 +618,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                     raise SshException(err, returncode=255)
         SetRemoteDirPermissions(
             remoteDir, username, privateKeyFilePath, host, port)
-        with LOCKS.remoteDirsCreated:
-            REMOTE_DIRS_CREATED[remoteDir] = True
+        REMOTE_DIRS_CREATED[remoteDir] = True
 
 def GetCygwinPath(path):
     """

@@ -11,6 +11,7 @@ from glob import glob
 from datetime import datetime
 
 import requests
+from requests.exceptions import HTTPError
 from validate_email import validate_email
 import wx
 
@@ -18,12 +19,9 @@ from ...logs import logger
 from ...threads.flags import FLAGS
 from ...utils.autostart import UpdateAutostartFile
 from ...utils.exceptions import InvalidSettings
-from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import UserAbortedSettingsValidation
 from ..facility import FacilityModel
 from .miscellaneous import LastSettingsUpdateTrigger
-
-DEFAULT_TIMEOUT = 5
 
 
 def ValidateSettings(setStatusMessage=None):
@@ -261,8 +259,9 @@ def CheckMyTardisUrl(setStatusMessage):
         logger.debug(message)
         if setStatusMessage:
             setStatusMessage(message)
-        response = requests.get(SETTINGS.general.myTardisApiUrl,
-                                timeout=DEFAULT_TIMEOUT)
+        response = requests.get(
+            SETTINGS.general.myTardisApiUrl,
+            timeout=SETTINGS.miscellaneous.connectionTimeout)
         history = response.history
         url = response.url
         if history:
@@ -314,7 +313,8 @@ def CheckMyTardisUrl(setStatusMessage):
             raise InvalidSettings(message, "mytardis_url")
     except requests.exceptions.Timeout:
         message = "Attempt to connect to %s timed out after " \
-            "%s seconds." % (SETTINGS.general.myTardisApiUrl, DEFAULT_TIMEOUT)
+            "%s seconds." % (SETTINGS.general.myTardisApiUrl,
+                             SETTINGS.miscellaneous.connectionTimeout)
         LogIfTestRun("ERROR: %s" % message)
         logger.error(traceback.format_exc())
         raise InvalidSettings(message, "mytardis_url")
@@ -416,7 +416,7 @@ def CheckInstrument(setStatusMessage):
     try:
         # Try to get the InstrumentModel from the instrument name:
         _ = SETTINGS.general.instrument
-    except Unauthorized as err:
+    except HTTPError as err:
         message = str(err)
         raise InvalidSettings(message, "instrument_name")
 

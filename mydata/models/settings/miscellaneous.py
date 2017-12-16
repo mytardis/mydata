@@ -8,6 +8,8 @@ the main settings model module (model.py) to prevent cyclic imports.
 """
 import sys
 
+from .base import BaseSettingsModel
+
 
 class LastSettingsUpdateTrigger(object):
     """
@@ -31,7 +33,7 @@ class LastSettingsUpdateTrigger(object):
     UI_RESPONSE = 1
 
 
-class MiscellaneousSettingsModel(object):
+class MiscellaneousSettingsModel(BaseSettingsModel):
     """
     Model class for the settings not displayed in the settings dialog,
     but accessible in MyData.cfg, or in the case of "locked", visible in the
@@ -51,12 +53,28 @@ class MiscellaneousSettingsModel(object):
             'use_none_cipher',
             'progress_poll_interval',
             'immutable_datasets',
-            'cache_datafile_lookups'
+            'cache_datafile_lookups',
+            'connection_timeout'
         ]
+
+        self.default = dict(
+            locked=False,
+            uuid=None,
+            verification_delay=3.0,
+            max_verification_threads=5,
+            fake_md5_sum=False,
+            cipher="aes128-ctr",
+            use_none_cipher=False,
+            progress_poll_interval=1.0,
+            immutable_datasets=False,
+            cache_datafile_lookups=True,
+            connection_timeout=10.0)
 
     @property
     def locked(self):
         """
+        Settings Dialog's Lock/Unlock button
+
         Return True if settings are locked
         """
         return self.mydataConfig['locked']
@@ -64,6 +82,8 @@ class MiscellaneousSettingsModel(object):
     @locked.setter
     def locked(self, locked):
         """
+        Settings Dialog's Lock/Unlock button
+
         Set this to True to lock settings
         """
         self.mydataConfig['locked'] = locked
@@ -97,8 +117,11 @@ class MiscellaneousSettingsModel(object):
         """
         Upon a successful upload, MyData will request verification
         after a short delay, defaulting to 3 seconds:
+
+        :return: the delay in seconds
+        :rtype: float
         """
-        return float(self.mydataConfig['verification_delay'])
+        return self.mydataConfig['verification_delay']
 
     @property
     def maxVerificationThreads(self):
@@ -155,10 +178,13 @@ class MiscellaneousSettingsModel(object):
     @property
     def progressPollInterval(self):
         """
-        Stored as an int in MyData.cfg, but used
-        as a float in threading.Timer(...)
+        Upload progress is queried periodically via the MyTardis API.
+        Returns the interval in seconds between RESTful progress queries.
+
+        :return: the interval in seconds
+        :rtype: float
         """
-        return float(self.mydataConfig['progress_poll_interval'])
+        return self.mydataConfig['progress_poll_interval']
 
     @property
     def immutableDatasets(self):
@@ -192,40 +218,37 @@ class MiscellaneousSettingsModel(object):
         """
         self.mydataConfig['cache_datafile_lookups'] = cacheDataFileLookups
 
-    def SetDefaults(self):
+    @property
+    def connectionTimeout(self):
         """
-        Set default values for configuration parameters that will appear in
-        MyData.cfg for miscellaneous fields not in the Settings Dialog.
+        Timeout (in seconds) used for HTTP responses and SSH connections
+
+        :return: the timeout in seconds
+        :rtype: float
         """
-        # Settings Dialog's Lock/Unlock button:
-        self.mydataConfig['locked'] = False
+        return self.mydataConfig['connection_timeout']
 
-        # MyData instance's unique ID:
-        self.mydataConfig['uuid'] = None
+    @connectionTimeout.setter
+    def connectionTimeout(self, connectionTimeout):
+        """
+        Timeout (in seconds) used for HTTP responses and SSH connections
 
-        # Upon a successful upload, MyData will request verification
-        # after a short delay, defaulting to 3 seconds:
-        self.mydataConfig['verification_delay'] = 3
+        :param connectionTimeout: the timeout in seconds
+        :type connectionTimeout: float
+        """
+        self.mydataConfig['connection_timeout'] = connectionTimeout
 
-        self.mydataConfig['max_verification_threads'] = 5
-
-        # If True, don't calculate an MD5 sum, just provide a string of zeroes:
-        self.mydataConfig['fake_md5_sum'] = False
-
-        if sys.platform.startswith("win"):
-            self.mydataConfig['cipher'] = "aes128-gcm@openssh.com,aes128-ctr"
-        else:
-            # On Mac/Linux, we don't bundle SSH binaries, we
-            # just use the installed SSH version, which might
-            # be too old to support aes128-gcm@openssh.com
-            self.mydataConfig['cipher'] = "aes128-ctr"
-        self.mydataConfig['use_none_cipher'] = False
-
-        # Interval in seconds between RESTful progress queries:
-        self.mydataConfig['progress_poll_interval'] = 1
-
-        # Whether datasets created by MyData should be read-only:
-        self.mydataConfig['immutable_datasets'] = False
-
-        # Whether MyData should cache results of successful datafile lookups:
-        self.mydataConfig['cache_datafile_lookups'] = True
+    def SetDefaultForField(self, field):
+        """
+        Set default value for one field.
+        """
+        self.mydataConfig[field] = self.default[field]
+        if field == 'cipher':
+            if sys.platform.startswith("win"):
+                self.mydataConfig['cipher'] = \
+                    "aes128-gcm@openssh.com,aes128-ctr"
+            else:
+                # On Mac/Linux, we don't bundle SSH binaries, we
+                # just use the installed SSH version, which might
+                # be too old to support aes128-gcm@openssh.com
+                self.mydataConfig['cipher'] = "aes128-ctr"

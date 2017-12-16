@@ -25,9 +25,6 @@ from ..models.datafile import DataFileModel
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from ..utils import SafeStr
-from ..utils.exceptions import DoesNotExist
-from ..utils.exceptions import Unauthorized
-from ..utils.exceptions import InternalServerError
 from ..utils.exceptions import SshException
 from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..events import MYDATA_EVENTS
@@ -339,13 +336,7 @@ class UploadDatafileRunnable(object):
         if not self.existingUnverifiedDatafile:
             response = \
                 DataFileModel.CreateDataFileForStagingUpload(dataFileDict)
-            if response.status_code != 201:
-                dataFileName = os.path.basename(dataFilePath)
-                folderName = self.folderModel.folderName
-                myTardisUsername = SETTINGS.general.username
-                UploadDatafileRunnable.HandleFailedCreateDataFile(
-                    response, dataFileName, folderName, myTardisUsername)
-                return
+            response.raise_for_status()
         uploadToStagingRequest = SETTINGS.uploaderModel.uploadToStagingRequest
         foldersController = wx.GetApp().foldersController
         try:
@@ -464,13 +455,7 @@ class UploadDatafileRunnable(object):
         if not self.existingUnverifiedDatafile:
             response = \
                 DataFileModel.CreateDataFileForStagingUpload(dataFileDict)
-            if response.status_code != 201:
-                dataFileName = os.path.basename(dataFilePath)
-                folderName = self.folderModel.folderName
-                myTardisUsername = SETTINGS.general.username
-                UploadDatafileRunnable.HandleFailedCreateDataFile(
-                    response, dataFileName, folderName, myTardisUsername)
-                return
+            response.raise_for_status()
         location = "UNKNOWN"
         try:
             location = SETTINGS.uploaderModel.uploadToStagingRequest.location
@@ -564,56 +549,6 @@ class UploadDatafileRunnable(object):
             uploadSuccess = False
         self.FinalizeUpload(uploadSuccess)
         return
-
-    @staticmethod
-    def HandleFailedCreateDataFile(response, dataFileName, folderName,
-                                   myTardisUsername):
-        """
-        Handle DataFile creation exceptions for staging upload method.
-        """
-        if response.status_code == 401:
-            message = "Couldn't create datafile \"%s\" " \
-                      "for folder \"%s\"." % (dataFileName, folderName)
-            message += "\n\n"
-            message += \
-                "Please ask your MyTardis administrator to " \
-                "check the permissions of the \"%s\" user " \
-                "account." % myTardisUsername
-            raise Unauthorized(message)
-        elif response.status_code == 404:
-            message = "Encountered a 404 (Not Found) error " \
-                "while attempting to create a datafile " \
-                "record for \"%s\" in folder \"%s\"." \
-                      % (dataFileName, folderName)
-            message += "\n\n"
-            message += \
-                "Please ask your MyTardis administrator to " \
-                "check whether an appropriate staging " \
-                "storage box exists."
-            raise DoesNotExist(message)
-        elif response.status_code == 500:
-            message = "Couldn't create datafile \"%s\" " \
-                      "for folder \"%s\"." \
-                      % (dataFileName, folderName)
-            message += "\n\n"
-            message += "An Internal Server Error occurred."
-            message += "\n\n"
-            message += \
-                "If running MyTardis in DEBUG mode, " \
-                "more information may be available below. " \
-                "Otherwise, please ask your MyTardis " \
-                "administrator to check in their logs " \
-                "for more information."
-            message += "\n\n"
-            try:
-                message += "ERROR: \"%s\"" \
-                    % response.json()['error_message']
-            except:
-                message = "Internal Server Error: " \
-                    "See MyData's log for further " \
-                    "information."
-            finally:
-                raise InternalServerError(message)
 
     def FinalizeUpload(self, uploadSuccess, message=None):
         """

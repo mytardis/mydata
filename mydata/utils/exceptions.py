@@ -9,32 +9,16 @@ class DuplicateKey(Exception):
     """
 
 
-class HttpException(Exception):
-    """
-    Base class for deriving HTTP related exception classes from.
-    """
-    def __init__(self, message, response=None):
-        super(HttpException, self).__init__(message)
-        self.response = response
-
-    def GetResponse(self):
-        """
-        Returns response
-        """
-        return self.response
-
-
-class MultipleObjectsReturned(HttpException):
+class MultipleObjectsReturned(Exception):
     """
     Multiple objects returned exception.
     """
 
 
-class DoesNotExist(HttpException):
+class DoesNotExist(Exception):
     """
-    Does not exist exception. This could be raised when an HTTP status code
-    of 404 is received, or when a JSON list expected to return one object
-    returns zero objects.
+    Does not exist exception. Raised when when a JSON list
+    expected to return one object returns zero objects.
     """
     def __init__(self, message, response=None, modelClass=None):
         super(DoesNotExist, self).__init__(message, response)
@@ -45,36 +29,6 @@ class DoesNotExist(HttpException):
         Returns model class.
         """
         return self.modelClass
-
-
-class Unauthorized(HttpException):
-    """
-    Unauthorized exception (HTTP status: 403).
-    """
-
-
-class InternalServerError(HttpException):
-    """
-    Internal server exception (HTTP status: 500).
-    """
-
-
-class BadGateway(HttpException):
-    """
-    BadGateway exception (HTTP status: 502).
-    """
-
-
-class ServiceUnavailable(HttpException):
-    """
-    Service unavailable exception (HTTP status: 503).
-    """
-
-
-class GatewayTimeout(HttpException):
-    """
-    Gateway timeout exception (HTTP status: 504).
-    """
 
 
 class SshException(Exception):

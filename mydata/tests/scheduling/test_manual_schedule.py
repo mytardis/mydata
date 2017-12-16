@@ -29,6 +29,11 @@ class ManualScheduleTester(MyDataSettingsTester):
         SETTINGS.schedule.scheduleType = "Manually"
         SaveSettingsToDisk()
 
+    def tearDown(self):
+        super(ManualScheduleTester, self).tearDown()
+        self.mydataApp.frame.Hide()
+        self.mydataApp.frame.Destroy()
+
     def test_manual_schedule(self):
         """
         Test Manual schedule type.

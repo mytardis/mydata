@@ -1,11 +1,12 @@
 """
 Test ability to handle group-related exceptions.
 """
+from requests.exceptions import HTTPError
+
 from .. import MyDataTester
 from ...settings import SETTINGS
 from ...models.group import GroupModel
 from ...models.settings.validation import ValidateSettings
-from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import DoesNotExist
 
 
@@ -30,8 +31,9 @@ class GroupExceptionsTester(MyDataTester):
         # which should give 401 (Unauthorized).
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = GroupModel.GetGroupByName("TestFacility-Group 1")
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         with self.assertRaises(DoesNotExist):

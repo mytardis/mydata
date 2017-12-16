@@ -422,6 +422,9 @@ to verify that a newly uploaded file has the correct size and checksum.
     +==========================+===================================+=========================================================+
     | cache_datafile_lookups   | True                              | Whether to cache results of successful datafile lookups |
     +--------------------------+-----------------------------------+---------------------------------------------------------+
+    | connection_timeout       | 10                                | Timeout (in seconds) used for HTTP responses and SSH    |
+    |                          |                                   | connections                                             |
+    +--------------------------+-----------------------------------+---------------------------------------------------------+
     | max_verification_threads | 5                                 | Maximum number of concurrent DataFile lookups           |
     +--------------------------+-----------------------------------+---------------------------------------------------------+
     | verification_delay       | 3                                 | Upon a successful upload, MyData will request           |
