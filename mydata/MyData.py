@@ -128,6 +128,10 @@ class MyData(wx.App):
         else:
             self.frame.SetTitle(
                 "%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
+            if SETTINGS.schedule.scheduleType == "Manually":
+                # Don't minimize to system tray in this case
+                self.frame.Show(True)
+                return True
             self.frame.Hide()
             if sys.platform.startswith("darwin"):
                 message = \
