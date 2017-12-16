@@ -814,6 +814,10 @@ class FoldersController(object):
 
         logger.debug("")
 
+        if SETTINGS.miscellaneous.autoexit:
+            sys.stdout.write("%s\n" % message)
+            app.ShutDownCleanlyAndExit(event, confirm=False)
+
     def VerifyDatafiles(self, folderModel):
         """
         Verify datafiles in the specified folder
