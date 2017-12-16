@@ -20,7 +20,6 @@ from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MultipleObjectsReturned
 from ..utils import UnderscoreToCamelcase
 from .replica import ReplicaModel
-from . import HandleHttpError
 
 
 class DataFileModel(object):
@@ -62,6 +61,8 @@ class DataFileModel(object):
     def GetDataFile(dataset, filename, directory):
         """
         Lookup datafile by dataset, filename and directory.
+
+        :raises requests.exceptions.HTTPError:
         """
         myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
@@ -69,10 +70,7 @@ class DataFileModel(object):
             "&filename=" + urllib.quote(filename.encode('utf-8')) + \
             "&directory=" + urllib.quote(directory.encode('utf-8'))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code < 200 or response.status_code >= 300:
-            logger.error("Failed to look up datafile \"%s\" in dataset \"%s\"."
-                         % (filename, dataset.description))
-            HandleHttpError(response)
+        response.raise_for_status()
         dataFilesJson = response.json()
         numDataFilesFound = dataFilesJson['meta']['total_count']
         if numDataFilesFound == 0:
@@ -92,19 +90,14 @@ class DataFileModel(object):
     def GetDataFileFromId(dataFileId):
         """
         Lookup datafile by ID.
+
+        :raises requests.exceptions.HTTPError:
         """
         myTardisUrl = SETTINGS.general.myTardisUrl
         url = "%s/api/v1/mydata_dataset_file/%s/?format=json" \
             % (myTardisUrl, dataFileId)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code == 404:
-            raise DoesNotExist(
-                message="Datafile ID %s was not found in MyTardis"
-                % dataFileId,
-                response=response)
-        elif response.status_code < 200 or response.status_code >= 300:
-            logger.error("Failed to look up datafile ID \"%s\"." % dataFileId)
-            HandleHttpError(response)
+        response.raise_for_status()
         dataFileJson = response.json()
         return DataFileModel(dataset=None, dataFileJson=dataFileJson)
 

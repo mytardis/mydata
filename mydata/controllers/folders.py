@@ -12,6 +12,7 @@ import traceback
 import datetime
 
 import requests
+from requests.exceptions import HTTPError
 
 import wx
 import wx.lib.newevent
@@ -30,8 +31,6 @@ from ..logs import logger
 from ..logs.testrun import LogTestRunSummary
 from ..utils import EndBusyCursorIfRequired
 from ..utils import SafeStr
-from ..utils.exceptions import HttpException
-from ..utils.exceptions import InternalServerError
 from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
@@ -475,7 +474,8 @@ class FoldersController(object):
                     if self.failed:
                         return
                     message = str(err)
-                    if isinstance(err, InternalServerError):
+                    if isinstance(err, HTTPError) and \
+                            err.response.status_code == 500:
                         logger.error(err.response.request.url)
                         try:
                             error = ("Internal Server Error: %s"
@@ -495,7 +495,7 @@ class FoldersController(object):
                             MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
-                    elif isinstance(err, HttpException) and not message:
+                    elif isinstance(err, HTTPError) and not message:
                         message = ("Received %s (%s) response from server."
                                    % (type(err).__name__,
                                       err.response.status_code))

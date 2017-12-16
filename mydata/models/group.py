@@ -8,7 +8,6 @@ import requests
 from ..settings import SETTINGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
-from . import HandleHttpError
 
 
 class GroupModel(object):
@@ -41,13 +40,14 @@ class GroupModel(object):
     def GetGroupByName(name):
         """
         Return the group record matching the supplied name
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/group/?format=json&name=%s" \
             % (SETTINGS.general.myTardisUrl,
                urllib.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         groupsJson = response.json()
         numGroupsFound = groupsJson['meta']['total_count']
 

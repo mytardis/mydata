@@ -3,6 +3,8 @@ Test ability to handle ObjectACL-related exceptions.
 """
 import os
 
+from requests.exceptions import HTTPError
+
 from ...settings import SETTINGS
 from ...models.objectacl import ObjectAclModel
 from ...models.experiment import ExperimentModel
@@ -10,8 +12,6 @@ from ...models.folder import FolderModel
 from ...models.group import GroupModel
 from ...models.settings.validation import ValidateSettings
 from ...models.user import UserModel
-from ...utils.exceptions import Unauthorized
-from ...utils.exceptions import DoesNotExist
 from .. import MyDataTester
 
 
@@ -53,29 +53,33 @@ class ObjectAclExceptionsTester(MyDataTester):
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             ObjectAclModel.ShareExperimentWithUser(experimentModel, owner)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Try to create a group ObjectACL record with
         # an invalid API key, which should give 401 (Unauthorized)
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             ObjectAclModel.ShareExperimentWithGroup(experimentModel, groupModel)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Try to create a user ObjectACL record with
-        # a user without a UserProfile, which should give 404 (DoesNotExist)
+        # a user without a UserProfile, which should give 404
         userWithoutProfile = UserModel.GetUserByUsername("userwithoutprofile")
         SETTINGS.general.defaultOwner = userWithoutProfile
         SETTINGS.general.username = "userwithoutprofile"
-        with self.assertRaises(DoesNotExist):
+        with self.assertRaises(HTTPError) as context:
             ObjectAclModel.ShareExperimentWithUser(experimentModel,
                                                    userWithoutProfile)
+        self.assertEqual(context.exception.response.status_code, 404)
 
         # Try to create a group ObjectACL record with
-        # a user without a UserProfile, which should give 404 (DoesNotExist)
-        with self.assertRaises(DoesNotExist):
+        # a user without a UserProfile, which should give 404
+        with self.assertRaises(HTTPError) as context:
             ObjectAclModel.ShareExperimentWithGroup(experimentModel,
                                                     groupModel)
+        self.assertEqual(context.exception.response.status_code, 404)

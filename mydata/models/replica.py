@@ -7,8 +7,6 @@ import requests
 
 from ..settings import SETTINGS
 from ..utils import UnderscoreToCamelcase
-from ..utils.exceptions import MissingMyDataReplicaApiEndpoint
-from . import HandleHttpError
 
 
 class ReplicaModel(object):
@@ -39,18 +37,13 @@ class ReplicaModel(object):
     def CountBytesUploadedToStaging(dfoId):
         """
         Count bytes uploaded to staging.
+
+        :raises requests.exceptions.HTTPError:
         """
         url = "%s/api/v1/mydata_replica/%s/?format=json" \
             % (SETTINGS.general.myTardisUrl, dfoId)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code < 200 or response.status_code >= 300:
-            if response.status_code == 404:
-                message = "Please ask your MyTardis administrator to " \
-                    "upgrade mytardis-app-mydata.  The " \
-                    "/api/v1/mydata_replica/ endpoint may be missing."
-                raise MissingMyDataReplicaApiEndpoint(message)
-            else:
-                HandleHttpError(response)
+        response.raise_for_status()
         dfoJson = response.json()
         return dfoJson['size']
 

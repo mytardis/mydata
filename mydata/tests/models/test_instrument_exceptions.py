@@ -1,11 +1,11 @@
 """
 Test ability to handle instrument-related exceptions.
 """
+from requests.exceptions import HTTPError
+
 from ...settings import SETTINGS
 from ...models.instrument import InstrumentModel
 from ...models.settings.validation import ValidateSettings
-from ...utils.exceptions import Unauthorized
-from ...utils.exceptions import InternalServerError
 from .. import MyDataTester
 
 
@@ -25,22 +25,28 @@ class InstrumentExceptionsTester(MyDataTester):
 
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = InstrumentModel.GetInstrument(facility,
                                               "Unauthorized Instrument")
-        with self.assertRaises(Unauthorized):
+        self.assertEqual(context.exception.response.status_code, 401)
+
+        with self.assertRaises(HTTPError) as context:
             _ = InstrumentModel.CreateInstrument(facility,
                                                  "Unauthorized Instrument")
+        self.assertEqual(context.exception.response.status_code, 401)
+
         SETTINGS.general.apiKey = apiKey
 
         SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
-        with self.assertRaises(InternalServerError):
+        with self.assertRaises(HTTPError) as context:
             _ = InstrumentModel.CreateInstrument(facility, "Instrument name")
+        self.assertEqual(context.exception.response.status_code, 500)
 
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         instrument = SETTINGS.general.instrument
         SETTINGS.general.myTardisUrl = \
             "%s/request/http/code/500" % self.fakeMyTardisUrl
-        with self.assertRaises(InternalServerError):
+        with self.assertRaises(HTTPError) as context:
             instrument.Rename("New instrument name")
+        self.assertEqual(context.exception.response.status_code, 500)

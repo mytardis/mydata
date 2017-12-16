@@ -9,13 +9,9 @@ import requests
 from ..settings import SETTINGS
 from ..threads.flags import FLAGS
 from ..logs import logger
-from ..utils.exceptions import Unauthorized
 from ..utils.exceptions import DoesNotExist
 from ..utils.exceptions import MultipleObjectsReturned
-from .user import UserProfileModel
 from .objectacl import ObjectAclModel
-from .schema import SchemaModel
-from . import HandleHttpError
 
 
 class ExperimentModel(object):
@@ -85,24 +81,9 @@ class ExperimentModel(object):
 
         logger.debug(url)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
-        if response.status_code == 200:
-            experimentsJson = response.json()
-            numExperimentsFound = experimentsJson['meta']['total_count']
-        else:
-            if response.status_code == 404:
-                try:
-                    message = response.json()['error_message']
-                    modelClassOfObjectNotFound = None
-                    if "UserProfile" in message:
-                        modelClassOfObjectNotFound = UserProfileModel
-                    elif "Schema" in message:
-                        modelClassOfObjectNotFound = SchemaModel
-                    raise DoesNotExist(
-                        message, modelClass=modelClassOfObjectNotFound)
-                except (KeyError, ValueError):
-                    message = "Received 404 while looking up experiment(s)"
-                    raise DoesNotExist(message, modelClass=None)
-            HandleHttpError(response)
+        response.raise_for_status()
+        experimentsJson = response.json()
+        numExperimentsFound = experimentsJson['meta']['total_count']
         if numExperimentsFound == 0:
             if folderModel.experimentTitleSetManually:
                 if userFolderName:
@@ -192,6 +173,9 @@ class ExperimentModel(object):
                        "MyTardis administrator to investigate."
             raise MultipleObjectsReturned(message)
 
+        # Should never reach this, but it keeps Pylint happy:
+        return None
+
     @staticmethod
     def CreateExperimentForFolder(folderModel):
         # pylint: disable=too-many-branches
@@ -255,7 +239,7 @@ class ExperimentModel(object):
                    experimentTitle, uploaderName, userFolderName,
                    ownerUsername)
             logger.testrun(message)
-            return
+            return None
 
         experimentJson = {
             "title": experimentTitle,
@@ -275,97 +259,33 @@ class ExperimentModel(object):
         logger.debug(url)
         response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=json.dumps(experimentJson))
-        if response.status_code == 201:
-            createdExperimentJson = response.json()
-            createdExperiment = ExperimentModel(createdExperimentJson)
-            message = "Succeeded in creating experiment '%s' for uploader " \
-                "\"%s\" and user folder \"%s\"" \
-                % (experimentTitle, uploaderName, userFolderName)
-            if groupFolderName:
-                message += " and group folder \"%s\"" % groupFolderName
-            logger.debug(message)
+        response.raise_for_status()
+        createdExperimentJson = response.json()
+        createdExperiment = ExperimentModel(createdExperimentJson)
+        message = "Succeeded in creating experiment '%s' for uploader " \
+            "\"%s\" and user folder \"%s\"" \
+            % (experimentTitle, uploaderName, userFolderName)
+        if groupFolderName:
+            message += " and group folder \"%s\"" % groupFolderName
+        logger.debug(message)
 
-            facilityManagersGroup = SETTINGS.general.facility.managerGroup
+        facilityManagersGroup = SETTINGS.general.facility.managerGroup
+        ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
+                                                facilityManagersGroup)
+        # Avoid creating a duplicate ObjectACL if the user folder's
+        # username matches the facility manager's username.
+        # Don't attempt to create an ObjectACL record for an
+        # invalid user (without a MyTardis user ID).
+        if myTardisDefaultUsername != ownerUsername and \
+                ownerUserId is not None:
+            ObjectAclModel.ShareExperimentWithUser(createdExperiment,
+                                                   owner)
+        if folderModel.group is not None and \
+                folderModel.group.groupId != \
+                facilityManagersGroup.groupId:
             ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
-                                                    facilityManagersGroup)
-            # Avoid creating a duplicate ObjectACL if the user folder's
-            # username matches the facility manager's username.
-            # Don't attempt to create an ObjectACL record for an
-            # invalid user (without a MyTardis user ID).
-            if myTardisDefaultUsername != ownerUsername and \
-                    ownerUserId is not None:
-                ObjectAclModel.ShareExperimentWithUser(createdExperiment,
-                                                       owner)
-            if folderModel.group is not None and \
-                    folderModel.group.groupId != \
-                    facilityManagersGroup.groupId:
-                ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
-                                                        folderModel.group)
-            return createdExperiment
-        else:
-            message = "Failed to create experiment for uploader " \
-                "\"%s\" and user folder \"%s\"" \
-                % (uploaderName, userFolderName)
-            if groupFolderName:
-                message += " and group folder \"%s\"" % groupFolderName
-            logger.error(message)
-            logger.error(url)
-            logger.error(response.text)
-            logger.error("response.status_code = " +
-                         str(response.status_code))
-            if response.status_code == 401:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folderName)
-                message += "\n\n"
-                message += "Please ask your MyTardis administrator to " \
-                           "check the permissions of the \"%s\" user " \
-                           "account." % myTardisDefaultUsername
-                raise Unauthorized(message)
-            elif response.status_code == 404:
-                message = "Couldn't create experiment \"%s\" " \
-                          "for folder \"%s\"." \
-                          % (experimentTitle, folderModel.folderName)
-                message += "\n\n"
-                modelClassOfObjectNotFound = None
-                try:
-                    errorResponse = response.json()
-                    if errorResponse['error_message'] == \
-                            "UserProfile matching query does not exist.":
-                        modelClassOfObjectNotFound = UserProfileModel
-                    elif errorResponse['error_message'] == \
-                            "Schema matching query does not exist.":
-                        modelClassOfObjectNotFound = SchemaModel
-                    message += "A 404 (Not Found) error occurred while " \
-                               "attempting to create an experiment " \
-                               "record:\n\n" \
-                               "    %s\n\n" % errorResponse['error_message']
-                except:
-                    message += "A 404 (Not Found) error occurred while " \
-                               "attempting to create an experiment " \
-                               "record.  This could be caused by a missing " \
-                               "UserProfile record for user \"%s\" or it " \
-                               "could be caused by a missing Schema record " \
-                               "(see https://github.com/mytardis/" \
-                               "mytardis-app-mydata/blob/master/README.md)" \
-                               "\n\n" \
-                               "Turning on DEBUG mode on the MyTardis " \
-                               "server could help to isolate the problem." \
-                               % myTardisDefaultUsername
-                if modelClassOfObjectNotFound == UserProfileModel:
-                    message += "Please ask your MyTardis administrator to " \
-                               "ensure that a User Profile record exists " \
-                               "for the \"%s\" user account." \
-                               % myTardisDefaultUsername
-                elif modelClassOfObjectNotFound == SchemaModel:
-                    message += "Please ask your MyTardis administrator to " \
-                               "create the experiment metadata schema " \
-                               "described in the \"MyTardis Prerequisites\" " \
-                               "section of the MyData documentation:\n\n" \
-                               "http://mydata.readthedocs.org/en/latest/" \
-                               "mytardis-prerequisites.html"
-                raise DoesNotExist(message,
-                                   modelClass=modelClassOfObjectNotFound)
+                                                    folderModel.group)
+        return createdExperiment
 
     @property
     def experimentId(self):

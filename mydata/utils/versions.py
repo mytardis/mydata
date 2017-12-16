@@ -11,7 +11,6 @@ import dateutil.parser
 import pytz
 import requests
 
-from ..models import HandleHttpError
 from ..settings import SETTINGS
 
 from ..logs import logger
@@ -39,6 +38,8 @@ class MyDataVersions(object):
     def latestOfficialRelease(self):
         """
         Gets the latest official release from the GitHub API.
+
+        :raises requests.exceptions.HTTPError:
         """
         if self._latestOfficialRelease:
             return self._latestOfficialRelease
@@ -48,8 +49,7 @@ class MyDataVersions(object):
             url = "%s/releases/latest" % GITHUB_API_BASE_URL
             logger.debug(url)
             response = requests.get(url)
-            if response.status_code != 200:
-                HandleHttpError(response)
+            response.raise_for_status()
             self._latestOfficialRelease = response.json()
             with open(self.latestOfficialReleaseCachePath, 'w') as cache:
                 cache.write(response.text)
@@ -120,6 +120,8 @@ class MyDataVersions(object):
         30 is the default number of releases per page in the GitHub API.
 
         They are in reverse chronological order (most recent first).
+
+        :raises requests.exceptions.HTTPError:
         """
         if self._latestReleases:
             return self._latestReleases
@@ -129,8 +131,7 @@ class MyDataVersions(object):
             url = "%s/releases" % GITHUB_API_BASE_URL
             logger.debug(url)
             response = requests.get(url)
-            if response.status_code != 200:
-                HandleHttpError(response)
+            response.raise_for_status()
             self._latestReleases = response.json()
             with open(self.latestReleasesCachePath, 'w') as cache:
                 cache.write(response.text)
@@ -257,14 +258,15 @@ class MyDataVersions(object):
     def GetTag(self, tagName):
         """
         Gets the latest official release's tag from the GitHub API.
+
+        :raises requests.exceptions.HTTPError:
         """
         if tagName in self.tagsCache:
             return self.tagsCache[tagName]
         url = "%s/git/refs/tags/%s" % (GITHUB_API_BASE_URL, tagName)
         logger.debug(url)
         response = requests.get(url)
-        if response.status_code != 200:
-            HandleHttpError(response)
+        response.raise_for_status()
         tag = response.json()
         self.tagsCache[tagName] = tag
         self.SaveTagsCache()

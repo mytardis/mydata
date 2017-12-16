@@ -11,6 +11,7 @@ from glob import glob
 from datetime import datetime
 
 import requests
+from requests.exceptions import HTTPError
 from validate_email import validate_email
 import wx
 
@@ -18,7 +19,6 @@ from ...logs import logger
 from ...threads.flags import FLAGS
 from ...utils.autostart import UpdateAutostartFile
 from ...utils.exceptions import InvalidSettings
-from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import UserAbortedSettingsValidation
 from ..facility import FacilityModel
 from .miscellaneous import LastSettingsUpdateTrigger
@@ -416,7 +416,7 @@ def CheckInstrument(setStatusMessage):
     try:
         # Try to get the InstrumentModel from the instrument name:
         _ = SETTINGS.general.instrument
-    except Unauthorized as err:
+    except HTTPError as err:
         message = str(err)
         raise InvalidSettings(message, "instrument_name")
 

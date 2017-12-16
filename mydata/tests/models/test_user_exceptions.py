@@ -1,10 +1,11 @@
 """
 Test ability to handle user-related exceptions.
 """
+from requests.exceptions import HTTPError
+
 from ...settings import SETTINGS
 from ...models.user import UserModel
 from ...models.settings.validation import ValidateSettings
-from ...utils.exceptions import Unauthorized
 from ...utils.exceptions import DoesNotExist
 from .. import MyDataTester
 
@@ -32,16 +33,18 @@ class UserExceptionsTester(MyDataTester):
         # which should give 401 (Unauthorized).
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = UserModel.GetUserByUsername(owner.username)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Try to look up user record by email with an invalid API key,
         # which should give 401 (Unauthorized).
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(HTTPError) as context:
             _ = UserModel.GetUserByEmail(owner.email)
+        self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
         # Test Getters which act differently when the user folder name
