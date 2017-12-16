@@ -272,9 +272,23 @@ class MyDataFrame(wx.Frame):
 
     def OnClose(self, event):
         """
-        Don't actually close it, just hide it.
+        Don't let this event propagate to the default handlers which will
+        destroy the window and the application.
+
+        If the schedule type is "Manually", "On Startup" or
+        "On Settings Saved", call the MyData system tray icon's exit handler,
+        which will ask the user to confirm they want to exit MyData, and
+        quit if requested.
+
+        If the schedule type is "Once", "Daily", "Weekly" or "Timer",
+        closing the window will just minimize MyData to its system tray icon.
         """
         event.StopPropagation()
+        from ..settings import SETTINGS
+        if SETTINGS.schedule.scheduleType in [
+                "Manually", "On Startup", "On Settings Saved"]:
+            self.taskBarIcon.OnExit(event)
+            return
         if sys.platform.startswith("win"):
             self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
         self.Hide()
