@@ -468,6 +468,8 @@ class FoldersController(object):
             try:
                 try:
                     with LOCKS.getOrCreateExp:
+                        if self.IsShuttingDown() or CheckIfShouldAbort():
+                            return
                         experimentModel = ExperimentModel\
                             .GetOrCreateExperimentForFolder(folderModel)
                 except Exception as err:
