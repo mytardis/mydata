@@ -77,7 +77,7 @@ def ShouldCancelUpload(uploadModel):
     """
     app = wx.GetApp()
     if hasattr(app, "foldersController"):
-        return wx.GetApp().foldersController.canceled or uploadModel.canceled
+        return app.foldersController.canceled or uploadModel.canceled
 
     # This code would only run in tests where a scheduled progress query
     # from one test attempts to run in a subsequent test, but the subsequent
