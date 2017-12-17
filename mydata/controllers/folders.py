@@ -370,12 +370,13 @@ class FoldersController(object):
         wx.CallAfter
         """
         self.countCompletedTimer = wx.Timer(self.parent)
-        self.parent.Bind(wx.EVT_TIMER, self.CountCompletedUploadsAndVerifications,
-                         self.countCompletedTimer)
+        self.parent.Bind(
+            wx.EVT_TIMER, self.CountCompletedUploadsAndVerifications,
+            self.countCompletedTimer)
         if 'MYDATA_TESTING' not in os.environ:
             wx.CallAfter(self.countCompletedTimer.Start, 500)
-            wx.CallAfter(self.parent.dataViews['verifications'] \
-                    .updateCacheHitSummaryTimer.Start, 500)
+            wx.CallAfter(self.parent.dataViews['verifications']
+                         .updateCacheHitSummaryTimer.Start, 500)
 
     def StopTimers(self):
         """
@@ -441,7 +442,8 @@ class FoldersController(object):
         logger.debug("Finished scanning for dataset folders.")
         self.finishedScanningForDatasetFolders.set()
         if wx.PyApp.IsMainLoopRunning():
-            wx.CallAfter(self.CountCompletedUploadsAndVerifications, event=None)
+            wx.CallAfter(
+                self.CountCompletedUploadsAndVerifications, event=None)
         else:
             self.CountCompletedUploadsAndVerifications(event=None)
 
@@ -463,8 +465,6 @@ class FoldersController(object):
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " + folderModel.folderName)
-            if self.IsShuttingDown() or CheckIfShouldAbort():
-                return
             try:
                 try:
                     with LOCKS.getOrCreateExp:
@@ -513,7 +513,8 @@ class FoldersController(object):
                             MYDATA_EVENTS.ShowMessageDialogEvent(
                                 title="MyData", message=message,
                                 icon=wx.ICON_ERROR))
-                        PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
+                        PostEvent(
+                            MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
                     return
                 folderModel.experimentModel = experimentModel
                 try:
@@ -768,7 +769,8 @@ class FoldersController(object):
         elif DATAVIEW_MODELS['uploads'].GetFailedCount() > 0:
             message = \
                 "Data scans and uploads completed with " \
-                "%d failed upload(s)." % DATAVIEW_MODELS['uploads'].GetFailedCount()
+                "%d failed upload(s)." \
+                % DATAVIEW_MODELS['uploads'].GetFailedCount()
         elif self.completed:
             if DATAVIEW_MODELS['uploads'].GetCompletedCount() > 0:
                 message = "Data scans and uploads completed successfully."
@@ -787,8 +789,8 @@ class FoldersController(object):
                 if FLAGS.testRunRunning:
                     if self.uploadsAcknowledged > 0:
                         message = \
-                            "Finished scanning with %s files requiring upload." \
-                            % self.uploadsAcknowledged
+                            "Finished scanning with %s files requiring " \
+                            "upload." % self.uploadsAcknowledged
                     else:
                         message = "No new files were found to upload."
                 else:
