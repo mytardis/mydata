@@ -387,7 +387,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
     SetRemoteFilePermissions(
-        remoteDir, username, privateKeyFilePath, host, port)
+        remoteFilePath, username, privateKeyFilePath, host, port)
 
     uploadModel.SetLatestTime(datetime.now())
     progressCallback(current=fileSize, total=fileSize)
@@ -446,7 +446,7 @@ def ScpUploadWithErrandBoy(uploadModel, scpCommandList):
             raise ScpException(err, scpCommandString, returncode=255)
 
 
-def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
+def SetRemoteFilePermissions(remoteFilePath, username, privateKeyFilePath,
                              host, port):
     """
     Ensure that the mytardis account (via the mytardis group) has read and
@@ -457,17 +457,7 @@ def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
     permissions.  rsync can do this (copy and set permissions) in a single
     command, so we could investigate switching from scp to rsync, but rsync is
     likely to be slower in most cases.
-
-    The command we use to set the permissions is applied to all files in the
-    remote directory - we avoid referring to a specific remote file path
-    (including filename) where possible, because of potential quoting /
-    escaping issues.  Given that we are running the chmod command for the
-    entire remote directory, we could just run it once (after MyData has
-    finished uploading files to that directory), however there's a risk that
-    MyData will terminate before it has finished uploading a directory's files,
-    so we run the chmod after each upload for now.
     """
-    remotePath = "%s/*" % remoteDir.rstrip('/')
     chmodCmdAndArgs = \
         [OPENSSH.ssh,
          "-p", port,
@@ -476,7 +466,7 @@ def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
          "-i", privateKeyFilePath,
          "-l", username,
          host,
-         "chmod 660 %s" % remotePath]
+         "chmod 660 %s" % OpenSSH.DoubleQuoteRemotePath(remoteFilePath)]
     chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
         SETTINGS.miscellaneous.connectionTimeout)
     logger.debug(" ".join(chmodCmdAndArgs))
