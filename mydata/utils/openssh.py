@@ -387,7 +387,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
     SetRemoteFilePermissions(
-        remoteDir, username, privateKeyFilePath, host, port)
+        remoteFilePath, username, privateKeyFilePath, host, port)
 
     uploadModel.SetLatestTime(datetime.now())
     progressCallback(current=fileSize, total=fileSize)
@@ -446,7 +446,7 @@ def ScpUploadWithErrandBoy(uploadModel, scpCommandList):
             raise ScpException(err, scpCommandString, returncode=255)
 
 
-def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
+def SetRemoteFilePermissions(remoteFilePath, username, privateKeyFilePath,
                              host, port):
     """
     Ensure that the mytardis account (via the mytardis group) has read and
@@ -457,70 +457,6 @@ def SetRemoteFilePermissions(remoteDir, username, privateKeyFilePath,
     permissions.  rsync can do this (copy and set permissions) in a single
     command, so we could investigate switching from scp to rsync, but rsync is
     likely to be slower in most cases.
-
-    The command we use to set the permissions is applied to all files in the
-    remote directory - we avoid referring to a specific remote file path
-    (including filename) where possible, because of potential quoting /
-    escaping issues.  Given that we are running the chmod command for the
-    entire remote directory, we could just run it once (after MyData has
-    finished uploading files to that directory), however there's a risk that
-    MyData will terminate before it has finished uploading a directory's files,
-    so we run the chmod after each upload for now.
-    """
-    remotePath = "%s/*" % remoteDir.rstrip('/')
-    chmodCmdAndArgs = \
-        [OPENSSH.ssh,
-         "-p", port,
-         "-n",
-         "-c", SETTINGS.miscellaneous.cipher,
-         "-i", privateKeyFilePath,
-         "-l", username,
-         host,
-         "chmod 660 %s" % remotePath]
-    chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
-        SETTINGS.miscellaneous.connectionTimeout)
-    logger.debug(" ".join(chmodCmdAndArgs))
-    if not sys.platform.startswith("linux"):
-        chmodProcess = \
-            subprocess.Popen(chmodCmdAndArgs,
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             startupinfo=DEFAULT_STARTUP_INFO,
-                             creationflags=DEFAULT_CREATION_FLAGS)
-        stdout, _ = chmodProcess.communicate()
-        if chmodProcess.returncode != 0:
-            raise SshException(stdout, chmodProcess.returncode)
-    else:
-        with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
-            try:
-                chmodProcess = session.subprocess.Popen(
-                    chmodCmdAndArgs, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, close_fds=True,
-                    preexec_fn=os.setpgrp)
-                stdout, stderr = chmodProcess.communicate()
-                if chmodProcess.returncode != 0:
-                    if stdout and not stderr:
-                        stderr = stdout
-                    raise SshException(stderr, chmodProcess.returncode)
-            except (IOError, OSError) as err:
-                raise SshException(err, returncode=255)
-
-
-def SetRemoteDirPermissions(remoteDir, username, privateKeyFilePath,
-                            host, port):
-    """
-    Ensure that the mytardis account (via the mytardis group) has read and
-    write access to the uploaded data so that it can be moved from staging
-    into its permanent location.  With some older versions of OpenSSH
-    (installed on the SCP server), umask settings from ~mydata/.bashrc are
-    respected, but recent versions ignore ~/.bashrc, so we need to explicitly
-    set the permissions.
-
-    The command we use to set the permissions on subdirectories we create
-    with mkdir over ssh is "chmod 2770", where 2 sets the setgid bit, so all
-    child subdirectories should be created with the parent directory's group
-    ("mytardis") rather than the "mydata" group.
     """
     chmodCmdAndArgs = \
         [OPENSSH.ssh,
@@ -530,7 +466,7 @@ def SetRemoteDirPermissions(remoteDir, username, privateKeyFilePath,
          "-i", privateKeyFilePath,
          "-l", username,
          host,
-         "chmod 2770 %s" % remoteDir]
+         "chmod 660 %s" % OpenSSH.DoubleQuoteRemotePath(remoteFilePath)]
     chmodCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
         SETTINGS.miscellaneous.connectionTimeout)
     logger.debug(" ".join(chmodCmdAndArgs))
@@ -587,7 +523,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
              "-i", privateKeyFilePath,
              "-l", username,
              host,
-             "mkdir -p %s" % remoteDir]
+             "mkdir -m 2770 -p %s" % remoteDir]
         mkdirCmdAndArgs[1:1] = OpenSSH.DefaultSshOptions(
             SETTINGS.miscellaneous.connectionTimeout)
         logger.debug(" ".join(mkdirCmdAndArgs))
@@ -616,8 +552,6 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                         raise SshException(stderr, mkdirProcess.returncode)
                 except (IOError, OSError) as err:
                     raise SshException(err, returncode=255)
-        SetRemoteDirPermissions(
-            remoteDir, username, privateKeyFilePath, host, port)
         REMOTE_DIRS_CREATED[remoteDir] = True
 
 def GetCygwinPath(path):
