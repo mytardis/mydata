@@ -192,6 +192,7 @@ class FoldersModel(MyDataDataViewModel):
             seconds = dict(day=24 * 60 * 60)
             seconds['year'] = int(365.25 * seconds['day'])
             seconds['month'] = seconds['year'] / 12
+            seconds['week'] = 7 * seconds['day']
             singularIgnoreIntervalUnit = \
                 SETTINGS.filters.ignoreOldDatasetIntervalUnit.rstrip('s')
             ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
