@@ -1258,7 +1258,7 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.DirDialog(self, "Choose a directory:",
                            defaultPath=self.GetDataDirectory()
                            .encode('ascii', 'ignore'))
-        if wx.PyApp.IsMainLoopRunning():
+        if not 'MYDATA_TESTING' in os.environ:
             dialogOK = (dlg.ShowModal() == wx.ID_OK)
         else:
             dialogOK = True
@@ -1278,7 +1278,7 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if wx.PyApp.IsMainLoopRunning():
+        if not 'MYDATA_TESTING' in os.environ:
             dialogOK = (dlg.ShowModal() == wx.ID_OK)
         else:
             dialogOK = True
@@ -1312,7 +1312,7 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.FileDialog(self, "Choose a file:", "",
                             self.GetIncludesFile().encode('ascii', 'ignore'),
                             "", wx.FD_OPEN)
-        if wx.PyApp.IsMainLoopRunning():
+        if not 'MYDATA_TESTING' in os.environ:
             dialogOK = (dlg.ShowModal() == wx.ID_OK)
         else:
             dialogOK = True
