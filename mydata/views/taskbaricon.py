@@ -131,6 +131,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         selected from MyData's system tray / menu bar icon menu.
         """
         self.frame.Show(True)
+        self.frame.Iconize(False)
         self.frame.Raise()
         event.Skip()
 
@@ -140,6 +141,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         selected from MyData's system tray / menu bar icon menu.
         """
         self.frame.Show(True)
+        self.frame.Iconize(False)
         self.frame.Raise()
         OnSettings(event)
         event.Skip()
@@ -170,6 +172,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         selected from MyData's system tray / menu bar icon menu.
         """
         self.frame.Show(True)
+        self.frame.Iconize(False)
         self.frame.Raise()
         message = "Are you sure you want to quit MyData?"
         if wx.GetApp().Processing():
