@@ -298,9 +298,11 @@ class MyDataFrame(wx.Frame):
         When minimizing, hide the frame so it "minimizes to tray"
         """
         if event.Iconized():
-            self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
+            if sys.platform.startswith("win"):
+                self.Show()  # See: http://trac.wxwidgets.org/ticket/10426
             self.Hide()
         else:
-            self.Show(True)
+            if sys.platform.startswith("win"):
+                self.Show()
             self.Raise()
         # event.Skip()

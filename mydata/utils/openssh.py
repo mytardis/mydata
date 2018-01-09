@@ -578,7 +578,12 @@ def CleanUpScpAndSshProcesses():
     """
     if not SETTINGS.uploaderModel:
         return
-    privateKeyPath = SETTINGS.uploaderModel.sshKeyPair.privateKeyFilePath
+    try:
+        privateKeyPath = SETTINGS.uploaderModel.sshKeyPair.privateKeyFilePath
+    except AttributeError:
+        # If sshKeyPair or privateKeyFilePath hasn't been defined yet,
+        # then there won't be any SCP or SSH processes to kill.
+        return
     for proc in psutil.process_iter():
         try:
             if proc.exe() == OPENSSH.ssh or proc.exe() == OPENSSH.scp:

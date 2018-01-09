@@ -29,55 +29,39 @@ def ShutdownForRefresh(event):
     scan and upload task is already running.
     """
     from . import MYDATA_EVENTS
-    from . import MYDATA_THREADS
     from . import PostEvent
 
-    def ShutdownForRefreshWorker():
-        """
-        Shuts down upload threads (in dedicated worker thread)
-        before restarting them.
-        """
-        logger.debug("Starting run() method for thread %s"
-                     % threading.current_thread().name)
-        logger.debug("Shutting down for refresh from %s."
-                     % threading.current_thread().name)
-        try:
-            wx.CallAfter(BeginBusyCursorIfRequired)
-            app = wx.GetApp()
-            app.foldersController.ShutDownUploadThreads()
-            shutdownForRefreshCompleteEvent = \
-                MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
-                    shutdownSuccessful=True)
-            PostEvent(shutdownForRefreshCompleteEvent)
-            wx.CallAfter(EndBusyCursorIfRequired, event)
-            app.scheduleController.ApplySchedule(event)
-        except:
-            message = "An error occurred while trying to shut down " \
-                "the existing data-scan-and-upload process in order " \
-                "to start another one.\n\n" \
-                "See the Log tab for details of the error."
-            logger.error(message)
-            logger.error(traceback.format_exc())
+    assert threading.current_thread().name == "MainThread"
 
-            def ShowDialog():
-                """
-                Show error dialog in main thread.
-                """
-                dlg = wx.MessageDialog(None, message, "MyData",
-                                       wx.OK | wx.ICON_ERROR)
-                dlg.ShowModal()
-            if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
-                wx.CallAfter(ShowDialog)
-        logger.debug("Finishing run() method for thread %s"
-                     % threading.current_thread().name)
+    logger.debug("Shutting down for refresh from %s."
+                 % threading.current_thread().name)
+    try:
+        wx.CallAfter(BeginBusyCursorIfRequired)
+        app = wx.GetApp()
+        app.foldersController.ShutDownUploadThreads()
+        shutdownForRefreshCompleteEvent = \
+            MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
+                shutdownSuccessful=True)
+        PostEvent(shutdownForRefreshCompleteEvent)
+        wx.CallAfter(EndBusyCursorIfRequired, event)
+        app.scheduleController.ApplySchedule(event)
+    except:
+        message = "An error occurred while trying to shut down " \
+            "the existing data-scan-and-upload process in order " \
+            "to start another one.\n\n" \
+            "See the Log tab for details of the error."
+        logger.error(message)
+        logger.error(traceback.format_exc())
 
-    shutdownForRefreshThread = \
-        threading.Thread(target=ShutdownForRefreshWorker,
-                         name="ShutdownForRefreshThread")
-    MYDATA_THREADS.Add(shutdownForRefreshThread)
-    logger.debug("Starting thread %s" % shutdownForRefreshThread.name)
-    shutdownForRefreshThread.start()
-    logger.debug("Started thread %s" % shutdownForRefreshThread.name)
+        def ShowDialog():
+            """
+            Show error dialog in main thread.
+            """
+            dlg = wx.MessageDialog(None, message, "MyData",
+                                   wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
+            wx.CallAfter(ShowDialog)
 
 
 def ShutdownForRefreshComplete(event):
