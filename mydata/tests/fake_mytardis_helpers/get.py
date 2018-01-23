@@ -554,9 +554,11 @@ def RespondToDatasetRequest(mytardis):
 
     :param mytardis: The FakeMyTardisHandler instance
     """
-    match = re.match(r"^.*&experiments__id=(\S+)&description=(\S+)$",
-                     mytardis.path)
+    match = re.match(
+        r"^.*&experiments__id=(\S+)&description=(\S+)&instrument__id=(\S+)$",
+        mytardis.path)
     description = urllib.unquote(match.groups()[1])
+    instrumentId = urllib.unquote(match.groups()[2])
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
@@ -567,7 +569,7 @@ def RespondToDatasetRequest(mytardis):
             {
                 "id": "1001",
                 "description": description,
-                "instrument": "/api/v1/instrument/17/",
+                "instrument": "/api/v1/instrument/%s/" % instrumentId,
                 "experiments": ["/api/v1/experiment/2552/"]
             }
         ]
