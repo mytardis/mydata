@@ -125,7 +125,14 @@ class DatasetModel(object):
                "&description=%s" % (SETTINGS.general.myTardisUrl,
                                     folderModel.experimentModel.experimentId,
                                     description))
-        response = requests.get(headers=SETTINGS.defaultHeaders, url=url)
+        urlWithInstrument = "%s&instrument__id=%s"\
+            % (url, SETTINGS.general.instrument.instrumentId)
+        response = requests.get(
+            headers=SETTINGS.defaultHeaders, url=urlWithInstrument)
+        if response.status_code == 400:
+            logger.debug(
+                "MyTardis doesn't support filtering datasets by instrument")
+            response = requests.get(headers=SETTINGS.defaultHeaders, url=url)
         response.raise_for_status()
         datasetsJson = response.json()
         numDatasets = datasetsJson['meta']['total_count']
