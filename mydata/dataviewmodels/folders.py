@@ -536,12 +536,15 @@ def GroupFolderNames(pathToScan):
     return FolderNames(pathToScan, SETTINGS.filters.userFilter)
 
 
-def DatasetFolderNames(pathToScan):
+def DatasetFolderNames(pathToScan, orderByDate=False):
     """
     Return a list of dataset folder names in the specified
     folder path, matching the dataset filter (if one exists).
     """
-    return FolderNames(pathToScan, SETTINGS.filters.datasetFilter)
+    folderNames = FolderNames(pathToScan, SETTINGS.filters.datasetFilter)
+    if orderByDate:
+        return folderNames.sort(key=os.path.getmtime)
+    return folderNames
 
 
 def ExperimentFolderNames(pathToScan):
