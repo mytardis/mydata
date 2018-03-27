@@ -144,6 +144,7 @@ class UploadModel(object):
         """
         try:
             self.canceled = True
+            self.status = UploadStatus.CANCELED
             if self.verificationTimer:
                 try:
                     self.verificationTimer.cancel()

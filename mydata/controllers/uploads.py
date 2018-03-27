@@ -56,6 +56,21 @@ def AddUploaderInfo(dataFileDict):
     return dataFileDict
 
 
+def StopUploadsAsFailed(message, showError=False):
+    """
+    Shutdown uploads with the reason: failed.
+    """
+    logger.error(message)
+    wx.GetApp().foldersController.failed = True
+    FLAGS.shouldAbort = True
+    PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
+    if showError:
+        PostEvent(
+            MYDATA_EVENTS.ShowMessageDialogEvent(
+                title="MyData", message=message,
+                icon=wx.ICON_ERROR))
+
+
 class UploadDatafileRunnable(object):
     """
     The Run method of this class provides the functionality of
@@ -201,7 +216,7 @@ class UploadDatafileRunnable(object):
                 self.CopyFileToStaging(dataFileDict)
         except Exception as err:
             logger.error(traceback.format_exc())
-            self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+            StopUploadsAsFailed(SafeStr(err), showError=True)
             return
 
     def CanceledCallback(self):
@@ -297,7 +312,7 @@ class UploadDatafileRunnable(object):
                              self.uploadModel.GetRelativePathToUpload())
             else:
                 logger.error(traceback.format_exc())
-                self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+                StopUploadsAsFailed(SafeStr(err), showError=True)
             return
         except urllib2.HTTPError as err:
             self.uploadModel.traceback = traceback.format_exc()
@@ -392,8 +407,8 @@ class UploadDatafileRunnable(object):
                     continue
                 else:
                     logger.error(traceback.format_exc())
-                    self.FinalizeUpload(
-                        uploadSuccess=False, message=SafeStr(err))
+                    message = SafeStr(err)
+                    StopUploadsAsFailed(message, showError=True)
                     return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
@@ -461,22 +476,7 @@ class UploadDatafileRunnable(object):
             location = SETTINGS.uploaderModel.uploadToStagingRequest.location
         except StorageBoxAttributeNotFound as err:
             message = SafeStr(err)
-
-            def StopUploadsAsFailed(showError=False):
-                """
-                Shutdown uploads with the reason: failed.
-                """
-                logger.error(message)
-                foldersController.failed = True
-                FLAGS.shouldAbort = True
-                PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
-                if showError:
-                    PostEvent(
-                        MYDATA_EVENTS.ShowMessageDialogEvent(
-                            title="MyData", message=message,
-                            icon=wx.ICON_ERROR))
-
-            StopUploadsAsFailed(showError=True)
+            StopUploadsAsFailed(message, showError=True)
             return
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
@@ -502,8 +502,7 @@ class UploadDatafileRunnable(object):
                 return
             self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())
-            self.FinalizeUpload(
-                uploadSuccess=False, message=SafeStr(err))
+            StopUploadsAsFailed(SafeStr(err), showError=True)
             return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
