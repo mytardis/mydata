@@ -379,6 +379,7 @@ class FoldersModel(MyDataDataViewModel):
             datasetFilterString = '*%s*' % SETTINGS.filters.datasetFilter
             filesDepth1 = glob(os.path.join(pathToScan, datasetFilterString))
             dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
+            dirsDepth1.sort(key=os.path.getmtime)
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
                 logger.debug("Found folder assumed to be dataset: " +
