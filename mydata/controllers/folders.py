@@ -633,8 +633,8 @@ class FoldersController(object):
         assert threading.current_thread().name == "MainThread"
 
         # Tell the folders view to refresh its data.  (It was previously
-        # updated only when a changed was made to the underlying data, but
-        # because changes coming from the cache are two quick, we can't use
+        # updated only when a change was made to the underlying data, but
+        # because changes coming from the cache are too quick, we can't use
         # these changes as the trigger to update the view any longer:
         # The lock prevents RuntimeError: deque mutated during iteration
         with LOCKS.foldersToUpdate:
@@ -662,7 +662,7 @@ class FoldersController(object):
                 message = "Looked up %d of %d files." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
-            wx.CallAfter(wx.GetApp().frame.SetStatusMessage, message)
+            wx.GetApp().frame.SetStatusMessage(message)
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
