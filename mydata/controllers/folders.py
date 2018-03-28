@@ -673,7 +673,7 @@ class FoldersController(object):
                     finishedVerificationCounting = False
                     break
 
-        if numVerificationsCompleted == self.numVerificationsToBePerformed \
+        if numVerificationsCompleted >= self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
                 and (uploadsProcessed == uploadsToBePerformed or
                      FLAGS.testRunRunning and
@@ -681,6 +681,17 @@ class FoldersController(object):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
+            if numVerificationsCompleted > self.numVerificationsToBePerformed:
+                # This shouldn't occur, but has been observed to occur, and
+                # until the root cause can be determined, we should ensure
+                # that MyData still shuts down its upload threads (hence the
+                # >= above instead of ==), but logs a warning.
+                message = (
+                    "MyData counted %s datafile lookups, but only expected to "
+                    "perform %s lookups"
+                    % (numVerificationsCompleted,
+                       self.numVerificationsToBePerformed))
+                logger.warning(message)
             PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
         elif not wx.PyApp.IsMainLoopRunning() and FLAGS.testRunRunning and \
                 finishedVerificationCounting:
