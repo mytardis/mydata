@@ -157,17 +157,25 @@ def LoadFilterSettings(settings, configParser):
     These settings appear in the Filter tab of the settings dialog.
     """
     configFileSection = "MyData"
-    fields = ["user_filter", "dataset_filter", "experiment_filter",
-              "includes_file", "excludes_file", "ignore_interval_unit"]
+    fields = [
+        "user_filter", "dataset_filter", "experiment_filter",
+        "includes_file", "excludes_file",
+        "ignore_interval_unit", "ignore_new_interval_unit"
+    ]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
-    booleanFields = ["ignore_old_datasets", "ignore_new_files",
-                     "use_includes_file", "use_excludes_file"]
+    booleanFields = [
+        "ignore_old_datasets", "ignore_new_datasets", "ignore_new_files",
+        "use_includes_file", "use_excludes_file"
+    ]
     for field in booleanFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getboolean(configFileSection, field)
-    intFields = ["ignore_interval_number", "ignore_new_files_minutes"]
+    intFields = [
+        "ignore_interval_number", "ignore_new_interval_number",
+        "ignore_new_files_minutes"
+    ]
     for field in intFields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.getint(configFileSection, field)
@@ -267,7 +275,8 @@ def CheckForUpdatedSettingsOnServer(settings):
             try:
                 settings[setting['key']] = setting['value']
                 if setting['key'] in (
-                        "ignore_old_datasets", "ignore_new_files",
+                        "ignore_old_datasets", "ignore_new_datasets",
+                        "ignore_new_files",
                         "validate_folder_structure",
                         "start_automatically_on_login",
                         "upload_invalid_user_folders",
@@ -339,7 +348,8 @@ def SaveSettingsToDisk(configPath=None):
                   "folder_structure",
                   "dataset_grouping", "group_prefix",
                   "ignore_old_datasets", "ignore_interval_number",
-                  "ignore_interval_unit",
+                  "ignore_interval_unit", "ignore_new_datasets",
+                  "ignore_new_interval_number", "ignore_new_interval_unit",
                   "ignore_new_files", "ignore_new_files_minutes",
                   "use_includes_file", "use_excludes_file",
                   "max_verification_threads",

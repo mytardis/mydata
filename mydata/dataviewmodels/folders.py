@@ -33,7 +33,6 @@ class FoldersModel(MyDataDataViewModel):
     Represents the Folders tab of MyData's main window,
     and the tabular data displayed on that tab view.
     """
-    # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
@@ -52,11 +51,6 @@ class FoldersModel(MyDataDataViewModel):
             self.defaultColumnWidths = [40, 185, 200, 80, 150, 160, 90, 150]
         else:
             self.defaultColumnWidths = [40, 185, 200, 80, 160, 160, 90, 150]
-
-        self.ignoreIntervalSeconds = 0
-        self.ignoreOldDatasets = False
-        self.ignoreIntervalNumber = 0
-        self.ignoreIntervalUnit = "months"
 
         self.filterFields = \
             ["folderName", "location", "owner.username", "experimentTitle"]
@@ -187,22 +181,6 @@ class FoldersModel(MyDataDataViewModel):
         dataDir = SETTINGS.general.dataDirectory
         defaultOwner = SETTINGS.general.defaultOwner
         folderStructure = SETTINGS.advanced.folderStructure
-        self.ignoreOldDatasets = SETTINGS.filters.ignoreOldDatasets
-        if self.ignoreOldDatasets:
-            seconds = dict(day=24 * 60 * 60)
-            seconds['year'] = int(365.25 * seconds['day'])
-            seconds['month'] = seconds['year'] / 12
-            seconds['week'] = 7 * seconds['day']
-            singularIgnoreIntervalUnit = \
-                SETTINGS.filters.ignoreOldDatasetIntervalUnit.rstrip('s')
-            ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
-
-            self.ignoreIntervalNumber = \
-                SETTINGS.filters.ignoreOldDatasetIntervalNumber
-            self.ignoreIntervalUnit = \
-                SETTINGS.filters.ignoreOldDatasetIntervalUnit
-            self.ignoreIntervalSeconds = \
-                self.ignoreIntervalNumber * ignoreIntervalUnitSeconds
         logger.debug("FoldersModel.ScanFolders(): Scanning " + dataDir + "...")
         if folderStructure.startswith("Username") or \
                 folderStructure.startswith("Email"):
@@ -384,21 +362,12 @@ class FoldersModel(MyDataDataViewModel):
             for datasetFolderName in datasetFolders:
                 logger.debug("Found folder assumed to be dataset: " +
                              datasetFolderName)
-                if self.ignoreOldDatasets:
-                    datasetFolderPath = os.path.join(pathToScan,
-                                                     datasetFolderName)
-                    ctimestamp = os.path.getctime(datasetFolderPath)
-                    ctime = datetime.fromtimestamp(ctimestamp)
-                    age = datetime.now() - ctime
-                    if age.total_seconds() > \
-                            self.ignoreIntervalSeconds:
-                        message = "Ignoring \"%s\", because it is " \
-                            "older than %d %s" \
-                            % (datasetFolderPath,
-                               self.ignoreIntervalNumber,
-                               self.ignoreIntervalUnit)
-                        logger.warning(message)
-                        continue
+                if SETTINGS.filters.ignoreOldDatasets and \
+                        DatasetIsTooOld(pathToScan, datasetFolderName):
+                    continue
+                if SETTINGS.filters.ignoreNewDatasets and \
+                        DatasetIsTooNew(pathToScan, datasetFolderName):
+                    continue
                 dataViewId = self.GetMaxDataViewId() + 1
                 folderModel = \
                     FolderModel(dataViewId=dataViewId,
@@ -463,19 +432,12 @@ class FoldersModel(MyDataDataViewModel):
             dirsDepth1 = [item for item in globDepth1 if os.path.isdir(item)]
             datasetFolders = [os.path.basename(d) for d in dirsDepth1]
             for datasetFolderName in datasetFolders:
-                if self.ignoreOldDatasets:
-                    datasetFolderPath = os.path.join(expFolderPath,
-                                                     datasetFolderName)
-                    ctimestamp = os.path.getctime(datasetFolderPath)
-                    ctime = datetime.fromtimestamp(ctimestamp)
-                    age = datetime.now() - ctime
-                    if age.total_seconds() > self.ignoreIntervalSeconds:
-                        message = "Ignoring \"%s\", because it is " \
-                            "older than %d %s" \
-                            % (datasetFolderPath, self.ignoreIntervalNumber,
-                               self.ignoreIntervalUnit)
-                        logger.warning(message)
-                        continue
+                if SETTINGS.filters.ignoreOldDatasets and \
+                        DatasetIsTooOld(expFolderPath, datasetFolderName):
+                    continue
+                if SETTINGS.filters.ignoreNewDatasets and \
+                        DatasetIsTooNew(expFolderPath, datasetFolderName):
+                    continue
                 dataViewId = self.GetMaxDataViewId() + 1
                 folderModel = \
                     FolderModel(dataViewId=dataViewId,
@@ -585,20 +547,12 @@ class FoldersModel(MyDataDataViewModel):
                               if os.path.isdir(item)]
                 datasetFolders = [os.path.basename(d) for d in dirsDepth1]
                 for datasetFolderName in datasetFolders:
-                    if self.ignoreOldDatasets:
-                        datasetFolderPath = os.path.join(userFolderPath,
-                                                         datasetFolderName)
-                        ctimestamp = os.path.getctime(datasetFolderPath)
-                        ctime = datetime.fromtimestamp(ctimestamp)
-                        age = datetime.now() - ctime
-                        if age.total_seconds() > self.ignoreIntervalSeconds:
-                            message = "Ignoring \"%s\", because it is " \
-                                "older than %d %s" \
-                                % (datasetFolderPath,
-                                   self.ignoreIntervalNumber,
-                                   self.ignoreIntervalUnit)
-                            logger.warning(message)
-                            continue
+                    if SETTINGS.filters.ignoreOldDatasets and \
+                            DatasetIsTooOld(userFolderPath, datasetFolderName):
+                        continue
+                    if SETTINGS.filters.ignoreNewDatasets and \
+                            DatasetIsTooNew(userFolderPath, datasetFolderName):
+                        continue
                     groupFolderName = os.path.basename(groupFolderPath)
                     dataViewId = self.GetMaxDataViewId() + 1
                     folderModel = \
@@ -636,3 +590,45 @@ class FoldersModel(MyDataDataViewModel):
         """
         for folderModel in self.rowsData:
             folderModel.ResetCounts()
+
+
+def DatasetIsTooOld(pathToScan, datasetFolderName):
+    """
+    If the supplied dataset folder is too old, according to
+    our filtering settings, return True and log a warning
+    """
+    datasetFolderPath = os.path.join(pathToScan, datasetFolderName)
+    ctimestamp = os.path.getctime(datasetFolderPath)
+    ctime = datetime.fromtimestamp(ctimestamp)
+    age = datetime.now() - ctime
+    if age.total_seconds() > \
+            SETTINGS.filters.ignoreOldDatasetIntervalSeconds:
+        message = "Ignoring \"%s\", because it is " \
+            "older than %d %s" \
+            % (datasetFolderPath,
+               SETTINGS.filters.ignoreIntervalNumber,
+               SETTINGS.filters.ignoreIntervalUnit)
+        logger.warning(message)
+        return True
+    return False
+
+
+def DatasetIsTooNew(pathToScan, datasetFolderName):
+    """
+    If the supplied dataset folder is too new, according to
+    our filtering settings, return True and log a warning
+    """
+    datasetFolderPath = os.path.join(pathToScan, datasetFolderName)
+    ctimestamp = os.path.getctime(datasetFolderPath)
+    ctime = datetime.fromtimestamp(ctimestamp)
+    age = datetime.now() - ctime
+    if age.total_seconds() < \
+            SETTINGS.filters.ignoreNewDatasetIntervalSeconds:
+        message = "Ignoring \"%s\", because it is " \
+            "newer than %d %s" \
+            % (datasetFolderPath,
+               SETTINGS.filters.ignoreNewIntervalNumber,
+               SETTINGS.filters.ignoreNewIntervalUnit)
+        logger.warning(message)
+        return True
+    return False
