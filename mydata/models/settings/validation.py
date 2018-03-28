@@ -189,6 +189,10 @@ def CheckFilters(setStatusMessage):
         message = "Old datasets are being ignored."
         logger.warning(message)
         LogIfTestRun("WARNING: %s" % message)
+    if SETTINGS.filters.ignoreNewDatasets:
+        message = "New datasets are being ignored."
+        logger.warning(message)
+        LogIfTestRun("WARNING: %s" % message)
     if SETTINGS.filters.ignoreNewFiles:
         message = "Files newer than %s minute(s) are being ignored." \
             % SETTINGS.filters.ignoreNewFilesMinutes
@@ -547,24 +551,31 @@ def CountDatasetsInDirs(dirs):
                  folders, depending on the active dataset filter(s)
     """
     from ...settings import SETTINGS
-    seconds = dict(day=24 * 60 * 60)
-    seconds['year'] = int(365.25 * seconds['day'])
-    seconds['month'] = seconds['year'] / 12
-    singularIgnoreIntervalUnit = \
-        SETTINGS.filters.ignoreOldDatasetIntervalUnit.rstrip('s')
-    ignoreIntervalUnitSeconds = seconds[singularIgnoreIntervalUnit]
-    ignoreIntervalSeconds = (
-        SETTINGS.filters.ignoreOldDatasetIntervalNumber *
-        ignoreIntervalUnitSeconds)
-
-    if SETTINGS.filters.ignoreOldDatasets:
+    if SETTINGS.filters.ignoreOldDatasets or \
+            SETTINGS.filters.ignoreNewDatasets:
         datasetCount = 0
         for folder in dirs:
             ctimestamp = os.path.getctime(folder)
             ctime = datetime.fromtimestamp(ctimestamp)
             age = datetime.now() - ctime
-            if age.total_seconds() <= ignoreIntervalSeconds:
-                datasetCount += 1
+            if SETTINGS.filters.ignoreOldDatasets:
+                if SETTINGS.filters.ignoreNewDatasets:
+                    if age.total_seconds() <= \
+                            SETTINGS.filters.ignoreOldDatasetIntervalSeconds \
+                            and age.total_seconds() >= \
+                            SETTINGS.filters.ignoreNewDatasetIntervalSeconds:
+                        datasetCount += 1
+                else:
+                    if age.total_seconds() <= \
+                            SETTINGS.filters.ignoreOldDatasetIntervalSeconds:
+                        datasetCount += 1
+            else:
+                if SETTINGS.filters.ignoreNewDatasets:
+                    if age.total_seconds() >= \
+                            SETTINGS.filters.ignoreNewDatasetIntervalSeconds:
+                        datasetCount += 1
+                else:
+                    datasetCount += 1
     else:
         datasetCount = len(dirs)
     return datasetCount

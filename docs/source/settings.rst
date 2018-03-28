@@ -425,26 +425,32 @@ previously uploaded to and verified on the MyTardis server, whereas the
 "verification" in "verification_delay" refers to MyData's request for MyTardis
 to verify that a newly uploaded file has the correct size and checksum.
 
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | Setting                  | Default value                     | Description                                             |
-    +==========================+===================================+=========================================================+
-    | cache_datafile_lookups   | True                              | Whether to cache results of successful datafile lookups |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | connection_timeout       | 10                                | Timeout (in seconds) used for HTTP responses and SSH    |
-    |                          |                                   | connections                                             |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | max_verification_threads | 5                                 | Maximum number of concurrent DataFile lookups           |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | verification_delay       | 3                                 | Upon a successful upload, MyData will request           |
-    |                          |                                   | verification after a short delay (e.g. 3 seconds)       |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | immutable_datasets       | False                             | Whether datasets created by MyData should be read-only  |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | progress_poll_interval   | 1                                 | Interval in seconds between RESTful progress queries    |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | cipher                   | aes128-gcm@openssh.com,aes128-ctr | Encryption cipher for SCP uploads                       |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | use_none_cipher          | False                             | Use None cipher (only applicable for HPN-SSH)           |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
-    | fake_md5_sum             | False                             | Skip MD5 calculation, and just send a string of zeroes  |
-    +--------------------------+-----------------------------------+---------------------------------------------------------+
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | Setting                    | Default value                     | Description                                             |
+    +============================+===================================+=========================================================+
+    | cache_datafile_lookups     | True                              | Whether to cache results of successful datafile lookups |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | connection_timeout         | 10                                | Timeout (in seconds) used for HTTP responses and SSH    |
+    |                            |                                   | connections                                             |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | max_verification_threads   | 5                                 | Maximum number of concurrent DataFile lookups           |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | verification_delay         | 3                                 | Upon a successful upload, MyData will request           |
+    |                            |                                   | verification after a short delay (e.g. 3 seconds)       |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | immutable_datasets         | False                             | Whether datasets created by MyData should be read-only  |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | progress_poll_interval     | 1                                 | Interval in seconds between RESTful progress queries    |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | cipher                     | aes128-gcm@openssh.com,aes128-ctr | Encryption cipher for SCP uploads                       |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | use_none_cipher            | False                             | Use None cipher (only applicable for HPN-SSH)           |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | fake_md5_sum               | False                             | Skip MD5 calculation, and just send a string of zeroes  |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | ignore_new_datasets        | False                             | Ignore new datasets                                     |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | ignore_new_interval_number | 0                                 | Number of intervals (e.g. months) to ignore for         |
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
+    | ignore_new_interval_unit   | months                            | Interval used for ignoring new datasets
+    +----------------------------+-----------------------------------+---------------------------------------------------------+
