@@ -4,6 +4,12 @@ of the settings dialog and saved to disk in MyData.cfg
 """
 from .base import BaseSettingsModel
 
+# Used to convert ignore intervals (e.g. 3 months) into seconds:
+SECONDS = dict(day=24 * 60 * 60)
+SECONDS['year'] = int(365.25 * SECONDS['day'])
+SECONDS['month'] = SECONDS['year'] / 12
+SECONDS['week'] = 7 * SECONDS['day']
+
 
 class FiltersSettingsModel(BaseSettingsModel):
     """
@@ -22,6 +28,9 @@ class FiltersSettingsModel(BaseSettingsModel):
             'ignore_old_datasets',
             'ignore_interval_number',
             'ignore_interval_unit',
+            'ignore_new_datasets',
+            'ignore_new_interval_number',
+            'ignore_new_interval_unit',
             'ignore_new_files',
             'ignore_new_files_minutes',
             'use_includes_file',
@@ -37,6 +46,9 @@ class FiltersSettingsModel(BaseSettingsModel):
             ignore_old_datasets=False,
             ignore_interval_number=0,
             ignore_interval_unit="months",
+            ignore_new_datasets=False,
+            ignore_new_interval_number=0,
+            ignore_new_interval_unit="months",
             ignore_new_files=True,
             ignore_new_files_minutes=1,
             use_includes_file=False,
@@ -132,6 +144,74 @@ class FiltersSettingsModel(BaseSettingsModel):
         """
         self.mydataConfig['ignore_interval_unit'] = \
             ignoreOldDatasetIntervalUnit
+
+    @property
+    def ignoreOldDatasetIntervalSeconds(self):
+        """
+        Return the interval (in seconds) beyond which
+        old datasets will be ignored.
+        """
+        singularIgnoreIntervalUnit = \
+            self.mydataConfig['ignore_interval_unit'].rstrip('s')
+        return self.mydataConfig['ignore_interval_number'] * \
+            SECONDS[singularIgnoreIntervalUnit]
+
+    @property
+    def ignoreNewDatasets(self):
+        """
+        Returns True if MyData should ignore new dataset folders
+        """
+        return self.mydataConfig['ignore_new_datasets']
+
+    @ignoreNewDatasets.setter
+    def ignoreNewDatasets(self, ignoreNewDatasets):
+        """
+        Set this to True if MyData should ignore new dataset folders
+        """
+        self.mydataConfig['ignore_new_datasets'] = ignoreNewDatasets
+
+    @property
+    def ignoreNewDatasetIntervalNumber(self):
+        """
+        Return the number of days/weeks/months used to define an new dataset
+        """
+        return self.mydataConfig['ignore_new_interval_number']
+
+    @ignoreNewDatasetIntervalNumber.setter
+    def ignoreNewDatasetIntervalNumber(self, ignoreNewDatasetIntervalNumber):
+        """
+        Set the number of days/weeks/months used to define an new dataset
+        """
+        self.mydataConfig['ignore_new_interval_number'] = \
+            ignoreNewDatasetIntervalNumber
+
+    @property
+    def ignoreNewDatasetIntervalUnit(self):
+        """
+        Return the time interval unit (days/weeks/months)
+        used to define an new dataset
+        """
+        return self.mydataConfig['ignore_new_interval_unit']
+
+    @ignoreNewDatasetIntervalUnit.setter
+    def ignoreNewDatasetIntervalUnit(self, ignoreNewDatasetIntervalUnit):
+        """
+        Set the time interval unit (days/weeks/months)
+        used to define an new dataset
+        """
+        self.mydataConfig['ignore_new_interval_unit'] = \
+            ignoreNewDatasetIntervalUnit
+
+    @property
+    def ignoreNewDatasetIntervalSeconds(self):
+        """
+        Return the interval (in seconds) beyond which
+        old datasets will be ignored.
+        """
+        singularIgnoreIntervalUnit = \
+            self.mydataConfig['ignore_new_interval_unit'].rstrip('s')
+        return self.mydataConfig['ignore_new_interval_number'] * \
+            SECONDS[singularIgnoreIntervalUnit]
 
     @property
     def ignoreNewFiles(self):

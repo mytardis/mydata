@@ -390,6 +390,10 @@ def ProvideSettingsValidationResults(event):
                SETTINGS.filters.ignoreOldDatasetIntervalUnit)
     else:
         intervalIfUsed = ""
+    if SETTINGS.filters.ignoreNewDatasets:
+        intervalIfUsed += " (older than %d %s)" \
+            % (SETTINGS.filters.ignoreNewDatasetIntervalNumber,
+               SETTINGS.filters.ignoreNewDatasetIntervalUnit)
     numDatasets = getattr(event, "datasetCount", None)
     if numDatasets is not None and numDatasets != -1:
         filtersSummary = ""

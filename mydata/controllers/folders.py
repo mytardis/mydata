@@ -633,8 +633,8 @@ class FoldersController(object):
         assert threading.current_thread().name == "MainThread"
 
         # Tell the folders view to refresh its data.  (It was previously
-        # updated only when a changed was made to the underlying data, but
-        # because changes coming from the cache are two quick, we can't use
+        # updated only when a change was made to the underlying data, but
+        # because changes coming from the cache are too quick, we can't use
         # these changes as the trigger to update the view any longer:
         # The lock prevents RuntimeError: deque mutated during iteration
         with LOCKS.foldersToUpdate:
@@ -662,7 +662,7 @@ class FoldersController(object):
                 message = "Looked up %d of %d files." % \
                     (numVerificationsCompleted,
                      self.numVerificationsToBePerformed)
-            wx.CallAfter(wx.GetApp().frame.SetStatusMessage, message)
+            wx.GetApp().frame.SetStatusMessage(message)
 
         finishedVerificationCounting = \
             self.finishedScanningForDatasetFolders.isSet()
@@ -673,7 +673,7 @@ class FoldersController(object):
                     finishedVerificationCounting = False
                     break
 
-        if numVerificationsCompleted == self.numVerificationsToBePerformed \
+        if numVerificationsCompleted >= self.numVerificationsToBePerformed \
                 and finishedVerificationCounting \
                 and (uploadsProcessed == uploadsToBePerformed or
                      FLAGS.testRunRunning and
@@ -681,6 +681,17 @@ class FoldersController(object):
             logger.debug("All datafile verifications and uploads "
                          "have completed.")
             logger.debug("Shutting down upload and verification threads.")
+            if numVerificationsCompleted > self.numVerificationsToBePerformed:
+                # This shouldn't occur, but has been observed to occur, and
+                # until the root cause can be determined, we should ensure
+                # that MyData still shuts down its upload threads (hence the
+                # >= above instead of ==), but logs a warning.
+                message = (
+                    "MyData counted %s datafile lookups, but only expected to "
+                    "perform %s lookups"
+                    % (numVerificationsCompleted,
+                       self.numVerificationsToBePerformed))
+                logger.warning(message)
             PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
         elif not wx.PyApp.IsMainLoopRunning() and FLAGS.testRunRunning and \
                 finishedVerificationCounting:

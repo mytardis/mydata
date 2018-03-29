@@ -82,7 +82,8 @@ class DatasetModel(object):
             description = folderModel.folderName
             logger.debug("Creating dataset record for folder: " + description)
             myTardisUrl = SETTINGS.general.myTardisUrl
-            experimentUri = experiment.resourceUri if experiment else None
+            experimentUri = experiment.resourceUri.replace(
+                'mydata_experiment', 'experiment') if experiment else None
             datasetJson = {
                 "instrument": SETTINGS.general.instrument.resourceUri,
                 "description": description,
