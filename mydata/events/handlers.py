@@ -385,13 +385,13 @@ def ProvideSettingsValidationResults(event):
         return
 
     if SETTINGS.filters.ignoreOldDatasets:
-        intervalIfUsed = " (created within the past %d %s)" \
+        intervalIfUsed = " (created within the past %s %s)" \
             % (SETTINGS.filters.ignoreOldDatasetIntervalNumber,
                SETTINGS.filters.ignoreOldDatasetIntervalUnit)
     else:
         intervalIfUsed = ""
     if SETTINGS.filters.ignoreNewDatasets:
-        intervalIfUsed += " (older than %d %s)" \
+        intervalIfUsed += " (older than %s %s)" \
             % (SETTINGS.filters.ignoreNewDatasetIntervalNumber,
                SETTINGS.filters.ignoreNewDatasetIntervalUnit)
     numDatasets = getattr(event, "datasetCount", None)
@@ -403,7 +403,7 @@ def ProvideSettingsValidationResults(event):
             filtersSummary = "and applying the specified filters, "
 
         message = "Assuming a folder structure of '%s', %s" \
-            "there %s %d %s in \"%s\"%s.\n\n" \
+            "there %s %s %s in \"%s\"%s.\n\n" \
             "Do you want to continue?" \
             % (SETTINGS.advanced.folderStructure,
                filtersSummary,
