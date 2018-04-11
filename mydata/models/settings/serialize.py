@@ -115,10 +115,6 @@ def LoadScheduleSettings(settings, configParser):
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
-    intFields = ["ignore_interval_number", "ignore_new_files_minutes"]
-    for field in intFields:
-        if configParser.has_option(configFileSection, field):
-            settings[field] = configParser.getint(configFileSection, field)
     if configParser.has_option(configFileSection, "scheduled_date"):
         datestring = configParser.get(configFileSection, "scheduled_date")
         settings['scheduled_date'] = \
@@ -290,6 +286,7 @@ def CheckForUpdatedSettingsOnServer(settings):
                     settings[setting['key']] = (setting['value'] == "True")
                 if setting['key'] in (
                         "timer_minutes", "ignore_interval_number",
+                        "ignore_new_interval_number",
                         "ignore_new_files_minutes",
                         "max_verification_threads",
                         "max_upload_threads", "max_upload_retries"):
