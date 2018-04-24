@@ -338,7 +338,10 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             newLogs,
             ".*ssh: connect to host localhost port %s: Connection refused.*"
             "|"
-            ".*Connection timed out during banner exchange.*" % self.scpPort)
+            ".*ssh: connect to host localhost port %s: Operation timed out.*"
+            "|"
+            ".*Connection timed out during banner exchange.*"
+            % (self.scpPort, self.scpPort))
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
         SETTINGS.miscellaneous.connectionTimeout = defaultTimeout
 

@@ -21,8 +21,8 @@ environment:
 
   matrix:
 
-    - PYTHON: "C:\\Python27.13"
-      PYTHON_VERSION: "2.7.13"
+    - PYTHON: "C:\\Python27.14"
+      PYTHON_VERSION: "2.7.14"
       PYTHON_ARCH: "32"
 
 install:
@@ -45,9 +45,11 @@ install:
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
+  # AVOID UPGRADING PIP FOR NOW, BECAUSE WE'RE SEEING ERRORS LIKE THIS
+  # IN APPVEYOR BUILDS: https://github.com/pyenv/pyenv/issues/1141
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "pip install --disable-pip-version-check --user --upgrade pip"
+  # - "pip install --disable-pip-version-check --user --upgrade pip"
 
   # Install InnoSetup for building a distributable setup wizard.
   - choco install -y InnoSetup
