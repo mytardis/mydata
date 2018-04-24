@@ -21,8 +21,8 @@ environment:
 
   matrix:
 
-    - PYTHON: "C:\\Python27.13"
-      PYTHON_VERSION: "2.7.13"
+    - PYTHON: "C:\\Python27.14"
+      PYTHON_VERSION: "2.7.14"
       PYTHON_ARCH: "32"
 
 install:
