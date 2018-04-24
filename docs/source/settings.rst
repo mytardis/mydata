@@ -444,5 +444,5 @@ to verify that a newly uploaded file has the correct size and checksum.
     +----------------------------+-----------------------------------+---------------------------------------------------------+
     | ignore_new_interval_number | 0                                 | Number of intervals (e.g. months) to ignore for         |
     +----------------------------+-----------------------------------+---------------------------------------------------------+
-    | ignore_new_interval_unit   | months                            | Interval used for ignoring new datasets
+    | ignore_new_interval_unit   | months                            | Interval used for ignoring new datasets                 |
     +----------------------------+-----------------------------------+---------------------------------------------------------+
