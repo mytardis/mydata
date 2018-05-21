@@ -597,8 +597,8 @@ def DatasetIsTooNew(pathToScan, datasetFolderName):
         message = "Ignoring \"%s\", because it is " \
             "newer than %d %s" \
             % (datasetFolderPath,
-               SETTINGS.filters.ignoreNewIntervalNumber,
-               SETTINGS.filters.ignoreNewIntervalUnit)
+               SETTINGS.filters.ignoreNewDatasetIntervalNumber,
+               SETTINGS.filters.ignoreNewDatasetIntervalUnit)
         logger.warning(message)
         return True
     return False
