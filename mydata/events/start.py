@@ -21,7 +21,7 @@ from ..models.settings import LastSettingsUpdateTrigger
 from ..models.settings.validation import ValidateSettings
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import InvalidSettings
-from ..utils.exceptions import UserAbortedSettingsValidation
+from ..utils.exceptions import UserAborted
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
@@ -140,7 +140,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                     event = MYDATA_EVENTS.SettingsValidationCompleteEvent()
                     PostEvent(event)
                     wx.CallAfter(EndBusyCursorIfRequired)
-                except UserAbortedSettingsValidation:
+                except UserAborted:
                     RestoreUserInterfaceForAbort()
                     return
                 except InvalidSettings as invalidSettings:
@@ -232,6 +232,11 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                 app.foldersController.FinishedScanningForDatasetFolders()
                 FLAGS.scanningFolders = False
             logger.debug("Just set scanningFolders to False")
+        except UserAborted:
+            RestoreUserInterfaceForAbort()
+            if FLAGS.testRunRunning:
+                logger.testrun("Data scans and uploads were canceled.")
+            return
         except InvalidFolderStructure as ifs:
             def ShowMessageDialog():
                 """
@@ -242,13 +247,6 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                 dlg.ShowModal()
             wx.CallAfter(ShowMessageDialog)
             wx.CallAfter(app.frame.SetStatusMessage, str(ifs))
-            return
-
-        if CheckIfShouldAbort():
-            RestoreUserInterfaceForAbort()
-            if FLAGS.testRunRunning:
-                logger.testrun("Data scans and uploads were canceled.")
-                FLAGS.testRunRunning = False
             return
 
         folderStructure = SETTINGS.advanced.folderStructure

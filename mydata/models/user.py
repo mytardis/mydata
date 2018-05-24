@@ -158,6 +158,28 @@ class UserModel(object):
             logger.debug("Found user record for email '" + email + "'.")
             return UserModel(userRecordJson=userRecordsJson['objects'][0])
 
+    @staticmethod
+    def GetUserForFolder(userFolderName, userNotFoundInMyTardis=False):
+        """
+        Return a UserModel for a username or email folder
+
+        Set userNotFoundInMyTardis to True if you already know there is
+        no corresponding user record in MyTardis, but you want to create
+        a "USER NOT FOUND" dummy record to render in MyData's users table.
+        """
+        folderStructure = SETTINGS.advanced.folderStructure
+        if folderStructure.startswith("Username"):
+            if userNotFoundInMyTardis:
+                return UserModel(
+                    username=userFolderName, userNotFoundInMyTardis=True)
+            return UserModel.GetUserByUsername(userFolderName)
+        elif folderStructure.startswith("Email"):
+            if userNotFoundInMyTardis:
+                return UserModel(
+                    email=userFolderName, userNotFoundInMyTardis=True)
+            return UserModel.GetUserByEmail(userFolderName)
+        else:
+            return None
 
 class UserProfileModel(object):
     """

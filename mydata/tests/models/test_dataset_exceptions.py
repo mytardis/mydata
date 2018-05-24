@@ -56,7 +56,7 @@ class DatasetExceptionsTester(MyDataTester):
         # Simulate retrieving existing dataset record during test run
         # and ensure that no exception is raised:
         FLAGS.testRunRunning = True
-        folderModel.folderName = "Existing Dataset"
+        folderModel.dataViewFields['folderName'] = "Existing Dataset"
         datasetModel = DatasetModel.CreateDatasetIfNecessary(folderModel)
         FLAGS.testRunRunning = False
         self.assertEqual(datasetModel.description, "Existing Dataset")
@@ -73,7 +73,8 @@ class DatasetExceptionsTester(MyDataTester):
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where the user doesn't have
         # permission to do so.
-        folderModel.folderName = "New Dataset Folder Without Permission"
+        folderModel.dataViewFields['folderName'] = \
+            "New Dataset Folder Without Permission"
         with self.assertRaises(HTTPError) as context:
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel)
         self.assertEqual(context.exception.response.status_code, 401)
@@ -81,7 +82,8 @@ class DatasetExceptionsTester(MyDataTester):
         # Try to create a new dataset record with the Fake MyTardis
         # server simulating the case where an Internal Server Error
         # occurs.
-        folderModel.folderName = "New Dataset Folder With Internal Server Error"
+        folderModel.dataViewFields['folderName'] = \
+            "New Dataset Folder With Internal Server Error"
         with self.assertRaises(HTTPError) as context:
             _ = DatasetModel.CreateDatasetIfNecessary(folderModel)
         self.assertEqual(context.exception.response.status_code, 500)

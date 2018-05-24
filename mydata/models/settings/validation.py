@@ -13,13 +13,13 @@ from datetime import datetime
 import requests
 from requests.exceptions import HTTPError
 from validate_email import validate_email
-import wx
 
+from ...events.stop import RaiseExceptionIfUserAborted
 from ...logs import logger
 from ...threads.flags import FLAGS
 from ...utils.autostart import UpdateAutostartFile
 from ...utils.exceptions import InvalidSettings
-from ...utils.exceptions import UserAbortedSettingsValidation
+from ...utils.exceptions import UserAborted
 from ..facility import FacilityModel
 from .miscellaneous import LastSettingsUpdateTrigger
 
@@ -40,31 +40,31 @@ def ValidateSettings(setStatusMessage=None):
             logger.testrun(message)
 
     try:
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckForMissingRequiredField()
         LogIfTestRun("Folder structure: %s"
                      % SETTINGS.advanced.folderStructure)
         WarnIfIgnoringInvalidUserFolders()
         CheckFilters(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         if SETTINGS.advanced.validateFolderStructure:
             datasetCount = CheckStructureAndCountDatasets(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckMyTardisUrl(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckMyTardisCredentials(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckFacility(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckInstrument(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckContactEmailAndEmailFolders(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.UI_RESPONSE \
                 and not sys.platform.startswith("win"):
             CheckAutostart(setStatusMessage)
-        CheckIfUserAborted(setStatusMessage)
+        RaiseExceptionIfUserAborted(setStatusMessage)
         CheckScheduledTime()
         message = "Settings validation - succeeded!"
         logger.debug(message)
@@ -75,7 +75,7 @@ def ValidateSettings(setStatusMessage=None):
     except Exception as err:
         if isinstance(err, InvalidSettings):
             raise
-        if isinstance(err, UserAbortedSettingsValidation):
+        if isinstance(err, UserAborted):
             raise
         logger.error(traceback.format_exc())
         message = str(err)
@@ -230,7 +230,7 @@ def CheckDataFileGlobFiles(setStatusMessage):
         PerformGlobsFileValidation(SETTINGS.filters.includesFile,
                                    "Includes", "includes", "includes_file")
 
-    CheckIfUserAborted(setStatusMessage)
+    RaiseExceptionIfUserAborted(setStatusMessage)
 
     if SETTINGS.filters.useExcludesFile:
         message = "Settings validation - checking excludes file..."
@@ -601,14 +601,3 @@ def FolderGlob(level, instrumentName='*'):
             [userOrGroupGlob, instrumentName, '*', datasetGlob]
     }
     return globDict[SETTINGS.advanced.folderStructure][level - 1]
-
-
-def CheckIfUserAborted(setStatusMessage):
-    """
-    Check if settings validation should abort, because the user has clicked the
-    Stop button on the main MyData frame's toolbar.  And if so, raise
-    UserAbortedSettingsValidation
-    """
-    app = wx.GetApp()
-    if hasattr(app, "ShouldAbort") and app.ShouldAbort():
-        raise UserAbortedSettingsValidation(setStatusMessage)

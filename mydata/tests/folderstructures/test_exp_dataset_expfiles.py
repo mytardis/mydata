@@ -30,9 +30,8 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
         foundExpFilename = False
         for row in range(foldersModel.GetRowCount()):
             folderModel = foldersModel.GetFolderRecord(row)
-            numFiles = folderModel.GetNumFiles()
-            totalNumFiles += numFiles
-            for fileIndex in range(numFiles):
+            totalNumFiles += folderModel.numFiles
+            for fileIndex in range(folderModel.numFiles):
                 if folderModel.GetDataFileName(fileIndex) == "exp_file1.txt":
                     foundExpFilename = True
         self.assertEqual(totalNumFiles, 7)

@@ -19,25 +19,47 @@ class FolderModel(object):
     have a corresponding dataset record in MyTardis.
     """
     # pylint: disable=too-many-public-methods
-    # pylint: disable=too-many-instance-attributes
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-statements
     def __init__(self, dataViewId, folderName, location, userFolderName,
-                 groupFolderName, owner, isExperimentFilesFolder=False):
-        # pylint: disable=too-many-locals
-        self.dataViewId = dataViewId
-        # The folder name, e.g. "Dataset1":
-        self.folderName = folderName
-        # The folder's location, e.g. "C:\Data\testuser1":
-        self.location = location
+                 groupFolderName, owner, group=None,
+                 isExperimentFilesFolder=False):
+
+        self.dataViewFields = dict(
+            dataViewId=dataViewId,
+            folderName=folderName,
+            location=location,
+            created="",
+            experimentTitle="",
+            status="0 of 0 files uploaded",
+            owner=owner,
+            group=group)
+
+        # If there are files in the top-level of an Experiment folder, not
+        # within any dataset folder, then we create a special dataset to
+        # collect these files:
         self.isExperimentFilesFolder = isExperimentFilesFolder
+
+        self.dataFilePaths = dict(
+            files=[],
+            directories=[],
+            uploaded=[])
+        self.PopulateDataFilePaths()
+
+        self.experimentTitleSetManually = False
+        self.userFolderName = userFolderName
+        self.groupFolderName = groupFolderName
+
+        self.datasetModel = None
+        self.experimentModel = None
+
+    def PopulateDataFilePaths(self):
+        """
+        Populate data file paths within folder object
+        """
         if self.isExperimentFilesFolder:
-            absoluteFolderPath = location
+            absoluteFolderPath = self.location
         else:
-            absoluteFolderPath = os.path.join(location, folderName)
-        self.dataFilePaths = []
-        self.dataFileDirectories = []
-        self.numFiles = 0
+            absoluteFolderPath = os.path.join(self.location, self.folderName)
+
         for dirname, _, files in os.walk(absoluteFolderPath):
             for filename in sorted(files):
                 if SETTINGS.filters.useIncludesFile and \
@@ -60,39 +82,29 @@ class FolderModel(object):
                                      "and not matching includes."
                                      % filename)
                         continue
-                self.numFiles += 1
-                self.dataFilePaths.append(os.path.join(dirname, filename))
-                self.dataFileDirectories\
+                self.dataFilePaths['files'].append(
+                    os.path.join(dirname, filename))
+                self.dataFilePaths['directories']\
                     .append(os.path.relpath(dirname, absoluteFolderPath))
+                self.dataFilePaths['uploaded'].append(False)
             if self.isExperimentFilesFolder:
                 break
-        for i in range(0, len(self.dataFileDirectories)):
-            if self.dataFileDirectories[i] == ".":
-                self.dataFileDirectories[i] = ""
-            self.dataFileDirectories[i] = \
-                self.dataFileDirectories[i].replace("\\", "/")
-        self.created = ""
-        self._experimentTitle = ""
-        self.group = None
-        self.experimentTitleSetManually = False
-        self.status = "0 of %d files uploaded" % (self.numFiles,)
-        self.userFolderName = userFolderName
-        self.groupFolderName = groupFolderName
-        self.owner = owner
+        self.ConvertSubdirectoriesToMyTardisFormat()
+        self.dataViewFields['status'] = \
+            "0 of %d files uploaded" % self.numFiles
 
-        self.datasetModel = None
-        self.experimentModel = None
-
-        self.dataFileUploaded = []
-        for i in range(0, self.numFiles):
-            self.dataFileUploaded.append(False)
-
-        self.dataFileVerified = []
-        for i in range(0, self.numFiles):
-            self.dataFileVerified.append(False)
-
-        self.numFilesUploaded = 0
-        self.numFilesVerified = 0
+    def ConvertSubdirectoriesToMyTardisFormat(self):
+        """
+        When we write a subdirectory path into the directory field of a
+        MyTardis DataFile record, we use forward slashes, and use an
+        empty string (rather than ".") to indicate that the file is in
+        the dataset's top-level directory
+        """
+        for i in range(0, len(self.dataFilePaths['directories'])):
+            if self.dataFilePaths['directories'][i] == ".":
+                self.dataFilePaths['directories'][i] = ""
+            self.dataFilePaths['directories'][i] = \
+                self.dataFilePaths['directories'][i].replace("\\", "/")
 
     def __hash__(self):
         """
@@ -115,17 +127,18 @@ class FolderModel(object):
         Used to update the number of files uploaded per folder
         displayed in the Status column of the Folders view.
         """
-        self.dataFileUploaded[dataFileIndex] = uploaded
-        self.numFilesUploaded = sum(self.dataFileUploaded)
-        self.status = "%d of %d files uploaded" % (self.numFilesUploaded,
-                                                   self.numFiles)
+        self.dataFilePaths['uploaded'][dataFileIndex] = uploaded
+        numFilesUploaded = sum(self.dataFilePaths['uploaded'])
+        self.dataViewFields['status'] = \
+            "%d of %d files uploaded" % (numFilesUploaded,
+                                         self.numFiles)
 
     def GetDataFilePath(self, dataFileIndex):
         """
         Get the absolute path to a file within this folder's root directory
         which is os.path.join(self.location, self.folderName)
         """
-        return self.dataFilePaths[dataFileIndex]
+        return self.dataFilePaths['files'][dataFileIndex]
 
     def GetDataFileRelPath(self, dataFileIndex):
         """
@@ -141,13 +154,13 @@ class FolderModel(object):
         folder's root directory which is
         os.path.join(self.location, self.folderName)
         """
-        return self.dataFileDirectories[dataFileIndex]
+        return self.dataFilePaths['directories'][dataFileIndex]
 
     def GetDataFileName(self, dataFileIndex):
         """
         Return a file's filename
         """
-        return os.path.basename(self.dataFilePaths[dataFileIndex])
+        return os.path.basename(self.dataFilePaths['files'][dataFileIndex])
 
     def GetDataFileSize(self, dataFileIndex):
         """
@@ -195,11 +208,12 @@ class FolderModel(object):
                 self.folderName)
         return relpath
 
-    def GetNumFiles(self):
+    @property
+    def numFiles(self):
         """
         Return total number of files in this folder
         """
-        return self.numFiles
+        return len(self.dataFilePaths['files'])
 
     def GetValueForKey(self, key):
         """
@@ -221,7 +235,7 @@ class FolderModel(object):
             absoluteFolderPath = self.location
         else:
             absoluteFolderPath = os.path.join(self.location, self.folderName)
-        self.created = datetime.fromtimestamp(
+        self.dataViewFields['created'] = datetime.fromtimestamp(
             os.stat(absoluteFolderPath).st_ctime)\
             .strftime('%Y-%m-%d')
 
@@ -230,14 +244,14 @@ class FolderModel(object):
         """
         Get MyTardis experiment title associated with this folder
         """
-        return self._experimentTitle
+        return self.dataViewFields['experimentTitle']
 
     @experimentTitle.setter
     def experimentTitle(self, title):
         """
         Set MyTardis experiment title associated with this folder
         """
-        self._experimentTitle = title
+        self.dataViewFields['experimentTitle'] = title
         self.experimentTitleSetManually = True
 
     @staticmethod
@@ -327,13 +341,63 @@ class FolderModel(object):
         """
         Reset counts of uploaded files etc.
         """
-        self.dataFileUploaded = []
+        self.dataFilePaths['uploaded'] = []
         for _ in range(0, self.numFiles):
-            self.dataFileUploaded.append(False)
+            self.dataFilePaths['uploaded'].append(False)
 
-        self.dataFileVerified = []
-        for _ in range(0, self.numFiles):
-            self.dataFileVerified.append(False)
+    @property
+    def dataViewId(self):
+        """
+        The row index in MyData's Folders view
+        """
+        return self.dataViewFields['dataViewId']
 
-        self.numFilesUploaded = 0
-        self.numFilesVerified = 0
+    @property
+    def folderName(self):
+        """
+        The folder name, displayed in the Folder (dataset)
+        column of MyData's Folders view
+        """
+        return self.dataViewFields['folderName']
+
+    @property
+    def location(self):
+        """
+        The folder location, displayed in the Location
+        column of MyData's Folders view
+        """
+        return self.dataViewFields['location']
+
+    @property
+    def created(self):
+        """
+        The folder's created date/time stamp, displayed
+        in the Created column of MyData's Folders view
+        """
+        return self.dataViewFields['created']
+
+    @property
+    def status(self):
+        """
+        The folder's upload status, displayed in the
+        Status column of MyData's Folders view
+        """
+        return self.dataViewFields['status']
+
+    @property
+    def owner(self):
+        """
+        The folder's primary owner, i.e. which user should
+        be granted access in the ObjectACL), displayed in
+        the Owner column of MyData's Folders view
+        """
+        return self.dataViewFields['owner']
+
+    @property
+    def group(self):
+        """
+        The group which this folder will be granted access to
+        via its ObjectACL, displayed in the Group column of
+        MyData's Folders view
+        """
+        return self.dataViewFields['group']

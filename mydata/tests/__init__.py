@@ -189,7 +189,7 @@ class MyDataTester(unittest.TestCase):
         totalFiles = 0
         for row in range(DATAVIEW_MODELS['folders'].GetRowCount()):
             totalFiles += DATAVIEW_MODELS['folders'] \
-                .GetFolderRecord(row).GetNumFiles()
+                .GetFolderRecord(row).numFiles
         self.assertEqual(totalFiles, numFiles)
 
 

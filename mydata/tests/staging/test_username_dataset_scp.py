@@ -98,7 +98,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
-            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
+            numFiles += foldersModel.GetFolderRecord(row).numFiles
         self.assertEqual(numFiles, 11)
 
         numExistingVerifiedFiles = 1
@@ -291,7 +291,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         for row in range(foldersModel.GetRowCount()):
             folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
-                folderModel.dataFilePaths[dataFileIndex] += "_INVALID"
+                folderModel.dataFilePaths['files'][dataFileIndex] += "_INVALID"
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         newLogs = Subtract(logger.GetValue(), loggerOutput)
@@ -319,8 +319,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         for row in range(foldersModel.GetRowCount()):
             folderModel = foldersModel.GetFolderRecord(row)
             for dataFileIndex in range(folderModel.numFiles):
-                folderModel.dataFilePaths[dataFileIndex] = \
-                    folderModel.dataFilePaths[dataFileIndex].rstrip("_INVALID")
+                folderModel.dataFilePaths['files'][dataFileIndex] = \
+                    folderModel.dataFilePaths['files'][dataFileIndex] \
+                    .rstrip("_INVALID")
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         newLogs = Subtract(logger.GetValue(), loggerOutput)

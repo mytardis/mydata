@@ -52,7 +52,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
 
         numFiles = 0
         for row in range(foldersModel.GetRowCount()):
-            numFiles += foldersModel.GetFolderRecord(row).GetNumFiles()
+            numFiles += foldersModel.GetFolderRecord(row).numFiles
         self.assertEqual(numFiles, 12)
 
         uploadsModel = UploadsModel()
