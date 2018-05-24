@@ -504,6 +504,62 @@ class FoldersModel(MyDataDataViewModel):
         for folderModel in self.rowsData:
             folderModel.ResetCounts()
 
+def FolderNames(pathToScan, filterPattern=''):
+    """
+    List of folder names in path matching the filter pattern
+    (or all folders in the specified path if there is no filter).
+    """
+    filesDepth1 = glob(os.path.join(pathToScan, '*%s*' % filterPattern))
+    dirsDepth1 = [item for item in filesDepth1 if os.path.isdir(item)]
+    return [os.path.basename(d) for d in dirsDepth1]
+
+
+def UserFolderNames(pathToScan):
+    """
+    List of folder names in path matching user filter (or
+    all folders in the specified path if there is no filter).
+    """
+    return FolderNames(pathToScan, SETTINGS.filters.userFilter)
+
+
+def GroupFolderNames(pathToScan):
+    """
+    List of folder names in path matching group filter (or
+    all folders in the specified path if there is no filter).
+
+    The filter field for user groups is still stored as
+    SETTING.filter.userFilter even though the user interface
+    (settings dialog) presents it as a "user group" filter
+    when a User Group folder structure is selected.
+    """
+    return FolderNames(pathToScan, SETTINGS.filters.userFilter)
+
+
+def DatasetFolderNames(pathToScan):
+    """
+    Return a list of dataset folder names in the specified
+    folder path, matching the dataset filter (if one exists).
+    """
+    return FolderNames(pathToScan, SETTINGS.filters.datasetFilter)
+
+
+def ExperimentFolderNames(pathToScan):
+    """
+    Return a list of experiment folder names in the specified
+    folder path, matching the experiment filter (if one exists).
+    """
+    return FolderNames(pathToScan, SETTINGS.filters.experimentFilter)
+
+
+def FilesInTopLevel(expFolderPath):
+    """
+    Return a list of file names in the specified experiment
+    folder path, not within any specific dataset folder.
+    """
+    globDepth1 = glob(os.path.join(
+        expFolderPath, '*%s*' % SETTINGS.filters.datasetFilter))
+    return [item for item in globDepth1 if os.path.isfile(item)]
+
 
 def FolderNames(pathToScan, filterPattern=''):
     """
