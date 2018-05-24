@@ -10,6 +10,7 @@ import wx
 from ..threads.flags import FLAGS
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
+from ..utils.exceptions import UserAborted
 
 from ..logs import logger
 
@@ -84,3 +85,19 @@ def ShouldCancelUpload(uploadModel):
     # test doesn't create a folders controller instance.  (See the use of
     # threading.Timer in mydata.utils.progress.)
     return True
+
+
+def RaiseExceptionIfUserAborted(setStatusMessage=None):
+    """
+    Check if user has aborted by clicking the Stop button on the main
+    MyData frame's toolbar.  And if so, raise UserAborted.
+
+    A function accepting a status message string argument can be
+    supplied which will be called before the exception is raised.
+    """
+    app = wx.GetApp()
+    if hasattr(app, "ShouldAbort") and app.ShouldAbort():
+        message = "Canceled by user"
+        if setStatusMessage:
+            setStatusMessage(message)
+        raise UserAborted(message)
