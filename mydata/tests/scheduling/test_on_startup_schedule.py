@@ -5,7 +5,6 @@ from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
@@ -24,7 +23,6 @@ class OnStartupScheduleTester(MyDataSettingsTester):
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         SETTINGS.schedule.scheduleType = "On Startup"
-        SaveSettingsToDisk()
 
     def tearDown(self):
         super(OnStartupScheduleTester, self).tearDown()

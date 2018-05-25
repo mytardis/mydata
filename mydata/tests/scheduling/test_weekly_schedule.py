@@ -8,7 +8,6 @@ from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
@@ -41,7 +40,6 @@ class WeeklyScheduleTester(MyDataSettingsTester):
         SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) +
                           timedelta(minutes=1))
-        SaveSettingsToDisk()
 
     def test_weekly_schedule(self):
         """
