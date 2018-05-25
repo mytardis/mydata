@@ -7,7 +7,6 @@ from datetime import timedelta
 from ...settings import SETTINGS
 from ...MyData import MyData
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
 from .. import MyDataSettingsTester
@@ -31,7 +30,6 @@ class OnceScheduleTester(MyDataSettingsTester):
         SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) -
                           timedelta(minutes=1))
-        SaveSettingsToDisk()
 
     def test_once_schedule(self):
         """
