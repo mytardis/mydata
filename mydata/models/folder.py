@@ -255,14 +255,14 @@ class FolderModel(object):
         self.experimentTitleSetManually = True
 
     @staticmethod
-    def MatchesIncludes(filename):
+    def MatchesPatterns(filename, includesOrExcludesFile):
         """
         Return True if file matches at least one pattern in the includes
-        file.
+        or excludes file.
         """
         match = False
-        with open(SETTINGS.filters.includesFile, 'r') as includesFile:
-            for glob in includesFile.readlines():
+        with open(includesOrExcludesFile, 'r') as patternsFile:
+            for glob in patternsFile.readlines():
                 glob = glob.decode('utf-8').strip()
                 if glob == "":
                     continue
@@ -274,23 +274,22 @@ class FolderModel(object):
         return match
 
     @staticmethod
+    def MatchesIncludes(filename):
+        """
+        Return True if file matches at least one pattern in the includes
+        file.
+        """
+        return FolderModel.MatchesPatterns(
+            filename, SETTINGS.filters.includesFile)
+
+    @staticmethod
     def MatchesExcludes(filename):
         """
         Return True if file matches at least one pattern in the excludes
         file.
         """
-        match = False
-        with open(SETTINGS.filters.excludesFile, 'r') as excludesFile:
-            for glob in excludesFile.readlines():
-                glob = glob.decode('utf-8').strip()
-                if glob == "":
-                    continue
-                if glob.startswith(";"):
-                    continue
-                if glob.startswith("#"):
-                    continue
-                match = match or fnmatch(filename, glob)
-        return match
+        return FolderModel.MatchesPatterns(
+            filename, SETTINGS.filters.excludesFile)
 
     def FileIsTooNewToUpload(self, dataFileIndex):
         """
