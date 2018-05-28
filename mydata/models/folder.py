@@ -44,7 +44,6 @@ class FolderModel(object):
             uploaded=[])
         self.PopulateDataFilePaths()
 
-        self.experimentTitleSetManually = False
         self.userFolderName = userFolderName
         self.groupFolderName = groupFolderName
 
@@ -252,7 +251,6 @@ class FolderModel(object):
         Set MyTardis experiment title associated with this folder
         """
         self.dataViewFields['experimentTitle'] = title
-        self.experimentTitleSetManually = True
 
     @staticmethod
     def MatchesPatterns(filename, includesOrExcludesFile):

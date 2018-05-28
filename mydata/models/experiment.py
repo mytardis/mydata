@@ -10,7 +10,6 @@ from ..settings import SETTINGS
 from ..threads.flags import FLAGS
 from ..logs import logger
 from ..utils.exceptions import DoesNotExist
-from ..utils.exceptions import MultipleObjectsReturned
 from .objectacl import ObjectAclModel
 
 
@@ -52,32 +51,20 @@ class ExperimentModel(object):
         """
         See also GetOrCreateExperimentForFolder
         """
-        # pylint: disable=too-many-branches
-        # pylint: disable=too-many-locals
-        # pylint: disable=too-many-statements
-        uploaderName = SETTINGS.uploaderModel.name
-        uploaderUuid = SETTINGS.miscellaneous.uuid
-        userFolderName = folderModel.userFolderName
-        groupFolderName = folderModel.groupFolderName
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        experimentTitle = folderModel.experimentTitle
-
-        if folderModel.experimentTitleSetManually:
-            expTitleEncoded = urllib.quote(experimentTitle.encode('utf-8'))
-            folderStructureEncoded = \
-                urllib.quote(SETTINGS.advanced.folderStructure)
-            url = "%s/api/v1/mydata_experiment/?format=json" \
-                "&title=%s&folder_structure=%s" \
-                % (myTardisUrl, expTitleEncoded, folderStructureEncoded)
-        else:
-            url = "%s/api/v1/mydata_experiment/?format=json" \
-                "&uploader=%s" % (myTardisUrl, uploaderUuid)
-        if userFolderName:
+        expTitleEncoded = urllib.quote(
+            folderModel.experimentTitle.encode('utf-8'))
+        folderStructureEncoded = \
+            urllib.quote(SETTINGS.advanced.folderStructure)
+        url = "%s/api/v1/mydata_experiment/?format=json" \
+            "&title=%s&folder_structure=%s" \
+            % (SETTINGS.general.myTardisUrl, expTitleEncoded,
+               folderStructureEncoded)
+        if folderModel.userFolderName:
             url += "&user_folder_name=%s" \
-                % urllib.quote(userFolderName.encode('utf-8'))
-        if groupFolderName:
+                % urllib.quote(folderModel.userFolderName.encode('utf-8'))
+        if folderModel.groupFolderName:
             url += "&group_folder_name=%s" \
-                % urllib.quote(groupFolderName.encode('utf-8'))
+                % urllib.quote(folderModel.groupFolderName.encode('utf-8'))
 
         logger.debug(url)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
@@ -85,159 +72,58 @@ class ExperimentModel(object):
         experimentsJson = response.json()
         numExperimentsFound = experimentsJson['meta']['total_count']
         if numExperimentsFound == 0:
-            if folderModel.experimentTitleSetManually:
-                if userFolderName:
-                    message = "Experiment not found for '%s', %s, '%s'" \
-                        % (uploaderName, userFolderName, experimentTitle)
-                    if groupFolderName:
-                        message += ", '%s'" % groupFolderName
-                elif groupFolderName:
-                    message = "Experiment not found for '%s', %s, '%s'" \
-                        % (uploaderName, groupFolderName, experimentTitle)
-                else:
-                    message = "Experiment not found for '%s', '%s'" \
-                        % (uploaderName, experimentTitle)
-            else:
-                if userFolderName:
-                    message = "Experiment not found for '%s', %s" \
-                        % (uploaderName, userFolderName)
-                    if groupFolderName:
-                        message += ", '%s'" % groupFolderName
-                elif groupFolderName:
-                    message = "Experiment not found for '%s', %s" \
-                        % (uploaderName, groupFolderName)
-                else:
-                    message = "Experiment not found for '%s'." % uploaderName
-
-            logger.debug(message)
+            message = ExperimentModel.LogExperimentNotFound(folderModel)
             raise DoesNotExist(message, modelClass=ExperimentModel)
-        elif numExperimentsFound == 1 or \
-                folderModel.experimentTitleSetManually:
-            # When an experiment is created for a single MyData
-            # uploader instance, we shouldn't find any duplicates,
-            # but when MyData is instructed to add datasets to an
-            # existing experiment (e.g. the "Experiment / Data"
-            # folder structure), we don't raise a critical error
-            # for duplicate experiments - instead we just use the
-            # first one we find.
-            if folderModel.experimentTitleSetManually:
-                if userFolderName:
-                    message = "Found existing experiment with title '%s' " \
-                        "and user folder '%s'" % (experimentTitle,
-                                                  userFolderName)
-                    if groupFolderName:
-                        message += " and group folder '%s'." % groupFolderName
-                elif groupFolderName:
-                    message = "Found existing experiment with title '%s' " \
-                        "and user group folder '%s'" % (experimentTitle,
-                                                        groupFolderName)
-                else:
-                    message = "Found existing experiment with title '%s'." \
-                        % experimentTitle
-            else:
-                if userFolderName:
-                    message = "Found existing experiment for uploader '%s' " \
-                        "and user folder '%s'." % (uploaderName,
-                                                   userFolderName)
-                    if groupFolderName:
-                        message += " and group folder '%s'." % groupFolderName
-                elif groupFolderName:
-                    message = "Found existing experiment for uploader '%s' " \
-                        "and user group folder '%s'." % (uploaderName,
-                                                         groupFolderName)
-                else:
-                    message = "Found existing experiment for uploader '%s'." \
-                        % uploaderName
-
-            logger.debug(message)
+        elif numExperimentsFound >= 1:
+            ExperimentModel.LogExperimentFound(folderModel)
             return ExperimentModel(experimentsJson['objects'][0])
-        elif numExperimentsFound > 1:
-            message = "ERROR: Found multiple experiments matching " \
-                "Uploader UUID for user '%s'" % userFolderName
-            if groupFolderName:
-                message += " and group '%s'" % groupFolderName
-            logger.error(message)
-            for expJson in experimentsJson['objects']:
-                logger.error("\t%s" % expJson['title'])
-            groupFolderString = ""
-            if groupFolderName:
-                groupFolderString = ", and group folder \"%s\"" \
-                    % groupFolderName
-            message = "Multiple experiments were found matching " \
-                      "uploader \"%s\" and user folder \"%s\"%s " \
-                      "for folder \"%s\"." \
-                      % (uploaderName, userFolderName, groupFolderString,
-                         folderModel.folderName)
-            message += "\n\n"
-            message += "This shouldn't happen.  Please ask your " \
-                       "MyTardis administrator to investigate."
-            raise MultipleObjectsReturned(message)
 
         # Should never reach this, but it keeps Pylint happy:
         return None
 
     @staticmethod
     def CreateExperimentForFolder(folderModel):
-        # pylint: disable=too-many-branches
-        # pylint: disable=too-many-locals
-        # pylint: disable=too-many-statements
         """
         Create a MyTardis experiment to create this folder's dataset within
         """
         userFolderName = folderModel.userFolderName
-        hostname = SETTINGS.uploaderModel.hostname
-        location = folderModel.location
         groupFolderName = folderModel.groupFolderName
-        owner = folderModel.owner
-        ownerUsername = folderModel.owner.username
         try:
             ownerUserId = folderModel.owner.userId
         except:
             ownerUserId = None
 
-        uploaderName = SETTINGS.uploaderModel.name
-        uploaderUuid = SETTINGS.miscellaneous.uuid
+        instrumentName = SETTINGS.general.instrument.name
         experimentTitle = folderModel.experimentTitle
 
-        myTardisUrl = SETTINGS.general.myTardisUrl
-        myTardisDefaultUsername = SETTINGS.general.username
-
+        ExperimentModel.LogExperimentCreation(folderModel)
         if userFolderName:
-            message = "Creating experiment for uploader '%s', " \
-                "user folder '%s'." % (uploaderName, userFolderName)
-            if groupFolderName:
-                message += ", group folder : '%s'" % groupFolderName
-        elif groupFolderName:
-            message = "Creating experiment for uploader '%s', " \
-                "user group folder '%s'." % (uploaderName, groupFolderName)
-        else:
-            message = "Creating experiment for uploader '%s'" % uploaderName
-        logger.info(message)
-        if userFolderName:
-            description = ("Uploader: %s\n"
+            description = ("Instrument: %s\n"
                            "User folder name: %s\n"
                            "Uploaded from: %s:%s"
-                           % (uploaderName, userFolderName, hostname,
-                              location))
+                           % (instrumentName, userFolderName,
+                              SETTINGS.uploaderModel.hostname,
+                              folderModel.location))
             if groupFolderName:
                 description += "\nGroup folder name: %s" % groupFolderName
         else:
-            description = ("Uploader: %s\n"
+            description = ("Instrument: %s\n"
                            "Group folder name: %s\n"
                            "Uploaded from: %s:%s"
-                           % (uploaderName, groupFolderName, hostname,
-                              location))
+                           % (instrumentName, groupFolderName,
+                              SETTINGS.uploaderModel.hostname,
+                              folderModel.location))
 
         if FLAGS.testRunRunning:
             message = "CREATING NEW EXPERIMENT FOR FOLDER: %s\n" \
                 "    Title: %s\n" \
                 "    Description: \n" \
-                "        Uploader: %s\n" \
+                "        Instrument: %s\n" \
                 "        User folder name: %s\n" \
                 "    Owner: %s" \
                 % (folderModel.GetRelPath(),
-                   experimentTitle, uploaderName, userFolderName,
-                   ownerUsername)
+                   experimentTitle, instrumentName, userFolderName,
+                   folderModel.owner.username)
             logger.testrun(message)
             return None
 
@@ -249,13 +135,13 @@ class ExperimentModel(object):
                 "schema": "http://mytardis.org/schemas"
                           "/mydata/defaultexperiment",
                 "parameters": [{"name": "uploader",
-                                "value": uploaderUuid},
+                                "value": SETTINGS.miscellaneous.uuid},
                                {"name": "user_folder_name",
                                 "value": userFolderName}]}]}
         if groupFolderName:
             experimentJson["parameter_sets"][0]["parameters"].append(
                 {"name": "group_folder_name", "value": groupFolderName})
-        url = "%s/api/v1/mydata_experiment/" % myTardisUrl
+        url = "%s/api/v1/mydata_experiment/" % SETTINGS.general.myTardisUrl
         logger.debug(url)
         response = requests.post(headers=SETTINGS.defaultHeaders,
                                  url=url, data=json.dumps(experimentJson))
@@ -264,7 +150,7 @@ class ExperimentModel(object):
         createdExperiment = ExperimentModel(createdExperimentJson)
         message = "Succeeded in creating experiment '%s' for uploader " \
             "\"%s\" and user folder \"%s\"" \
-            % (experimentTitle, uploaderName, userFolderName)
+            % (experimentTitle, instrumentName, userFolderName)
         if groupFolderName:
             message += " and group folder \"%s\"" % groupFolderName
         logger.debug(message)
@@ -276,10 +162,10 @@ class ExperimentModel(object):
         # username matches the facility manager's username.
         # Don't attempt to create an ObjectACL record for an
         # invalid user (without a MyTardis user ID).
-        if myTardisDefaultUsername != ownerUsername and \
+        if SETTINGS.general.username != folderModel.owner.username and \
                 ownerUserId is not None:
             ObjectAclModel.ShareExperimentWithUser(createdExperiment,
-                                                   owner)
+                                                   folderModel.owner)
         if folderModel.group is not None and \
                 folderModel.group.groupId != \
                 facilityManagersGroup.groupId:
@@ -315,3 +201,71 @@ class ExperimentModel(object):
         Return the experiment's view URI
         """
         return "experiment/view/%d/" % self.experimentId
+
+    @staticmethod
+    def LogExperimentCreation(folderModel):
+        """
+        Log a message about the experiment's creation
+        """
+        instrumentName = SETTINGS.general.instrument.name
+
+        if folderModel.userFolderName:
+            message = "Creating experiment for instrument '%s', " \
+                "user folder '%s'." % (
+                    instrumentName, folderModel.userFolderName)
+            if folderModel.groupFolderName:
+                message += ", group folder : '%s'" \
+                    % folderModel.groupFolderName
+        elif folderModel.groupFolderName:
+            message = "Creating experiment for uploader '%s', " \
+                "user group folder '%s'." % (
+                    instrumentName, folderModel.groupFolderName)
+        else:
+            message = \
+                "Creating experiment for uploader '%s'" % instrumentName
+        logger.info(message)
+        return message
+
+    @staticmethod
+    def LogExperimentNotFound(folderModel):
+        """
+        Log a message about an experiment not being found.  This doesn't
+        deserve a warning-level log message, because it's quite normal for
+        MyData to find that it needs to create an experiment rather than
+        using an existing one.
+        """
+        if folderModel.userFolderName:
+            message = "Experiment not found for %s, '%s'" \
+                % (folderModel.userFolderName, folderModel.experimentTitle)
+            if folderModel.groupFolderName:
+                message += ", '%s'" % folderModel.groupFolderName
+        elif folderModel.groupFolderName:
+            message = "Experiment not found for %s, '%s'" \
+                % (folderModel.groupFolderName, folderModel.experimentTitle)
+        else:
+            message = \
+                "Experiment not found for '%s'" % folderModel.experimentTitle
+        logger.debug(message)
+        return message
+
+    @staticmethod
+    def LogExperimentFound(folderModel):
+        """
+        Log a message about an existing experiment being found
+        """
+        if folderModel.userFolderName:
+            message = "Found existing experiment with title '%s' " \
+                "and user folder '%s'" % (folderModel.experimentTitle,
+                                          folderModel.userFolderName)
+            if folderModel.groupFolderName:
+                message += " and group folder '%s'." \
+                    % folderModel.groupFolderName
+        elif folderModel.groupFolderName:
+            message = "Found existing experiment with title '%s' " \
+                "and user group folder '%s'" % (folderModel.experimentTitle,
+                                                folderModel.groupFolderName)
+        else:
+            message = "Found existing experiment with title '%s'." \
+                % folderModel.experimentTitle
+        logger.debug(message)
+        return message
