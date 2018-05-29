@@ -8,7 +8,6 @@ from ...logs import logger
 from ...MyData import MyData
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.settings import LastSettingsUpdateTrigger
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
@@ -27,7 +26,6 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         SETTINGS.schedule.scheduleType = "On Settings Saved"
-        SaveSettingsToDisk()
 
     def tearDown(self):
         super(OnSettingsSavedScheduleTester, self).tearDown()

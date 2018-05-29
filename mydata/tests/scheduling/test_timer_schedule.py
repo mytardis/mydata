@@ -7,7 +7,6 @@ from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
-from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
@@ -31,7 +30,6 @@ class TimerScheduleTester(MyDataSettingsTester):
             datetime.time(datetime.strptime("12:00 AM", "%I:%M %p"))
         SETTINGS.schedule.timerToTime = \
             datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
-        SaveSettingsToDisk()
 
     def test_timer_schedule(self):
         """

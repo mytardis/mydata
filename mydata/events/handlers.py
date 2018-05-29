@@ -14,7 +14,7 @@ from ..models.instrument import InstrumentModel
 from ..models.uploader import UploaderModel
 from ..utils.connectivity import CONNECTIVITY
 from ..utils.exceptions import DuplicateKey
-from ..utils.exceptions import UserAbortedSettingsValidation
+from ..utils.exceptions import UserAborted
 from ..utils.exceptions import InvalidSettings
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
@@ -264,7 +264,7 @@ def SettingsDialogValidation(event):
                 PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
                     settingsDialog=settingsDialog,
                     datasetCount=datasetCount))
-            except UserAbortedSettingsValidation:
+            except UserAborted:
                 SETTINGS.RollBack()
                 return
             except InvalidSettings as invalidSettings:

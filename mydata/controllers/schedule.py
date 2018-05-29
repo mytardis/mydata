@@ -18,6 +18,9 @@ from ..models.task import TaskModel
 from ..models.settings import LastSettingsUpdateTrigger
 from ..logs import logger
 
+# Default description for jobs created here:
+JOB_DESC = "Scan folders and upload datafiles"
+
 
 def ScanAndUploadTask(event, needToValidateSettings, jobId):
     """
@@ -86,13 +89,33 @@ class ScheduleController(object):
         logger.debug("Finished processing schedule type.")
 
     @staticmethod
+    def CreateTask(event, needToValidateSettings, startTime, scheduleType, msg,
+                   intervalMinutes=None, days=None):
+        """
+        Collecting the common functionality for creating tasks for different
+        schedule types
+        """
+        if wx.PyApp.IsMainLoopRunning():
+            wx.GetApp().frame.SetStatusMessage(msg)
+        else:
+            sys.stderr.write("%s\n" % msg)
+        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
+        jobArgs = [event, needToValidateSettings, taskDataViewId]
+        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, JOB_DESC,
+                         startTime, scheduleType, intervalMinutes, days)
+        try:
+            DATAVIEW_MODELS['tasks'].AddRow(task)
+        except ValueError as err:
+            HandleValueError(err)
+
+    @staticmethod
     def CreateOnStartupTask(event, needToValidateSettings):
         """
-        Create a task to be run automatically when MyData is launched.
+        Called when MyData is launched with the "On Startup" schedule type
+        in its MyData.cfg, so the task needs to run immediately
         """
         scheduleType = "On Startup"
         logger.debug("Schedule type is %s." % scheduleType)
-        jobDesc = "Scan folders and upload datafiles"
         # Wait a few seconds to give the user a chance to
         # read the initial MyData notification before
         # starting the task.
@@ -101,19 +124,9 @@ class ScheduleController(object):
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
-               "to run at %s on %s" % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               "to run at %s on %s" % (JOB_DESC, timeString, dateString))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg)
 
     @staticmethod
     def CreateOnSettingsSavedTask(event):
@@ -123,26 +136,15 @@ class ScheduleController(object):
         """
         scheduleType = "On Settings Saved"
         logger.debug("Schedule type is %s." % scheduleType)
-        jobDesc = "Scan folders and upload datafiles"
         startTime = datetime.now() + timedelta(seconds=1)
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
-               "to run at %s on %s" % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
+               "to run at %s on %s" % (JOB_DESC, timeString, dateString))
         needToValidateSettings = False
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg)
 
     @staticmethod
     def CreateManualTask(event, needToValidateSettings=True):
@@ -153,25 +155,14 @@ class ScheduleController(object):
         "Sync Now" menu item.
         """
         scheduleType = "Manual"
-        jobDesc = "Scan folders and upload datafiles"
         startTime = datetime.now() + timedelta(seconds=1)
         timeString = startTime.strftime("%I:%M %p")
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
-               "to run at %s on %s" % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               "to run at %s on %s" % (JOB_DESC, timeString, dateString))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg)
 
     @staticmethod
     def CreateOnceTask(event, needToValidateSettings):
@@ -181,7 +172,6 @@ class ScheduleController(object):
         """
         scheduleType = "Once"
         logger.debug("Schedule type is Once.")
-        jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(SETTINGS.schedule.scheduledDate,
                              SETTINGS.schedule.scheduledTime)
@@ -201,19 +191,9 @@ class ScheduleController(object):
         dateString = \
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
-               "to run at %s on %s" % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               "to run at %s on %s" % (JOB_DESC, timeString, dateString))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg)
 
     @staticmethod
     def CreateDailyTask(event, needToValidateSettings):
@@ -223,7 +203,6 @@ class ScheduleController(object):
         """
         scheduleType = "Daily"
         logger.debug("Schedule type is Daily.")
-        jobDesc = "Scan folders and upload datafiles"
         startTime = \
             datetime.combine(datetime.date(datetime.now()),
                              SETTINGS.schedule.scheduledTime)
@@ -234,19 +213,9 @@ class ScheduleController(object):
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s (recurring daily)"
-               % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               % (JOB_DESC, timeString, dateString))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg)
 
     @staticmethod
     def CreateWeeklyTask(event, needToValidateSettings):
@@ -256,7 +225,6 @@ class ScheduleController(object):
         """
         scheduleType = "Weekly"
         logger.debug("Schedule type is Weekly.")
-        jobDesc = "Scan folders and upload datafiles"
         days = [SETTINGS.schedule.mondayChecked,
                 SETTINGS.schedule.tuesdayChecked,
                 SETTINGS.schedule.wednesdayChecked,
@@ -277,20 +245,10 @@ class ScheduleController(object):
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s (recurring on specified days)"
-               % (jobDesc, timeString, dateString))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType,
-                         days=days)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               % (JOB_DESC, timeString, dateString))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg,
+            days=days)
 
     @staticmethod
     def CreateTimerTask(event, needToValidateSettings):
@@ -300,7 +258,6 @@ class ScheduleController(object):
         """
         scheduleType = "Timer"
         logger.debug("Schedule type is Timer.")
-        jobDesc = "Scan folders and upload datafiles"
         intervalMinutes = SETTINGS.schedule.timerMinutes
         if SETTINGS.lastSettingsUpdateTrigger == \
                 LastSettingsUpdateTrigger.READ_FROM_DISK:
@@ -313,17 +270,7 @@ class ScheduleController(object):
             "{d:%A} {d.day}/{d.month}/{d.year}".format(d=startTime)
         msg = ("The \"%s\" task is scheduled "
                "to run at %s on %s (recurring every %d minutes)" %
-               (jobDesc, timeString, dateString, intervalMinutes))
-        if wx.PyApp.IsMainLoopRunning():
-            wx.GetApp().frame.SetStatusMessage(msg)
-        else:
-            sys.stderr.write("%s\n" % msg)
-        taskDataViewId = DATAVIEW_MODELS['tasks'].GetMaxDataViewId() + 1
-        jobArgs = [event, needToValidateSettings, taskDataViewId]
-        task = TaskModel(taskDataViewId, ScanAndUploadTask, jobArgs, jobDesc,
-                         startTime, scheduleType=scheduleType,
-                         intervalMinutes=intervalMinutes)
-        try:
-            DATAVIEW_MODELS['tasks'].AddRow(task)
-        except ValueError as err:
-            HandleValueError(err)
+               (JOB_DESC, timeString, dateString, intervalMinutes))
+        ScheduleController.CreateTask(
+            event, needToValidateSettings, startTime, scheduleType, msg,
+            intervalMinutes=intervalMinutes)

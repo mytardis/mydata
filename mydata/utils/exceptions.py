@@ -107,16 +107,11 @@ class StorageBoxOptionNotFound(Exception):
         super(StorageBoxOptionNotFound, self).__init__(message)
 
 
-class UserAbortedSettingsValidation(Exception):
+class UserAborted(Exception):
     """
-    User aborted settings validation by pressing the Stop button
+    User aborted by pressing the Stop button
     on the main window's toolbar.
     """
-    def __init__(self, setStatusMessage):
-        message = "Settings validation aborted."
-        if setStatusMessage:
-            setStatusMessage(message)
-        super(UserAbortedSettingsValidation, self).__init__(message)
 
 
 class InvalidSettings(Exception):

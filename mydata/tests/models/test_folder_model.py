@@ -80,7 +80,7 @@ class FolderModelTester(MyDataTester):
         SETTINGS.filters.useExcludesFile = False
         folderModel = FolderModel(dataViewId, folder, location, userFolderName,
                                   groupFolderName, testuser1)
-        self.assertEqual(folderModel.GetNumFiles(), 8)
+        self.assertEqual(folderModel.numFiles, 8)
 
         SETTINGS.filters.useIncludesFile = True
         SETTINGS.filters.useExcludesFile = True
@@ -94,7 +94,8 @@ class FolderModelTester(MyDataTester):
         folderModel = FolderModel(dataViewId, folder, location, userFolderName,
                                   groupFolderName, testuser1)
         self.assertEqual(
-            sorted([os.path.basename(f) for f in folderModel.dataFilePaths]),
+            sorted([os.path.basename(f) for f in
+                    folderModel.dataFilePaths['files']]),
             expectedFiles)
 
         SETTINGS.filters.useIncludesFile = True
@@ -102,7 +103,8 @@ class FolderModelTester(MyDataTester):
         folderModel = FolderModel(dataViewId, folder, location, userFolderName,
                                   groupFolderName, testuser1)
         self.assertEqual(
-            sorted([os.path.basename(f) for f in folderModel.dataFilePaths]),
+            sorted([os.path.basename(f) for f in
+                    folderModel.dataFilePaths['files']]),
             expectedFiles)
 
         SETTINGS.filters.useIncludesFile = False
@@ -118,7 +120,8 @@ class FolderModelTester(MyDataTester):
         folderModel = FolderModel(dataViewId, folder, location, userFolderName,
                                   groupFolderName, testuser1)
         self.assertEqual(
-            sorted([os.path.basename(f) for f in folderModel.dataFilePaths]),
+            sorted([os.path.basename(f) for f in
+                    folderModel.dataFilePaths['files']]),
             expectedFiles)
 
     def tearDown(self):

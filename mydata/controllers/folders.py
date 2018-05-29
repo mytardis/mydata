@@ -461,7 +461,7 @@ class FoldersController(object):
             if self.IsShuttingDown() or CheckIfShouldAbort():
                 return
             with LOCKS.numVerificationsToBePerformed:
-                self.numVerificationsToBePerformed += folderModel.GetNumFiles()
+                self.numVerificationsToBePerformed += folderModel.numFiles
             logger.debug(
                 "StartUploadsForFolder: Starting verifications "
                 "and uploads for folder: " + folderModel.folderName)
