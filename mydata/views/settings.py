@@ -682,6 +682,7 @@ class SettingsDialog(wx.Dialog):
             'Email / Experiment / Dataset',
             'Username / "MyTardis" / Experiment / Dataset',
             'User Group / Instrument / Full Name / Dataset',
+            'User Group / Dataset',
             'User Group / Experiment / Dataset',
             'Experiment / Dataset',
             'Dataset']
@@ -1617,6 +1618,14 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(True)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(True)
+        elif folderStructure == \
+                'User Group / Dataset':
+            self.datasetGroupingField.SetValue("User Group")
+            self.groupPrefixLabel.Show(True)
+            self.groupPrefixField.Show(True)
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
 
         if "User" in folderStructure or \
                 "Email" in folderStructure:
@@ -1672,8 +1681,7 @@ class SettingsDialog(wx.Dialog):
         self.UpdateDialogFieldsFromSettings()
 
         folderStructure = self.folderStructureComboBox.GetValue()
-        if folderStructure == \
-                'User Group / Instrument / Full Name / Dataset':
+        if "User Group" in folderStructure:
             self.groupPrefixLabel.Show(True)
             self.groupPrefixField.Show(True)
         else:
@@ -1688,8 +1696,12 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
 
-        if "User" in folderStructure or \
+        if "Username" in folderStructure or \
+                "User Group" in folderStructure or \
                 "Email" in folderStructure:
+            # The same field is used for either
+            # Username or User Group filtering,
+            # depending on the folder structure:
             self.userFolderFilterLabel.Show(True)
             self.userFolderFilterField.SetValue("")
             self.userFolderFilterField.Show(True)

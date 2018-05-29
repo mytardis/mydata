@@ -269,6 +269,14 @@ Advanced
     software making it difficult to structure folders according to who should
     have access to them.
 
+**Folder Structure - User Group / Dataset**
+    Folders immediately inside the main data directory
+    (e.g. "D:\\Data\\SmithLab") are assumed to be MyTardis user groups.
+    Folders inside each user group folder (e.g. "D:\\Data\\SmithLab\\Dataset1"
+    will be mapped to MyTardis datasets.
+    Datasets will be automatically grouped into a MyTardis experiment whose
+    title is the name of the User Group.
+
 **Folder Structure - User Group / Experiment / Dataset**
     Folders immediately inside the main data directory
     (e.g. "D:\\Data\\SmithLab") are assumed to be MyTardis user groups.
