@@ -328,6 +328,11 @@ class FoldersModel(MyDataDataViewModel):
                                               owner=defaultOwner,
                                               groupRecord=groupRecord,
                                               groupFolderName=groupFolderName)
+            elif folderStructure == 'User Group / Dataset':
+                self.ScanForDatasetFolders(groupFolderPath,
+                                           owner=defaultOwner,
+                                           groupRecord=groupRecord,
+                                           groupFolderName=groupFolderName)
             else:
                 raise InvalidFolderStructure("Unknown folder structure.")
             RaiseExceptionIfUserAborted()
@@ -415,7 +420,7 @@ class FoldersModel(MyDataDataViewModel):
                         folderStructure.startswith("Email") or \
                         folderStructure.startswith("Experiment"):
                     folderModel.experimentTitle = expFolderName
-                elif folderStructure.startswith("User Group"):
+                elif folderStructure.startswith("User Group / Experiment"):
                     if groupRecord:
                         groupName = groupRecord.shortName
                     else:
@@ -646,9 +651,11 @@ def SetExperimentTitle(folderModel, owner, groupFolderName):
     the user hasn't explicitly specified it in a folder name
     """
     folderStructure = SETTINGS.advanced.folderStructure
-    if folderStructure.startswith("User Group"):
+    if folderStructure.startswith("User Group / Experiment"):
         experimentTitle = "%s - %s" \
             % (SETTINGS.general.instrumentName, groupFolderName)
+    elif folderStructure.startswith("User Group / Dataset"):
+        experimentTitle = groupFolderName
     elif not owner.userNotFoundInMyTardis:
         if owner.fullName.strip() != "":
             experimentTitle = "%s - %s" \
