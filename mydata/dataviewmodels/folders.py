@@ -576,8 +576,8 @@ def DatasetIsTooOld(pathToScan, datasetFolderName):
         message = "Ignoring \"%s\", because it is " \
             "older than %d %s" \
             % (datasetFolderPath,
-               SETTINGS.filters.ignoreIntervalNumber,
-               SETTINGS.filters.ignoreIntervalUnit)
+               SETTINGS.filters.ignoreOldDatasetIntervalNumber,
+               SETTINGS.filters.ignoreOldDatasetIntervalUnit)
         logger.warning(message)
         return True
     return False
