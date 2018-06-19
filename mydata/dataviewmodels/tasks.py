@@ -189,6 +189,7 @@ class TasksModel(MyDataDataViewModel):
                 taskModel.startTime = datetime.now() + timedelta(seconds=5)
                 logger.warning(
                     "Rescheduled task to start at %s" % taskModel.startTime)
+                millis = 5000
         args = [taskModel, row, col]
 
         def ScheduleTask():
