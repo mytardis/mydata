@@ -9,7 +9,7 @@ python:
 before_install:
  - sudo apt-add-repository -y ppa:fixnix/indicator-systemtray-unity
  - sudo apt-get update
- - sudo apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" indicator-systemtray-unity
+ - sudo apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" indicator-systemtray-unity
  - pip install -f https://extras.wxpython.org/wxPython4/extras/linux/gtk2/ubuntu-14.04/ --only-binary wxPython wxPython 
 
 # Commands to install dependencies:
