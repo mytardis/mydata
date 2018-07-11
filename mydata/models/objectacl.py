@@ -61,7 +61,7 @@ class ObjectAclModel(object):
             "content_type": "experiment",
             "object_id": experiment.experimentId,
             "aclOwnershipType": 1,
-            "isOwner": True,
+            "isOwner": False,
             "canRead": True,
             "canWrite": True,
             "canDelete": False,
