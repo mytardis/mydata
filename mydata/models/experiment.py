@@ -156,8 +156,8 @@ class ExperimentModel(object):
         logger.debug(message)
 
         facilityManagersGroup = SETTINGS.general.facility.managerGroup
-        ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
-                                                facilityManagersGroup)
+        ObjectAclModel.ShareExperimentWithGroup(
+            createdExperiment, facilityManagersGroup, isOwner=False)
         # Avoid creating a duplicate ObjectACL if the user folder's
         # username matches the facility manager's username.
         # Don't attempt to create an ObjectACL record for an
@@ -169,8 +169,8 @@ class ExperimentModel(object):
         if folderModel.group is not None and \
                 folderModel.group.groupId != \
                 facilityManagersGroup.groupId:
-            ObjectAclModel.ShareExperimentWithGroup(createdExperiment,
-                                                    folderModel.group)
+            ObjectAclModel.ShareExperimentWithGroup(
+                createdExperiment, folderModel.group, isOwner=True)
         return createdExperiment
 
     @property
