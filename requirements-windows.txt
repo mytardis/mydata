@@ -7,7 +7,7 @@
 # On Windows, I tend to use a 32-bit Python and wxPython, but there's no reason
 # why MyData can't be built with 64-bit Python and wxPython.
 
-https://www.python.org/ftp/python/2.7.9/python-2.7.9.msi
+https://www.python.org/ftp/python/2.7.15/python-2.7.15.msi
 
 # Either wxPython 2.9 or 3.0 should work with MyData.  I currently use 3.0:
 
