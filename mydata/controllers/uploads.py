@@ -356,6 +356,14 @@ class UploadDatafileRunnable(object):
             return
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
+            if not uri:
+                logger.error(
+                    "URI is None in DataFileObject ID %s"
+                    % self.existingUnverifiedDatafile.replicas[0].replicaId)
+                self.FinalizeUpload(
+                    uploadSuccess=False,
+                    message="Couldn't determine path to upload to.")
+                return
             remoteFilePath = "%s/%s" % (location.rstrip('/'), uri)
         else:
             # DataFile creation via the MyTardis API doesn't
@@ -480,6 +488,14 @@ class UploadDatafileRunnable(object):
             return
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
+            if not uri:
+                logger.error(
+                    "URI is None in DataFileObject ID %s"
+                    % self.existingUnverifiedDatafile.replicas[0].replicaId)
+                self.FinalizeUpload(
+                    uploadSuccess=False,
+                    message="Couldn't determine path to upload to.")
+                return
             targetFilePath = "%s/%s" % (location.rstrip('/'), uri)
         else:
             # DataFile creation via the MyTardis API doesn't
