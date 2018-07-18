@@ -81,9 +81,9 @@ test_script:
 
 after_test:
   # If tests are successful, upload coverage data:
-  - "codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION%"
+  - "codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION% & exit 0"
   - "coverage xml"
-  - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml"
+  - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml & exit 0"
 
   # If tests are successful, create binary packages for the project.
   # - "python setup.py bdist"
