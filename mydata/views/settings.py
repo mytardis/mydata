@@ -31,10 +31,14 @@ if 'phoenix' in wx.PlatformInfo:
     import wx.lib.masked
     from wx.lib.agw.aui import AuiNotebook
     from wx.lib.agw.aui import AUI_NB_TOP
+    from wx import FD_SAVE
+    from wx import FD_OVERWRITE_PROMPT
 else:
     import wx.lib.masked
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
+    from wx import SAVE as FD_SAVE
+    from wx import OVERWRITE_PROMPT as FD_OVERWRITE_PROMPT
 
 
 class SettingsDropTarget(wx.FileDropTarget):
@@ -1478,7 +1482,7 @@ class SettingsDialog(wx.Dialog):
         dlg = wx.FileDialog(wx.GetApp().frame,
                             "Save MyData configuration as...", "",
                             "%s.cfg" % self.GetInstrumentName(), "*.cfg",
-                            wx.SAVE | wx.OVERWRITE_PROMPT)
+                            FD_SAVE | FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             configPath = dlg.GetPath()
             SaveFieldsFromDialog(self, configPath=configPath)

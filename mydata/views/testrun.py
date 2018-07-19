@@ -8,6 +8,13 @@ from ..events.stop import OnStop
 from ..logs import logger
 from ..threads.flags import FLAGS
 
+if 'phoenix' in wx.PlatformInfo:
+    from wx import FD_SAVE
+    from wx import FD_OVERWRITE_PROMPT
+else:
+    from wx import SAVE as FD_SAVE
+    from wx import OVERWRITE_PROMPT as FD_OVERWRITE_PROMPT
+
 
 class TestRunFrame(wx.Frame):
     """
@@ -68,7 +75,7 @@ class TestRunFrame(wx.Frame):
         dlg = wx.FileDialog(self,
                             "Save MyData test run summary as...", "",
                             "%s.txt" % self.GetTitle(), "*.txt",
-                            wx.SAVE | wx.OVERWRITE_PROMPT)
+                            FD_SAVE | FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             with open(dlg.GetPath(), 'w') as saveFile:
                 for line in range(self.textCtrl.GetNumberOfLines()):

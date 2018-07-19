@@ -4,8 +4,7 @@ poster==0.8.1 # TO DO: Use requests-toolbelt instead for POST uploads with progr
 psutil==5.4.6
 requests==2.13.0
 validate_email==1.3
-# wxPython>=2.9.5.0
-# wxPython-common>=2.9.5.0
+wxPython==4.0.3
 nose==1.3.7
 coverage==4.5.1
 paramiko==2.4.1
