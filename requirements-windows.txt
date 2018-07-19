@@ -4,13 +4,13 @@
 # packages from source which can be more easily installed using binary
 # setup wizards on Windows.
 
-# On Windows, I tend to use a 32-bit Python and wxPython, but there's no reason
-# why MyData can't be built with 64-bit Python and wxPython.
+# Until mid-2018, MyData was developed with wxPython 3.0 (classic).
+# New development is now being done with wxPython 4.0 (Phoenix).
 
-https://www.python.org/ftp/python/2.7.15/python-2.7.15.msi
+# wxPython 4.0 (Phoenix):
+https://pypi.org/project/wxPython/
 
-# Either wxPython 2.9 or 3.0 should work with MyData.  I currently use 3.0:
-
+# wxPython 3.0 (classic):
 http://downloads.sourceforge.net/wxpython/wxPython3.0-win32-3.0.2.0-py27.exe
 
 # For Python package dependencies I use a combination of
