@@ -51,6 +51,37 @@ class NotebookTabs(object):
     UPLOADS = 4
     LOG = 5
 
+class MyFileDropTarget(wx.FileDropTarget):
+    # Based on a tutorial from http://zetcode.com/wxpython/draganddrop/
+    def __init__(self, window):
+        wx.FileDropTarget.__init__(self)
+        self.window = window
+
+    def OnDropFiles(self, x, y, filenames):
+
+        for name in filenames:
+            try:
+                file = open(name, 'r')
+                #text = file.read()
+
+                msg = "Drag n drop coming shortly! :) \n"
+                dlg = wx.MessageDialog(None, msg)
+                dlg.ShowModal()
+
+            except IOError as error:
+
+                msg = "Error opening file\n {}".format(str(error))
+                dlg = wx.MessageDialog(None, msg)
+                dlg.ShowModal()
+
+                return False
+
+            finally:
+
+                file.close()
+
+        return True
+
 
 class MyDataFrame(wx.Frame):
     """
@@ -121,6 +152,11 @@ class MyDataFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_ICONIZE, self.OnMinimize)
+
+        # Let's make this a drag n drop panel
+        dt = MyFileDropTarget(self.panel)
+        self.panel.SetDropTarget(dt)
+
 
     def AddDataViews(self):
         """
