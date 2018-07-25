@@ -52,18 +52,23 @@ class NotebookTabs(object):
     LOG = 5
 
 class MyFileDropTarget(wx.FileDropTarget):
+    """
+    Drag n drop functionality
+    """
     # Based on a tutorial from http://zetcode.com/wxpython/draganddrop/
     def __init__(self, window):
         wx.FileDropTarget.__init__(self)
         self.window = window
 
-    def OnDropFiles(self, x, y, filenames):
-
+    def OnDropFiles(self, mouseX, mouseY, filenames):
+        """
+        Overridding a wxPython method that provides drag n drop functionality.
+        This is meant to be used this way.
+        """
         for name in filenames:
             try:
-                file = open(name, 'r')
+                fileToOpen = open(name, 'r')
                 #text = file.read()
-
                 msg = "Drag n drop coming shortly! :) \n"
                 dlg = wx.MessageDialog(None, msg)
                 dlg.ShowModal()
@@ -154,8 +159,8 @@ class MyDataFrame(wx.Frame):
         self.Bind(wx.EVT_ICONIZE, self.OnMinimize)
 
         # Let's make this a drag n drop panel
-        dt = MyFileDropTarget(self.panel)
-        self.panel.SetDropTarget(dt)
+        dropTarget = MyFileDropTarget(self.panel)
+        self.panel.SetDropTarget(dropTarget)
 
 
     def AddDataViews(self):
