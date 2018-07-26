@@ -353,6 +353,29 @@ class FoldersModel(MyDataDataViewModel):
         except:
             logger.error(traceback.format_exc())
 
+    def UploadDraggedFolder(self, draggedFolderPath, owner=SETTINGS.general.defaultOwner,
+                            userFolderName=None, groupRecord=None, groupFolderName=None):
+        """
+        Upload folder that has been dragged and dropped..
+        """
+        try:
+            logger.debug("Queuing dragged folder" + draggedFolderPath)
+            dataViewId = self.GetMaxDataViewId() + 1
+            folderModel = \
+                FolderModel(dataViewId=dataViewId,
+                            folderName=draggedFolderPath,
+                            location=draggedFolderPath,
+                            userFolderName=userFolderName,
+                            groupFolderName=groupFolderName,
+                            owner=owner,
+                            group=groupRecord)
+            RaiseExceptionIfUserAborted()
+            folderModel.SetCreatedDate()
+            SetExperimentTitle(folderModel, owner, groupFolderName)
+            self.AddRow(folderModel)
+        except:
+            logger.error(traceback.format_exc())
+
     def ScanForExperimentFolders(self, pathToScan, owner, userFolderName=None,
                                  groupRecord=None, groupFolderName=None):
         """

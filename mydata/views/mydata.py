@@ -68,11 +68,13 @@ class MyFileDropTarget(wx.FileDropTarget):
         # This method is a wx method. Tell pylint to disable inherent syntax complaints.
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument
-        #self.window.notify(filenames)
 
         try:
             assert len(folderName) == 1
             assert os.path.isdir(folderName[0])
+            dirAbsPath = str(os.path.abspath(folderName[0]))
+            print dirAbsPath
+            DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(dirAbsPath))
         except AssertionError:
             msg = "Drag n Drop accepts a single [folder].\n"
             dlg = wx.MessageDialog(None, msg)
