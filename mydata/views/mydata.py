@@ -63,7 +63,6 @@ class MyFileDropTarget(wx.FileDropTarget):
     def OnDropFiles(self, mouseX, mouseY, filenames):
         """
         Overridding a wxPython method that provides drag n drop functionality.
-        This is meant to be used this way.
         """
         for name in filenames:
             try:
