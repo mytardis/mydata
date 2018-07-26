@@ -3,6 +3,7 @@ mydata/views/mydata.py
 
 Main window for MyData.
 """
+import os
 import sys
 import threading
 import traceback
@@ -60,36 +61,24 @@ class MyFileDropTarget(wx.FileDropTarget):
         wx.FileDropTarget.__init__(self)
         self.window = window
 
-    def OnDropFiles(self, mouseX, mouseY, filenames):
+    def OnDropFiles(self, mouseX, mouseY, folderName):
         """
         Overridding a wxPython method that provides drag n drop functionality.
         """
         # This method is a wx method. Tell pylint to disable inherent syntax complaints.
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument
-        for name in filenames:
-            try:
-                fileToOpen = open(name, 'r')
-                assert fileToOpen
-                #text = file.read()
-                msg = "Drag n drop coming shortly! :) \n"
-                dlg = wx.MessageDialog(None, msg)
-                dlg.ShowModal()
+        #self.window.notify(filenames)
 
-            except IOError as error:
-
-                msg = "Error opening file\n {}".format(str(error))
-                dlg = wx.MessageDialog(None, msg)
-                dlg.ShowModal()
-
-                return False
-
-            finally:
-
-                file.close()
+        try:
+            assert len(folderName) == 1
+            assert os.path.isdir(folderName[0])
+        except AssertionError:
+            msg = "Drag n Drop accepts a single [folder].\n"
+            dlg = wx.MessageDialog(None, msg)
+            dlg.ShowModal()
 
         return True
-
 
 class MyDataFrame(wx.Frame):
     """
