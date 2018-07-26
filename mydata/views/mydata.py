@@ -64,9 +64,13 @@ class MyFileDropTarget(wx.FileDropTarget):
         """
         Overridding a wxPython method that provides drag n drop functionality.
         """
+        # This method is a wx method. Tell pylint to disable inherent syntax complaints.
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
         for name in filenames:
             try:
                 fileToOpen = open(name, 'r')
+                assert fileToOpen
                 #text = file.read()
                 msg = "Drag n drop coming shortly! :) \n"
                 dlg = wx.MessageDialog(None, msg)
