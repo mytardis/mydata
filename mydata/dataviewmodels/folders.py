@@ -353,11 +353,14 @@ class FoldersModel(MyDataDataViewModel):
         except:
             logger.error(traceback.format_exc())
 
-    def UploadDraggedFolder(self, draggedFolderPath, owner=SETTINGS.general.defaultOwner,
+    def UploadDraggedFolder(self, draggedFolderPath, owner=None,
                             userFolderName=None, groupRecord=None, groupFolderName=None):
         """
         Upload folder that has been dragged and dropped..
         """
+        if owner==None:
+            owner=SETTINGS.general.defaultOwner # A simple workaround: unit tests may be failing because giving owner a default value...
+            # ...might be causing settings to be pulled before the settings config is available under test conditions 
         try:
             logger.debug("Queuing dragged folder" + draggedFolderPath)
             dataViewId = self.GetMaxDataViewId() + 1
