@@ -366,8 +366,8 @@ class FoldersModel(MyDataDataViewModel):
             dataViewId = self.GetMaxDataViewId() + 1
             folderModel = \
                 FolderModel(dataViewId=dataViewId,
-                            folderName=draggedFolderPath,
-                            location=draggedFolderPath,
+                            folderName=os.path.basename(draggedFolderPath),
+                            location=os.path.dirname(draggedFolderPath),
                             userFolderName=userFolderName,
                             groupFolderName=groupFolderName,
                             owner=owner,
