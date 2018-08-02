@@ -20,6 +20,7 @@ from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..threads.flags import FLAGS
 from ..logs import logger
+from ..utils.enums import FolderUploadUIType
 
 
 def ShutdownForRefresh(event):
@@ -476,8 +477,9 @@ def StartDataUploadsForFolder(event):
     Start the data uploads.
     """
     from . import MYDATA_THREADS
-    if FLAGS.shouldAbort or not FLAGS.scanningFolders:
-        return
+    if not event.folderAddMethod == FolderUploadUIType.DRAG_N_DROP:
+        if FLAGS.shouldAbort or not FLAGS.scanningFolders:
+            return
 
     def StartDataUploadsForFolderWorker(folderModel):
         """

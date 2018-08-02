@@ -26,7 +26,7 @@ from ..events.stop import RaiseExceptionIfUserAborted
 from ..threads.locks import LOCKS
 from .dataview import MyDataDataViewModel
 from .dataview import DATAVIEW_MODELS
-
+from ..utils.enums import FolderUploadUIType
 
 class FoldersModel(MyDataDataViewModel):
     """
@@ -133,7 +133,7 @@ class FoldersModel(MyDataDataViewModel):
             obj2 = folderRecord2.GetValueForKey(self.columnKeys[col])
         return Compare(obj1, obj2)
 
-    def AddRow(self, folderModel):
+    def AddRow(self, folderModel, folderAddMethod=FolderUploadUIType.FILE_BROWSER):
         """
         Add folder model to folders model and notify view.
         """
@@ -142,7 +142,10 @@ class FoldersModel(MyDataDataViewModel):
 
         startDataUploadsForFolderEvent = \
             MYDATA_EVENTS.StartUploadsForFolderEvent(
-                folderModel=folderModel)
+                folderModel=folderModel,
+                folderAddMethod=folderAddMethod
+                )
+
         PostEvent(startDataUploadsForFolderEvent)
 
     def FolderStatusUpdated(self, folderModel, delay=False):
@@ -358,9 +361,12 @@ class FoldersModel(MyDataDataViewModel):
         """
         Upload folder that has been dragged and dropped..
         """
-        if owner==None:
-            owner=SETTINGS.general.defaultOwner # A simple workaround: unit tests may be failing because giving owner a default value...
-            # ...might be causing settings to be pulled before the settings config is available under test conditions 
+        if owner is None:
+            owner = SETTINGS.general.defaultOwner
+            # A simple workaround: unit tests may be failing
+            # because giving owner a default value...
+            # ...might be causing settings to be pulled before the
+            # settings config is available under test conditions
         try:
             logger.debug("Queuing dragged folder" + draggedFolderPath)
             dataViewId = self.GetMaxDataViewId() + 1
@@ -375,7 +381,7 @@ class FoldersModel(MyDataDataViewModel):
             RaiseExceptionIfUserAborted()
             folderModel.SetCreatedDate()
             SetExperimentTitle(folderModel, owner, groupFolderName)
-            self.AddRow(folderModel)
+            self.AddRow(folderModel, FolderUploadUIType.DRAG_N_DROP)
         except:
             logger.error(traceback.format_exc())
 

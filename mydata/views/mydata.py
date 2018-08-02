@@ -73,7 +73,7 @@ class MyFileDropTarget(wx.FileDropTarget):
             assert len(folderName) == 1
             assert os.path.isdir(folderName[0])
             dirAbsPath = str(os.path.abspath(folderName[0]))
-            print dirAbsPath
+            # print dirAbsPath
             DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(dirAbsPath))
         except AssertionError:
             msg = "Drag n Drop accepts a single [folder].\n"
