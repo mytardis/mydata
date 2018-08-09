@@ -2,15 +2,13 @@
 The main controller class for managing datafile uploads.
 """
 import os
-# urllib2 is not available in Python 3, but it is only used
-# for poster which can be replaced by requests-toolbelt:
-import urllib2
 import json
 import traceback
 import mimetypes
 import threading
 from datetime import datetime
 
+import requests
 import wx
 
 from ..utils.localcopy import CopyFile
@@ -289,24 +287,25 @@ class UploadDatafileRunnable(object):
         """
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
 
-        def PosterCallback(param, current, total):
+        def ProgressCallback(monitor):
             """
             Callback for progress updates from POST uploads
             """
-            # pylint: disable=unused-argument
+            current = monitor.bytes_read
+            total = monitor.len
             self.ProgressCallback(current, total)
 
         try:
             _ = DataFileModel.UploadDataFileWithPost(
                 dataFilePath, dataFileDict,
-                self.uploadModel, PosterCallback)
+                self.uploadModel, ProgressCallback)
             self.FinalizeUpload(uploadSuccess=True)
             return
-        except ValueError as err:
-            self.uploadModel.traceback = traceback.format_exc()
+        except TypeError as err:
             errString = SafeStr(err)
-            if errString == "read of closed file" or \
-                    errString == "seek of closed file":
+            if "unsupported operand type(s)" in errString:
+                # This is how requests-toolbelt reacts if we close
+                # the file it's trying to upload in order to cancel it.
                 logger.debug("Aborting upload for \"%s\" because "
                              "file handle was closed." %
                              self.uploadModel.GetRelativePathToUpload())
@@ -314,10 +313,10 @@ class UploadDatafileRunnable(object):
                 logger.error(traceback.format_exc())
                 StopUploadsAsFailed(SafeStr(err), showError=True)
             return
-        except urllib2.HTTPError as err:
+        except requests.exceptions.RequestException as err:
             self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())
-            errorResponse = err.read()
+            errorResponse = SafeStr(err)
             logger.error(errorResponse)
             PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
             message = "An error occured while trying to POST data to " \
@@ -329,7 +328,7 @@ class UploadDatafileRunnable(object):
                     % json.loads(errorResponse)['error_message']
             except:
                 message += SafeStr(err)
-            if err.code == 409:
+            if err.response and err.response.status_code == 409:
                 message += \
                     "\n\nA Duplicate Key error occurred, suggesting that " \
                     "multiple MyData instances could be trying to create " \
@@ -371,14 +370,6 @@ class UploadDatafileRunnable(object):
             return
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
-            if not uri:
-                logger.error(
-                    "URI is None in DataFileObject ID %s"
-                    % self.existingUnverifiedDatafile.replicas[0].replicaId)
-                self.FinalizeUpload(
-                    uploadSuccess=False,
-                    message="Couldn't determine path to upload to.")
-                return
             remoteFilePath = "%s/%s" % (location.rstrip('/'), uri)
         else:
             # DataFile creation via the MyTardis API doesn't
@@ -488,14 +479,6 @@ class UploadDatafileRunnable(object):
             return
         if self.existingUnverifiedDatafile:
             uri = self.existingUnverifiedDatafile.replicas[0].uri
-            if not uri:
-                logger.error(
-                    "URI is None in DataFileObject ID %s"
-                    % self.existingUnverifiedDatafile.replicas[0].replicaId)
-                self.FinalizeUpload(
-                    uploadSuccess=False,
-                    message="Couldn't determine path to upload to.")
-                return
             targetFilePath = "%s/%s" % (location.rstrip('/'), uri)
         else:
             # DataFile creation via the MyTardis API doesn't

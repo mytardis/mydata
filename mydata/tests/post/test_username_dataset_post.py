@@ -123,6 +123,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         # know which one it will be.
         # Errno 10053 is a Winsock error: "Software caused connection abort"
         self.assertTrue(
+            "ConnectionError" in newLogs or
             "urlopen error [Errno 32] Broken pipe" in newLogs or
             "[Errno 54] Connection reset by peer" in newLogs or
             "BadStatusLine" in newLogs or
