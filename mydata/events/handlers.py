@@ -481,7 +481,7 @@ def StartDataUploadsForFolder(event):
         if FLAGS.shouldAbort or not FLAGS.scanningFolders:
             return
 
-    def StartDataUploadsForFolderWorker(folderModel):
+    def StartDataUploadsForFolderWorker(folderModel, eventFolderAddMethod):
         """
         Start the data uploads in a dedicated thread.
         """
@@ -489,8 +489,9 @@ def StartDataUploadsForFolder(event):
                      % threading.current_thread().name)
         logger.debug("StartDataUploadsForFolderWorker")
         wx.CallAfter(BeginBusyCursorIfRequired)
-        if FLAGS.shouldAbort or not FLAGS.scanningFolders:
-            return
+        if not eventFolderAddMethod == FolderUploadUIType.DRAG_N_DROP:
+            if FLAGS.shouldAbort or not FLAGS.scanningFolders:
+                return
         FLAGS.performingLookupsAndUploads = True
         message = "Checking for data files on MyTardis and uploading " \
             "if necessary for folder: %s" % folderModel.folderName
@@ -506,7 +507,7 @@ def StartDataUploadsForFolder(event):
     if wx.PyApp.IsMainLoopRunning():
         startDataUploadsForFolderThread = \
             threading.Thread(target=StartDataUploadsForFolderWorker,
-                             args=[event.folderModel])
+                             args=[event.folderModel, event.folderAddMethod])
         threadName = startDataUploadsForFolderThread.name
         threadName = \
             threadName.replace("Thread", "StartDataUploadsForFolderThread")

@@ -361,6 +361,7 @@ class FoldersModel(MyDataDataViewModel):
         """
         Upload folder that has been dragged and dropped..
         """
+        wx.GetApp().foldersController.InitForUploads()
         if owner is None:
             owner = SETTINGS.general.defaultOwner
             # A simple workaround: unit tests may be failing
