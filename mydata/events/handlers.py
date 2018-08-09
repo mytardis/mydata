@@ -481,7 +481,7 @@ def StartDataUploadsForFolder(event):
         if FLAGS.shouldAbort or not FLAGS.scanningFolders:
             return
 
-    def StartDataUploadsForFolderWorker(folderModel, eventFolderAddMethod):
+    def StartDataUploadsForFolderWorker(folderModel, eventFolderAddMethod=None):
         """
         Start the data uploads in a dedicated thread.
         """
@@ -505,6 +505,8 @@ def StartDataUploadsForFolder(event):
             wx.CallAfter(EndBusyCursorIfRequired, event)
 
     if wx.PyApp.IsMainLoopRunning():
+        # Note that you only need to supply two arguments if you have a GUI. Without a GUI \
+        # you can't drag n drop
         startDataUploadsForFolderThread = \
             threading.Thread(target=StartDataUploadsForFolderWorker,
                              args=[event.folderModel, event.folderAddMethod])
