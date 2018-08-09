@@ -6,12 +6,9 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 import io
 import json
 import urllib
-# Only used for poster which will be replaced by requests-toolbelt:
-import urllib2
 
 import requests
-# poster will soon be replaced by requests-toolbelt:
-import poster
+from requests_toolbelt.multipart import encoder
 
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..settings import SETTINGS
@@ -133,7 +130,7 @@ class DataFileModel(object):
 
     @staticmethod
     def UploadDataFileWithPost(dataFilePath, dataFileDict,
-                               uploadModel, posterCallback):
+                               uploadModel, progressCallback):
         """
         Upload a file to the MyTardis API via POST, creating a new
         DataFile record.
@@ -144,12 +141,15 @@ class DataFileModel(object):
         datafileBufferedReader = io.open(dataFilePath, 'rb')
         uploadModel.bufferedReader = datafileBufferedReader
 
-        datagen, headers = poster.encode.multipart_encode(
-            {"json_data": json.dumps(dataFileDict),
-             "attached_file": datafileBufferedReader},
-            cb=posterCallback)
-        opener = poster.streaminghttp.register_openers()
-        opener.addheaders = SETTINGS.defaultHeaders.items()
-        request = urllib2.Request(url, datagen, headers)
-        response = urllib2.urlopen(request)
+        encoded = encoder.MultipartEncoder(
+            fields={"json_data": json.dumps(dataFileDict),
+                    'attached_file': (uploadModel.filename,
+                                      datafileBufferedReader,
+                                      'application/octet-stream')})
+
+        multipart = encoder.MultipartEncoderMonitor(encoded, progressCallback)
+
+        headers = SETTINGS.defaultHeaders
+        headers['Content-Type'] = multipart.content_type
+        response = requests.post(url, data=multipart, headers=headers)
         return response
