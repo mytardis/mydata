@@ -150,8 +150,8 @@ class DataFileModel(object):
         # of 8192 bytes which can lead to slow uploads, see:
         # http://toolbelt.readthedocs.io/en/latest/uploading-data.html
         # https://github.com/requests/toolbelt/issues/75
-        encoded._read = encoded.read
-        encoded.read = lambda size: encoded._read(1024*1024)
+        multipartEncoderReadMethod = encoded.read
+        encoded.read = lambda size: multipartEncoderReadMethod(1024*1024)
 
         multipart = encoder.MultipartEncoderMonitor(encoded, progressCallback)
 
