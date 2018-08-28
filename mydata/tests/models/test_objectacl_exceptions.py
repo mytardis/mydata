@@ -47,7 +47,8 @@ class ObjectAclExceptionsTester(MyDataTester):
         # Test sharing experiment with group, and ensure that no exception
         # is raised:
         groupModel = GroupModel.GetGroupByName("TestFacility-Group1")
-        ObjectAclModel.ShareExperimentWithGroup(experimentModel, groupModel)
+        ObjectAclModel.ShareExperimentWithGroup(
+            experimentModel, groupModel, isOwner=True)
 
         # Try to create a user ObjectACL record with
         # an invalid API key, which should give 401 (Unauthorized)
@@ -63,7 +64,8 @@ class ObjectAclExceptionsTester(MyDataTester):
         apiKey = SETTINGS.general.apiKey
         SETTINGS.general.apiKey = "invalid"
         with self.assertRaises(HTTPError) as context:
-            ObjectAclModel.ShareExperimentWithGroup(experimentModel, groupModel)
+            ObjectAclModel.ShareExperimentWithGroup(
+                experimentModel, groupModel, isOwner=True)
         self.assertEqual(context.exception.response.status_code, 401)
         SETTINGS.general.apiKey = apiKey
 
@@ -80,6 +82,6 @@ class ObjectAclExceptionsTester(MyDataTester):
         # Try to create a group ObjectACL record with
         # a user without a UserProfile, which should give 404
         with self.assertRaises(HTTPError) as context:
-            ObjectAclModel.ShareExperimentWithGroup(experimentModel,
-                                                    groupModel)
+            ObjectAclModel.ShareExperimentWithGroup(
+                experimentModel, groupModel, isOwner=True)
         self.assertEqual(context.exception.response.status_code, 404)

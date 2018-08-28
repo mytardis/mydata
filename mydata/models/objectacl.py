@@ -45,7 +45,7 @@ class ObjectAclModel(object):
         logger.debug("Shared experiment with user " + user.username + ".")
 
     @staticmethod
-    def ShareExperimentWithGroup(experiment, group):
+    def ShareExperimentWithGroup(experiment, group, isOwner):
         """
         Grants read access to experiment to group.
         """
@@ -61,7 +61,7 @@ class ObjectAclModel(object):
             "content_type": "experiment",
             "object_id": experiment.experimentId,
             "aclOwnershipType": 1,
-            "isOwner": True,
+            "isOwner": isOwner,
             "canRead": True,
             "canWrite": True,
             "canDelete": False,

@@ -52,7 +52,7 @@ install:
   # - "pip install --disable-pip-version-check --user --upgrade pip"
 
   # Install InnoSetup for building a distributable setup wizard.
-  - choco install -y InnoSetup
+  # - choco install -y InnoSetup
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
@@ -66,14 +66,14 @@ install:
 
   - "%CMD_IN_ENV% pip install codacy-coverage"
 
-  - "%CMD_IN_ENV% pip install --pre wxPython"
+  - "%CMD_IN_ENV% pip install wxPython"
 
   - "git submodule update --init --recursive"
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - "%CMD_IN_ENV% pip install pylint"
+  - "%CMD_IN_ENV% pip install pylint==1.9.2"
   - "pylint --rcfile=.pylintrc mydata"
 
   - "SET MYDATA_DEBUG_LOG_PATH=."
@@ -81,15 +81,15 @@ test_script:
 
 after_test:
   # If tests are successful, upload coverage data:
-  - "codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION%"
+  - "codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION% & exit 0"
   - "coverage xml"
-  - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml"
+  - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml & exit 0"
 
   # If tests are successful, create binary packages for the project.
-  - "python setup.py bdist"
-  - ps: "ls dist"
+  # - "python setup.py bdist"
+  # - ps: "ls dist"
 
 artifacts:
   # These can be downloaded after the build is complete:
   - path: .MyData_debug_log.txt
-  - path: dist\*.exe
+  # - path: dist\*.exe
