@@ -146,6 +146,12 @@ class DataFileModel(object):
                     'attached_file': (uploadModel.filename,
                                       datafileBufferedReader,
                                       'application/octet-stream')})
+        # Workaround for issue with httplib's hard-coded read size
+        # of 8192 bytes which can lead to slow uploads, see:
+        # http://toolbelt.readthedocs.io/en/latest/uploading-data.html
+        # https://github.com/requests/toolbelt/issues/75
+        multipartEncoderReadMethod = encoded.read
+        encoded.read = lambda size: multipartEncoderReadMethod(1024*1024)
 
         multipart = encoder.MultipartEncoderMonitor(encoded, progressCallback)
 
