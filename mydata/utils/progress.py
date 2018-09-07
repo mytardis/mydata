@@ -40,6 +40,11 @@ def MonitorProgress(progressPollInterval, uploadModel,
                 dataFile = DataFileModel.GetDataFileFromId(
                     uploadModel.dataFileId)
                 uploadModel.dfoId = dataFile.replicas[0].dfoId
+            except requests.exceptions.RequestException:
+                # If something goes wrong trying to retrieve
+                # the DataFile from the MyTardis API, don't
+                # worry, just try again later.
+                pass
             except DoesNotExist:
                 # If the DataFile ID reported in the location header
                 # after POSTing to the API doesn't exist yet, don't
