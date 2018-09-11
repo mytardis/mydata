@@ -3,10 +3,10 @@ Download
 
 Current Version
 ^^^^^^^^^^^^^^^
-* Download MyData for Windows: `MyData_v0.7.2.exe <https://github.com/mytardis/mydata/releases/download/v0.7.2/MyData_v0.7.2.exe>`_
-* Download MyData for Mac OS X: `MyData_v0.7.2.dmg <https://github.com/mytardis/mydata/releases/download/v0.7.2/MyData_v0.7.2.dmg>`_
-* Download MyData for RHEL 6: `mydata-0.7.2-1.el6.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.7.2/mydata-0.7.2-1.el6.x86_64.rpm>`_
-* Download MyData for RHEL 7: `mydata-0.7.2-1.el7.centos.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.7.2/mydata-0.7.2-1.el7.centos.x86_64.rpm>`_
+* Download MyData for Windows: `MyData_v0.8.0.exe <https://github.com/mytardis/mydata/releases/download/v0.8.0/MyData_v0.8.0.exe>`_
+* Download MyData for Mac OS X: `MyData_v0.8.0.dmg <https://github.com/mytardis/mydata/releases/download/v0.8.0/MyData_v0.8.0.dmg>`_
+* Download MyData for RHEL 6: `mydata-0.8.0-1.el6.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.8.0/mydata-0.8.0-1.el6.x86_64.rpm>`_
+* Download MyData for RHEL 7: `mydata-0.8.0-1.el7.centos.x86_64.rpm <https://github.com/mytardis/mydata/releases/download/v0.8.0/mydata-0.8.0-1.el7.centos.x86_64.rpm>`_
 
 Previous Version
 ^^^^^^^^^^^^^^^^
