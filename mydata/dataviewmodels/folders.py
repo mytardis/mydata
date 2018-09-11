@@ -403,9 +403,6 @@ class FoldersModel(MyDataDataViewModel):
                 if SETTINGS.filters.ignoreOldDatasets and \
                         DatasetIsTooOld(expFolderPath, datasetFolderName):
                     continue
-                if SETTINGS.filters.ignoreNewDatasets and \
-                        DatasetIsTooNew(expFolderPath, datasetFolderName):
-                    continue
                 dataViewId = self.GetMaxDataViewId() + 1
                 folderModel = \
                     FolderModel(dataViewId=dataViewId,
@@ -495,9 +492,6 @@ class FoldersModel(MyDataDataViewModel):
                 for datasetFolderName in DatasetFolderNames(userFolderPath):
                     if SETTINGS.filters.ignoreOldDatasets and \
                             DatasetIsTooOld(userFolderPath, datasetFolderName):
-                        continue
-                    if SETTINGS.filters.ignoreNewDatasets and \
-                            DatasetIsTooNew(userFolderPath, datasetFolderName):
                         continue
                     groupFolderName = os.path.basename(groupFolderPath)
                     folderModel = \
@@ -609,27 +603,6 @@ def DatasetIsTooOld(pathToScan, datasetFolderName):
             % (datasetFolderPath,
                SETTINGS.filters.ignoreIntervalNumber,
                SETTINGS.filters.ignoreIntervalUnit)
-        logger.warning(message)
-        return True
-    return False
-
-
-def DatasetIsTooNew(pathToScan, datasetFolderName):
-    """
-    If the supplied dataset folder is too new, according to
-    our filtering settings, return True and log a warning
-    """
-    datasetFolderPath = os.path.join(pathToScan, datasetFolderName)
-    ctimestamp = os.path.getctime(datasetFolderPath)
-    ctime = datetime.fromtimestamp(ctimestamp)
-    age = datetime.now() - ctime
-    if age.total_seconds() < \
-            SETTINGS.filters.ignoreNewDatasetIntervalSeconds:
-        message = "Ignoring \"%s\", because it is " \
-            "newer than %d %s" \
-            % (datasetFolderPath,
-               SETTINGS.filters.ignoreNewDatasetIntervalNumber,
-               SETTINGS.filters.ignoreNewDatasetIntervalUnit)
         logger.warning(message)
         return True
     return False
