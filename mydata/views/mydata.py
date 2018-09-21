@@ -70,17 +70,79 @@ class MyFileDropTarget(wx.FileDropTarget):
         # pylint: disable=unused-argument
 
         try:
+            # Add the email details dialog here, make sure it grabs the linked user... then puts all that info in with the upload (through folders/dataviewmodels/models- user records are in there somewhere...)
+
             assert len(folderName) == 1
             assert os.path.isdir(folderName[0])
+
             dirAbsPath = str(os.path.abspath(folderName[0]))
             # print dirAbsPath
-            DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(dirAbsPath))
+
+            dlg = EmailExperimentEntryDialog(self.window, dirAbsPath)
+            dlg.ShowModal()
+
         except AssertionError:
             msg = "Drag n Drop accepts a single [folder].\n"
             dlg = wx.MessageDialog(None, msg)
             dlg.ShowModal()
 
         return True
+
+class EmailExperimentEntryDialog(wx.Dialog):
+    def __init__(self, parent, dirAbsPath):
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, "Upload Folder", size=(430, 250))
+        self.panel = wx.Panel(self, wx.ID_ANY)
+        self.dirAbsPath = dirAbsPath
+
+        intro1 = "The 'dragged_dir' folder will be uploaded to"
+        self.intro1 = wx.StaticText(self.panel, label=intro1, pos=(20, 20))
+        intro2 = "https://store.erc.monash.edu"
+        self.intro2 = wx.StaticText(self.panel, label=intro2, pos=(20, 40))
+
+        intro3 = "Please complete the required fields below:"
+        self.intro3 = wx.StaticText(self.panel, label=intro3, pos=(20, 80))
+
+        self.emailLabel = wx.StaticText(self.panel, label="Email", pos=(20, 120))
+        self.emailEntry = wx.TextCtrl(self.panel, value="", pos=(110, 120), size=(300, -1))
+        self.experimentLabel = wx.StaticText(self.panel, label="Experiment", pos=(20, 150))
+        self.experimentEntry = wx.TextCtrl(self.panel, value="", pos=(110, 150), size=(300, -1))
+
+        self.cancelButton = wx.Button(self.panel, label="Cancel", pos=(220, 190))
+        self.uploadButton = wx.Button(self.panel, label="Upload", pos=(320, 190))
+        self.uploadButton.Bind(wx.EVT_BUTTON, self.OnUpload)
+        self.cancelButton.Bind(wx.EVT_BUTTON, self.OnCancel)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Show()
+
+    def OnCancel(self, event):
+        self.EndModal(wx.ID_CANCEL)
+        self.Hide()
+
+    def OnUpload(self, event):
+        dlg = wx.MessageDialog(self, "Adding to upload queue...")
+        dlg.ShowModal()
+        email = dlg.emailEntry.GetValue() # check syntax
+        # Regular expression validation of email
+        # maybe do some exception handling
+        owner = UserModel.GetUserByEmail(email)
+        DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(self.dirAbsPath), owner)
+        self.EndModal(wx.ID_CLOSE)
+        self.Hide()
+
+    def OnClose(self, event):
+        if event.CanVeto():
+
+            if wx.MessageBox("The upload will not proceed... continue closing?",
+                             "Please confirm",
+                             wx.ICON_QUESTION | wx.YES_NO) != wx.YES:
+
+                event.Veto()
+                return
+
+        self.EndModal(wx.ID_CANCEL)
+        self.Hide()  # you may also do:  event.Skip()
+                    # since the default event handler does call Destroy(), too
+
 
 class MyDataFrame(wx.Frame):
     """

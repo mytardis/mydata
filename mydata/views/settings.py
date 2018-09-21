@@ -680,6 +680,7 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(folderStructureLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.folderStructures = [
+            'Drag-n-Drop',
             'Username / Dataset',
             'Email / Dataset',
             'Username / Experiment / Dataset',
@@ -1586,7 +1587,16 @@ class SettingsDialog(wx.Dialog):
         """
         # pylint: disable=too-many-branches
         folderStructure = self.folderStructureComboBox.GetValue()
-        if folderStructure == 'Username / Dataset' or \
+
+        if folderStructure == 'Drag-n-Drop':
+            self.datasetGroupingField\
+                .SetValue("Instrument Name - Data Owner's Full Name")
+            self.groupPrefixLabel.Show(False)
+            self.groupPrefixField.Show(False)
+            self.expFolderFilterLabel.Show(False)
+            self.expFolderFilterField.SetValue("")
+            self.expFolderFilterField.Show(False)
+        elif folderStructure == 'Username / Dataset' or \
                 folderStructure == 'Email / Dataset' or \
                 folderStructure == 'Dataset':
             self.datasetGroupingField\

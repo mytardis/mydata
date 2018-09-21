@@ -231,7 +231,10 @@ class FoldersModel(MyDataDataViewModel):
             userFolderPath = os.path.join(
                 SETTINGS.general.dataDirectory, userFolderName)
             logger.debug("Folder structure: " + folderStructure)
-            if folderStructure == 'Username / Dataset' or \
+
+            if folderStructure == 'Drag-n-Drop':
+                pass # We shouldn't ever get here!
+            elif folderStructure == 'Username / Dataset' or \
                     folderStructure == 'Email / Dataset':
                 self.ScanForDatasetFolders(userFolderPath, userRecord,
                                            userFolderName)
