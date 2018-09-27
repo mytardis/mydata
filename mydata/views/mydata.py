@@ -15,6 +15,7 @@ from ..logs import logger
 from ..media import MYDATA_ICONS
 from ..threads.flags import FLAGS
 from ..utils import OpenUrl
+from ..utils.exceptions import DoesNotExist
 from ..events.docs import OnHelp
 from ..events.docs import OnWalkthrough
 from .dataview import MyDataDataView
@@ -23,6 +24,7 @@ from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from .log import LogView
 from .taskbaricon import MyDataTaskBarIcon
 from .toolbar import MyDataToolbar
+from ..models.user import UserModel
 
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
@@ -104,8 +106,10 @@ class EmailExperimentEntryDialog(wx.Dialog):
 
         self.emailLabel = wx.StaticText(self.panel, label="Email", pos=(20, 120))
         self.emailEntry = wx.TextCtrl(self.panel, value="", pos=(110, 120), size=(300, -1))
-        self.experimentLabel = wx.StaticText(self.panel, label="Experiment", pos=(20, 150))
-        self.experimentEntry = wx.TextCtrl(self.panel, value="", pos=(110, 150), size=(300, -1))
+
+        #self.experimentLabel = wx.StaticText(self.panel, label="Experiment", pos=(20, 150))
+        #self.experimentEntry = wx.TextCtrl(self.panel, value="", pos=(110, 150), size=(300, -1))
+        # Add experiment field in a later release
 
         self.cancelButton = wx.Button(self.panel, label="Cancel", pos=(220, 190))
         self.uploadButton = wx.Button(self.panel, label="Upload", pos=(320, 190))
@@ -119,15 +123,21 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.Hide()
 
     def OnUpload(self, event):
-        dlg = wx.MessageDialog(self, "Adding to upload queue...")
-        dlg.ShowModal()
-        email = dlg.emailEntry.GetValue() # check syntax
-        # Regular expression validation of email
-        # maybe do some exception handling
-        owner = UserModel.GetUserByEmail(email)
-        DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(self.dirAbsPath), owner)
-        self.EndModal(wx.ID_CLOSE)
-        self.Hide()
+        try:
+            email = self.emailEntry.GetValue() # check syntax
+            owner = UserModel.GetUserByEmail(email)
+            dlg = wx.MessageDialog(self, "Adding to upload queue...")
+            dlg.ShowModal()
+            # Regular expression validation of email
+            # maybe do some exception handling
+            DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(self.dirAbsPath), owner)
+        except DoesNotExist as doesntExist:
+            logger.error(traceback.format_exc())
+            dlgError = wx.MessageDialog(self, str(doesntExist))
+            dlgError.ShowModal()
+        finally:
+            self.EndModal(wx.ID_CLOSE)
+            self.Hide()
 
     def OnClose(self, event):
         if event.CanVeto():
