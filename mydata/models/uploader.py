@@ -159,29 +159,6 @@ class UploaderModel(object):
         else:
             logger.warning("There is no active network interface.")
 
-        fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
-        diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
-                           "Mount")
-
-        for part in psutil.disk_partitions(all=False):
-            if os.name == 'nt':
-                if 'cdrom' in part.opts or part.fstype == '':
-                    # skip cd-rom drives with no disk in it; they may raise
-                    # ENOENT, pop-up a Windows GUI error for a non-ready
-                    # partition or just hang.
-                    continue
-            usage = psutil.disk_usage(part.mountpoint)
-            diskUsage += fmt % (
-                part.device,
-                BytesToHuman(usage.total),
-                BytesToHuman(usage.used),
-                BytesToHuman(usage.free),
-                int(usage.percent),
-                part.fstype,
-                part.mountpoint)
-
-        self.diskUsage = diskUsage.strip()
-
     def UploadUploaderInfo(self):
         """
         Uploads info about the instrument PC to MyTardis via HTTP POST
@@ -219,6 +196,16 @@ class UploaderModel(object):
         else:
             url = myTardisUrl + "/api/v1/mydata_uploader/"
 
+        # The "disk_usage": "" below will be reviewed and possibly
+        # removed in future MyData versions.  Previously, MyData was
+        # reporting on disk usage as part of its Uploader info, so
+        # that MyTardis sys admins could detect when instrument PCs
+        # were low on disk space.  However the method used to detect
+        # disk usage attempted to scan all disk partitions, not just
+        # the partition containing MyData's data directory.  This was
+        # problematic for multiple reasons, e.g. the account running
+        # MyData might not have permission to access other partitions.
+
         uploaderJson = {
             "uuid": self.settings.miscellaneous.uuid,
             "name": self.settings.general.instrumentName,
@@ -241,7 +228,7 @@ class UploaderModel(object):
             "memory": self.sysInfo['memory'],
             "cpus": self.sysInfo['cpus'],
 
-            "disk_usage": self.diskUsage,
+            "disk_usage": "",
             "data_path": self.settings.general.dataDirectory,
             "default_user": self.settings.general.username,
 
