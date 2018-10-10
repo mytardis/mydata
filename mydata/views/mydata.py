@@ -72,7 +72,9 @@ class MyFileDropTarget(wx.FileDropTarget):
         # pylint: disable=unused-argument
 
         try:
-            # Add the email details dialog here, make sure it grabs the linked user... then puts all that info in with the upload (through folders/dataviewmodels/models- user records are in there somewhere...)
+            # Email details dialog here, making sure it grabs the linked user...
+            # Then puts all that info in with the upload
+            # (through folders/dataviewmodels/models- user records are in there somewhere...)
 
             assert len(folderName) == 1
             assert os.path.isdir(folderName[0])
@@ -91,6 +93,10 @@ class MyFileDropTarget(wx.FileDropTarget):
         return True
 
 class EmailExperimentEntryDialog(wx.Dialog):
+    """
+    Dialog for entering email for experiments as identifier when using drag-n-drop
+    """
+
     def __init__(self, parent, dirAbsPath):
         wx.Dialog.__init__(self, parent, wx.ID_ANY, "Upload Folder", size=(430, 250))
         self.panel = wx.Panel(self, wx.ID_ANY)
@@ -118,11 +124,17 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Show()
 
-    def OnCancel(self, event):
+    def OnCancel(self):
+        """
+        Behaviour for Cancel Button
+        """
         self.EndModal(wx.ID_CANCEL)
         self.Hide()
 
-    def OnUpload(self, event):
+    def OnUpload(self):
+        """
+        When upload is clicked, do some sanity checks, then upload
+        """
         try:
             email = self.emailEntry.GetValue() # check syntax
             owner = UserModel.GetUserByEmail(email)
@@ -140,6 +152,9 @@ class EmailExperimentEntryDialog(wx.Dialog):
             self.Hide()
 
     def OnClose(self, event):
+        """
+        Behaviour for Close Button
+        """
         if event.CanVeto():
 
             if wx.MessageBox("The upload will not proceed... continue closing?",
