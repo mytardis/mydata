@@ -194,6 +194,7 @@ class FoldersModel(MyDataDataViewModel):
             raise InvalidFolderStructure("Unknown folder structure.")
 
     def ScanForUserFolders(self, writeProgressUpdateToStatusBar):
+        # pylint: disable=too-many-branches
         """
         Scan for user folders.
         """
