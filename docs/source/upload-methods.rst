@@ -196,3 +196,35 @@ at once (5 by default):
 
   .. image:: images/MultipleUploadThreads.png
 
+
+.. _drag-n-drop-scp:
+
+Drag-n-Drop via SCP with Staging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+MyData allows Dragging and Dropping data folders in order to upload via SCP to
+Staging.
+
+It requires the user to input an email adress, which is cross-referenced with
+registered users and email addresses.
+
+MyData's underlying "SCP to Staging" upload method uses the "Via staging location" method
+of MyTardis's RESTful API.  For more details, see: 
+https://mytardis.readthedocs.org/en/latest/api.html#via-staging-location
+
+To initiate, simply start up MyData, navigate to the folder to be uploaded, then drag
+and drop it.
+
+
+  .. image:: images/Dragndrop0.png
+  .. image:: images/Dragndrop1.png
+
+The user will then be prompted to enter their email address. As long as the email
+provided is registered, the files will be added to the upload queue and uploaded.
+
+
+
+  .. image:: images/Dragndrop2.png
+  .. image:: images/Dragndrop3.png
+  .. image:: images/Dragndrop4.png
+
