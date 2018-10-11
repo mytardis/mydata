@@ -124,17 +124,19 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Show()
 
-    def OnCancel(self):
+    def OnCancel(self, event):
         """
         Behaviour for Cancel Button
         """
+        # pylint: disable=unused-argument
         self.EndModal(wx.ID_CANCEL)
         self.Hide()
 
-    def OnUpload(self):
+    def OnUpload(self, event):
         """
         When upload is clicked, do some sanity checks, then upload
         """
+        # pylint: disable=unused-argument
         try:
             email = self.emailEntry.GetValue() # check syntax
             owner = UserModel.GetUserByEmail(email)
