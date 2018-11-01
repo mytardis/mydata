@@ -12,4 +12,4 @@ pytz==2018.7
 lxml==4.2.5
 python-dateutil==2.7.5
 PyInstaller==3.4
-PyUpdater==2.3.2
+PyUpdater==2.5.3
