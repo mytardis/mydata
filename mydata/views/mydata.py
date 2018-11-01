@@ -82,13 +82,13 @@ class MyFileDropTarget(wx.FileDropTarget):
             dirAbsPath = str(os.path.abspath(folderName[0]))
             # print dirAbsPath
 
-            dlg = EmailExperimentEntryDialog(self.window, dirAbsPath)
-            dlg.ShowModal()
+            self.dlg = EmailExperimentEntryDialog(self.window, dirAbsPath)
+            self.dlg.ShowModal()
 
         except AssertionError:
             msg = "Drag n Drop accepts a single [folder].\n"
-            dlg = wx.MessageDialog(None, msg)
-            dlg.ShowModal()
+            self.dlg = wx.MessageDialog(None, msg)
+            self.dlg.ShowModal()
 
         return True
 
@@ -122,7 +122,6 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.uploadButton.Bind(wx.EVT_BUTTON, self.OnUpload)
         self.cancelButton.Bind(wx.EVT_BUTTON, self.OnCancel)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-        self.Show()
 
     def OnCancel(self, event):
         """
@@ -131,6 +130,7 @@ class EmailExperimentEntryDialog(wx.Dialog):
         # pylint: disable=unused-argument
         self.EndModal(wx.ID_CANCEL)
         self.Hide()
+        self.Destroy()
 
     def OnUpload(self, event):
         """
@@ -140,8 +140,8 @@ class EmailExperimentEntryDialog(wx.Dialog):
         try:
             email = self.emailEntry.GetValue() # check syntax
             owner = UserModel.GetUserByEmail(email)
-            dlg = wx.MessageDialog(self, "Adding to upload queue...")
-            dlg.ShowModal()
+            #self.dlg = wx.MessageDialog(self, "Adding to upload queue...")
+            #self.dlg.Show()
             # Regular expression validation of email
             # maybe do some exception handling
             DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(self.dirAbsPath), owner)
