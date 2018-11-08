@@ -79,12 +79,7 @@ class MyDataAppInstanceDragnDropTester(MyDataSettingsTester):
         dropTarget.OnDropFiles(0,0,[SETTINGS.general.dataDirectory])
         dropTarget.dlg.emailEntry.SetValue(r'testuser1@example.com')
         dropTarget.dlg.OnUpload(wx.PyCommandEvent(wx.EVT_BUTTON.typeId, dropTarget.dlg.GetId()))
-        #dropTarget.dlg.close()
-        #dropTarget.EndModal(wx.ID_CLOSE)
-        #dropTarget.dlg.dlg.Hide()
-        #dropTarget.dlg.dlg.Destroy()
-        #dropTarget.dlg.Hide()
-        #dropTarget.dlg.Destroy()
+        dropTarget.dlg.EndModal(wx.ID_CLOSE)
 
         # When running MyData without an event loop, this will block until complete:
         OnTestRunFromToolbar(event=wx.PyEvent())

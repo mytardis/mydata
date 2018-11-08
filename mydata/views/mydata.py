@@ -83,7 +83,11 @@ class MyFileDropTarget(wx.FileDropTarget):
             # print dirAbsPath
 
             self.dlg = EmailExperimentEntryDialog(self.window, dirAbsPath)
-            self.dlg.ShowModal()
+
+            if not 'MYDATA_TESTING' in os.environ:
+                dialogOK = (self.dlg.ShowModal() == wx.ID_OK)
+            else:
+                dialogOK = True
 
         except AssertionError:
             msg = "Drag n Drop accepts a single [folder].\n"
@@ -104,6 +108,7 @@ class EmailExperimentEntryDialog(wx.Dialog):
 
         intro1 = "The 'dragged_dir' folder will be uploaded to"
         self.intro1 = wx.StaticText(self.panel, label=intro1, pos=(20, 20))
+
         intro2 = "https://store.erc.monash.edu"
         self.intro2 = wx.StaticText(self.panel, label=intro2, pos=(20, 40))
 
@@ -113,8 +118,8 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.emailLabel = wx.StaticText(self.panel, label="Email", pos=(20, 120))
         self.emailEntry = wx.TextCtrl(self.panel, value="", pos=(110, 120), size=(300, -1))
 
-        #self.experimentLabel = wx.StaticText(self.panel, label="Experiment", pos=(20, 150))
-        #self.experimentEntry = wx.TextCtrl(self.panel, value="", pos=(110, 150), size=(300, -1))
+        # self.experimentLabel = wx.StaticText(self.panel, label="Experiment", pos=(20, 150))
+        # self.experimentEntry = wx.TextCtrl(self.panel, value="", pos=(110, 150), size=(300, -1))
         # Add experiment field in a later release
 
         self.cancelButton = wx.Button(self.panel, label="Cancel", pos=(220, 190))
@@ -122,6 +127,7 @@ class EmailExperimentEntryDialog(wx.Dialog):
         self.uploadButton.Bind(wx.EVT_BUTTON, self.OnUpload)
         self.cancelButton.Bind(wx.EVT_BUTTON, self.OnCancel)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Show()
 
     def OnCancel(self, event):
         """
@@ -130,7 +136,6 @@ class EmailExperimentEntryDialog(wx.Dialog):
         # pylint: disable=unused-argument
         self.EndModal(wx.ID_CANCEL)
         self.Hide()
-        self.Destroy()
 
     def OnUpload(self, event):
         """
@@ -140,10 +145,13 @@ class EmailExperimentEntryDialog(wx.Dialog):
         try:
             email = self.emailEntry.GetValue() # check syntax
             owner = UserModel.GetUserByEmail(email)
-            #self.dlg = wx.MessageDialog(self, "Adding to upload queue...")
-            #self.dlg.Show()
+            self.dlg = wx.MessageDialog(self, "Adding to upload queue...")
+            if not 'MYDATA_TESTING' in os.environ:
+                dialogOK = (self.dlg.ShowModal() == wx.ID_OK)
+            else:
+                dialogOK = True
             # Regular expression validation of email
-            # maybe do some exception handling
+            # do some exception handling
             DATAVIEW_MODELS['folders'].UploadDraggedFolder(str(self.dirAbsPath), owner)
         except DoesNotExist as doesntExist:
             logger.error(traceback.format_exc())
