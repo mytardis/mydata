@@ -7,6 +7,8 @@ import threading
 import os
 import sys
 import traceback
+import sqlite3
+
 from datetime import datetime
 from glob import glob
 
@@ -235,6 +237,10 @@ class FoldersModel(MyDataDataViewModel):
 
             if folderStructure == 'Drag-n-Drop':
                 pass # We shouldn't ever get here!
+                # Actually we should now, since we are adding persistence.
+                # We should want users to explicitly set Drag-n-drop mode, then add all dragged folders to 
+                # the persistent database
+
             elif folderStructure == 'Username / Dataset' or \
                     folderStructure == 'Email / Dataset':
                 self.ScanForDatasetFolders(userFolderPath, userRecord,
@@ -383,11 +389,32 @@ class FoldersModel(MyDataDataViewModel):
                             groupFolderName=groupFolderName,
                             owner=owner,
                             group=groupRecord)
+
+            # Ref: https://pythonprogramming.net/sql-database-python-part-1-inserting-database/ 
+
+            dragNDropDB = sqlite3.connect('dragndrop.db') # store this value somewhere properly? Also proper path.
+            c = dragNDropDB.cursor()
+            c.execute("CREATE TABLE IF NOT EXISTS draggedFolderInfo (userEmail TEXT, folderPath TEXT, UNIQUE(userEmail, folderPath))")
+            c.execute("INSERT OR IGNORE INTO draggedFolderInfo (userEmail, folderPath) VALUES (?, ?)", 
+                    (owner.email,str(draggedFolderPath)))
+
+            dragNDropDB.commit()
+
+            #c.execute('SELECT * FROM draggedFolderInfo')
+            #data = c.fetchall()
+            #print(data)
+
+            c.close()
+            dragNDropDB.close()
+
             # We need to ensure these FolderModels persist. The current suggestion is to use SQLite.
-            # Should I get the folderModel object and serialize it into a pickle? Or store it in JSON format? Or SQLite?
-            # maybe just store the owner email and the abspath... shouldn't really need anything else... can get owner from email and name/location from path
+            # Should I get the folderModel object and serialize it into a pickle? 
+            # Or store it in JSON format? Or SQLite?
+            # maybe just store the owner email and the abspath... shouldn't really need anything else... 
+            # ...can get owner from email and name/location from path
             # Maybe also change the UploadDraggedFolders interface accordingly
-            # When MyData is restarted, go through the database and look for folders that are in it. If an upload has failed, reupload.
+            # When MyData is restarted, go through the database and look for folders that are in it. 
+            # If an upload has failed, reupload.
 
             RaiseExceptionIfUserAborted()
             folderModel.SetCreatedDate()
