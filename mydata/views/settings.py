@@ -863,6 +863,8 @@ class SettingsDialog(wx.Dialog):
         self.SetSizer(sizer)
         self.Fit()
 
+        # This is where we should handle things differently if Drag-n-Drop preset
+        # Call this differently...
         self.UpdateDialogFieldsFromSettings()
 
         folderStructure = self.folderStructureComboBox.GetValue()
@@ -1341,6 +1343,27 @@ class SettingsDialog(wx.Dialog):
             event.Skip()
 
     def UpdateDialogFieldsFromSettings(self):
+
+        # First Check if drag-n-Drop is preset, if so, disable everything else
+        if SETTINGS.advanced.folderStructure == 'Drag-n-Drop':
+            self.SetFolderStructure(SETTINGS.advanced.folderStructure)
+
+            self.generalPanel.Enable(False)
+            self.filtersPanel.Enable(False)
+            self.schedulePanel.Enable(False)
+            
+            for child in self.advancedPanelSizer.GetChildren():
+                child.Show(False)
+                print(child)
+            # give the SizerItem children ids, pick the ones with the ids for 
+            # folder structure text and multi, and show them... hide the rest 
+            #self.folderStructureComboBox.Show(True)
+            #folderStructureLabel.Show(True)
+            self.settingsTabsNotebook.EnableTab(0, False)
+            self.settingsTabsNotebook.EnableTab(1, False)
+            self.settingsTabsNotebook.EnableTab(2, False)
+            self.settingsTabsNotebook.SetSelection(3, True)
+ 
         # General tab
         self.SetInstrumentName(SETTINGS.general.instrumentName)
         self.SetFacilityName(SETTINGS.general.facilityName)
@@ -1589,8 +1612,11 @@ class SettingsDialog(wx.Dialog):
         folderStructure = self.folderStructureComboBox.GetValue()
 
         if folderStructure == 'Drag-n-Drop':
+            self.generalPanel.Enable(False)
+            self.filtersPanel.Enable(False)
+            self.schedulePanel.Enable(False)
             self.datasetGroupingField\
-                .SetValue("Instrument Name - Data Owner's Full Name")
+                .SetValue("Data Owner's Email and Upload Folder")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
             self.expFolderFilterLabel.Show(False)

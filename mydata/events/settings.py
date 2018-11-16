@@ -18,6 +18,10 @@ def OnSettings(event, validationMessage=None):
     icon's "MyData Settings" menu item, or in response to MyData being
     launched without any previously saved settings.
     """
+
+    # If opened in Drag-n-drop Mode, we should have all other settings disabled
+    # Until a different mode is selected
+
     from .stop import ResetShouldAbortStatus
     # When Settings is launched by user e.g. from the toolbar, we don't
     # want it to be aborted, so we'll ensure FLAGS.shouldAbort is False.

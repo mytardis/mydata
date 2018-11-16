@@ -594,6 +594,7 @@ def FolderGlob(level, instrumentName='*'):
     datasetGlob = "*%s*" % SETTINGS.filters.datasetFilter
     expGlob = "*%s*" % SETTINGS.filters.experimentFilter
     globDict = {
+        #'Drag-n-Drop': [datasetGlob],
         'Dataset': [datasetGlob],
         'Username / Dataset': [userOrGroupGlob, datasetGlob],
         'User Group / Dataset':

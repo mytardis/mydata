@@ -236,8 +236,20 @@ class FoldersModel(MyDataDataViewModel):
             logger.debug("Folder structure: " + folderStructure)
 
             if folderStructure == 'Drag-n-Drop':
-                pass # We shouldn't ever get here!
-                # Actually we should now, since we are adding persistence.
+    
+                # store this value somewhere properly? Also proper path.
+                dragNDropDB = sqlite3.connect('dragndrop.db') 
+                c = dragNDropDB.cursor()
+                c.execute('SELECT userEmail, folderPath FROM draggedFolderInfo')
+                data = c.fetchall()
+                print data
+    
+                # populate view and check folders from this data
+                c.close()
+                dragNDropDB.close()
+    
+                #load persistent folders from database
+
                 # We should want users to explicitly set Drag-n-drop mode, then add all dragged folders to 
                 # the persistent database
 
