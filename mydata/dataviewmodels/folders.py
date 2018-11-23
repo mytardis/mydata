@@ -242,7 +242,7 @@ class FoldersModel(MyDataDataViewModel):
                 c = dragNDropDB.cursor()
                 c.execute('SELECT userEmail, folderPath FROM draggedFolderInfo')
                 data = c.fetchall()
-                print data
+                #print data
     
                 # populate view and check folders from this data
                 c.close()

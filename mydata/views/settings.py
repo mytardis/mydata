@@ -677,6 +677,7 @@ class SettingsDialog(wx.Dialog):
 
         folderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                              "Folder Structure:")
+        self.ID_folderStructureLabel = folderStructureLabel.GetId()
         self.advancedPanelSizer.Add(folderStructureLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.folderStructures = [
@@ -694,6 +695,7 @@ class SettingsDialog(wx.Dialog):
         self.folderStructureComboBox = \
             wx.ComboBox(self.advancedPanel, wx.ID_ANY,
                         choices=self.folderStructures, style=wx.CB_READONLY)
+        self.ID_folderStructureComboBox = self.folderStructureComboBox.GetId()
         self.Bind(wx.EVT_COMBOBOX, self.OnSelectFolderStructure,
                   self.folderStructureComboBox)
         self.folderStructureComboBox.SetValue("Username / Dataset")
@@ -1344,24 +1346,21 @@ class SettingsDialog(wx.Dialog):
 
     def UpdateDialogFieldsFromSettings(self):
 
-        # First Check if drag-n-Drop is preset, if so, disable everything else
+        # First Check if drag-n-Drop is preset, if so, disable everything else on panel
+        # But if user changes selection, it has to revert to normal.  
         if SETTINGS.advanced.folderStructure == 'Drag-n-Drop':
             self.SetFolderStructure(SETTINGS.advanced.folderStructure)
 
-            self.generalPanel.Enable(False)
-            self.filtersPanel.Enable(False)
-            self.schedulePanel.Enable(False)
-            
             for child in self.advancedPanelSizer.GetChildren():
-                child.Show(False)
-                print(child)
+                if(child.GetWindow() is not None):
+                    if(child.GetWindow().GetId() not in [self.ID_folderStructureComboBox, self.ID_folderStructureLabel]):
+                        child.Show(False)
             # give the SizerItem children ids, pick the ones with the ids for 
             # folder structure text and multi, and show them... hide the rest 
-            #self.folderStructureComboBox.Show(True)
-            #folderStructureLabel.Show(True)
             self.settingsTabsNotebook.EnableTab(0, False)
             self.settingsTabsNotebook.EnableTab(1, False)
             self.settingsTabsNotebook.EnableTab(2, False)
+            self.settingsTabsNotebook.EnableTab(3, True)
             self.settingsTabsNotebook.SetSelection(3, True)
  
         # General tab
@@ -1612,17 +1611,27 @@ class SettingsDialog(wx.Dialog):
         folderStructure = self.folderStructureComboBox.GetValue()
 
         if folderStructure == 'Drag-n-Drop':
-            self.generalPanel.Enable(False)
-            self.filtersPanel.Enable(False)
-            self.schedulePanel.Enable(False)
-            self.datasetGroupingField\
-                .SetValue("Data Owner's Email and Upload Folder")
-            self.groupPrefixLabel.Show(False)
-            self.groupPrefixField.Show(False)
-            self.expFolderFilterLabel.Show(False)
-            self.expFolderFilterField.SetValue("")
-            self.expFolderFilterField.Show(False)
-        elif folderStructure == 'Username / Dataset' or \
+            self.settingsTabsNotebook.EnableTab(0, False)
+            self.settingsTabsNotebook.EnableTab(1, False)
+            self.settingsTabsNotebook.EnableTab(2, False)
+            self.settingsTabsNotebook.EnableTab(3, True)
+            self.settingsTabsNotebook.SetSelection(3, True)
+            for child in self.advancedPanelSizer.GetChildren():
+                if(child.GetWindow() is not None):
+                    if(child.GetWindow().GetId() not in [self.ID_folderStructureComboBox, self.ID_folderStructureLabel]):
+                        child.Show(False)
+ 
+        else:
+            self.settingsTabsNotebook.EnableTab(0, True)
+            self.settingsTabsNotebook.EnableTab(1, True)
+            self.settingsTabsNotebook.EnableTab(2, True)
+            self.settingsTabsNotebook.EnableTab(3, True)
+            self.settingsTabsNotebook.SetSelection(3, True)
+            for child in self.advancedPanelSizer.GetChildren():
+                if(child.GetWindow() is not None):
+                    child.Show(True) # Slows it down?
+ 
+        if folderStructure == 'Username / Dataset' or \
                 folderStructure == 'Email / Dataset' or \
                 folderStructure == 'Dataset':
             self.datasetGroupingField\

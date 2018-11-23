@@ -253,6 +253,7 @@ class MyDataFrame(wx.Frame):
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
 
+        # Maybe this is where we should also launch something to add the drag-n-drop persistent folders
 
     def AddDataViews(self):
         """
