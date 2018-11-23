@@ -1244,6 +1244,10 @@ class SettingsDialog(wx.Dialog):
         event.Skip()
 
     def OnOK(self, event):
+        # We probably don't want any of this if Drag-n-drop is chosen
+        # Instead we want to activate the drop-zone, load previously dragged-n-dropped
+        # folders from sqlite db
+
         if self.GetInstrumentName() != \
                 SETTINGS.general.instrumentName and \
                 SETTINGS.general.instrumentName != "":
