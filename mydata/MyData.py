@@ -90,6 +90,12 @@ class MyData(wx.App):
         """
         Called automatically when application instance is created.
         """
+
+        # A good spot to check if Settings.advanced.folderStructure has a value,
+        # is/isn't set to Drag-n-drop. If set, start in Drag-n-drop mode. If unset, 
+        # default to what it currently starts with. Obviously, if set, reload persistent
+        # folders. Also reload persistent folders when Drag-n-drop is explicitly set.
+
         from .utils import CreateConfigPathIfNecessary
         from .utils import InitializeTrustedCertsPath
         from .utils import CheckIfSystemTrayFunctionalityMissing
