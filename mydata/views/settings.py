@@ -1247,6 +1247,14 @@ class SettingsDialog(wx.Dialog):
         # We probably don't want any of this if Drag-n-drop is chosen
         # Instead we want to activate the drop-zone, load previously dragged-n-dropped
         # folders from sqlite db
+        # Set a flag here? A flag to let the app know that it is now OK to activate the
+        # DropTarget. Is that okay or too messy?
+        # The Drag-n-Drop flag must first be set when loading settings from config
+        # ... but... because we need Drag-n-Drop to be explcitly set, we need to have it disabled
+        # by default, on program launch, even if it was the last used config
+        # So the user will be greeted with a "Please set folder structure" dialog even if last used
+        # was drag-n-drop
+        # We need a total compartmentalization
 
         if self.GetInstrumentName() != \
                 SETTINGS.general.instrumentName and \
@@ -1264,6 +1272,9 @@ class SettingsDialog(wx.Dialog):
             MYDATA_EVENTS.SettingsDialogValidationEvent(
                 settingsDialog=self, okEvent=event)
         PostEvent(settingsDialogValidationEvent)
+        # If we reintroduce the General Tab as suggested... because we need the MyTardis URL
+        # We will also need to mod the ValidationEvent
+        # So I'll take the shortest path to persistence first, then fill in the blanks
 
     def OnBrowse(self, event):
         """
