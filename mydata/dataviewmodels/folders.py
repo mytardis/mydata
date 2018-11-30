@@ -22,6 +22,7 @@ from ..logs import logger
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import DoesNotExist
 from ..utils import Compare
+from ..utils import CreateConfigPathIfNecessary
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
 from ..events.stop import RaiseExceptionIfUserAborted
@@ -238,11 +239,11 @@ class FoldersModel(MyDataDataViewModel):
             if folderStructure == 'Drag-n-Drop':
     
                 # store this value somewhere properly? Also proper path.
-                dragNDropDB = sqlite3.connect('dragndrop.db') 
+                dragNDropDB = sqlite3.connect(os.path.join(os.sep, CreateConfigPathIfNecessary(), 'dragndrop.db'))
                 c = dragNDropDB.cursor()
                 c.execute('SELECT userEmail, folderPath FROM draggedFolderInfo')
                 data = c.fetchall()
-                #print data
+                print data
     
                 # populate view and check folders from this data
                 c.close()
@@ -404,7 +405,8 @@ class FoldersModel(MyDataDataViewModel):
 
             # Ref: https://pythonprogramming.net/sql-database-python-part-1-inserting-database/ 
 
-            dragNDropDB = sqlite3.connect('dragndrop.db') # store this value somewhere properly? Also proper path.
+            dragNDropDB = sqlite3.connect(os.path.join(os.sep, CreateConfigPathIfNecessary(), 'dragndrop.db'))
+            # store this value somewhere properly? Also proper path.
             c = dragNDropDB.cursor()
             c.execute("CREATE TABLE IF NOT EXISTS draggedFolderInfo (userEmail TEXT, folderPath TEXT, UNIQUE(userEmail, folderPath))")
             c.execute("INSERT OR IGNORE INTO draggedFolderInfo (userEmail, folderPath) VALUES (?, ?)", 

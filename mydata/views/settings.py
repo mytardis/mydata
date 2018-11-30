@@ -15,13 +15,17 @@ import os
 import traceback
 
 import wx
+import sqlite3
 
 from ..settings import SETTINGS
 from ..models.settings.serialize import LoadSettings
 from ..models.settings.serialize import SaveFieldsFromDialog
+from ..models.user import UserModel
+from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..utils import BeginBusyCursorIfRequired
 from ..utils import EndBusyCursorIfRequired
 from ..utils.autostart import IsMyDataShortcutInWinStartupItems
+from ..utils import CreateConfigPathIfNecessary
 from ..logs import logger
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
@@ -1255,6 +1259,27 @@ class SettingsDialog(wx.Dialog):
         # So the user will be greeted with a "Please set folder structure" dialog even if last used
         # was drag-n-drop
         # We need a total compartmentalization
+        # The control code should be in a controller file and merely called here...
+        if self.GetFolderStructure() == "Drag-n-Drop":
+            try:
+                db_file = os.path.join(os.sep, CreateConfigPathIfNecessary(), 'dragndrop.db')
+                dragNDropDB = sqlite3.connect(db_file)
+                c = dragNDropDB.cursor()
+                c.execute('SELECT userEmail, folderPath FROM draggedFolderInfo')
+                data = c.fetchall()
+                for record in data:
+                    email = record[0]
+                    folder = record[1]
+                    owner = UserModel.GetUserByEmail(email)
+                    DATAVIEW_MODELS['folders'].UploadDraggedFolder(folder, owner)
+
+                c.close()
+                dragNDropDB.close()
+            except Exception as e:
+                    print(e)
+            app = wx.GetApp()
+            message = "Entering Drag-n-drop Mode.======================================================="
+            app.frame.SetStatusMessage(message)
 
         if self.GetInstrumentName() != \
                 SETTINGS.general.instrumentName and \
@@ -1272,7 +1297,7 @@ class SettingsDialog(wx.Dialog):
             MYDATA_EVENTS.SettingsDialogValidationEvent(
                 settingsDialog=self, okEvent=event)
         PostEvent(settingsDialogValidationEvent)
-        # If we reintroduce the General Tab as suggested... because we need the MyTardis URL
+       # If we reintroduce the General Tab as suggested... because we need the MyTardis URL
         # We will also need to mod the ValidationEvent
         # So I'll take the shortest path to persistence first, then fill in the blanks
 
