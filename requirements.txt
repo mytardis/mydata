@@ -1,5 +1,5 @@
 appdirs==1.4.3
-netifaces==0.10.7
+netifaces==0.10.9
 psutil==5.4.6
 requests==2.20.1
 requests-toolbelt==0.8.0
