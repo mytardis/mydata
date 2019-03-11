@@ -1,6 +1,6 @@
 appdirs==1.4.3
 netifaces==0.10.7
-psutil==5.4.6
+psutil==5.6.1
 requests==2.20.1
 requests-toolbelt==0.8.0
 validate_email==1.3
