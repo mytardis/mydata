@@ -1,9 +1,8 @@
 """
 Model class for MyTardis API v1's GroupResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import urllib
 import requests
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..logs import logger
@@ -45,7 +44,7 @@ class GroupModel(object):
         """
         url = "%s/api/v1/group/?format=json&name=%s" \
             % (SETTINGS.general.myTardisUrl,
-               urllib.quote(name.encode('utf-8')))
+               urllib.parse.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         groupsJson = response.json()
@@ -55,6 +54,5 @@ class GroupModel(object):
             raise DoesNotExist(
                 message="Group \"%s\" was not found in MyTardis" % name,
                 response=response)
-        else:
-            logger.debug("Found group record for name '" + name + "'.")
-            return GroupModel(name=name, groupJson=groupsJson['objects'][0])
+        logger.debug("Found group record for name '" + name + "'.")
+        return GroupModel(name=name, groupJson=groupsJson['objects'][0])

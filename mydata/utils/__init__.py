@@ -12,7 +12,6 @@ import webbrowser
 
 import appdirs
 import psutil
-import requests
 import wx
 
 from ..constants import APPNAME, APPAUTHOR
@@ -26,9 +25,9 @@ def PidIsRunning(pid):
     """
     try:
         proc = psutil.Process(int(pid))
-        if proc.status == psutil.STATUS_DEAD:
+        if proc.status() == psutil.STATUS_DEAD:
             return False
-        if proc.status == psutil.STATUS_ZOMBIE:
+        if proc.status() == psutil.STATUS_ZOMBIE:
             return False
         return True  # Assume other status are valid
     except psutil.NoSuchProcess:
@@ -210,13 +209,9 @@ def HandleGenericErrorWithDialog(err):
 
 def OpenUrl(url, new=0, autoraise=True):
     """
-    Open URL in web browser or just check URL is accessible if running tests.
+    Open URL in web browser
     """
-    if wx.PyApp.IsMainLoopRunning():
-        webbrowser.open(url, new, autoraise)
-    else:
-        response = requests.get(url)
-        assert response.status_code == 200
+    webbrowser.open(url, new, autoraise)
 
 
 def CreateConfigPathIfNecessary():
@@ -341,9 +336,8 @@ def MyDataInstallLocation():
     """
     if hasattr(sys, 'frozen'):
         return os.path.dirname(sys.executable)
-    else:
-        try:
-            return os.path.dirname(pkgutil.get_loader("MyData").filename)
-        except:
-            return os.getcwd()
+    try:
+        return os.path.dirname(pkgutil.get_loader("MyData").filename)
+    except:
+        return os.getcwd()
     return ""

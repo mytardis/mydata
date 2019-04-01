@@ -5,7 +5,7 @@ RUNNING TESTS
 =============
 Run tests with:
 
-    python setup.py nosetests
+    nosetests -v
 
 
 BUILDING BINARIES
@@ -52,12 +52,13 @@ as described here:
     http://ftp.rpm.org/max-rpm/rpmbuild.8.html
 
 """
+from __future__ import print_function
+
 from argparse import Namespace
 import os
 import sys
 import tarfile
 import tempfile
-import commands
 import subprocess
 import shutil
 import zipfile
@@ -66,6 +67,8 @@ from distutils.command.build import build
 from distutils.command.bdist import bdist
 from distutils.command.install import install
 import distutils.dir_util
+
+from six.moves import getoutput
 
 from pyupdater.builder import Builder
 from pyupdater import settings as pyu_settings
@@ -297,7 +300,7 @@ class CustomBdistCommand(bdist):
         """
         if sys.platform.startswith("win"):
             self.run_command("build")
-            print "Building binary distributable for Windows..."
+            print("Building binary distributable for Windows...")
             with open('setup_templates/windows/MyData.iss.template',
                       'r') as issFile:
                 innosetupTemplate = issFile.read()
@@ -318,7 +321,7 @@ class CustomBdistCommand(bdist):
         elif sys.platform.startswith("darwin"):
             os.system("rm -fr dist/*")
             self.run_command("build")
-            print "\nCreating MyData_v%s.dmg...\n" % APP_VERSION
+            print("\nCreating MyData_v%s.dmg...\n" % APP_VERSION)
 
             # Build DMG (disk image) :
 
@@ -329,7 +332,7 @@ class CustomBdistCommand(bdist):
 
             if os.path.exists("/Volumes/%s" % title):
                 cmd = "hdiutil unmount \"/Volumes/%s\"" % title
-                print cmd
+                print(cmd)
                 os.system(cmd)
 
             tempDmgFile = \
@@ -344,7 +347,7 @@ class CustomBdistCommand(bdist):
                 '-fs HFS+ -fsargs ' \
                 '"-c c=64,a=16,e=16" -format UDRW -size %sk "%s"' \
                 % (source, title, size, tempDmgFilename)
-            print cmd
+            print(cmd)
             os.system(cmd)
 
             cmds = [
@@ -358,9 +361,9 @@ class CustomBdistCommand(bdist):
                 'ln -s /Applications/ "/Volumes/' + title + '/Applications"']
 
             for cmd in cmds:
-                print cmd
+                print(cmd)
                 if "hdiutil attach" in cmd:
-                    device = commands.getoutput(cmd)
+                    device = getoutput(cmd)
                 else:
                     os.system(cmd)
 
@@ -404,7 +407,7 @@ tell application "Finder"
      end tell
    end tell
 """
-            print applescript
+            print(applescript)
             tempApplescriptFile = tempfile.NamedTemporaryFile(delete=False)
             tempApplescriptFilename = tempApplescriptFile.name
             tempApplescriptFile.write(applescript)
@@ -415,8 +418,8 @@ tell application "Finder"
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
             stdout, stderr = proc.communicate()
-            print stderr
-            print stdout
+            print(stderr)
+            print(stdout)
             os.unlink(tempApplescriptFilename)
 
             cmds = [
@@ -432,12 +435,12 @@ tell application "Finder"
                 'ls -lh "dist/%s.dmg"' % finalDmgName
             ]
             for cmd in cmds:
-                print cmd
+                print(cmd)
                 os.system(cmd)
         elif sys.platform.startswith("linux"):
             os.system("cd linux; ./package_centos_version.sh")
         else:
-            print "Custom bdist command."
+            print("Custom bdist command.")
 
 
 class CustomInstallCommand(install):
@@ -458,17 +461,17 @@ class CustomInstallCommand(install):
         """
         self.run_command("bdist")
         if sys.platform.startswith("win"):
-            print "\nLaunching MyData_v%s.exe...\n" % APP_VERSION
+            print("\nLaunching MyData_v%s.exe...\n" % APP_VERSION)
             installerFilename = "%s_v%s.exe" % (APP_NAME, APP_VERSION)
             cmd = r'dist\%s' % installerFilename
             os.system(cmd)
         elif sys.platform.startswith("darwin"):
-            print "\nOpening dist/MyData_v%s.dmg...\n" % APP_VERSION
+            print("\nOpening dist/MyData_v%s.dmg...\n" % APP_VERSION)
             dmgFilename = "%s_v%s.dmg" % (APP_NAME, APP_VERSION)
             cmd = 'open "dist/%s"' % dmgFilename
             os.system(cmd)
-            print "Drag MyData.app into the Applications folder to complete " \
-                "the installation.\n"
+            print("Drag MyData.app into the Applications folder to complete "
+                  "the installation.\n")
         else:
             raise NotImplementedError(
                 "Only implemented for Windows and macOS.")
@@ -501,5 +504,6 @@ SETUP_ARGS = dict(name=APP_NAME,
                       "Programming Language :: Python",
                       "Topic :: Database :: Front-Ends",
                       "Topic :: System :: Archiving",
-                  ])
+                  ],
+                  test_suite='mydata.tests')
 setup(**SETUP_ARGS)

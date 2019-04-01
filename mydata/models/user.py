@@ -1,9 +1,8 @@
 """
 Model class for MyTardis API v1's UserResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import urllib
 import requests
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..utils.exceptions import DoesNotExist
@@ -104,7 +103,7 @@ class UserModel(object):
         """
         if hasattr(self, key) and getattr(self, key, None):
             return getattr(self, key)
-        elif key in ('username', 'fullName', 'email') and \
+        if key in ('username', 'fullName', 'email') and \
                 self.userNotFoundInMyTardis:
             value = UserModel.userNotFoundString
         else:
@@ -129,10 +128,9 @@ class UserModel(object):
             raise DoesNotExist(
                 message="User \"%s\" was not found in MyTardis" % username,
                 response=response)
-        else:
-            logger.debug("Found user record for username '" + username + "'.")
-            return UserModel(username=username,
-                             userRecordJson=userRecordsJson['objects'][0])
+        logger.debug("Found user record for username '" + username + "'.")
+        return UserModel(username=username,
+                         userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
     def GetUserByEmail(email):
@@ -143,7 +141,7 @@ class UserModel(object):
         """
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
             % (SETTINGS.general.myTardisUrl,
-               urllib.quote(email.encode('utf-8')))
+               urllib.parse.quote(email.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         userRecordsJson = response.json()
@@ -154,9 +152,8 @@ class UserModel(object):
                 message="User with email \"%s\" was not found in MyTardis"
                 % email,
                 response=response)
-        else:
-            logger.debug("Found user record for email '" + email + "'.")
-            return UserModel(userRecordJson=userRecordsJson['objects'][0])
+        logger.debug("Found user record for email '" + email + "'.")
+        return UserModel(userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
     def GetUserForFolder(userFolderName, userNotFoundInMyTardis=False):
@@ -173,17 +170,15 @@ class UserModel(object):
                 return UserModel(
                     username=userFolderName, userNotFoundInMyTardis=True)
             return UserModel.GetUserByUsername(userFolderName)
-        elif folderStructure.startswith("Email"):
+        if folderStructure.startswith("Email"):
             if userNotFoundInMyTardis:
                 return UserModel(
                     email=userFolderName, userNotFoundInMyTardis=True)
             return UserModel.GetUserByEmail(userFolderName)
-        else:
-            return None
+        return None
 
 class UserProfileModel(object):
     """
     Used with the DoesNotExist exception when a 404 from MyTardis's API
     is assumed to have been caused by a missing user profile record.
     """
-    pass

@@ -4,9 +4,11 @@ Test ability to open submit debug report dialog.
 import sys
 import time
 import threading
-from BaseHTTPServer import HTTPServer
+import unittest
 
 import requests
+import six
+from six.moves.BaseHTTPServer import HTTPServer  # pylint: disable=relative-import,wrong-import-order
 import wx
 
 from ...settings import SETTINGS
@@ -16,6 +18,7 @@ from ..utils import GetEphemeralPort
 from .. import MyDataTester
 
 
+@unittest.skipIf(six.PY3, "Not working in Python 3 yet")
 class SubmitDebugLogTester(MyDataTester):
     """
     Test ability to open submit debug report dialog.

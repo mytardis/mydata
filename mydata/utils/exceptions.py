@@ -120,6 +120,7 @@ class InvalidSettings(Exception):
     mydata.models.settings.validation.ValidateSettings
     """
     def __init__(self, message, field="", suggestion=None):
+        self.message = message
         self.field = field
         self.suggestion = suggestion
         super(InvalidSettings, self).__init__(message)

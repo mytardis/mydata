@@ -11,8 +11,7 @@ class NewInstrumentTester(MyDataTester):
     Test ability to create a new instrument when required.
     """
     def test_create_new_instrument(self):
-        """
-        Test ability to create a new instrument when required.
+        """Test ability to create a new instrument when required
         """
         self.UpdateSettingsFromCfg(
             "testdataNewInstrument",

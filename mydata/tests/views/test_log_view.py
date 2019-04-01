@@ -4,12 +4,14 @@ Test ability to open log view.
 import unittest
 import logging
 
+import six
 import wx
 
 from ...views.log import LogView
 from ...logs import logger
 
 
+@unittest.skipIf(six.PY3, "Not working in Python 3 yet")
 class LogViewTester(unittest.TestCase):
     """
     Test ability to open log view.

@@ -1,8 +1,12 @@
 """
 Test Weekly schedule type.
 """
+import unittest
+
 from datetime import datetime
 from datetime import timedelta
+
+import six
 
 from ...settings import SETTINGS
 from ...logs import logger
@@ -12,6 +16,7 @@ from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
 
+@unittest.skipIf(six.PY3, "Not working in Python 3 yet")
 class WeeklyScheduleTester(MyDataSettingsTester):
     """
     Test Weekly schedule type.
@@ -42,8 +47,7 @@ class WeeklyScheduleTester(MyDataSettingsTester):
                           timedelta(minutes=1))
 
     def test_weekly_schedule(self):
-        """
-        Test Weekly schedule type.
+        """Test Weekly schedule type
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

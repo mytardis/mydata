@@ -25,7 +25,7 @@ def UpdateAutostartFile():
     if sys.platform.startswith("win"):
         raise NotImplementedError(
             "On Windows, autostart preference is configured at install time.")
-    elif sys.platform.startswith("darwin"):
+    if sys.platform.startswith("darwin"):
         UpdateMacAutostartFile()
     elif sys.platform.startswith("linux") and hasattr(sys, "frozen"):
         UpdateLinuxAutostartFile()

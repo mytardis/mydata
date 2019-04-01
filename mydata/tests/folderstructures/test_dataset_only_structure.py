@@ -10,8 +10,7 @@ class ScanDatasetTester(MyDataScanFoldersTester):
     Test ability to scan the Dataset folder structure.
     """
     def test_scan_folders(self):
-        """
-        Test ability to scan the Dataset folder structure.
+        """Test ability to scan the Dataset folder structure
         """
         self.UpdateSettingsFromCfg("testdataDataset")
         ValidateSettingsAndScanFolders()

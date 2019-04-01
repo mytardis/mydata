@@ -81,7 +81,7 @@ class FoldersModel(MyDataDataViewModel):
             ownerKey = columnKey.split("owner.")[1]
             owner = self.rowsData[row].owner
             return owner.GetValueForKey(ownerKey) if owner else ""
-        elif columnKey.startswith("group."):
+        if columnKey.startswith("group."):
             groupKey = columnKey.split("group.")[1]
             group = self.rowsData[row].group
             return group.GetValueForKey(groupKey) if group else ""
@@ -125,7 +125,7 @@ class FoldersModel(MyDataDataViewModel):
             pass
         if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
-        if col == 0 or col == 3:
+        if col in (0, 3):
             obj1 = int(folderRecord1.dataViewId)
             obj2 = int(folderRecord2.dataViewId)
         else:
@@ -228,13 +228,12 @@ class FoldersModel(MyDataDataViewModel):
             userFolderPath = os.path.join(
                 SETTINGS.general.dataDirectory, userFolderName)
             logger.debug("Folder structure: " + folderStructure)
-            if folderStructure == 'Username / Dataset' or \
-                    folderStructure == 'Email / Dataset':
+            if folderStructure in ('Username / Dataset', 'Email / Dataset'):
                 self.ScanForDatasetFolders(userFolderPath, userRecord,
                                            userFolderName)
-            elif folderStructure == \
-                    'Username / Experiment / Dataset' or \
-                    folderStructure == 'Email / Experiment / Dataset':
+            elif folderStructure in (
+                    'Username / Experiment / Dataset',
+                    'Email / Experiment / Dataset'):
                 self.ScanForExperimentFolders(userFolderPath, userRecord,
                                               userFolderName)
             elif folderStructure == \
@@ -454,7 +453,7 @@ class FoldersModel(MyDataDataViewModel):
 
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")
-            userFolders = os.walk(instrumentFolderPath).next()[1]
+            userFolders = next(os.walk(instrumentFolderPath))[1]
             RaiseExceptionIfUserAborted()
             for userFolderName in userFolders:
                 userFolderPath = os.path.join(instrumentFolderPath,

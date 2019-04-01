@@ -40,11 +40,11 @@ class TasksModel(MyDataDataViewModel):
         value = self.rowsData[row].GetValueForKey(columnKey)
         if value is None:
             return ""
-        elif columnKey in ("startTime", "finishTime"):
+        if columnKey in ("startTime", "finishTime"):
             timeString = value.strftime("%I:%M:%S %p")
             dateString = "{d:%a} {d.day}/{d.month}/{d.year}".format(d=value)
             return value.strftime("%s on %s" % (timeString, dateString))
-        elif columnKey == "scheduleType" and value == "Weekly":
+        if columnKey == "scheduleType" and value == "Weekly":
             value += " ("
             days = self.rowsData[row].days
             value += 'M' if days[0] else '-'
@@ -61,6 +61,7 @@ class TasksModel(MyDataDataViewModel):
         """
         Add a task to the Tasks view and activate it.
         """
+        # pylint: disable=too-many-statements
         super(TasksModel, self).AddRow(taskModel)
 
         def JobFunc(taskModel, row, col):

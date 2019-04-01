@@ -19,8 +19,7 @@ class DatasetExceptionsTester(MyDataTester):
     Test ability to handle dataset-related exceptions.
     """
     def test_dataset_exceptions(self):
-        """
-        Test ability to handle dataset-related exceptions.
+        """Test ability to handle dataset-related exceptions
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()

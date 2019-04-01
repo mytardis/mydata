@@ -63,6 +63,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     for existing datafiles on MyTardis and uploading any datafiles
     not yet available on MyTardis.
     """
+    # pylint: disable=too-many-statements
     from .stop import CheckIfShouldAbort
     from .stop import RestoreUserInterfaceForAbort
     app = wx.GetApp()
@@ -152,7 +153,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                     # defined timeout interval.  Any other settings validation
                     # failure will be reported to the user.
                     field = invalidSettings.field
-                    if field != "scheduled_time" and field != "mytardis_url":
+                    if field not in ("scheduled_time", "mytardis_url"):
                         logger.debug(
                             "Displaying result from settings validation.")
                         message = invalidSettings.message

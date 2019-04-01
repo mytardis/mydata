@@ -10,10 +10,10 @@ Classes for MyData's settings dialog.
 from datetime import datetime
 from datetime import timedelta
 import sys
-import platform
 import os
 import traceback
 
+import distro
 import wx
 
 from ..settings import SETTINGS
@@ -115,7 +115,8 @@ class SettingsDialog(wx.Dialog):
                 "MyData: Gtk-CRITICAL errors about IA__gtk_widget_set_size_request "
                 "are harmless: http://trac.wxwidgets.org/ticket/15891\n")
             self.SetMinSize(wx.Size(-1, 490))
-            distroName, distroVersion, _ = platform.linux_distribution()
+            distroName, distroVersion, _ = distro.linux_distribution(
+                full_distribution_name=False)
             if (distroName.startswith("Red Hat") or
                     distroName.startswith("CentOS")) and \
                     distroVersion.startswith("7"):
@@ -1586,9 +1587,10 @@ class SettingsDialog(wx.Dialog):
         """
         # pylint: disable=too-many-branches
         folderStructure = self.folderStructureComboBox.GetValue()
-        if folderStructure == 'Username / Dataset' or \
-                folderStructure == 'Email / Dataset' or \
-                folderStructure == 'Dataset':
+        if folderStructure in (
+                'Username / Dataset',
+                'Email / Dataset',
+                'Dataset'):
             self.datasetGroupingField\
                 .SetValue("Instrument Name - Data Owner's Full Name")
             self.groupPrefixLabel.Show(False)
@@ -1596,11 +1598,11 @@ class SettingsDialog(wx.Dialog):
             self.expFolderFilterLabel.Show(False)
             self.expFolderFilterField.SetValue("")
             self.expFolderFilterField.Show(False)
-        elif folderStructure == \
-                'Username / "MyTardis" / Experiment / Dataset' or \
-                folderStructure == 'Username / Experiment / Dataset' or \
-                folderStructure == 'Email / Experiment / Dataset' or \
-                folderStructure == 'Experiment / Dataset':
+        elif folderStructure in (
+                'Username / "MyTardis" / Experiment / Dataset',
+                'Username / Experiment / Dataset',
+                'Email / Experiment / Dataset',
+                'Experiment / Dataset'):
             self.datasetGroupingField.SetValue("Experiment")
             self.groupPrefixLabel.Show(False)
             self.groupPrefixField.Show(False)
@@ -1887,8 +1889,7 @@ class SettingsDialog(wx.Dialog):
         self.dateLabel.Enable(enableDate)
         self.dateSpin.Enable(enableDate)
         self.dateCtrl.Enable(enableDate)
-        enableTime = (scheduleType == "Once" or scheduleType == "Daily" or
-                      scheduleType == "Weekly")
+        enableTime = (scheduleType in ("Once", "Daily", "Weekly"))
         self.timeLabel.Enable(enableTime)
         self.timeCtrl.Enable(enableTime)
         self.timeSpin.Enable(enableTime)

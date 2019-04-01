@@ -12,17 +12,20 @@ import logging
 import os
 import sys
 import inspect
-import pkgutil
-# For Python 3, this will change to "from io import StringIO":
-from StringIO import StringIO
 
 import requests
 from requests.exceptions import RequestException
+import six
 import wx
 
 from .SubmitDebugReportDialog import SubmitDebugReportDialog
 from .wxloghandler import WxLogHandler
 from .wxloghandler import EVT_WX_LOG_EVENT
+
+if six.PY3:
+    from io import StringIO
+else:
+    from io import BytesIO as StringIO
 
 
 class MyDataFormatter(logging.Formatter):
@@ -62,8 +65,8 @@ class Logger(object):
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
-            self.appRootDir = \
-                os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
+            self.appRootDir = os.path.realpath(
+                os.path.join(os.path.dirname(__file__), "..", ".."))
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""
@@ -156,9 +159,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.debug(message, extra=extra)
+            self.loggerObject.debug(message.encode(), extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.debug, message, extra=extra)
+            wx.CallAfter(self.loggerObject.debug, message.encode(), extra=extra)
 
     def error(self, message):
         """
@@ -178,9 +181,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.error(message, extra=extra)
+            self.loggerObject.error(message.encode(), extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.error, message, extra=extra)
+            wx.CallAfter(self.loggerObject.error, message.encode(), extra=extra)
 
     def warning(self, message):
         """
@@ -202,9 +205,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.warning(message, extra=extra)
+            self.loggerObject.warning(message.encode(), extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.warning, message, extra=extra)
+            wx.CallAfter(self.loggerObject.warning, message.encode(), extra=extra)
 
     def info(self, message):
         """
@@ -226,9 +229,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.info(message, extra=extra)
+            self.loggerObject.info(message.encode(), extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.info, message, extra=extra)
+            wx.CallAfter(self.loggerObject.info, message.encode(), extra=extra)
 
     def testrun(self, message):
         # pylint: disable=no-self-use

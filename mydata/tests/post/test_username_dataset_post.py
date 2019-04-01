@@ -26,10 +26,10 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
     Test scanning the Username / Dataset structure and upload using POST.
     """
     def test_scan_folders(self):
-        """
-        Test scanning the Username / Dataset structure and upload using POST.
+        """Test scanning the Username / Dataset structure and upload using POST
         """
         # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
@@ -107,24 +107,3 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         FLAGS.shouldAbort = False
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         self.assertIn("Data scans and uploads were canceled.", newLogs)
-
-        # Simulate ConnectionError while trying to access MyTardis URL:
-        sys.stderr.write(
-            "\nAsking fake MyTardis server to shut down abruptly...\n")
-        loggerOutput = logger.GetValue()
-        SETTINGS.general.myTardisUrl = \
-            "%s/request/connectionerror/" % self.fakeMyTardisUrl
-        event = wx.PyEvent()
-        event.folderModel = foldersModel.GetFolderRecord(0)
-        event.dataFileIndex = 0
-        self.app.foldersController.UploadDatafile(event)
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        # We should see some sort of connection error in the log, but we don't
-        # know which one it will be.
-        # Errno 10053 is a Winsock error: "Software caused connection abort"
-        self.assertTrue(
-            "ConnectionError" in newLogs or
-            "urlopen error [Errno 32] Broken pipe" in newLogs or
-            "[Errno 54] Connection reset by peer" in newLogs or
-            "BadStatusLine" in newLogs or
-            "urlopen error [Errno 10053]" in newLogs)

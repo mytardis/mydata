@@ -39,7 +39,7 @@ def VersionCheck():
                     "The version you are running (%s) is the latest "
                     "official release." % VERSION)
                 return
-            elif VERSION == MYDATA_VERSIONS.latestReleaseCommitHash or \
+            if VERSION == MYDATA_VERSIONS.latestReleaseCommitHash or \
                     "v%s" % VERSION == latestReleaseTag:
                 logger.info(
                     "The version you are running (%s) is the latest "

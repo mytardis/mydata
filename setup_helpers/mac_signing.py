@@ -16,6 +16,8 @@ Before signing builds, you must:
             access an active Apple Developer Program account, you will
             be able to create a "Developer ID Application" certificate.
 """
+from __future__ import print_function
+
 import commands
 import os
 
@@ -74,7 +76,7 @@ class MacSigning(object):
                    '"%s/Contents/MacOS/%s"'
                    % (self.signCmd, self.identifier, self.certificateName,
                       appPath, thing))
-            print cmd
+            print(cmd)
             os.system(cmd)
 
     def VerifySignature(self, appPath):
@@ -83,7 +85,7 @@ class MacSigning(object):
         """
         for verifyCmd in self.verifyCmds:
             cmd = "%s %s" % (verifyCmd, appPath)
-            print cmd
+            print(cmd)
             os.system(cmd)
 
 

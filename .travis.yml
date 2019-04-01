@@ -25,7 +25,7 @@ before_script:
   - sleep 3 # give xvfb some time to start
 
 # Command to run tests
-script: python setup.py nosetests
+script: nosetests -v
 
 after_success:
   - codecov -X gcov

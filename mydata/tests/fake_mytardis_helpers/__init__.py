@@ -69,7 +69,7 @@ def RespondWithStatusCode(mytardis, status, errorMessage=None):
     else:
         errorJson = TASTYPIE_CANNED_ERROR
     if errorMessage or status == 500:
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
 
 
 def RespondToRequestForStatusCode(mytardis):

@@ -11,8 +11,7 @@ class UploadExpFilesTester(MyDataScanFoldersTester):
     Test ability to upload files at the Experiment level.
     """
     def test_upload_exp_files(self):
-        """
-        Test ability to upload files at the Experiment level.
+        """Test ability to upload files at the Experiment level
         """
         self.UpdateSettingsFromCfg("testdataExpDatasetExpFiles")
         ValidateSettingsAndScanFolders()

@@ -71,10 +71,9 @@ class Icons(object):
         if vendor == "Aha-Soft":
             return os.path.join(self.mediaPath, vendor, iconStyleFolderName,
                                 iconSubdir, "%s.png" % name)
-        else:
-            if not extension:
-                extension = "ico"
-            return os.path.join(self.mediaPath, "%s.%s" % (name, extension))
+        if not extension:
+            extension = "ico"
+        return os.path.join(self.mediaPath, "%s.%s" % (name, extension))
 
     def GetIcon(self, name, vendor="Aha-Soft", style=IconStyle.NORMAL,
                 size=None, extension=None):

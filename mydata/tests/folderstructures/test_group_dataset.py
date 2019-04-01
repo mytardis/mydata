@@ -11,8 +11,7 @@ class ScanGroupDatasetTester(MyDataScanFoldersTester):
     Test ability to scan the User Group / Dataset folder structure.
     """
     def test_scan_folders(self):
-        """
-        Test ability to scan the User Group / Dataset folder structure.
+        """Test ability to scan the User Group / Dataset folder structure
         """
         self.UpdateSettingsFromCfg("testdataGroupDataset")
         ValidateSettingsAndScanFolders()

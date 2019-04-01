@@ -10,8 +10,7 @@ fields have been removed from the JSON responses.
 """
 # Method names like do_GET clash with our .pylintrc's naming rules:
 # pylint: disable=invalid-name
-# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
-from BaseHTTPServer import BaseHTTPRequestHandler
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler  # pylint: disable=relative-import
 
 from .fake_mytardis_helpers.get import FakeMyTardisGet
 from .fake_mytardis_helpers.post import FakeMyTardisPost
@@ -74,8 +73,14 @@ class FakeMyTardisHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         """
-        Supressing logging of HTTP requests to STDERR.
+        Supress logging of HTTP requests to STDERR.
         """
         if DEBUG:
-            BaseHTTPRequestHandler.log_message(
-                self, format, *args)
+            BaseHTTPRequestHandler.log_message(self, format, *args)
+
+    def log_request(self, code='-', size='-'):
+        """
+        Supress logging of HTTP status codes to STDERR
+        """
+        if DEBUG:
+            BaseHTTPRequestHandler.log_request(self, code, size)

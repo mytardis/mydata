@@ -1,6 +1,10 @@
 """
 Test On Startup schedule type.
 """
+import unittest
+
+import six
+
 from ...settings import SETTINGS
 from ...logs import logger
 from ...MyData import MyData
@@ -9,6 +13,7 @@ from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
 
+@unittest.skipIf(six.PY3, "Not working in Python 3 yet")
 class OnStartupScheduleTester(MyDataSettingsTester):
     """
     Test On Startup schedule type.
@@ -30,8 +35,7 @@ class OnStartupScheduleTester(MyDataSettingsTester):
         self.mydataApp.frame.Destroy()
 
     def test_on_startup_schedule(self):
-        """
-        Test On Startup schedule type.
+        """Test On Startup schedule type
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

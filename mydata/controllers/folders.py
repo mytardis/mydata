@@ -6,13 +6,13 @@ import os
 import sys
 import time
 import threading
-# For Python3, this will change to "from queue import Queue":
-from Queue import Queue
 import traceback
 import datetime
 
 import requests
 from requests.exceptions import HTTPError
+
+from six.moves.queue import Queue  # pylint: disable=relative-import,wrong-import-order
 
 import wx
 import wx.lib.newevent

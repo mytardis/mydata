@@ -77,7 +77,7 @@ test_script:
   - "pylint --rcfile=.pylintrc mydata"
 
   - "SET MYDATA_DEBUG_LOG_PATH=."
-  - "python setup.py nosetests"
+  - "nosetests -v"
 
 after_test:
   # If tests are successful, upload coverage data:
