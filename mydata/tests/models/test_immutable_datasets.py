@@ -17,8 +17,7 @@ class ImmutableDatasetsTester(MyDataTester):
     Test ability to handle dataset-related exceptions.
     """
     def test_immutable_datasets(self):
-        """
-        Test ability to create immutable datasets.
+        """Test ability to create immutable datasets
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()

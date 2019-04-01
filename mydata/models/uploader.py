@@ -75,7 +75,6 @@ import platform
 import getpass
 import re
 import pkgutil
-import urllib
 import traceback
 import uuid
 
@@ -83,6 +82,7 @@ import dateutil.parser
 import psutil
 import requests
 import netifaces
+from six.moves import urllib
 
 from .. import __version__ as VERSION
 from ..logs import logger
@@ -168,7 +168,7 @@ class UploaderModel(object):
         # pylint: disable=too-many-branches
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-            "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
+            "&uuid=" + urllib.parse.quote(self.settings.miscellaneous.uuid)
         headers = self.settings.defaultHeaders
         response = requests.get(
             headers=headers, url=url,
@@ -248,11 +248,11 @@ class UploaderModel(object):
         headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
             response = requests.put(
-                headers=headers, url=url, data=data,
+                headers=headers, url=url, data=data.encode(),
                 timeout=self.settings.miscellaneous.connectionTimeout)
         else:
             response = requests.post(
-                headers=headers, url=url, data=data,
+                headers=headers, url=url, data=data.encode(),
                 timeout=self.settings.miscellaneous.connectionTimeout)
         response.raise_for_status()
         logger.debug("Upload succeeded for uploader info.")
@@ -274,11 +274,10 @@ class UploaderModel(object):
         """
         if hasattr(sys, 'frozen'):
             return os.path.dirname(sys.executable)
-        else:
-            try:
-                return os.path.dirname(pkgutil.get_loader("MyData").filename)
-            except:
-                return os.getcwd()
+        try:
+            return os.path.dirname(pkgutil.get_loader("MyData").filename)
+        except:
+            return os.getcwd()
         return ""
 
     @property
@@ -305,7 +304,7 @@ class UploaderModel(object):
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + self.settings.miscellaneous.uuid + \
-            "&requester_key_fingerprint=" + urllib.quote(
+            "&requester_key_fingerprint=" + urllib.parse.quote(
                 self.sshKeyPair.fingerprint)
         logger.debug(url)
         headers = self.settings.defaultHeaders
@@ -318,11 +317,10 @@ class UploaderModel(object):
             logger.debug("A request already exists for this uploader.")
             return UploaderRegistrationRequest(
                 uploaderRegRequestJson=approvalJson)
-        else:
-            message = "This uploader hasn't requested uploading " \
-                      "via staging yet."
-            logger.debug(message)
-            raise DoesNotExist(message)
+        message = "This uploader hasn't requested uploading " \
+                  "via staging yet."
+        logger.debug(message)
+        raise DoesNotExist(message)
 
     def RequestUploadToStagingApproval(self):
         """
@@ -349,7 +347,7 @@ class UploaderModel(object):
              "requester_key_fingerprint": self.sshKeyPair.fingerprint}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=self.settings.defaultHeaders, url=url,
-                                 data=data)
+                                 data=data.encode())
         response.raise_for_status()
         return UploaderRegistrationRequest(
             uploaderRegRequestJson=response.json())
@@ -402,7 +400,7 @@ class UploaderModel(object):
 
         if not self.uploaderId:
             url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-                % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
+                % (myTardisUrl, urllib.parse.quote(self.settings.miscellaneous.uuid))
             response = requests.get(headers=headers, url=url)
             response.raise_for_status()
             existingUploaderRecords = response.json()
@@ -435,7 +433,7 @@ class UploaderModel(object):
         myTardisUrl = self.settings.general.myTardisUrl
         headers = self.settings.defaultHeaders
         url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-            % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
+            % (myTardisUrl, urllib.parse.quote(self.settings.miscellaneous.uuid))
         try:
             response = requests.get(
                 headers=headers, url=url,

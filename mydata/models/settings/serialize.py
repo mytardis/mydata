@@ -13,8 +13,7 @@ circular dependency, so we pass the settings as an argument instead.
 import traceback
 import os
 import sys
-# For Python 3, this will change to "from configparser import ConfigParser":
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from datetime import datetime
 
 import appdirs
@@ -261,7 +260,7 @@ def CheckForUpdatedSettingsOnServer(settings):
         settingsFromServer = uploaderModel.GetSettings()
         settingsUpdated = uploaderModel.settingsUpdated
     except requests.exceptions.RequestException as err:
-        logger.error(err)
+        logger.error(str(err))
         settingsFromServer = None
         settingsUpdated = datetime.fromtimestamp(0)
     if settingsFromServer and settingsUpdated and \
@@ -360,7 +359,7 @@ def SaveSettingsToDisk(configPath=None):
         settingsList = []
         for field in fields:
             value = SETTINGS[field]
-            configParser.set("MyData", field, value)
+            configParser.set("MyData", field, str(value))
             settingsList.append(dict(key=field, value=str(value)))
         configParser.write(configFile)
     logger.info("Saved settings to " + configPath)

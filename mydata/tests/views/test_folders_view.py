@@ -1,6 +1,10 @@
 """
 Test ability to open folders view.
 """
+import unittest
+
+import six
+
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...models.folder import FolderModel
 from ...models.user import UserModel
@@ -8,6 +12,7 @@ from ...views.dataview import MyDataDataView
 from .. import MyDataSettingsTester
 
 
+@unittest.skipIf(six.PY3, "Not working in Python 3 yet")
 class FoldersViewTester(MyDataSettingsTester):
     """
     Test ability to open folders view.
@@ -19,8 +24,7 @@ class FoldersViewTester(MyDataSettingsTester):
             dataFolderName="testdataUsernameDataset")
 
     def test_folders_view(self):
-        """
-        Test ability to open folders view.
+        """Test ability to open folders view
         """
         foldersModel = DATAVIEW_MODELS['folders']
         # Create folders view:

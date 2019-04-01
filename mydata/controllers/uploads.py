@@ -253,7 +253,7 @@ class UploadDatafileRunnable(object):
         if self.uploadModel.canceled:
             wx.GetApp().foldersController.canceled = True
             return
-        elif self.uploadModel.status == UploadStatus.COMPLETED:
+        if self.uploadModel.status == UploadStatus.COMPLETED:
             return
         if current is None:
             # For a zero-sized file, current will be None
@@ -343,6 +343,7 @@ class UploadDatafileRunnable(object):
         """
         # pylint:disable=too-many-locals
         # pylint:disable=too-many-branches
+        # pylint:disable=too-many-statements
         dataFileDict = AddUploaderInfo(dataFileDict)
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)

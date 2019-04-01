@@ -9,6 +9,8 @@ import hashlib
 import traceback
 from fnmatch import fnmatch
 
+import six
+
 from ..settings import SETTINGS
 from ..logs import logger
 
@@ -221,7 +223,7 @@ class FolderModel(object):
         if key.startswith("owner."):
             ownerKey = key.split("owner.")[1]
             return self.owner.GetValueForKey(ownerKey) if self.owner else None
-        elif key.startswith("group."):
+        if key.startswith("group."):
             groupKey = key.split("group.")[1]
             return self.group.GetValueForKey(groupKey) if self.group else None
         return getattr(self, key)
@@ -261,7 +263,10 @@ class FolderModel(object):
         match = False
         with open(includesOrExcludesFile, 'r') as patternsFile:
             for glob in patternsFile.readlines():
-                glob = glob.decode('utf-8').strip()
+                if six.PY2:
+                    glob = glob.decode('utf-8').strip()
+                else:
+                    glob = glob.strip()
                 if glob == "":
                     continue
                 if glob.startswith(";"):

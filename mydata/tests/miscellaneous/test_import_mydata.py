@@ -13,8 +13,7 @@ class ImportMyDataTester(unittest.TestCase):
     Test ability to import mydata/__init__.py and update mydata/commitdef.py
     """
     def test_mydata_online_docs(self):
-        """
-        Test ability to import mydata/__init__.py and update mydata/commitdef.py
+        """Test ability to import mydata/__init__.py and update mydata/commitdef.py
         """
         if "mydata" in sys.modules:
             sys.modules.pop("mydata")

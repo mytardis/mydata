@@ -3,9 +3,9 @@ fake_submit_debug_log_server.py
 
 A simple HTTP server to use for unit testing in MyData.
 """
-# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
-from BaseHTTPServer import BaseHTTPRequestHandler
 import logging
+
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler  # pylint: disable=relative-import
 
 DEBUG = False
 

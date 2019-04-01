@@ -12,12 +12,11 @@ import logging
 import os
 import sys
 import inspect
-import pkgutil
-# For Python 3, this will change to "from io import StringIO":
-from StringIO import StringIO
+from io import StringIO
 
 import requests
 from requests.exceptions import RequestException
+import six
 import wx
 
 from .SubmitDebugReportDialog import SubmitDebugReportDialog
@@ -62,8 +61,7 @@ class Logger(object):
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
-            self.appRootDir = \
-                os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
+            self.appRootDir = os.path.join("..", "..", os.path.dirname(__file__))
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""
@@ -155,6 +153,8 @@ class Logger(object):
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
+        if six.PY2 and isinstance(message, str):
+            message = six.u(message)
         if threading.current_thread().name == "MainThread":
             self.loggerObject.debug(message, extra=extra)
         else:
@@ -177,6 +177,8 @@ class Logger(object):
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
+        if six.PY2 and isinstance(message, str):
+            message = six.u(message)
         if threading.current_thread().name == "MainThread":
             self.loggerObject.error(message, extra=extra)
         else:
@@ -201,6 +203,8 @@ class Logger(object):
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
+        if six.PY2 and isinstance(message, str):
+            message = six.u(message)
         if threading.current_thread().name == "MainThread":
             self.loggerObject.warning(message, extra=extra)
         else:
@@ -225,6 +229,8 @@ class Logger(object):
                  'lineNumber': outerFrames[2],
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
+        if six.PY2 and isinstance(message, str):
+            message = six.u(message)
         if threading.current_thread().name == "MainThread":
             self.loggerObject.info(message, extra=extra)
         else:

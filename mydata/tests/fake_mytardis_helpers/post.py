@@ -3,9 +3,12 @@ mydata/tests/fake_mytardis_helpers/post.py
 
 Responses to POST requests for our fake MyTardis server
 """
+# pylint: disable=comparison-with-callable
 import re
 import json
 import cgi
+
+import six
 
 from . import STAGING_PATH, TASTYPIE_CANNED_ERROR, TEST_FACILITY
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
@@ -26,7 +29,7 @@ def FakeMyTardisPost(mytardis):
         return
 
     assert mytardis.path.startswith("/api/v1/")
-    authorization = mytardis.headers.getheader("Authorization", "")
+    authorization = mytardis.headers.get("Authorization", "")
     match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
     apiUsername = match.groups()[0]
     apiKey = match.groups()[1]
@@ -37,7 +40,7 @@ def FakeMyTardisPost(mytardis):
     try:
         length = int(mytardis.headers['Content-Length'])
         contentType, _ = \
-            cgi.parse_header(mytardis.headers.getheader('content-type'))
+            cgi.parse_header(mytardis.headers.get('content-type'))
         if contentType == 'multipart/form-data':
             form = \
                 cgi.FieldStorage(
@@ -49,9 +52,9 @@ def FakeMyTardisPost(mytardis):
             postData = json.loads(mytardis.rfile.read(length))
     except KeyError:
         mytardis.send_response(500)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
-        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR).encode())
         return
 
     responderForPath = {
@@ -65,7 +68,7 @@ def FakeMyTardisPost(mytardis):
             RespondToUploaderRegRequest
     }
 
-    for path, responder in responderForPath.iteritems():
+    for path, responder in six.iteritems(responderForPath):
         if mytardis.path == path:
             if responder == RespondToDataFileRequest:
                 responder(mytardis, postData, contentType)
@@ -75,8 +78,9 @@ def FakeMyTardisPost(mytardis):
                 responder(mytardis, postData)
             return
 
-    raise Exception("FakeMyTardis Server doesn't know how to respond "
-                    "to POST: %s" % mytardis.path)
+    raise NotImplementedError(
+        "FakeMyTardis Server doesn't know how to respond "
+        "to POST: %s" % mytardis.path)
 
 
 def RespondToDataFileRequest(mytardis, postData, contentType):
@@ -87,7 +91,7 @@ def RespondToDataFileRequest(mytardis, postData, contentType):
     :param postData: The POST data dict
     """
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "text/html; charset=utf-8")
     mytardis.datafileIdAutoIncrement += 1
     mytardis.send_header("location",
                          "/api/v1/dataset_file/%d/"
@@ -112,7 +116,7 @@ def RespondToDataFileRequest(mytardis, postData, contentType):
         else:
             tempUrl = "%s/DatasetDescription-%s/%s" \
                 % (STAGING_PATH, datasetId, filename)
-        mytardis.wfile.write(tempUrl)
+        mytardis.wfile.write(tempUrl.encode())
 
 
 def RespondToExperimentRequest(mytardis, postData):
@@ -124,13 +128,14 @@ def RespondToExperimentRequest(mytardis, postData):
     """
     if "Request 404 from Fake MyTardis Server" in postData['title']:
         mytardis.send_response(404)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         errorJson = TASTYPIE_CANNED_ERROR
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
+
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     experimentJson = {
         "approved": False,
@@ -190,7 +195,7 @@ def RespondToExperimentRequest(mytardis, postData):
         "resource_uri": "/api/v1/mydata_experiment/2551/",
         "title": postData['title'],
     }
-    mytardis.wfile.write(json.dumps(experimentJson))
+    mytardis.wfile.write(json.dumps(experimentJson).encode())
 
 
 def RespondToObjectAclRequest(mytardis, apiUsername):
@@ -202,12 +207,14 @@ def RespondToObjectAclRequest(mytardis, apiUsername):
     """
     if apiUsername == "userwithoutprofile":
         mytardis.send_response(404)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "text/html; charset=utf-8")
         mytardis.end_headers()
         return
     mytardis.send_response(201)
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
+    mytardis.end_headers()
     objectaclJson = dict()
-    mytardis.wfile.write(json.dumps(objectaclJson))
+    mytardis.wfile.write(json.dumps(objectaclJson).encode())
 
 
 def RespondToDatasetRequest(mytardis, postData):
@@ -220,26 +227,26 @@ def RespondToDatasetRequest(mytardis, postData):
     description = postData['description']
     if description == "New Dataset Folder Without Permission":
         mytardis.send_response(401)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "text/html; charset=utf-8")
         mytardis.end_headers()
-        mytardis.wfile.write("<html><head><title>"
-                             "FakeMyTardisServer API - Unauthorized"
-                             "</title></head>")
-        mytardis.wfile.write("<body><h2>Unauthorized</h2>")
-        mytardis.wfile.write("</body></html>")
+        mytardis.wfile.write(b"<html><head><title>"
+                             b"FakeMyTardisServer API - Unauthorized"
+                             b"</title></head>")
+        mytardis.wfile.write(b"<body><h2>Unauthorized</h2>")
+        mytardis.wfile.write(b"</body></html>")
         return
-    elif description == "New Dataset Folder With Internal Server Error":
+    if description == "New Dataset Folder With Internal Server Error":
         mytardis.send_response(500)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         errorJson = {
             "error_message": ("Sorry, this request could not be "
                               "processed. Please try again later.")
         }
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     experimentResourceUri = postData['experiments'][0]
     experimentId = experimentResourceUri.split("/")[-2]
@@ -260,7 +267,7 @@ def RespondToDatasetRequest(mytardis, postData):
         "parameter_sets": [],
         "resource_uri": "/api/v1/dataset/4457/"
     }
-    mytardis.wfile.write(json.dumps(datasetJson))
+    mytardis.wfile.write(json.dumps(datasetJson).encode())
 
 
 def RespondToInstrumentRequest(mytardis, postData):
@@ -271,7 +278,7 @@ def RespondToInstrumentRequest(mytardis, postData):
     :param postData: The POST data dict
     """
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     name = postData['name']
     instrumentJson = {
@@ -280,7 +287,7 @@ def RespondToInstrumentRequest(mytardis, postData):
         "facility": TEST_FACILITY,
         "resource_uri": "/api/v1/instrument/32/"
     }
-    mytardis.wfile.write(json.dumps(instrumentJson))
+    mytardis.wfile.write(json.dumps(instrumentJson).encode())
 
 
 def RespondToUploaderRegRequest(mytardis, postData):
@@ -291,7 +298,7 @@ def RespondToUploaderRegRequest(mytardis, postData):
     :param postData: The POST data dict
     """
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     uploaderResourceUri = postData['uploader']
     fingerprint = postData['requester_key_fingerprint']
@@ -303,4 +310,4 @@ def RespondToUploaderRegRequest(mytardis, postData):
         "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
         "uploader": uploaderResourceUri
     }
-    mytardis.wfile.write(json.dumps(uploaderRegistrationRequestJson))
+    mytardis.wfile.write(json.dumps(uploaderRegistrationRequestJson).encode())

@@ -5,10 +5,10 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 import io
 import json
-import urllib
 
 import requests
 from requests_toolbelt.multipart import encoder
+from six.moves import urllib
 
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..settings import SETTINGS
@@ -64,8 +64,8 @@ class DataFileModel(object):
         myTardisUrl = SETTINGS.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_dataset_file/?format=json" + \
             "&dataset__id=" + str(dataset.datasetId) + \
-            "&filename=" + urllib.quote(filename.encode('utf-8')) + \
-            "&directory=" + urllib.quote(directory.encode('utf-8'))
+            "&filename=" + urllib.parse.quote(filename.encode('utf-8')) + \
+            "&directory=" + urllib.parse.quote(directory.encode('utf-8'))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         dataFilesJson = response.json()
@@ -74,14 +74,13 @@ class DataFileModel(object):
             raise DoesNotExist(
                 message="Datafile \"%s\" was not found in MyTardis" % filename,
                 response=response)
-        elif numDataFilesFound > 1:
+        if numDataFilesFound > 1:
             raise MultipleObjectsReturned(
                 message="Multiple datafiles matching %s were found in MyTardis"
                 % filename,
                 response=response)
-        else:
-            return DataFileModel(
-                dataset=dataset, dataFileJson=dataFilesJson['objects'][0])
+        return DataFileModel(
+            dataset=dataset, dataFileJson=dataFilesJson['objects'][0])
 
     @staticmethod
     def GetDataFileFromId(dataFileId):
@@ -125,7 +124,7 @@ class DataFileModel(object):
         url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         dataFileJson = json.dumps(dataFileDict)
         response = requests.post(headers=SETTINGS.defaultHeaders,
-                                 url=url, data=dataFileJson)
+                                 url=url, data=dataFileJson.encode())
         return response
 
     @staticmethod

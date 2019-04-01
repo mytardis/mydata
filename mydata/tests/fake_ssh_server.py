@@ -34,7 +34,7 @@ using a Cygwin build of scp from a Windows command prompt:
 # pylint: disable=invalid-name
 # pylint: disable=unused-argument
 
-import SocketServer
+import socketserver
 import sys
 import traceback
 import subprocess
@@ -43,13 +43,13 @@ import re
 import logging
 import socket
 import select
-# For Python 3, this will change to "from io import StringIO":
-from StringIO import StringIO
+from io import StringIO
 
 import paramiko
-from paramiko.py3compat import decodebytes
+import paramiko.py3compat
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
+import six
 
 import mydata.utils.openssh as OpenSSH
 
@@ -81,8 +81,9 @@ class SshServerInterface(paramiko.ServerInterface):
         self.command = None
         keyPair = OpenSSH.FindKeyPair("MyDataTest")
         # Remove "ssh-rsa " and "MyDataTest key":
-        data = bytes(keyPair.publicKey.split(" ")[1])
-        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
+        data = keyPair.publicKey.split(" ")[1].encode()
+        self.mydata_pub_key = paramiko.RSAKey(
+            data=paramiko.py3compat.decodebytes(data))  # pylint: disable=deprecated-method
 
     def check_channel_request(self, kind, chanid):
         """
@@ -138,7 +139,7 @@ class SshServerInterface(paramiko.ServerInterface):
 
 # Default host key used by ThreadedSshServer
 #
-DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
+HOST_KEY = (
     "-----BEGIN RSA PRIVATE KEY-----\n"
     "MIIEowIBAAKCAQEAsIPRjSXd3zcgaBOeECY0jeperpN69SRXLu4wjfwCCI55fzLE\n"
     "7GRR48uO5V57JH5a9tHdc2P8RVA+2ahSn/yYWV7NmZOJy7Rt79xsoHjKbxe9mlSL\n"
@@ -165,11 +166,12 @@ DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
     "Lut2IwKBgAWa55IoR0jFBMuBW3WdADNI0NpXr7aAMfLR6Tq1Jub4+5cQ8w+Yv4Q2\n"
     "1XrKzfkgaeCc3KWimMH8qWZYifbk4YB3RLQpLA6kGDeretVXs9qrSkznU6elGRsD\n"
     "8AVaj+iDC5qISXWUQAsGrSk7/Agodrc8rsOYu1lPN01pNStQ86Tb\n"
-    "-----END RSA PRIVATE KEY-----\n"
-))
+    "-----END RSA PRIVATE KEY-----\n")
+HOST_KEY_STREAM = StringIO(HOST_KEY) if six.PY3 else StringIO(six.u(HOST_KEY))
+DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(HOST_KEY_STREAM)
 
 
-class SshRequestHandler(SocketServer.BaseRequestHandler):
+class SshRequestHandler(socketserver.BaseRequestHandler):
     """
     Handles a client address and creates a paramiko
     Transport object.
@@ -180,7 +182,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
 
     def __init__(self, request, client_address, server):
         try:
-            SocketServer.BaseRequestHandler.__init__(
+            socketserver.BaseRequestHandler.__init__(
                 self, request, client_address, server)
         except (socket.error, select.error, EOFError) as err:
             logger.error(
@@ -292,7 +294,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                         self.server_instance.command.replace(
                             "scp", OpenSSH.OPENSSH.scp)
 
-            if "scp" not in self.server_instance.command:
+            if b"scp" not in self.server_instance.command:
                 # Execute a "remote" command other than scp.
                 logger.info("Executing: %s", self.server_instance.command)
                 proc = subprocess.Popen(self.server_instance.command,
@@ -305,9 +307,9 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 self.chan.send_exit_status(proc.returncode)
                 self.chan.close()
 
-            if "scp" in self.server_instance.command:
+            if b"scp" in self.server_instance.command:
                 self.verbose = \
-                    ("-v" in self.server_instance.command.split(" "))
+                    (b"-v" in self.server_instance.command.split(b" "))
                 if self.verbose:
                     logger.info("Executing: %s", self.server_instance.command)
                 stderr_handle = subprocess.PIPE if self.verbose else None
@@ -521,7 +523,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 self.close_transport(success=True)
         except Exception as e:
             logger.error(
-                '*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
+                '*** Caught exception: %s: %s', e.__class__, e)
             if not isinstance(e, socket.error) and \
                     not isinstance(e, select.error):
                 logger.error(traceback.format_exc())
@@ -548,11 +550,10 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
             self.server.handle_timeout()
 
 
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """
     ThreadedTCPServer
     """
-    pass
 
 
 class ThreadedSshServer(ThreadedTCPServer):
@@ -570,7 +571,7 @@ class ThreadedSshServer(ThreadedTCPServer):
 
     def __init__(self, address):
         self.host_key = DEFAULT_HOST_KEY
-        SocketServer.TCPServer.__init__(self, address, SshRequestHandler)
+        socketserver.TCPServer.__init__(self, address, SshRequestHandler)
 
     def shutdown_request(self, request):
         """
@@ -579,7 +580,7 @@ class ThreadedSshServer(ThreadedTCPServer):
         See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l466
 
         We don't call automatically call
-        SocketServer.TCPServer.shutdown_request() to prevent
+        socketserver.TCPServer.shutdown_request() to prevent
         TCPServer from closing the connection prematurely
         """
         return
@@ -590,7 +591,7 @@ class ThreadedSshServer(ThreadedTCPServer):
 
         See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l476
 
-        We don't call SocketServer.TCPServer.close_request() to prevent
+        We don't call socketserver.TCPServer.close_request() to prevent
         TCPServer from closing the connection prematurely
         """
         return

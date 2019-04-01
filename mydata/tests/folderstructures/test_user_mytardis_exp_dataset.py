@@ -12,9 +12,7 @@ class ScanUserMyTardisExpDatasetTester(MyDataScanFoldersTester):
     structure.
     """
     def test_scan_folders(self):
-        """
-        Test ability to scan the Username / MyTardis / Experiment / Dataset
-        folder structure.
+        """Test ability to scan the Username / MyTardis / Experiment / Dataset folder structure
         """
         self.UpdateSettingsFromCfg("testdataUserMyTardisExpDataset")
         ValidateSettingsAndScanFolders()

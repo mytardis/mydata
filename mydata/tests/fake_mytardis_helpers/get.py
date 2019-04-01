@@ -9,6 +9,9 @@ import re
 import json
 import urllib
 
+import six
+from six.moves import urllib
+
 from . import EMPTY_API_LIST, STAGING_PATH, TEST_FACILITY, TEST_INSTRUMENT
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
 
@@ -25,10 +28,6 @@ def FakeMyTardisGet(mytardis):
     if mytardis.path.startswith("/redirect") or \
             mytardis.path.startswith("/different_url"):
         mytardis.do_HEAD()
-        return
-
-    if mytardis.path.startswith("/request/connectionerror/"):
-        mytardis.server.server_close()
         return
 
     if re.match(r"^/request/http/code/(\d+)/.*$", mytardis.path):
@@ -49,7 +48,7 @@ def FakeMyTardisGet(mytardis):
             "Fake MyTardis server doesn't know how to respond to %s"
             % mytardis.path)
 
-    authorization = mytardis.headers.getheader("Authorization", "")
+    authorization = mytardis.headers.get("Authorization", "")
     match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
     apiKey = match.groups()[1]
     if apiKey == "invalid":
@@ -69,7 +68,7 @@ def FakeMyTardisGet(mytardis):
         "/api/v1/mydata_replica/": RespondToReplicaRequest
     }
 
-    for prefix, responder in responderForPrefix.iteritems():
+    for prefix, responder in six.iteritems(responderForPrefix):
         if mytardis.path.startswith(prefix):
             responder(mytardis)
             return
@@ -99,12 +98,12 @@ def RespondToFacilityRequest(mytardis):
     """
     assert mytardis.path == "/api/v1/facility/?format=json"
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     facilitiesJson = copy.deepcopy(EMPTY_API_LIST)
     facilitiesJson['meta']['total_count'] = 1
     facilitiesJson['objects'] = [TEST_FACILITY]
-    mytardis.wfile.write(json.dumps(facilitiesJson))
+    mytardis.wfile.write(json.dumps(facilitiesJson).encode())
 
 
 def RespondToInstrumentRequest(mytardis):
@@ -122,17 +121,17 @@ def RespondToInstrumentRequest(mytardis):
         instrument1="%sInstrument1" % baseRequestPath)
     assert mytardis.path in supportedRequests.values()
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     if mytardis.path == supportedRequests['newInstrument']:
-        mytardis.wfile.write(json.dumps(EMPTY_API_LIST))
+        mytardis.wfile.write(json.dumps(EMPTY_API_LIST).encode())
     elif mytardis.path == supportedRequests['renamedInstrument']:
-        mytardis.wfile.write(json.dumps(EMPTY_API_LIST))
+        mytardis.wfile.write(json.dumps(EMPTY_API_LIST).encode())
     elif mytardis.path == supportedRequests['testInstrument']:
         instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
         instrumentsJson['meta']['total_count'] = 1
         instrumentsJson['objects'] = [TEST_INSTRUMENT]
-        mytardis.wfile.write(json.dumps(instrumentsJson))
+        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
     elif mytardis.path == supportedRequests['testInstrument2']:
         instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
         instrumentsJson['meta']['total_count'] = 1
@@ -144,7 +143,7 @@ def RespondToInstrumentRequest(mytardis):
                 "resource_uri": "/api/v1/instrument/18/"
             }
         ]
-        mytardis.wfile.write(json.dumps(instrumentsJson))
+        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
     elif mytardis.path == supportedRequests['instrument1']:
         instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
         instrumentsJson['meta']['total_count'] = 1
@@ -156,7 +155,7 @@ def RespondToInstrumentRequest(mytardis):
                 "resource_uri": "/api/v1/instrument/1/"
             }
         ]
-        mytardis.wfile.write(json.dumps(instrumentsJson))
+        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
 
 
 def RespondToUserRequest(mytardis):
@@ -183,7 +182,7 @@ def RespondToUserRequest(mytardis):
         supportedRequests[key] = supportedRequests[key] % baseRequestPath
     assert mytardis.path in supportedRequests.values()
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     usersJson = copy.deepcopy(EMPTY_API_LIST)
     if mytardis.path not in (supportedRequests['invalidUserUsername'],
@@ -261,7 +260,7 @@ def RespondToUserRequest(mytardis):
                 "resource_uri": "/api/v1/user/1148/"
             }
         ]
-    mytardis.wfile.write(json.dumps(usersJson))
+    mytardis.wfile.write(json.dumps(usersJson).encode())
 
 
 def RespondToGroupRequest(mytardis):
@@ -278,7 +277,7 @@ def RespondToGroupRequest(mytardis):
     )
     assert mytardis.path in supportedRequests.values()
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     groupsJson = copy.deepcopy(EMPTY_API_LIST)
     if mytardis.path != supportedRequests['invalidGroupName']:
@@ -303,7 +302,7 @@ def RespondToGroupRequest(mytardis):
         ]
     elif mytardis.path == supportedRequests['invalidGroupName']:
         pass  # Return the default groupsJson, i.e. EMPTY_API_LIST
-    mytardis.wfile.write(json.dumps(groupsJson))
+    mytardis.wfile.write(json.dumps(groupsJson).encode())
 
 
 def RespondToUploaderRequest(mytardis):
@@ -313,9 +312,9 @@ def RespondToUploaderRequest(mytardis):
     :param mytardis: The FakeMyTardisHandler instance
     """
     match = re.match(r"^.*uuid=(\S+)$", mytardis.path)
-    uuid = urllib.unquote(match.groups()[0])
+    uuid = urllib.parse.unquote(match.groups()[0])
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     uploadersJson = copy.deepcopy(EMPTY_API_LIST)
     uploadersJson['meta']['total_count'] = 1
@@ -336,7 +335,7 @@ def RespondToUploaderRequest(mytardis):
             ]
         }
     ]
-    mytardis.wfile.write(json.dumps(uploadersJson))
+    mytardis.wfile.write(json.dumps(uploadersJson).encode())
 
 
 def RespondToUploaderRegRequest(mytardis):
@@ -348,20 +347,20 @@ def RespondToUploaderRegRequest(mytardis):
     match = re.match(r"^.*uploader__uuid=(\S+)"
                      r"&requester_key_fingerprint=(\S+)$", mytardis.path)
     if match:
-        uuid = urllib.unquote(match.groups()[0])
+        uuid = urllib.parse.unquote(match.groups()[0])
         existingApprovedRequest = (uuid == "1234567890")
         missingStorageBoxAttribute = (uuid == "1234567891")
-        fingerprint = urllib.unquote(match.groups()[1])
+        fingerprint = urllib.parse.unquote(match.groups()[1])
     else:
         mytardis.send_response(400)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         errorJson = {"error_message":
                      "Missing RSA key fingerprint in GET query"}
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     if existingApprovedRequest or missingStorageBoxAttribute:
         uploaderRegRequestsJson = copy.deepcopy(EMPTY_API_LIST)
@@ -440,7 +439,7 @@ def RespondToUploaderRegRequest(mytardis):
                 attrs.pop(attrNum)
     else:
         uploaderRegRequestsJson = EMPTY_API_LIST
-    mytardis.wfile.write(json.dumps(uploaderRegRequestsJson))
+    mytardis.wfile.write(json.dumps(uploaderRegRequestsJson).encode())
 
 
 def RespondToExperimentRequest(mytardis):
@@ -459,20 +458,20 @@ def RespondToExperimentRequest(mytardis):
     experimentsJson['meta']['total_count'] = 1
     if mytardis.path.startswith(supportedRequestPrefixes['title']):
         match = re.match(r"^.*&title=(\S+)&folder_structure.*$", mytardis.path)
-        title = urllib.unquote(match.groups()[0])
+        title = urllib.parse.unquote(match.groups()[0])
         if title == "Missing UserProfile":
             RespondWithStatusCode(
                 mytardis, 404, "UserProfile matching query does not exist.")
             return
-        elif title == "Missing Schema":
+        if title == "Missing Schema":
             RespondWithStatusCode(
                 mytardis, 404, "Schema matching query does not exist.")
             return
-        elif title == "Unknown 404":
+        if title == "Unknown 404":
             RespondWithStatusCode(mytardis, 404)
             return
         mytardis.send_response(200)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         experimentsJson = copy.deepcopy(EMPTY_API_LIST)
         mytardis.end_headers()
         if title == "Existing Experiment":
@@ -504,7 +503,7 @@ def RespondToExperimentRequest(mytardis):
                     "title": "Existing Experiment2",
                 }
             ]
-        mytardis.wfile.write(json.dumps(experimentsJson))
+        mytardis.wfile.write(json.dumps(experimentsJson).encode())
     elif mytardis.path.startswith(supportedRequestPrefixes['uploader']):
         match = re.match(r"^.*&uploader=(\S+)&user_folder_name.*$",
                          mytardis.path)
@@ -514,9 +513,9 @@ def RespondToExperimentRequest(mytardis):
         if not match:
             match = re.match(r"^.*&uploader=(\S+)$", mytardis.path)
 
-        uploaderUuid = urllib.unquote(match.groups()[0])
+        uploaderUuid = urllib.parse.unquote(match.groups()[0])
         mytardis.send_response(200)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         experimentsJson = copy.deepcopy(EMPTY_API_LIST)
         if uploaderUuid == "Existing Experiment":
@@ -545,7 +544,7 @@ def RespondToExperimentRequest(mytardis):
                     "title": "Existing Experiment2",
                 }
             ]
-        mytardis.wfile.write(json.dumps(experimentsJson))
+        mytardis.wfile.write(json.dumps(experimentsJson).encode())
 
 
 def RespondToDatasetRequest(mytardis):
@@ -557,10 +556,10 @@ def RespondToDatasetRequest(mytardis):
     match = re.match(
         r"^.*&experiments__id=(\S+)&description=(\S+)&instrument__id=(\S+)$",
         mytardis.path)
-    description = urllib.unquote(match.groups()[1])
-    instrumentId = urllib.unquote(match.groups()[2])
+    description = urllib.parse.unquote(match.groups()[1])
+    instrumentId = urllib.parse.unquote(match.groups()[2])
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     datasetsJson = copy.deepcopy(EMPTY_API_LIST)
     if description == "Existing Dataset":
@@ -573,7 +572,7 @@ def RespondToDatasetRequest(mytardis):
                 "experiments": ["/api/v1/experiment/2552/"]
             }
         ]
-    mytardis.wfile.write(json.dumps(datasetsJson))
+    mytardis.wfile.write(json.dumps(datasetsJson).encode())
 
 
 def RespondToDataFilesRequest(mytardis):
@@ -590,10 +589,10 @@ def RespondToDataFilesRequest(mytardis):
         r"^.*&dataset__id=(\S+)&filename=(\S+)&directory=(\S*)$",
         mytardis.path)
     datasetId = match.groups()[0]
-    filename = urllib.unquote(match.groups()[1])
-    directory = urllib.unquote(match.groups()[2])
+    filename = urllib.parse.unquote(match.groups()[1])
+    directory = urllib.parse.unquote(match.groups()[2])
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     datafilesJson = copy.deepcopy(EMPTY_API_LIST)
     if filename == "existing_unverified_incomplete_file.txt":
@@ -732,7 +731,7 @@ def RespondToDataFilesRequest(mytardis):
                 "version": 1
             }
         ]
-    mytardis.wfile.write(json.dumps(datafilesJson))
+    mytardis.wfile.write(json.dumps(datafilesJson).encode())
 
 
 def RespondToDataFileRequest(mytardis):
@@ -751,17 +750,17 @@ def RespondToDataFileRequest(mytardis):
         replicaId = dataFileId
     else:
         mytardis.send_response(400)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         errorJson = {
             "error_message":
             "Missing DataFile ID "
             "in mydata_dataset_file GET query"
         }
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     datafileJson = {
         "id": dataFileId,
@@ -772,7 +771,7 @@ def RespondToDataFileRequest(mytardis):
             }
         ],
     }
-    mytardis.wfile.write(json.dumps(datafileJson))
+    mytardis.wfile.write(json.dumps(datafileJson).encode())
 
 
 def RespondToReplicaRequest(mytardis):
@@ -793,20 +792,22 @@ def RespondToReplicaRequest(mytardis):
         replicaId = match.groups()[0]
     else:
         mytardis.send_response(400)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         errorJson = {
             "error_message":
             "Missing DFO ID "
             "in mydata_replica GET query"
         }
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     if replicaId == "444894":  # missing_mydata_replica_api_endpoint.txt
         mytardis.send_response(404)
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
+        mytardis.end_headers()
         return
     mytardis.send_response(200)
-    mytardis.send_header("Content-type", "application/json")
+    mytardis.send_header("Content-type", "application/json; charset=utf-8")
     mytardis.end_headers()
     if replicaId == "444891":  # existing_incomplete_file.txt
         replicaJson = {
@@ -823,7 +824,7 @@ def RespondToReplicaRequest(mytardis):
             "id": replicaId,
             "size": 1024
         }
-    mytardis.wfile.write(json.dumps(replicaJson))
+    mytardis.wfile.write(json.dumps(replicaJson).encode())
 
 
 def RespondToVerifyRequest(mytardis):

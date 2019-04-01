@@ -56,5 +56,5 @@ class UsersModel(MyDataDataViewModel):
         Fast method, ignoring filters.
         """
         dataDir = SETTINGS.general.dataDirectory
-        userOrGroupFolderNames = os.walk(dataDir).next()[1]
+        userOrGroupFolderNames = next(os.walk(dataDir))[1]
         return len(userOrGroupFolderNames)

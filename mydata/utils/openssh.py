@@ -11,7 +11,6 @@ import re
 import getpass
 import threading
 import time
-import pkgutil
 import struct
 
 import psutil
@@ -67,7 +66,7 @@ class OpenSSH(object):
         if hasattr(sys, "frozen"):
             baseDir = os.path.dirname(sys.executable)
         else:
-            baseDir = os.path.dirname(pkgutil.get_loader("mydata").filename)
+            baseDir = os.path.join("..", "..", os.path.dirname(__file__))
             winOpensshDir = os.path.join("resources", winOpensshDir)
         if sys.platform.startswith("win"):
             baseDir = os.path.join(baseDir, winOpensshDir)
@@ -210,13 +209,13 @@ class KeyPair(object):
         fingerprint = None
         keyType = None
         if stdout is not None:
-            sshKeyGenOutComponents = stdout.split(" ")
+            sshKeyGenOutComponents = stdout.split(b" ")
             if len(sshKeyGenOutComponents) > 1:
-                fingerprint = sshKeyGenOutComponents[1]
+                fingerprint = sshKeyGenOutComponents[1].decode()
                 if fingerprint.upper().startswith("MD5:"):
                     fingerprint = fingerprint[4:]
             if len(sshKeyGenOutComponents) > 3:
-                keyType = sshKeyGenOutComponents[-1]\
+                keyType = sshKeyGenOutComponents[-1].decode()\
                     .strip().strip('(').strip(')')
 
         return fingerprint, keyType
@@ -296,13 +295,12 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
 
     if stdout is None or str(stdout).strip() == "":
         raise SshException("Received unexpected EOF from ssh-keygen.")
-    elif "Your identification has been saved" in stdout:
+    if b"Your identification has been saved" in stdout:
         return KeyPair(privateKeyFilePath, publicKeyFilePath)
-    elif "already exists" in stdout:
+    if b"already exists" in stdout:
         raise SshException("Private key file \"%s\" already exists."
                            % privateKeyFilePath)
-    else:
-        raise SshException(stdout)
+    raise SshException(stdout)
 
 
 def SshServerIsReady(username, privateKeyFilePath,
@@ -563,9 +561,8 @@ def GetCygwinPath(path):
     if match:
         return "/cygdrive/" + match.groups()[0] + \
             match.groups()[1].replace("\\", "/")
-    else:
-        raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
-                        "a valid path." % path)
+    raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
+                    "a valid path." % path)
 
 
 def CleanUpScpAndSshProcesses():

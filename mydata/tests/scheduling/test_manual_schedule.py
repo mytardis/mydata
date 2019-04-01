@@ -1,6 +1,9 @@
 """
 Test Manual schedule type.
 """
+import unittest
+
+import six
 import wx
 
 from ...settings import SETTINGS
@@ -12,6 +15,7 @@ from ...models.settings.validation import ValidateSettings
 from .. import MyDataSettingsTester
 
 
+@unittest.skipIf(six.PY3, "Skip for now if using Python 3")
 class ManualScheduleTester(MyDataSettingsTester):
     """
     Test Manual schedule type.
@@ -33,8 +37,7 @@ class ManualScheduleTester(MyDataSettingsTester):
         self.mydataApp.frame.Destroy()
 
     def test_manual_schedule(self):
-        """
-        Test Manual schedule type.
+        """Test Manual schedule type
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

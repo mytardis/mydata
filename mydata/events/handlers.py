@@ -125,7 +125,7 @@ def InstrumentNameMismatch(event):
                 nextEvent=settingsDialogValidationEvent)
             PostEvent(renameInstrumentEvent)
             return
-        elif dlg.GetStringSelection() == discardChoice:
+        if dlg.GetStringSelection() == discardChoice:
             logger.info("OK, we will discard the new instrument name.")
             event.settingsDialog.SetInstrumentName(
                 SETTINGS.general.instrumentName)

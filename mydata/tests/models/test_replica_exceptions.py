@@ -20,8 +20,7 @@ class ReplicaExceptionsTester(MyDataTester):
     endpoint for DataFileObjects (DFOs).
     """
     def test_replica_exceptions(self):
-        """
-        Test ability to handle replica-related exceptions.
+        """Test ability to handle replica-related exceptions
         """
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
         # Fake MyTardis server's authentication will succeed as long

@@ -5,7 +5,9 @@ See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 
 import json
 import urllib
+
 import requests
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..logs import logger
@@ -58,7 +60,7 @@ class InstrumentModel(object):
         """
         url = "%s/api/v1/instrument/?format=json&facility__id=%s&name=%s" \
             % (SETTINGS.general.myTardisUrl, facility.facilityId,
-               urllib.quote(name.encode('utf-8')))
+               urllib.parse.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         instrumentsJson = response.json()
@@ -68,11 +70,10 @@ class InstrumentModel(object):
             message = "Instrument \"%s\" was not found in MyTardis" % name
             logger.warning(message)
             raise DoesNotExist(message, response, modelClass=InstrumentModel)
-        else:
-            logger.debug("Found instrument record for name \"%s\" "
-                         "in facility \"%s\"" % (name, facility.name))
-            instrumentJson = instrumentsJson['objects'][0]
-            return InstrumentModel(name=name, instrumentJson=instrumentJson)
+        logger.debug("Found instrument record for name \"%s\" "
+                     "in facility \"%s\"" % (name, facility.name))
+        instrumentJson = instrumentsJson['objects'][0]
+        return InstrumentModel(name=name, instrumentJson=instrumentJson)
 
     @staticmethod
     def RenameInstrument(facilityName, oldInstrumentName, newInstrumentName):

@@ -24,16 +24,16 @@ def FakeMyTardisPut(mytardis):
         else:
             httpCode = 500
         mytardis.send_response(httpCode)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
-        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR).encode())
         return
 
     if mytardis.path.startswith("/api/v1/mydata_uploader/"):
         match = re.match(r"^/api/v1/mydata_uploader/(\S+)/$", mytardis.path)
         uploaderId = match.groups()[0]
         mytardis.send_response(200)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         uploaderJson = {
             "id": uploaderId,
@@ -41,10 +41,11 @@ def FakeMyTardisPut(mytardis):
             "instruments": [TEST_INSTRUMENT],
             "resource_uri": "/api/v1/mydata_uploader/25/",
         }
-        mytardis.wfile.write(json.dumps(uploaderJson))
-    elif mytardis.path.startswith("/api/v1/instrument/17/"):
+        mytardis.wfile.write(json.dumps(uploaderJson).encode())
+        return
+    if mytardis.path.startswith("/api/v1/instrument/17/"):
         mytardis.send_response(200)
-        mytardis.send_header("Content-type", "application/json")
+        mytardis.send_header("Content-type", "application/json; charset=utf-8")
         mytardis.end_headers()
         instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
         instrumentsJson['meta']['total_count'] = 1
@@ -56,7 +57,8 @@ def FakeMyTardisPut(mytardis):
                 "resource_uri": "/api/v1/instrument/17/"
             }
         ]
-        mytardis.wfile.write(json.dumps(instrumentsJson))
-    else:
-        raise Exception("FakeMyTardis Server doesn't know how to respond "
-                        "to PUT: %s" % mytardis.path)
+        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
+        return
+    raise NotImplementedError(
+        "FakeMyTardis Server doesn't know how to respond to PUT: %s"
+        % mytardis.path)

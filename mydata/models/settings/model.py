@@ -5,7 +5,8 @@ and saved to disk in MyData.cfg
 import os
 import pickle
 import traceback
-import urlparse
+
+from six.moves import urllib
 
 from ...constants import APPNAME
 from ...logs import logger
@@ -25,6 +26,7 @@ class SettingsModel(object):
     Model class for the settings displayed in the settings dialog
     and saved to disk in MyData.cfg
     """
+    #def __init__(self, configPath):
     def __init__(self, configPath, checkForUpdates=True):
         super(SettingsModel, self).__init__()
 
@@ -121,16 +123,15 @@ class SettingsModel(object):
         """
         if key in self.general.fields:
             return self.general.mydataConfig[key]
-        elif key in self.schedule.fields:
+        if key in self.schedule.fields:
             return self.schedule.mydataConfig[key]
-        elif key in self.filters.fields:
+        if key in self.filters.fields:
             return self.filters.mydataConfig[key]
-        elif key in self.advanced.fields:
+        if key in self.advanced.fields:
             return self.advanced.mydataConfig[key]
-        elif key in self.miscellaneous.fields:
+        if key in self.miscellaneous.fields:
             return self.miscellaneous.mydataConfig[key]
-        else:
-            raise KeyError(key)
+        raise KeyError(key)
 
     @property
     def uploaderModel(self):
@@ -261,7 +262,7 @@ class SettingsModel(object):
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        parsed = urlparse.urlparse(self.general.myTardisUrl)
+        parsed = urllib.parse.urlparse(self.general.myTardisUrl)
         return os.path.join(
             os.path.dirname(self.configPath),
             "verified-files-%s-%s.pkl" %
@@ -304,6 +305,10 @@ class SettingsModel(object):
         "/Users/jsmith/Library/Application Support/MyData/MyData.cfg"
         """
         if not self._configPath:
+            configPathFromEnvVar = os.environ.get('MYDATA_CONFIG_PATH')
+            if configPathFromEnvVar:
+                self._configPath = configPathFromEnvVar
+                return self._configPath
             appdirPath = CreateConfigPathIfNecessary()
             self._configPath = os.path.join(appdirPath, APPNAME + '.cfg')
         return self._configPath

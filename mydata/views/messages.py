@@ -40,12 +40,12 @@ def ShowMessageDialog(event):
                      "\"%s\" because we are already showing an error "
                      "dialog." % event.message)
         return
-    elif FLAGS.showingConfirmationDialog:
+    if FLAGS.showingConfirmationDialog:
         logger.debug("Refusing to show message dialog for message "
                      "\"%s\" because we are already showing a confirmation "
                      "dialog." % event.message)
         return
-    elif event.message == LAST_ERROR_MESSAGE:
+    if event.message == LAST_ERROR_MESSAGE:
         logger.debug("Refusing to show message dialog for message "
                      "\"%s\" because we already showed an error "
                      "dialog with the same message." % event.message)
@@ -89,12 +89,12 @@ def ShowConfirmationDialog(event):
                      "\"%s\" because we are already showing a confirmation "
                      "dialog." % event.question)
         return
-    elif FLAGS.showingConfirmationDialog:
+    if FLAGS.showingConfirmationDialog:
         logger.debug("Refusing to show confirmation dialog for question "
                      "\"%s\" because we are already showing a confirmation "
                      "dialog." % event.question)
         return
-    elif event.question == LAST_CONFIRMATION_QUESTION:
+    if event.question == LAST_CONFIRMATION_QUESTION:
         logger.debug("Refusing to show confirmation dialog for question "
                      "\"%s\" because we already showed a confirmation "
                      "dialog with the same question." % event.question)

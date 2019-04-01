@@ -1,6 +1,7 @@
 """
 Test ability to use MyData's Test Run.
 """
+from mock import patch
 import wx
 
 from ...MyData import MyData
@@ -9,6 +10,7 @@ from ...events.start import LogStartScansAndUploadsCaller
 from ...events.start import OnTestRunFromToolbar
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.validation import ValidateSettings
+from ...settings import SETTINGS
 from .. import MyDataSettingsTester
 
 
@@ -28,8 +30,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         SaveSettingsToDisk()
 
     def test_mydata_test_run(self):
-        """
-        Test ability to use MyData's Test Run.
+        """Test ability to use MyData's Test Run
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
@@ -64,9 +65,14 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
 
         popupMenu.Destroy()
 
-        # Test opening webpages using fake MyTardis URL.
+        # mock opening webpage using fake MyTardis URL.
         pyEvent = wx.PyEvent()
-        self.mydataApp.frame.OnMyTardis(pyEvent)
+        with patch("webbrowser.open") as mockWebbrowserOpen:
+            self.mydataApp.frame.OnMyTardis(pyEvent)
+            mockWebbrowserOpen.assert_called_once_with(
+                SETTINGS.general.myTardisUrl, 0, True)
+
+        # Mock opening modal dialog:
         self.mydataApp.frame.OnAbout(pyEvent)
 
         # When running MyData without an event loop, this will block until complete:

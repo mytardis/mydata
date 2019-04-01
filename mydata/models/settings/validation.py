@@ -1,5 +1,4 @@
-"""
-Methods for validating settings.
+""" Methods for validating settings.
 
 The global SETTINGS singleton is imported inline to avoid
 circular dependencies.
@@ -12,6 +11,7 @@ from datetime import datetime
 
 import requests
 from requests.exceptions import HTTPError
+import six
 from validate_email import validate_email
 
 from ...events.stop import RaiseExceptionIfUserAborted
@@ -299,7 +299,7 @@ def CheckMyTardisUrl(setStatusMessage):
                 "If you suspect this, please contact your MyTardis " \
                 "administrator immediately."
             raise InvalidSettings(message, "mytardis_url")
-        elif response.status_code == 200:
+        if response.status_code == 200:
             message = "Retrieved %s in %.3f seconds." \
                 % (SETTINGS.general.myTardisApiUrl,
                    response.elapsed.total_seconds())
@@ -441,7 +441,7 @@ def CheckContactEmailAndEmailFolders(setStatusMessage):
     if SETTINGS.advanced.folderStructure.startswith('Email') and \
             SETTINGS.advanced.validateFolderStructure:
         dataDir = SETTINGS.general.dataDirectory
-        folderNames = os.walk(dataDir).next()[1]
+        folderNames = next(os.walk(dataDir))[1]
         for folderName in folderNames:
             if not validate_email(folderName):
                 message = "Folder name \"%s\" in \"%s\" is not a " \
@@ -510,7 +510,9 @@ def PerformGlobsFileValidation(filePath, upper, lower, field):
                 # Lines starting with '#' or ';' will be ignored.
                 # Other non-blank lines are expected to be globs,
                 # e.g. *.txt
-                _ = line.decode('utf-8').strip()
+                if six.PY2:
+                    line = line.decode('utf-8')
+                _ = line.strip()
             except UnicodeDecodeError:
                 message = "%s file is not a valid plain text " \
                     "(UTF-8) file." % upper
