@@ -65,7 +65,8 @@ class Logger(object):
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
-            self.appRootDir = os.path.join("..", "..", os.path.dirname(__file__))
+            self.appRootDir = os.path.realpath(
+                os.path.join(os.path.dirname(__file__), "..", ".."))
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""
