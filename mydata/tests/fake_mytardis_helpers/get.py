@@ -7,7 +7,6 @@ import copy
 import datetime
 import re
 import json
-import urllib
 
 import six
 from six.moves import urllib

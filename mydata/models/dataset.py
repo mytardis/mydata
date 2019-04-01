@@ -1,7 +1,6 @@
 """
 Model class for MyTardis API v1's DatasetResource.
 """
-import urllib
 import json
 
 import requests

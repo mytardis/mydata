@@ -2,7 +2,6 @@
 Model class for MyTardis API v1's ExperimentResource.
 """
 import json
-import urllib
 
 import requests
 from six.moves import urllib
