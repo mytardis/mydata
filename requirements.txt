@@ -13,7 +13,7 @@ python-dateutil==2.8.0
 PyUpdater==2.5.3
 pytz==2018.9
 requests==2.21.0
-requests-mock==1.5.2
+requests-mock==1.6.0
 requests-toolbelt==0.9.1
 six==1.12.0
 validate_email==1.3
