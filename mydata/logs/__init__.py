@@ -25,7 +25,7 @@ from .wxloghandler import EVT_WX_LOG_EVENT
 if six.PY3:
     from io import StringIO
 else:
-    from io import BytesIO as StringIO
+    from StringIO import StringIO  # pylint: disable=import-error
 
 
 class MyDataFormatter(logging.Formatter):
@@ -159,9 +159,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.debug(message.encode(), extra=extra)
+            self.loggerObject.debug(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.debug, message.encode(), extra=extra)
+            wx.CallAfter(self.loggerObject.debug, message, extra=extra)
 
     def error(self, message):
         """
@@ -181,9 +181,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.error(message.encode(), extra=extra)
+            self.loggerObject.error(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.error, message.encode(), extra=extra)
+            wx.CallAfter(self.loggerObject.error, message, extra=extra)
 
     def warning(self, message):
         """
@@ -205,9 +205,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.warning(message.encode(), extra=extra)
+            self.loggerObject.warning(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.warning, message.encode(), extra=extra)
+            wx.CallAfter(self.loggerObject.warning, message, extra=extra)
 
     def info(self, message):
         """
@@ -229,9 +229,9 @@ class Logger(object):
                  'functionName': outerFrames[3],
                  'currentThreadName': threading.current_thread().name}
         if threading.current_thread().name == "MainThread":
-            self.loggerObject.info(message.encode(), extra=extra)
+            self.loggerObject.info(message, extra=extra)
         else:
-            wx.CallAfter(self.loggerObject.info, message.encode(), extra=extra)
+            wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
     def testrun(self, message):
         # pylint: disable=no-self-use
