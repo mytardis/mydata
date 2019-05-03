@@ -78,11 +78,12 @@ import pkgutil
 import traceback
 import uuid
 
+from six.moves import urllib
+
 import dateutil.parser
 import psutil
 import requests
 import netifaces
-from six.moves import urllib
 
 from .. import __version__ as VERSION
 from ..logs import logger
