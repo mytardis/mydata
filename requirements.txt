@@ -21,4 +21,4 @@ lxml==4.3.3
 
 # PyUpdater needs to go after requests, because of requests's constraints
 # around the installed urllib3 version
-PyUpdater==2.5.3
+PyUpdater==3.0.0
