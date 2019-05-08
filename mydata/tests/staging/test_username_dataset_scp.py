@@ -326,14 +326,13 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         foldersController.FinishedScanningForDatasetFolders()
         newLogs = Subtract(logger.GetValue(), loggerOutput)
 
-        # Instead of allowing multiple SCP failures and asserting the expected
-        # number of failures here, MyData now raises a critical exception
-        # when one SCP upload fails (after SETTINGS.advanced.maxUploadRetries
-        # has been exceeded for that upload), because if we allow MyData to
-        # continue creating DataFile records via the MyTardis API while SCP
-        # uploads are failing, it could create a large number of empty DataFile
-        # records very quickly in the case of a "Disk quota exceeded" error.
-        self.assertTrue(foldersController.failed)
+        for uploadModel in uploadsModel.rowsData:
+            self.assertEqual(uploadModel.status, UploadStatus.FAILED)
+            self.assertEqual(uploadModel.retries, 1)
+            sys.stderr.write(
+                "Upload failed for %s: %s\n"
+                % (uploadModel.filename, uploadModel.message.strip()))
+        sys.stderr.write("\n")
 
         self.assertRegexpMatches(
             newLogs,

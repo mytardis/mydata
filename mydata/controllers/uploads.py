@@ -214,7 +214,7 @@ class UploadDatafileRunnable(object):
                 self.CopyFileToStaging(dataFileDict)
         except Exception as err:
             logger.error(traceback.format_exc())
-            StopUploadsAsFailed(SafeStr(err), showError=True)
+            self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
             return
 
     def CanceledCallback(self):
@@ -311,7 +311,7 @@ class UploadDatafileRunnable(object):
                              self.uploadModel.GetRelativePathToUpload())
             else:
                 logger.error(traceback.format_exc())
-                StopUploadsAsFailed(SafeStr(err), showError=True)
+                self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
             return
         except requests.exceptions.RequestException as err:
             self.uploadModel.traceback = traceback.format_exc()
@@ -407,7 +407,7 @@ class UploadDatafileRunnable(object):
                 else:
                     logger.error(traceback.format_exc())
                     message = SafeStr(err)
-                    StopUploadsAsFailed(message, showError=True)
+                    self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
                     return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
@@ -475,6 +475,8 @@ class UploadDatafileRunnable(object):
             location = SETTINGS.uploaderModel.uploadToStagingRequest.location
         except StorageBoxAttributeNotFound as err:
             message = SafeStr(err)
+            # We can't continue with uploads to staging if the storage box is
+            # missing the required "location" StorageBoxOption:
             StopUploadsAsFailed(message, showError=True)
             return
         if self.existingUnverifiedDatafile:
@@ -501,7 +503,7 @@ class UploadDatafileRunnable(object):
                 return
             self.uploadModel.traceback = traceback.format_exc()
             logger.error(traceback.format_exc())
-            StopUploadsAsFailed(SafeStr(err), showError=True)
+            self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
             return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
