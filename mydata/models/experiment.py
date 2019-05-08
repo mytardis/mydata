@@ -157,7 +157,7 @@ class ExperimentModel(object):
 
         facilityManagersGroup = SETTINGS.general.facility.managerGroup
         ObjectAclModel.ShareExperimentWithGroup(
-            createdExperiment, facilityManagersGroup, isOwner=False)
+            createdExperiment, facilityManagersGroup, isOwner=True)
         # Avoid creating a duplicate ObjectACL if the user folder's
         # username matches the facility manager's username.
         # Don't attempt to create an ObjectACL record for an
