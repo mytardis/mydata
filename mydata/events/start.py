@@ -152,7 +152,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                     # defined timeout interval.  Any other settings validation
                     # failure will be reported to the user.
                     field = invalidSettings.field
-                    if field != "scheduled_time" and field != "mytardis_url":
+                    if field not in ('scheduled_time', 'mytardis_url'):
                         logger.debug(
                             "Displaying result from settings validation.")
                         message = invalidSettings.message

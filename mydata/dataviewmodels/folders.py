@@ -125,7 +125,7 @@ class FoldersModel(MyDataDataViewModel):
             pass
         if not ascending:
             folderRecord2, folderRecord1 = folderRecord1, folderRecord2
-        if col == 0 or col == 3:
+        if col in (0, 3):
             obj1 = int(folderRecord1.dataViewId)
             obj2 = int(folderRecord2.dataViewId)
         else:
@@ -228,13 +228,12 @@ class FoldersModel(MyDataDataViewModel):
             userFolderPath = os.path.join(
                 SETTINGS.general.dataDirectory, userFolderName)
             logger.debug("Folder structure: " + folderStructure)
-            if folderStructure == 'Username / Dataset' or \
-                    folderStructure == 'Email / Dataset':
+            if folderStructure in ('Username / Dataset', 'Email / Dataset'):
                 self.ScanForDatasetFolders(userFolderPath, userRecord,
                                            userFolderName)
-            elif folderStructure == \
-                    'Username / Experiment / Dataset' or \
-                    folderStructure == 'Email / Experiment / Dataset':
+            elif folderStructure in (
+                    'Username / Experiment / Dataset',
+                    'Email / Experiment / Dataset'):
                 self.ScanForExperimentFolders(userFolderPath, userRecord,
                                               userFolderName)
             elif folderStructure == \
