@@ -526,7 +526,7 @@ class SshRequestHandler(SocketServer.BaseRequestHandler):
                 self.close_transport(success=True)
         except Exception as e:
             logger.error(
-                '*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
+                '*** Caught exception: %s: %s', str(e.__class__), str(e))
             if not isinstance(e, socket.error) and \
                     not isinstance(e, select.error):
                 logger.error(traceback.format_exc())
