@@ -557,7 +557,6 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
     ThreadedTCPServer
     """
-    pass
 
 
 class ThreadedSshServer(ThreadedTCPServer):
