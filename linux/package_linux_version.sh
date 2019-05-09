@@ -16,7 +16,7 @@ ARCHITECTURE=$(uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g)
 rm -fr dist
 
 # PyInstaller 2.1
-PATHS=$(python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)')
+PATHS=$(python -c 'import appdirs; import os; import sys; sys.stdout.write(os.path.dirname(appdirs.__file__))')
 pyinstaller --paths=$PATHS --name=MyData --icon=../mydata/media/MyData.ico --windowed ../run.py
 
 cp "MyData.desktop" 	dist/MyData/

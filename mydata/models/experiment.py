@@ -1,10 +1,10 @@
 """
 Model class for MyTardis API v1's ExperimentResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 import json
-import urllib
 import requests
+
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..threads.flags import FLAGS
@@ -51,20 +51,20 @@ class ExperimentModel(object):
         """
         See also GetOrCreateExperimentForFolder
         """
-        expTitleEncoded = urllib.quote(
+        expTitleEncoded = urllib.parse.quote(
             folderModel.experimentTitle.encode('utf-8'))
         folderStructureEncoded = \
-            urllib.quote(SETTINGS.advanced.folderStructure)
+            urllib.parse.quote(SETTINGS.advanced.folderStructure)
         url = "%s/api/v1/mydata_experiment/?format=json" \
             "&title=%s&folder_structure=%s" \
             % (SETTINGS.general.myTardisUrl, expTitleEncoded,
                folderStructureEncoded)
         if folderModel.userFolderName:
             url += "&user_folder_name=%s" \
-                % urllib.quote(folderModel.userFolderName.encode('utf-8'))
+                % urllib.parse.quote(folderModel.userFolderName.encode('utf-8'))
         if folderModel.groupFolderName:
             url += "&group_folder_name=%s" \
-                % urllib.quote(folderModel.groupFolderName.encode('utf-8'))
+                % urllib.parse.quote(folderModel.groupFolderName.encode('utf-8'))
 
         logger.debug(url)
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)

@@ -7,7 +7,9 @@ import copy
 import datetime
 import re
 import json
-import urllib
+
+import six
+from six.moves import urllib
 
 from . import EMPTY_API_LIST, STAGING_PATH, TEST_FACILITY, TEST_INSTRUMENT
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
@@ -69,7 +71,7 @@ def FakeMyTardisGet(mytardis):
         "/api/v1/mydata_replica/": RespondToReplicaRequest
     }
 
-    for prefix, responder in responderForPrefix.iteritems():
+    for prefix, responder in six.iteritems(responderForPrefix):
         if mytardis.path.startswith(prefix):
             responder(mytardis)
             return
@@ -313,7 +315,7 @@ def RespondToUploaderRequest(mytardis):
     :param mytardis: The FakeMyTardisHandler instance
     """
     match = re.match(r"^.*uuid=(\S+)$", mytardis.path)
-    uuid = urllib.unquote(match.groups()[0])
+    uuid = urllib.parse.unquote(match.groups()[0])
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
@@ -348,10 +350,10 @@ def RespondToUploaderRegRequest(mytardis):
     match = re.match(r"^.*uploader__uuid=(\S+)"
                      r"&requester_key_fingerprint=(\S+)$", mytardis.path)
     if match:
-        uuid = urllib.unquote(match.groups()[0])
+        uuid = urllib.parse.unquote(match.groups()[0])
         existingApprovedRequest = (uuid == "1234567890")
         missingStorageBoxAttribute = (uuid == "1234567891")
-        fingerprint = urllib.unquote(match.groups()[1])
+        fingerprint = urllib.parse.unquote(match.groups()[1])
     else:
         mytardis.send_response(400)
         mytardis.send_header("Content-type", "application/json")
@@ -459,7 +461,7 @@ def RespondToExperimentRequest(mytardis):
     experimentsJson['meta']['total_count'] = 1
     if mytardis.path.startswith(supportedRequestPrefixes['title']):
         match = re.match(r"^.*&title=(\S+)&folder_structure.*$", mytardis.path)
-        title = urllib.unquote(match.groups()[0])
+        title = urllib.parse.unquote(match.groups()[0])
         if title == "Missing UserProfile":
             RespondWithStatusCode(
                 mytardis, 404, "UserProfile matching query does not exist.")
@@ -514,7 +516,7 @@ def RespondToExperimentRequest(mytardis):
         if not match:
             match = re.match(r"^.*&uploader=(\S+)$", mytardis.path)
 
-        uploaderUuid = urllib.unquote(match.groups()[0])
+        uploaderUuid = urllib.parse.unquote(match.groups()[0])
         mytardis.send_response(200)
         mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
@@ -557,8 +559,8 @@ def RespondToDatasetRequest(mytardis):
     match = re.match(
         r"^.*&experiments__id=(\S+)&description=(\S+)&instrument__id=(\S+)$",
         mytardis.path)
-    description = urllib.unquote(match.groups()[1])
-    instrumentId = urllib.unquote(match.groups()[2])
+    description = urllib.parse.unquote(match.groups()[1])
+    instrumentId = urllib.parse.unquote(match.groups()[2])
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
@@ -590,8 +592,8 @@ def RespondToDataFilesRequest(mytardis):
         r"^.*&dataset__id=(\S+)&filename=(\S+)&directory=(\S*)$",
         mytardis.path)
     datasetId = match.groups()[0]
-    filename = urllib.unquote(match.groups()[1])
-    directory = urllib.unquote(match.groups()[2])
+    filename = urllib.parse.unquote(match.groups()[1])
+    directory = urllib.parse.unquote(match.groups()[2])
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()

@@ -43,15 +43,20 @@ import re
 import logging
 import socket
 import select
-# For Python 3, this will change to "from io import StringIO":
-from StringIO import StringIO
 
 import paramiko
 from paramiko.py3compat import decodebytes
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
+import six
 
 import mydata.utils.openssh as OpenSSH
+
+if six.PY3:
+    from io import StringIO
+else:
+    from StringIO import StringIO  # pylint: disable=import-error
+
 
 # setup logging
 logger = logging.getLogger(__name__)

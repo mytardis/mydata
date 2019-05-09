@@ -12,17 +12,20 @@ import logging
 import os
 import sys
 import inspect
-import pkgutil
-# For Python 3, this will change to "from io import StringIO":
-from StringIO import StringIO
 
 import requests
 from requests.exceptions import RequestException
+import six
 import wx
 
 from .SubmitDebugReportDialog import SubmitDebugReportDialog
 from .wxloghandler import WxLogHandler
 from .wxloghandler import EVT_WX_LOG_EVENT
+
+if six.PY3:
+    from io import StringIO
+else:
+    from StringIO import StringIO  # pylint: disable=import-error
 
 
 class MyDataFormatter(logging.Formatter):
@@ -62,8 +65,8 @@ class Logger(object):
         self.level = logging.INFO
         self.ConfigureLogger()
         if not hasattr(sys, "frozen"):
-            self.appRootDir = \
-                os.path.dirname(pkgutil.get_loader("mydata.MyData").filename)
+            self.appRootDir = os.path.realpath(
+                os.path.join(os.path.dirname(__file__), "..", ".."))
         self.logTextCtrl = None
         self.pleaseContactMe = False
         self.contactName = ""

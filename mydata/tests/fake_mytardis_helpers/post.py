@@ -7,6 +7,8 @@ import re
 import json
 import cgi
 
+import six
+
 from . import STAGING_PATH, TASTYPIE_CANNED_ERROR, TEST_FACILITY
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
 
@@ -65,7 +67,7 @@ def FakeMyTardisPost(mytardis):
             RespondToUploaderRegRequest
     }
 
-    for path, responder in responderForPath.iteritems():
+    for path, responder in six.iteritems(responderForPath):
         if mytardis.path == path:
             if responder == RespondToDataFileRequest:
                 responder(mytardis, postData, contentType)

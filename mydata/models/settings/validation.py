@@ -441,7 +441,7 @@ def CheckContactEmailAndEmailFolders(setStatusMessage):
     if SETTINGS.advanced.folderStructure.startswith('Email') and \
             SETTINGS.advanced.validateFolderStructure:
         dataDir = SETTINGS.general.dataDirectory
-        folderNames = os.walk(dataDir).next()[1]
+        folderNames = next(os.walk(dataDir))[1]
         for folderName in folderNames:
             if not validate_email(folderName):
                 message = "Folder name \"%s\" in \"%s\" is not a " \

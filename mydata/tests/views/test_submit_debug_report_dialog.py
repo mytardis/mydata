@@ -4,10 +4,10 @@ Test ability to open submit debug report dialog.
 import sys
 import time
 import threading
-from BaseHTTPServer import HTTPServer
 
 import requests
 import wx
+from six.moves.BaseHTTPServer import HTTPServer  # pylint: disable=relative-import,wrong-import-order
 
 from ...settings import SETTINGS
 from ...logs import logger

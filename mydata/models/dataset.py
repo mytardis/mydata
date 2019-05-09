@@ -1,10 +1,9 @@
 """
 Model class for MyTardis API v1's DatasetResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import urllib
 import json
 import requests
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..threads.flags import FLAGS
@@ -121,7 +120,7 @@ class DatasetModel(object):
             # folderModel.experimentModel could be None in testRun
             message = "Dataset can't exist because experiment is None"
             raise DoesNotExist(message, modelClass=DatasetModel)
-        description = urllib.quote(folderModel.folderName.encode('utf-8'))
+        description = urllib.parse.quote(folderModel.folderName.encode('utf-8'))
         url = ("%s/api/v1/dataset/?format=json&experiments__id=%s"
                "&description=%s" % (SETTINGS.general.myTardisUrl,
                                     folderModel.experimentModel.experimentId,

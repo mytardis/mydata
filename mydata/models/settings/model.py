@@ -5,7 +5,8 @@ and saved to disk in MyData.cfg
 import os
 import pickle
 import traceback
-import urlparse
+
+from six.moves import urllib
 
 from ...constants import APPNAME
 from ...logs import logger
@@ -261,7 +262,7 @@ class SettingsModel(object):
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        parsed = urlparse.urlparse(self.general.myTardisUrl)
+        parsed = urllib.parse.urlparse(self.general.myTardisUrl)
         return os.path.join(
             os.path.dirname(self.configPath),
             "verified-files-%s-%s.pkl" %

@@ -1,9 +1,9 @@
 """
 Model class for MyTardis API v1's UserResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
-import urllib
 import requests
+
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..utils.exceptions import DoesNotExist
@@ -143,7 +143,7 @@ class UserModel(object):
         """
         url = "%s/api/v1/user/?format=json&email__iexact=%s" \
             % (SETTINGS.general.myTardisUrl,
-               urllib.quote(email.encode('utf-8')))
+               urllib.parse.quote(email.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         userRecordsJson = response.json()

@@ -1,11 +1,11 @@
 """
 Model class for MyTardis API v1's InstrumentResource.
-See: https://github.com/mytardis/mytardis/blob/3.7/tardis/tardis_portal/api.py
 """
 
 import json
-import urllib
 import requests
+
+from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..logs import logger
@@ -58,7 +58,7 @@ class InstrumentModel(object):
         """
         url = "%s/api/v1/instrument/?format=json&facility__id=%s&name=%s" \
             % (SETTINGS.general.myTardisUrl, facility.facilityId,
-               urllib.quote(name.encode('utf-8')))
+               urllib.parse.quote(name.encode('utf-8')))
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         instrumentsJson = response.json()

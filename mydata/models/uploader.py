@@ -75,9 +75,10 @@ import platform
 import getpass
 import re
 import pkgutil
-import urllib
 import traceback
 import uuid
+
+from six.moves import urllib
 
 import dateutil.parser
 import psutil
@@ -101,7 +102,6 @@ from .storage import StorageBox
 class UploaderModel(object):
     """
     Model class for MyTardis API v1's UploaderAppResource.
-    See: https://github.com/mytardis/mytardis-app-mydata/blob/master/api.py
     """
     def __init__(self, settings):
         # pylint: disable=too-many-branches
@@ -191,7 +191,7 @@ class UploaderModel(object):
         # pylint: disable=too-many-branches
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploader/?format=json" + \
-            "&uuid=" + urllib.quote(self.settings.miscellaneous.uuid)
+            "&uuid=" + urllib.parse.quote(self.settings.miscellaneous.uuid)
         headers = self.settings.defaultHeaders
         response = requests.get(
             headers=headers, url=url,
@@ -318,7 +318,7 @@ class UploaderModel(object):
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
             "&uploader__uuid=" + self.settings.miscellaneous.uuid + \
-            "&requester_key_fingerprint=" + urllib.quote(
+            "&requester_key_fingerprint=" + urllib.parse.quote(
                 self.sshKeyPair.fingerprint)
         logger.debug(url)
         headers = self.settings.defaultHeaders
@@ -415,7 +415,8 @@ class UploaderModel(object):
 
         if not self.uploaderId:
             url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-                % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
+                % (myTardisUrl,
+                   urllib.parse.quote(self.settings.miscellaneous.uuid))
             response = requests.get(headers=headers, url=url)
             response.raise_for_status()
             existingUploaderRecords = response.json()
@@ -448,7 +449,7 @@ class UploaderModel(object):
         myTardisUrl = self.settings.general.myTardisUrl
         headers = self.settings.defaultHeaders
         url = "%s/api/v1/mydata_uploader/?format=json&uuid=%s" \
-            % (myTardisUrl, urllib.quote(self.settings.miscellaneous.uuid))
+            % (myTardisUrl, urllib.parse.quote(self.settings.miscellaneous.uuid))
         try:
             response = requests.get(
                 headers=headers, url=url,
