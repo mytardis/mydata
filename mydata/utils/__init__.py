@@ -26,9 +26,9 @@ def PidIsRunning(pid):
     """
     try:
         proc = psutil.Process(int(pid))
-        if proc.status == psutil.STATUS_DEAD:
+        if proc.status() == psutil.STATUS_DEAD:
             return False
-        if proc.status == psutil.STATUS_ZOMBIE:
+        if proc.status() == psutil.STATUS_ZOMBIE:
             return False
         return True  # Assume other status are valid
     except psutil.NoSuchProcess:

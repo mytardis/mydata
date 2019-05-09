@@ -3,6 +3,7 @@ mydata/tests/fake_mytardis_helpers/post.py
 
 Responses to POST requests for our fake MyTardis server
 """
+# pylint: disable=comparison-with-callable
 import re
 import json
 import cgi
