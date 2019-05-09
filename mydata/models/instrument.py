@@ -68,11 +68,10 @@ class InstrumentModel(object):
             message = "Instrument \"%s\" was not found in MyTardis" % name
             logger.warning(message)
             raise DoesNotExist(message, response, modelClass=InstrumentModel)
-        else:
-            logger.debug("Found instrument record for name \"%s\" "
-                         "in facility \"%s\"" % (name, facility.name))
-            instrumentJson = instrumentsJson['objects'][0]
-            return InstrumentModel(name=name, instrumentJson=instrumentJson)
+        logger.debug("Found instrument record for name \"%s\" "
+                     "in facility \"%s\"" % (name, facility.name))
+        instrumentJson = instrumentsJson['objects'][0]
+        return InstrumentModel(name=name, instrumentJson=instrumentJson)
 
     @staticmethod
     def RenameInstrument(facilityName, oldInstrumentName, newInstrumentName):

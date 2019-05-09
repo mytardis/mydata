@@ -296,13 +296,12 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
 
     if stdout is None or str(stdout).strip() == "":
         raise SshException("Received unexpected EOF from ssh-keygen.")
-    elif "Your identification has been saved" in stdout:
+    if "Your identification has been saved" in stdout:
         return KeyPair(privateKeyFilePath, publicKeyFilePath)
-    elif "already exists" in stdout:
+    if "already exists" in stdout:
         raise SshException("Private key file \"%s\" already exists."
                            % privateKeyFilePath)
-    else:
-        raise SshException(stdout)
+    raise SshException(stdout)
 
 
 def SshServerIsReady(username, privateKeyFilePath,

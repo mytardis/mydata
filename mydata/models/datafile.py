@@ -73,14 +73,13 @@ class DataFileModel(object):
             raise DoesNotExist(
                 message="Datafile \"%s\" was not found in MyTardis" % filename,
                 response=response)
-        elif numDataFilesFound > 1:
+        if numDataFilesFound > 1:
             raise MultipleObjectsReturned(
                 message="Multiple datafiles matching %s were found in MyTardis"
                 % filename,
                 response=response)
-        else:
-            return DataFileModel(
-                dataset=dataset, dataFileJson=dataFilesJson['objects'][0])
+        return DataFileModel(
+            dataset=dataset, dataFileJson=dataFilesJson['objects'][0])
 
     @staticmethod
     def GetDataFileFromId(dataFileId):

@@ -299,7 +299,7 @@ def CheckMyTardisUrl(setStatusMessage):
                 "If you suspect this, please contact your MyTardis " \
                 "administrator immediately."
             raise InvalidSettings(message, "mytardis_url")
-        elif response.status_code == 200:
+        if response.status_code == 200:
             message = "Retrieved %s in %.3f seconds." \
                 % (SETTINGS.general.myTardisApiUrl,
                    response.elapsed.total_seconds())

@@ -129,10 +129,9 @@ class UserModel(object):
             raise DoesNotExist(
                 message="User \"%s\" was not found in MyTardis" % username,
                 response=response)
-        else:
-            logger.debug("Found user record for username '" + username + "'.")
-            return UserModel(username=username,
-                             userRecordJson=userRecordsJson['objects'][0])
+        logger.debug("Found user record for username '" + username + "'.")
+        return UserModel(username=username,
+                         userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
     def GetUserByEmail(email):
@@ -154,9 +153,8 @@ class UserModel(object):
                 message="User with email \"%s\" was not found in MyTardis"
                 % email,
                 response=response)
-        else:
-            logger.debug("Found user record for email '" + email + "'.")
-            return UserModel(userRecordJson=userRecordsJson['objects'][0])
+        logger.debug("Found user record for email '" + email + "'.")
+        return UserModel(userRecordJson=userRecordsJson['objects'][0])
 
     @staticmethod
     def GetUserForFolder(userFolderName, userNotFoundInMyTardis=False):

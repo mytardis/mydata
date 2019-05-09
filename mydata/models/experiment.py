@@ -73,7 +73,7 @@ class ExperimentModel(object):
         if numExperimentsFound == 0:
             message = ExperimentModel.LogExperimentNotFound(folderModel)
             raise DoesNotExist(message, modelClass=ExperimentModel)
-        elif numExperimentsFound >= 1:
+        if numExperimentsFound >= 1:
             ExperimentModel.LogExperimentFound(folderModel)
             return ExperimentModel(experimentsJson['objects'][0])
 
