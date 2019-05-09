@@ -10,10 +10,10 @@ Classes for MyData's settings dialog.
 from datetime import datetime
 from datetime import timedelta
 import sys
-import platform
 import os
 import traceback
 
+import distro
 import wx
 
 from ..settings import SETTINGS
@@ -115,7 +115,7 @@ class SettingsDialog(wx.Dialog):
                 "MyData: Gtk-CRITICAL errors about IA__gtk_widget_set_size_request "
                 "are harmless: http://trac.wxwidgets.org/ticket/15891\n")
             self.SetMinSize(wx.Size(-1, 490))
-            distroName, distroVersion, _ = platform.linux_distribution()
+            distroName, distroVersion, _ = distro.linux_distribution()
             if (distroName.startswith("Red Hat") or
                     distroName.startswith("CentOS")) and \
                     distroVersion.startswith("7"):

@@ -87,7 +87,7 @@ class SshServerInterface(paramiko.ServerInterface):
         keyPair = OpenSSH.FindKeyPair("MyDataTest")
         # Remove "ssh-rsa " and "MyDataTest key":
         data = bytes(keyPair.publicKey.split(" ")[1])
-        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
+        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))  # pylint: disable=deprecated-method
 
     def check_channel_request(self, kind, chanid):
         """
