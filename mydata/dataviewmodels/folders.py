@@ -81,7 +81,7 @@ class FoldersModel(MyDataDataViewModel):
             ownerKey = columnKey.split("owner.")[1]
             owner = self.rowsData[row].owner
             return owner.GetValueForKey(ownerKey) if owner else ""
-        elif columnKey.startswith("group."):
+        if columnKey.startswith("group."):
             groupKey = columnKey.split("group.")[1]
             group = self.rowsData[row].group
             return group.GetValueForKey(groupKey) if group else ""

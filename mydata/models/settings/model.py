@@ -122,16 +122,15 @@ class SettingsModel(object):
         """
         if key in self.general.fields:
             return self.general.mydataConfig[key]
-        elif key in self.schedule.fields:
+        if key in self.schedule.fields:
             return self.schedule.mydataConfig[key]
-        elif key in self.filters.fields:
+        if key in self.filters.fields:
             return self.filters.mydataConfig[key]
-        elif key in self.advanced.fields:
+        if key in self.advanced.fields:
             return self.advanced.mydataConfig[key]
-        elif key in self.miscellaneous.fields:
+        if key in self.miscellaneous.fields:
             return self.miscellaneous.mydataConfig[key]
-        else:
-            raise KeyError(key)
+        raise KeyError(key)
 
     @property
     def uploaderModel(self):

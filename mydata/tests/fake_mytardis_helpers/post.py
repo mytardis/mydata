@@ -230,7 +230,7 @@ def RespondToDatasetRequest(mytardis, postData):
         mytardis.wfile.write("<body><h2>Unauthorized</h2>")
         mytardis.wfile.write("</body></html>")
         return
-    elif description == "New Dataset Folder With Internal Server Error":
+    if description == "New Dataset Folder With Internal Server Error":
         mytardis.send_response(500)
         mytardis.send_header("Content-type", "text/html")
         mytardis.end_headers()

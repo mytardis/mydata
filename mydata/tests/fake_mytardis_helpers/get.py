@@ -466,11 +466,11 @@ def RespondToExperimentRequest(mytardis):
             RespondWithStatusCode(
                 mytardis, 404, "UserProfile matching query does not exist.")
             return
-        elif title == "Missing Schema":
+        if title == "Missing Schema":
             RespondWithStatusCode(
                 mytardis, 404, "Schema matching query does not exist.")
             return
-        elif title == "Unknown 404":
+        if title == "Unknown 404":
             RespondWithStatusCode(mytardis, 404)
             return
         mytardis.send_response(200)

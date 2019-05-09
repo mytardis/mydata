@@ -287,12 +287,10 @@ class UploaderModel(object):
         """
         if hasattr(sys, 'frozen'):
             return os.path.dirname(sys.executable)
-        else:
-            try:
-                return os.path.dirname(pkgutil.get_loader("MyData").filename)
-            except:
-                return os.getcwd()
-        return ""
+        try:
+            return os.path.dirname(pkgutil.get_loader("MyData").filename)
+        except:
+            return os.getcwd()
 
     @property
     def hostname(self):
@@ -331,11 +329,10 @@ class UploaderModel(object):
             logger.debug("A request already exists for this uploader.")
             return UploaderRegistrationRequest(
                 uploaderRegRequestJson=approvalJson)
-        else:
-            message = "This uploader hasn't requested uploading " \
-                      "via staging yet."
-            logger.debug(message)
-            raise DoesNotExist(message)
+        message = "This uploader hasn't requested uploading " \
+                  "via staging yet."
+        logger.debug(message)
+        raise DoesNotExist(message)
 
     def RequestUploadToStagingApproval(self):
         """

@@ -341,9 +341,7 @@ def MyDataInstallLocation():
     """
     if hasattr(sys, 'frozen'):
         return os.path.dirname(sys.executable)
-    else:
-        try:
-            return os.path.dirname(pkgutil.get_loader("MyData").filename)
-        except:
-            return os.getcwd()
-    return ""
+    try:
+        return os.path.dirname(pkgutil.get_loader("MyData").filename)
+    except:
+        return os.getcwd()

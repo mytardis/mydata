@@ -221,7 +221,7 @@ class FolderModel(object):
         if key.startswith("owner."):
             ownerKey = key.split("owner.")[1]
             return self.owner.GetValueForKey(ownerKey) if self.owner else None
-        elif key.startswith("group."):
+        if key.startswith("group."):
             groupKey = key.split("group.")[1]
             return self.group.GetValueForKey(groupKey) if self.group else None
         return getattr(self, key)

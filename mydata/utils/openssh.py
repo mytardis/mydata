@@ -563,9 +563,8 @@ def GetCygwinPath(path):
     if match:
         return "/cygdrive/" + match.groups()[0] + \
             match.groups()[1].replace("\\", "/")
-    else:
-        raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
-                        "a valid path." % path)
+    raise Exception("OpenSSH.GetCygwinPath: %s doesn't look like "
+                    "a valid path." % path)
 
 
 def CleanUpScpAndSshProcesses():

@@ -43,8 +43,7 @@ class ExperimentModel(object):
         except DoesNotExist as err:
             if err.GetModelClass() == ExperimentModel:
                 return ExperimentModel.CreateExperimentForFolder(folderModel)
-            else:
-                raise
+            raise
 
     @staticmethod
     def GetExperimentForFolder(folderModel):

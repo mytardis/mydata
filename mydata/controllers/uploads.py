@@ -253,7 +253,7 @@ class UploadDatafileRunnable(object):
         if self.uploadModel.canceled:
             wx.GetApp().foldersController.canceled = True
             return
-        elif self.uploadModel.status == UploadStatus.COMPLETED:
+        if self.uploadModel.status == UploadStatus.COMPLETED:
             return
         if current is None:
             # For a zero-sized file, current will be None

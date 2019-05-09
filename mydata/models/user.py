@@ -104,7 +104,7 @@ class UserModel(object):
         """
         if hasattr(self, key) and getattr(self, key, None):
             return getattr(self, key)
-        elif key in ('username', 'fullName', 'email') and \
+        if key in ('username', 'fullName', 'email') and \
                 self.userNotFoundInMyTardis:
             value = UserModel.userNotFoundString
         else:
@@ -173,13 +173,12 @@ class UserModel(object):
                 return UserModel(
                     username=userFolderName, userNotFoundInMyTardis=True)
             return UserModel.GetUserByUsername(userFolderName)
-        elif folderStructure.startswith("Email"):
+        if folderStructure.startswith("Email"):
             if userNotFoundInMyTardis:
                 return UserModel(
                     email=userFolderName, userNotFoundInMyTardis=True)
             return UserModel.GetUserByEmail(userFolderName)
-        else:
-            return None
+        return None
 
 class UserProfileModel(object):
     """
