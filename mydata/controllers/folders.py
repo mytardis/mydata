@@ -6,8 +6,7 @@ import os
 import sys
 import time
 import threading
-# For Python3, this will change to "from queue import Queue":
-from Queue import Queue
+from queue import Queue
 import traceback
 import datetime
 
