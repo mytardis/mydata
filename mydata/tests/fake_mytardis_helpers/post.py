@@ -29,7 +29,7 @@ def FakeMyTardisPost(mytardis):
         return
 
     assert mytardis.path.startswith("/api/v1/")
-    authorization = mytardis.headers.getheader("Authorization", "")
+    authorization = mytardis.headers.get("Authorization", "")
     match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
     apiUsername = match.groups()[0]
     apiKey = match.groups()[1]
@@ -40,7 +40,7 @@ def FakeMyTardisPost(mytardis):
     try:
         length = int(mytardis.headers['Content-Length'])
         contentType, _ = \
-            cgi.parse_header(mytardis.headers.getheader('content-type'))
+            cgi.parse_header(mytardis.headers.get('content-type'))
         if contentType == 'multipart/form-data':
             form = \
                 cgi.FieldStorage(

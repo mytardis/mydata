@@ -51,7 +51,7 @@ def FakeMyTardisGet(mytardis):
             "Fake MyTardis server doesn't know how to respond to %s"
             % mytardis.path)
 
-    authorization = mytardis.headers.getheader("Authorization", "")
+    authorization = mytardis.headers.get("Authorization", "")
     match = re.match(r"^ApiKey (\S+):(\S+)$", authorization)
     apiKey = match.groups()[1]
     if apiKey == "invalid":
