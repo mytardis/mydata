@@ -13,7 +13,7 @@ circular dependency, so we pass the settings as an argument instead.
 import traceback
 import os
 import sys
-from configparser import ConfigParser
+from six.moves.configparser import ConfigParser
 from datetime import datetime
 
 import appdirs
