@@ -49,7 +49,7 @@ class SettingsDialogTester(MyDataSettingsTester):
         """
         Test ability to open settings dialog and save fields.
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-locals
 
         self.settingsDialog.Show()
 

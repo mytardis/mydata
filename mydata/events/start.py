@@ -63,6 +63,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     for existing datafiles on MyTardis and uploading any datafiles
     not yet available on MyTardis.
     """
+    # pylint: disable=too-many-statements
     from .stop import CheckIfShouldAbort
     from .stop import RestoreUserInterfaceForAbort
     app = wx.GetApp()

@@ -61,6 +61,7 @@ class TasksModel(MyDataDataViewModel):
         """
         Add a task to the Tasks view and activate it.
         """
+        # pylint: disable=too-many-statements
         super(TasksModel, self).AddRow(taskModel)
 
         def JobFunc(taskModel, row, col):

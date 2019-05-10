@@ -341,8 +341,7 @@ class UploadDatafileRunnable(object):
         """
         Upload a file to staging (Using SCP).
         """
-        # pylint:disable=too-many-locals
-        # pylint:disable=too-many-branches
+        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         dataFileDict = AddUploaderInfo(dataFileDict)
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
         dataFileSize = self.folderModel.GetDataFileSize(self.dataFileIndex)

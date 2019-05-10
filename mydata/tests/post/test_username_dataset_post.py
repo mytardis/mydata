@@ -29,7 +29,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         """
         Test scanning the Username / Dataset structure and upload using POST.
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements,too-many-locals
         self.UpdateSettingsFromCfg(
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
