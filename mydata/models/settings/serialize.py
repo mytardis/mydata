@@ -13,8 +13,7 @@ circular dependency, so we pass the settings as an argument instead.
 import traceback
 import os
 import sys
-# For Python 3, this will change to "from configparser import ConfigParser":
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from datetime import datetime
 
 import appdirs
