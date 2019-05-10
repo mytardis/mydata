@@ -90,7 +90,7 @@ def RespondToDataFileRequest(mytardis, postData, contentType):
     :param postData: The POST data dict
     """
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json")
     mytardis.datafileIdAutoIncrement += 1
     mytardis.send_header("location",
                          "/api/v1/dataset_file/%d/"
@@ -127,13 +127,13 @@ def RespondToExperimentRequest(mytardis, postData):
     """
     if "Request 404 from Fake MyTardis Server" in postData['title']:
         mytardis.send_response(404)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
         errorJson = TASTYPIE_CANNED_ERROR
         mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
     experimentJson = {
         "approved": False,
@@ -205,10 +205,12 @@ def RespondToObjectAclRequest(mytardis, apiUsername):
     """
     if apiUsername == "userwithoutprofile":
         mytardis.send_response(404)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
         return
     mytardis.send_response(201)
+    mytardis.send_header("Content-type", "application/json")
+    mytardis.end_headers()
     objectaclJson = dict()
     mytardis.wfile.write(json.dumps(objectaclJson).encode())
 
@@ -233,7 +235,7 @@ def RespondToDatasetRequest(mytardis, postData):
         return
     if description == "New Dataset Folder With Internal Server Error":
         mytardis.send_response(500)
-        mytardis.send_header("Content-type", "text/html")
+        mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
         errorJson = {
             "error_message": ("Sorry, this request could not be "
@@ -242,7 +244,7 @@ def RespondToDatasetRequest(mytardis, postData):
         mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
     experimentResourceUri = postData['experiments'][0]
     experimentId = experimentResourceUri.split("/")[-2]
@@ -274,7 +276,7 @@ def RespondToInstrumentRequest(mytardis, postData):
     :param postData: The POST data dict
     """
     mytardis.send_response(201)
-    mytardis.send_header("Content-type", "text/html")
+    mytardis.send_header("Content-type", "application/json")
     mytardis.end_headers()
     name = postData['name']
     instrumentJson = {
