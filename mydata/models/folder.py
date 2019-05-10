@@ -261,7 +261,7 @@ class FolderModel(object):
         match = False
         with open(includesOrExcludesFile, 'r') as patternsFile:
             for glob in patternsFile.readlines():
-                glob = glob.decode('utf-8').strip()
+                glob = glob.strip()
                 if glob == "":
                     continue
                 if glob.startswith(";"):
