@@ -453,7 +453,7 @@ class FoldersModel(MyDataDataViewModel):
 
             logger.debug("Scanning " + instrumentFolderPath +
                          " for user folders...")
-            userFolders = os.walk(instrumentFolderPath).next()[1]
+            userFolders = next(os.walk(instrumentFolderPath))[1]
             RaiseExceptionIfUserAborted()
             for userFolderName in userFolders:
                 userFolderPath = os.path.join(instrumentFolderPath,
