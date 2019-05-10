@@ -806,6 +806,7 @@ def RespondToReplicaRequest(mytardis):
         return
     if replicaId == "444894":  # missing_mydata_replica_api_endpoint.txt
         mytardis.send_response(404)
+        mytardis.end_headers()
         return
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
