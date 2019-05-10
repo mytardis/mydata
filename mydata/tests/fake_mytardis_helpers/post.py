@@ -54,7 +54,7 @@ def FakeMyTardisPost(mytardis):
         mytardis.send_response(500)
         mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
-        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR).encode())
         return
 
     responderForPath = {
@@ -115,7 +115,7 @@ def RespondToDataFileRequest(mytardis, postData, contentType):
         else:
             tempUrl = "%s/DatasetDescription-%s/%s" \
                 % (STAGING_PATH, datasetId, filename)
-        mytardis.wfile.write(tempUrl)
+        mytardis.wfile.write(tempUrl.encode())
 
 
 def RespondToExperimentRequest(mytardis, postData):
@@ -130,7 +130,7 @@ def RespondToExperimentRequest(mytardis, postData):
         mytardis.send_header("Content-type", "text/html")
         mytardis.end_headers()
         errorJson = TASTYPIE_CANNED_ERROR
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(201)
     mytardis.send_header("Content-type", "text/html")
@@ -193,7 +193,7 @@ def RespondToExperimentRequest(mytardis, postData):
         "resource_uri": "/api/v1/mydata_experiment/2551/",
         "title": postData['title'],
     }
-    mytardis.wfile.write(json.dumps(experimentJson))
+    mytardis.wfile.write(json.dumps(experimentJson).encode())
 
 
 def RespondToObjectAclRequest(mytardis, apiUsername):
@@ -210,7 +210,7 @@ def RespondToObjectAclRequest(mytardis, apiUsername):
         return
     mytardis.send_response(201)
     objectaclJson = dict()
-    mytardis.wfile.write(json.dumps(objectaclJson))
+    mytardis.wfile.write(json.dumps(objectaclJson).encode())
 
 
 def RespondToDatasetRequest(mytardis, postData):
@@ -225,11 +225,11 @@ def RespondToDatasetRequest(mytardis, postData):
         mytardis.send_response(401)
         mytardis.send_header("Content-type", "text/html")
         mytardis.end_headers()
-        mytardis.wfile.write("<html><head><title>"
-                             "FakeMyTardisServer API - Unauthorized"
-                             "</title></head>")
-        mytardis.wfile.write("<body><h2>Unauthorized</h2>")
-        mytardis.wfile.write("</body></html>")
+        mytardis.wfile.write(b"<html><head><title>"
+                             b"FakeMyTardisServer API - Unauthorized"
+                             b"</title></head>")
+        mytardis.wfile.write(b"<body><h2>Unauthorized</h2>")
+        mytardis.wfile.write(b"</body></html>")
         return
     if description == "New Dataset Folder With Internal Server Error":
         mytardis.send_response(500)
@@ -239,7 +239,7 @@ def RespondToDatasetRequest(mytardis, postData):
             "error_message": ("Sorry, this request could not be "
                               "processed. Please try again later.")
         }
-        mytardis.wfile.write(json.dumps(errorJson))
+        mytardis.wfile.write(json.dumps(errorJson).encode())
         return
     mytardis.send_response(201)
     mytardis.send_header("Content-type", "text/html")
@@ -263,7 +263,7 @@ def RespondToDatasetRequest(mytardis, postData):
         "parameter_sets": [],
         "resource_uri": "/api/v1/dataset/4457/"
     }
-    mytardis.wfile.write(json.dumps(datasetJson))
+    mytardis.wfile.write(json.dumps(datasetJson).encode())
 
 
 def RespondToInstrumentRequest(mytardis, postData):
@@ -283,7 +283,7 @@ def RespondToInstrumentRequest(mytardis, postData):
         "facility": TEST_FACILITY,
         "resource_uri": "/api/v1/instrument/32/"
     }
-    mytardis.wfile.write(json.dumps(instrumentJson))
+    mytardis.wfile.write(json.dumps(instrumentJson).encode())
 
 
 def RespondToUploaderRegRequest(mytardis, postData):
@@ -306,4 +306,4 @@ def RespondToUploaderRegRequest(mytardis, postData):
         "resource_uri": "/api/v1/mydata_uploaderregistrationrequest/25/",
         "uploader": uploaderResourceUri
     }
-    mytardis.wfile.write(json.dumps(uploaderRegistrationRequestJson))
+    mytardis.wfile.write(json.dumps(uploaderRegistrationRequestJson).encode())

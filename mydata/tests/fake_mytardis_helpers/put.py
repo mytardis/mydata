@@ -26,7 +26,7 @@ def FakeMyTardisPut(mytardis):
         mytardis.send_response(httpCode)
         mytardis.send_header("Content-type", "application/json")
         mytardis.end_headers()
-        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR))
+        mytardis.wfile.write(json.dumps(TASTYPIE_CANNED_ERROR).encode())
         return
 
     if mytardis.path.startswith("/api/v1/mydata_uploader/"):
@@ -41,7 +41,7 @@ def FakeMyTardisPut(mytardis):
             "instruments": [TEST_INSTRUMENT],
             "resource_uri": "/api/v1/mydata_uploader/25/",
         }
-        mytardis.wfile.write(json.dumps(uploaderJson))
+        mytardis.wfile.write(json.dumps(uploaderJson).encode())
     elif mytardis.path.startswith("/api/v1/instrument/17/"):
         mytardis.send_response(200)
         mytardis.send_header("Content-type", "application/json")
@@ -56,7 +56,7 @@ def FakeMyTardisPut(mytardis):
                 "resource_uri": "/api/v1/instrument/17/"
             }
         ]
-        mytardis.wfile.write(json.dumps(instrumentsJson))
+        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
     else:
         raise Exception("FakeMyTardis Server doesn't know how to respond "
                         "to PUT: %s" % mytardis.path)
