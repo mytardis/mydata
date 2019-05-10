@@ -359,7 +359,7 @@ def SaveSettingsToDisk(configPath=None):
         settingsList = []
         for field in fields:
             value = SETTINGS[field]
-            configParser.set("MyData", field, value)
+            configParser.set("MyData", field, str(value))
             settingsList.append(dict(key=field, value=str(value)))
         configParser.write(configFile)
     logger.info("Saved settings to " + configPath)
