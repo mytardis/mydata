@@ -74,7 +74,6 @@ import sys
 import platform
 import getpass
 import re
-import pkgutil
 import traceback
 import uuid
 
@@ -288,7 +287,8 @@ class UploaderModel(object):
         if hasattr(sys, 'frozen'):
             return os.path.dirname(sys.executable)
         try:
-            return os.path.dirname(pkgutil.get_loader("MyData").filename)
+            return os.path.realpath(
+                os.path.join(os.path.dirname(__file__), "..", ".."))
         except:
             return os.getcwd()
 

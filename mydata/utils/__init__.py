@@ -3,7 +3,6 @@
 Miscellaneous utility functions.
 """
 import os
-import pkgutil
 import sys
 import subprocess
 import traceback
@@ -342,6 +341,7 @@ def MyDataInstallLocation():
     if hasattr(sys, 'frozen'):
         return os.path.dirname(sys.executable)
     try:
-        return os.path.dirname(pkgutil.get_loader("MyData").filename)
+        return os.path.realpath(
+            os.path.join(os.path.dirname(__file__), "..", ".."))
     except:
         return os.getcwd()
