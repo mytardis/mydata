@@ -143,7 +143,8 @@ class ExperimentModel(object):
         url = "%s/api/v1/mydata_experiment/" % SETTINGS.general.myTardisUrl
         logger.debug(url)
         response = requests.post(headers=SETTINGS.defaultHeaders,
-                                 url=url, data=json.dumps(experimentJson))
+                                 url=url,
+                                 data=json.dumps(experimentJson).encode())
         response.raise_for_status()
         createdExperimentJson = response.json()
         createdExperiment = ExperimentModel(createdExperimentJson)

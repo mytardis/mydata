@@ -44,7 +44,7 @@ class InstrumentModel(object):
             "name": name}
         data = json.dumps(instrumentJson)
         headers = SETTINGS.defaultHeaders
-        response = requests.post(headers=headers, url=url, data=data)
+        response = requests.post(headers=headers, url=url, data=data.encode())
         response.raise_for_status()
         instrumentJson = response.json()
         return InstrumentModel(name=name, instrumentJson=instrumentJson)
@@ -114,6 +114,6 @@ class InstrumentModel(object):
         uploaderJson = {"name": name}
         data = json.dumps(uploaderJson)
         headers = SETTINGS.defaultHeaders
-        response = requests.put(headers=headers, url=url, data=data)
+        response = requests.put(headers=headers, url=url, data=data.encode())
         response.raise_for_status()
         logger.info("Renaming instrument succeeded.")

@@ -39,7 +39,7 @@ class ObjectAclModel(object):
 
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
-                                 data=json.dumps(objectAclJson))
+                                 data=json.dumps(objectAclJson).encode())
         response.raise_for_status()
         logger.debug("Shared experiment with user " + user.username + ".")
 
@@ -69,6 +69,6 @@ class ObjectAclModel(object):
 
         url = myTardisUrl + "/api/v1/objectacl/"
         response = requests.post(headers=SETTINGS.defaultHeaders, url=url,
-                                 data=json.dumps(objectAclJson))
+                                 data=json.dumps(objectAclJson).encode())
         response.raise_for_status()
         logger.debug("Shared experiment with group " + group.name + ".")

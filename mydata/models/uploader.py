@@ -260,11 +260,11 @@ class UploaderModel(object):
         headers = self.settings.defaultHeaders
         if numExistingUploaderRecords > 0:
             response = requests.put(
-                headers=headers, url=url, data=data,
+                headers=headers, url=url, data=data.encode(),
                 timeout=self.settings.miscellaneous.connectionTimeout)
         else:
             response = requests.post(
-                headers=headers, url=url, data=data,
+                headers=headers, url=url, data=data.encode(),
                 timeout=self.settings.miscellaneous.connectionTimeout)
         response.raise_for_status()
         logger.debug("Upload succeeded for uploader info.")
@@ -359,7 +359,7 @@ class UploaderModel(object):
              "requester_key_fingerprint": self.sshKeyPair.fingerprint}
         data = json.dumps(uploaderRegistrationRequestJson)
         response = requests.post(headers=self.settings.defaultHeaders, url=url,
-                                 data=data)
+                                 data=data.encode())
         response.raise_for_status()
         return UploaderRegistrationRequest(
             uploaderRegRequestJson=response.json())
@@ -433,7 +433,7 @@ class UploaderModel(object):
             'uuid': self.settings.miscellaneous.uuid
         }
         response = requests.patch(headers=headers, url=url,
-                                  data=json.dumps(patchData))
+                                  data=json.dumps(patchData).encode())
         response.raise_for_status()
 
     def GetSettings(self):

@@ -100,7 +100,7 @@ class DatasetModel(object):
                 logger.testrun(message)
                 return None
             response = requests.post(headers=SETTINGS.defaultHeaders,
-                                     url=url, data=data)
+                                     url=url, data=data.encode())
             response.raise_for_status()
             newDatasetJson = response.json()
             return DatasetModel(newDatasetJson)

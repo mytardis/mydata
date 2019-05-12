@@ -123,7 +123,7 @@ class DataFileModel(object):
         url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         dataFileJson = json.dumps(dataFileDict)
         response = requests.post(headers=SETTINGS.defaultHeaders,
-                                 url=url, data=dataFileJson)
+                                 url=url, data=dataFileJson.encode())
         return response
 
     @staticmethod
