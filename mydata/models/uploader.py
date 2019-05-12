@@ -158,29 +158,6 @@ class UploaderModel(object):
         else:
             logger.warning("There is no active network interface.")
 
-        fmt = "%-17s %8s %8s %8s %5s%% %9s  %s\n"
-        diskUsage = fmt % ("Device", "Total", "Used", "Free", "Use ", "Type",
-                           "Mount")
-
-        for part in psutil.disk_partitions(all=False):
-            if os.name == 'nt':
-                if 'cdrom' in part.opts or part.fstype == '':
-                    # skip cd-rom drives with no disk in it; they may raise
-                    # ENOENT, pop-up a Windows GUI error for a non-ready
-                    # partition or just hang.
-                    continue
-            usage = psutil.disk_usage(part.mountpoint)
-            diskUsage += fmt % (
-                part.device,
-                BytesToHuman(usage.total),
-                BytesToHuman(usage.used),
-                BytesToHuman(usage.free),
-                int(usage.percent),
-                part.fstype,
-                part.mountpoint)
-
-        self.diskUsage = diskUsage.strip()
-
     def UploadUploaderInfo(self):
         """
         Uploads info about the instrument PC to MyTardis via HTTP POST
@@ -240,7 +217,7 @@ class UploaderModel(object):
             "memory": self.sysInfo['memory'],
             "cpus": self.sysInfo['cpus'],
 
-            "disk_usage": self.diskUsage,
+            "disk_usage": "",
             "data_path": self.settings.general.dataDirectory,
             "default_user": self.settings.general.username,
 
