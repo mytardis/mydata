@@ -14,6 +14,7 @@ import time
 import struct
 
 import psutil
+import six
 
 from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
@@ -210,15 +211,17 @@ class KeyPair(object):
         fingerprint = None
         keyType = None
         if stdout is not None:
-            sshKeyGenOutComponents = stdout.split(" ")
+            sshKeyGenOutComponents = stdout.split(b" ")
             if len(sshKeyGenOutComponents) > 1:
                 fingerprint = sshKeyGenOutComponents[1]
-                if fingerprint.upper().startswith("MD5:"):
+                if fingerprint.upper().startswith(b"MD5:"):
                     fingerprint = fingerprint[4:]
             if len(sshKeyGenOutComponents) > 3:
                 keyType = sshKeyGenOutComponents[-1]\
-                    .strip().strip('(').strip(')')
+                    .strip().strip(b'(').strip(b')')
 
+        if six.PY3:
+            return fingerprint.decode(), keyType.decode()
         return fingerprint, keyType
 
     @property
@@ -296,9 +299,9 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
 
     if stdout is None or str(stdout).strip() == "":
         raise SshException("Received unexpected EOF from ssh-keygen.")
-    if "Your identification has been saved" in stdout:
+    if b"Your identification has been saved" in stdout:
         return KeyPair(privateKeyFilePath, publicKeyFilePath)
-    if "already exists" in stdout:
+    if b"already exists" in stdout:
         raise SshException("Private key file \"%s\" already exists."
                            % privateKeyFilePath)
     raise SshException(stdout)
