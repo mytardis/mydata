@@ -280,15 +280,14 @@ class UploaderModel(object):
         """
         Look for existing upload to staging request.
 
+        Ensures that a MyData SSH key-pair exists, creating one if needed.
+
         :raises requests.exceptions.HTTPError:
         """
-        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+        from mydata.utils.openssh import FindOrCreateKeyPair
 
-        try:
-            if not self.sshKeyPair:
-                self.sshKeyPair = FindKeyPair("MyData")
-        except PrivateKeyDoesNotExist:
-            self.sshKeyPair = NewKeyPair("MyData")
+        if not self.sshKeyPair:
+            self.sshKeyPair = FindOrCreateKeyPair()
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + \
             "/api/v1/mydata_uploaderregistrationrequest/?format=json" + \
@@ -318,13 +317,10 @@ class UploaderModel(object):
 
         :raises requests.exceptions.HTTPError:
         """
-        from mydata.utils.openssh import FindKeyPair, NewKeyPair
+        from mydata.utils.openssh import FindOrCreateKeyPair
 
-        try:
-            if not self.sshKeyPair:
-                self.sshKeyPair = FindKeyPair("MyData")
-        except PrivateKeyDoesNotExist:
-            self.sshKeyPair = NewKeyPair("MyData")
+        if not self.sshKeyPair:
+            self.sshKeyPair = FindOrCreateKeyPair()
         myTardisUrl = self.settings.general.myTardisUrl
         url = myTardisUrl + "/api/v1/mydata_uploaderregistrationrequest/"
         uploaderRegistrationRequestJson = \

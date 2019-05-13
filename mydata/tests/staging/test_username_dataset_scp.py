@@ -22,7 +22,6 @@ from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
 from ...threads.flags import FLAGS
-from ...utils.exceptions import PrivateKeyDoesNotExist
 from .. import MyDataScanFoldersTester
 from .. import InitializeModels
 from ..fake_ssh_server import ThreadedSshServer
@@ -47,10 +46,7 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         # key so it can authenticate the test client.
         # So we need to ensure that the MyData keypair
         # is generated before starting the fake SSH server.
-        try:
-            self.keyPair = OpenSSH.FindKeyPair("MyDataTest")
-        except PrivateKeyDoesNotExist:
-            self.keyPair = OpenSSH.NewKeyPair("MyDataTest")
+        self.keyPair = OpenSSH.FindOrCreateKeyPair("MyDataTest")
         self.scpPort = GetEphemeralPort()
         fake_mytardis_get.SCP_PORT = self.scpPort
         self.StartFakeSshServer()

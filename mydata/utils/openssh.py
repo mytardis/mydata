@@ -238,8 +238,8 @@ def FindKeyPair(keyName="MyData", keyPath=None):
     """
     Find an SSH key pair
     """
-    if keyPath is None:
-        keyPath = os.path.join(os.path.expanduser('~'), ".ssh")
+    if not keyPath:
+        keyPath = GetKeyPairLocation()
     if os.path.exists(os.path.join(keyPath, keyName)):
         with open(os.path.join(keyPath, keyName)) as keyFile:
             for line in keyFile:
@@ -249,13 +249,13 @@ def FindKeyPair(keyName="MyData", keyPath=None):
                     if not os.path.exists(publicKeyFilePath):
                         publicKeyFilePath = None
                     return KeyPair(privateKeyFilePath, publicKeyFilePath)
-    raise PrivateKeyDoesNotExist("Couldn't find valid private key in %s"
-                                 % os.path.join(keyPath, keyName))
+    return None
 
 
 def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     """
-    Create an RSA key-pair in ~/.ssh for use with SSH and SCP.
+    Create an RSA key-pair in ~/.ssh/ (or in keyPath if specified)
+    for use with SSH and SCP.
 
     We use shell=True with subprocess to allow entering an empty
     passphrase into ssh-keygen.  Otherwise (at least on macOS),
@@ -265,16 +265,15 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     """
     if keyName is None:
         keyName = "MyData"
-    if keyPath is None:
-        keyPath = os.path.join(os.path.expanduser('~'), ".ssh")
     if keyComment is None:
         keyComment = "MyData Key"
+    if keyPath is None:
+        keyPath = GetKeyPairLocation()
+    if not os.path.exists(keyPath):
+        os.makedirs(keyPath)
+
     privateKeyFilePath = os.path.join(keyPath, keyName)
     publicKeyFilePath = privateKeyFilePath + ".pub"
-
-    dotSshDir = os.path.join(os.path.expanduser('~'), ".ssh")
-    if not os.path.exists(dotSshDir):
-        os.makedirs(dotSshDir)
 
     if sys.platform.startswith('win'):
         quotedPrivateKeyFilePath = \
@@ -305,6 +304,40 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
         raise SshException("Private key file \"%s\" already exists."
                            % privateKeyFilePath)
     raise SshException(stdout)
+
+
+def GetKeyPairLocation():
+    r"""
+    Get a suitable location for the SSH key pair.
+
+    On Windows (on which MyData is most commonly deployed), MyData uses
+    a shared config directory of C:\ProgramData\Monash University\MyData\,
+    shared amongst multiple Windows users, so it makes sense to store
+    MyData's SSH key-pair in this central location.  This means that the
+    private key is private to the instrument PC, but not private to an
+    individual user of the instrument PC.
+    """
+    if sys.platform.startswith("win"):
+        return os.path.join(
+            os.path.dirname(SETTINGS.configPath), ".ssh")
+    return os.path.join(os.path.expanduser('~'), ".ssh")
+
+def FindOrCreateKeyPair(keyName="MyData"):
+    r"""
+    Find the MyData SSH key-pair, creating it if necessary
+    """
+    keyPath = GetKeyPairLocation()
+    keyPair = FindKeyPair(keyName=keyName, keyPath=keyPath)
+    if not keyPair and sys.platform.startswith("win"):
+        # Didn't find private key in shared config location,
+        # so look in traditional ~/.ssh/ location:
+        keyPair = FindKeyPair(keyName=keyName)
+    if not keyPair:
+        keyPair = NewKeyPair(
+            keyName=keyName, keyPath=keyPath,
+            keyComment="%s@%s"
+            % (getpass.getuser(), SETTINGS.general.instrumentName))
+    return keyPair
 
 
 def SshServerIsReady(username, privateKeyFilePath,
