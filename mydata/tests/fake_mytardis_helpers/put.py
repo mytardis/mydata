@@ -34,14 +34,16 @@ def FakeMyTardisPut(mytardis):
         uploaderId = match.groups()[0]
         mytardis.send_response(200)
         mytardis.send_header("Content-type", "application/json")
-        mytardis.end_headers()
         uploaderJson = {
             "id": uploaderId,
             "name": "Test Instrument",
             "instruments": [TEST_INSTRUMENT],
             "resource_uri": "/api/v1/mydata_uploader/25/",
         }
-        mytardis.wfile.write(json.dumps(uploaderJson).encode())
+        jsonResponse = json.dumps(uploaderJson).encode()
+        mytardis.send_header("Content-Length", len(jsonResponse))
+        mytardis.end_headers()
+        mytardis.wfile.write(jsonResponse)
     elif mytardis.path.startswith("/api/v1/instrument/17/"):
         mytardis.send_response(200)
         mytardis.send_header("Content-type", "application/json")

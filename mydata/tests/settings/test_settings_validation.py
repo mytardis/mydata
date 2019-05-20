@@ -2,15 +2,15 @@
 Test ability to validate settings.
 """
 import os
-import sys
 import tempfile
+
+import requests
+import requests_mock
 
 from ...settings import SETTINGS
 from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
 from ...utils.exceptions import InvalidSettings
-from ..utils import StartFakeMyTardisServer
-from ..utils import WaitForFakeMyTardisServerToStart
 from .. import MyDataSettingsTester
 
 
@@ -87,34 +87,23 @@ class SettingsValidationTester(MyDataSettingsTester):
         SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Simulate timeout while trying to access MyTardis URL:
-        defaultTimeout = SETTINGS.miscellaneous.connectionTimeout
-        SETTINGS.miscellaneous.connectionTimeout = sys.float_info.epsilon
-        with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings()
-        invalidSettings = contextManager.exception
-        self.assertEqual(invalidSettings.field, "mytardis_url")
-        SETTINGS.miscellaneous.connectionTimeout = defaultTimeout
+        with requests_mock.Mocker() as mocker:
+            mocker.get(SETTINGS.general.myTardisApiUrl,
+                       exc=requests.exceptions.ConnectTimeout)
+            with self.assertRaises(InvalidSettings) as contextManager:
+                ValidateSettings()
+            invalidSettings = contextManager.exception
+            self.assertEqual(invalidSettings.field, "mytardis_url")
 
         # Simulate ConnectionError while trying to access MyTardis URL:
-        sys.stderr.write(
-            "\n*** Asking fake MyTardis server to shut down abruptly...\n\n")
-        SETTINGS.general.myTardisUrl = \
-            "%s/request/connectionerror/" % self.fakeMyTardisUrl
-        with self.assertRaises(InvalidSettings) as contextManager:
-            ValidateSettings()
-        invalidSettings = contextManager.exception
-        self.assertEqual(invalidSettings.field, "mytardis_url")
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-
-        # Now we need to restart the fake MyTardis server, because
-        # our last test asked it to shut down abruptly, simulating
-        # a connection error:
-        self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
-            self.fakeMyTardisServerThread = StartFakeMyTardisServer()
-        self.fakeMyTardisUrl = \
-            "http://%s:%s" % (self.fakeMyTardisHost, self.fakeMyTardisPort)
-        SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
-        WaitForFakeMyTardisServerToStart(self.fakeMyTardisUrl)
+        with requests_mock.Mocker() as mocker:
+            mocker.get(SETTINGS.general.myTardisApiUrl,
+                       exc=requests.exceptions.ConnectionError)
+            with self.assertRaises(InvalidSettings) as contextManager:
+                ValidateSettings()
+            invalidSettings = contextManager.exception
+            self.assertEqual(invalidSettings.field, "mytardis_url")
+            SETTINGS.general.myTardisUrl = self.fakeMyTardisUrl
 
         # Test missing Facility Name:
         SETTINGS.general.facilityName = ""
