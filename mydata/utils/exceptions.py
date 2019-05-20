@@ -31,25 +31,6 @@ class DoesNotExist(Exception):
         return self.modelClass
 
 
-class SshException(Exception):
-    """
-    SSH exception.
-    """
-    def __init__(self, message, returncode=None):
-        super(SshException, self).__init__(message)
-        self.returncode = returncode
-
-
-class ScpException(SshException):
-    """
-    SCP exception.
-    """
-    def __init__(self, message, command=None, returncode=None):
-        super(ScpException, self).__init__(message)
-        self.command = command
-        self.returncode = returncode
-
-
 class NoActiveNetworkInterface(Exception):
     """
     No active network interface exception.

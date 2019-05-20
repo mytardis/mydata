@@ -10,6 +10,7 @@ from datetime import datetime
 
 import requests
 import wx
+from paramiko.ssh_exception import SSHException
 
 from ..utils.localcopy import CopyFile
 from ..utils.openssh import UploadFile
@@ -23,7 +24,6 @@ from ..models.datafile import DataFileModel
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from ..utils import SafeStr
-from ..utils.exceptions import SshException
 from ..utils.exceptions import StorageBoxAttributeNotFound
 from ..events import MYDATA_EVENTS
 from ..events import PostEvent
@@ -33,7 +33,7 @@ from ..logs import logger
 class UploadMethod(object):
     """
     Enumerated data type for upload methods,
-    POST to MyTardis API and SCP via staging
+    POST to MyTardis API and SFTP via staging
     """
     # pylint: disable=invalid-name
     HTTP_POST = 0
@@ -339,7 +339,7 @@ class UploadDatafileRunnable(object):
 
     def UploadFileToStaging(self, dataFileDict):
         """
-        Upload a file to staging (Using SCP).
+        Upload a file to staging (Using SFTP).
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         dataFileDict = AddUploaderInfo(dataFileDict)
@@ -385,13 +385,12 @@ class UploadDatafileRunnable(object):
             try:
                 UploadFile(
                     dataFilePath, dataFileSize, username,
-                    SETTINGS.uploaderModel.sshKeyPair.privateKeyFilePath,
+                    SETTINGS.uploaderModel.sshKeyPair.privateKey,
                     host, port, remoteFilePath, self.ProgressCallback,
                     self.uploadModel)
                 # Break out of upload retries loop.
                 break
-            except SshException as err:
-                # includes the ScpException subclass
+            except SSHException as err:
                 if foldersController.IsShuttingDown() or \
                         self.uploadModel.canceled:
                     return
@@ -414,7 +413,7 @@ class UploadDatafileRunnable(object):
                          % self.uploadModel
                          .GetRelativePathToUpload())
             return
-        # If an exception occurs (e.g. can't connect to SCP server)
+        # If an exception occurs (e.g. can't connect to SFTP server)
         # while uploading a zero-byte file, don't want to mark it
         # as completed, just because zero bytes have been uploaded.
         if self.uploadModel.bytesUploaded == dataFileSize and \

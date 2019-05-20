@@ -118,7 +118,7 @@ class DataFileModel(object):
     def CreateDataFileForStagingUpload(dataFileDict):
         """
         Create a DataFile record and return a temporary URL to upload
-        to (e.g. by SCP).
+        to (e.g. by SFTP).
         """
         url = "%s/api/v1/mydata_dataset_file/" % SETTINGS.general.myTardisUrl
         dataFileJson = json.dumps(dataFileDict)

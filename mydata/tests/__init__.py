@@ -40,8 +40,6 @@ from ..dataviewmodels.users import UsersModel
 from ..dataviewmodels.groups import GroupsModel
 from .utils import StartFakeMyTardisServer
 from .utils import WaitForFakeMyTardisServerToStart
-if sys.platform.startswith("linux"):
-    from ..linuxsubprocesses import StopErrandBoy
 
 
 class MyDataMinimalTester(unittest.TestCase):
@@ -78,7 +76,7 @@ class TestFrame(wx.Frame):
         self.parent = parent
         self.title = title
         self.toolbar = MockToolbar()
-        super(TestFrame, self).__init__(parent=parent, title=title)
+        super(TestFrame, self).__init__(parent, title=title)
 
     def SetStatusMessage(self, msg, force=False):
         """
@@ -133,8 +131,6 @@ class MyDataTester(unittest.TestCase):
             self.httpd.shutdown()
         if self.fakeMyTardisServerThread:
             self.fakeMyTardisServerThread.join()
-        if sys.platform.startswith("linux"):
-            StopErrandBoy()
 
     def UpdateSettingsFromCfg(self, configName, dataFolderName=None):
         """

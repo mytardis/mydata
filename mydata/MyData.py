@@ -190,8 +190,6 @@ class MyData(wx.App):
         """
         from .utils import BeginBusyCursorIfRequired
         from .utils import EndBusyCursorIfRequired
-        if sys.platform.startswith("linux"):
-            from .linuxsubprocesses import StopErrandBoy
 
         event.StopPropagation()
         okToExit = wx.ID_YES
@@ -211,8 +209,6 @@ class MyData(wx.App):
             self.foldersController.ShutDownUploadThreads()
             EndBusyCursorIfRequired()
             DATAVIEW_MODELS['tasks'].ShutDown()
-            if sys.platform.startswith("linux"):
-                StopErrandBoy()
             # sys.exit can raise exceptions if the wx.App
             # is shutting down:
             os._exit(0)  # pylint: disable=protected-access
