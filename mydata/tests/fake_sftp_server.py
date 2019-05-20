@@ -100,15 +100,26 @@ class SshServerInterface(paramiko.ServerInterface):
         self.username = None
         self.user = None
 
-    def check_auth_none(self, username):
-        return False
-
-    def check_auth_password(self, username, password):
-        if (username == "mydata") and (password == "foo"):
-            return paramiko.AUTH_SUCCESSFUL
-        return paramiko.AUTH_FAILED
-
     def check_auth_publickey(self, username, key):
+        """
+        Determine if a given key supplied by the client is acceptable for use
+        in authentication.
+
+        Return ``AUTH_FAILED`` if the key is not accepted,
+        ``AUTH_SUCCESSFUL`` if the key is accepted and completes the
+        authentication, or ``AUTH_PARTIALLY_SUCCESSFUL`` if your
+        authentication is stateful, and this password is accepted for
+        authentication, but more authentication is required.
+
+        :param str username: the username of the authenticating client
+        :param .PKey key: the key object provided by the client
+        :return:
+            ``AUTH_FAILED`` if the client can't authenticate with this key;
+            ``AUTH_SUCCESSFUL`` if it can; ``AUTH_PARTIALLY_SUCCESSFUL`` if it
+            can authenticate with this key but must continue with
+            authentication
+        :rtype: int
+        """
         print("Auth attempt with key: " + u(hexlify(key.get_fingerprint())))
         if (username == "mydata") and (
                 key.get_base64().encode('ascii') in
@@ -117,12 +128,47 @@ class SshServerInterface(paramiko.ServerInterface):
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
+        """
+        Return a list of authentication methods supported by the server.
+        This list is sent to clients attempting to authenticate, to inform them
+        of authentication methods that might be successful.
+
+        The "list" is actually a string of comma-separated names of types of
+        authentication.  Possible values are ``"password"``, ``"publickey"``,
+        and ``"none"``.
+
+        The default implementation always returns ``"password"``.
+
+        :param str username: the username requesting authentication.
+        :return: a comma-separated `str` of authentication types
+        """
         return "publickey"
 
-    def check_channel_shell_request(self, channel):
-        return True
-
     def check_channel_request(self, kind, chanid):
+        """
+        Determine if a channel request of a given type will be granted, and
+        return ``OPEN_SUCCEEDED`` or an error code.  This method is
+        called in server mode when the client requests a channel, after
+        authentication is complete.
+
+        The return value should either be ``OPEN_SUCCEEDED`` (or
+        ``0``) to allow the channel request, or one of the following error
+        codes to reject it:
+
+            - ``OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED``
+            - ``OPEN_FAILED_CONNECT_FAILED``
+            - ``OPEN_FAILED_UNKNOWN_CHANNEL_TYPE``
+            - ``OPEN_FAILED_RESOURCE_SHORTAGE``
+
+        The default implementation always returns
+        ``OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED``.
+
+        :param str kind:
+            the kind of channel the client would like to open (usually
+            ``"session"``).
+        :param int chanid: ID of the channel
+        :return: an `int` success or failure code (listed above)
+        """
         if kind == "session":
             return paramiko.OPEN_SUCCEEDED
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
