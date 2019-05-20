@@ -1,8 +1,9 @@
 """
-Test scanning the Username / Dataset structure and uploading with SCP.
+Test scanning the Username / Dataset structure and uploading with SFTP.
 """
 import logging
 import sys
+import tempfile
 import time
 import threading
 import socket
@@ -24,43 +25,50 @@ from ...models.upload import UploadStatus
 from ...threads.flags import FLAGS
 from .. import MyDataScanFoldersTester
 from .. import InitializeModels
-from ..fake_ssh_server import ThreadedSshServer
+from ..fake_sftp_server import SshServerInterface
+from ..fake_sftp_server import ThreadedSftpServer
 from ..utils import Subtract
 from ..utils import GetEphemeralPort
 
 
-class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
-    """
-    Test scanning the Username / Dataset structure and uploading with SCP.
+class ScanUsernameDatasetSftpTester(MyDataScanFoldersTester):
+    """Test scanning the Username / Dataset structure and uploading with SFTP
     """
     def __init__(self, *args, **kwargs):
-        super(ScanUsernameDatasetScpTester, self).__init__(*args, **kwargs)
-        self.fakeSshServerThread = None
-        self.fakeSshServerStopped = False
+        super(ScanUsernameDatasetSftpTester, self).__init__(*args, **kwargs)
+        self.fakeSftpServerThread = None
+        self.fakeSftpServerStopped = False
         self.scpPort = None
 
     def setUp(self):
-        super(ScanUsernameDatasetScpTester, self).setUp()
-        logger.SetLevel(logging.DEBUG)
-        # The fake SSH server needs to know the public
+        super(ScanUsernameDatasetSftpTester, self).setUp()
+        # logger.SetLevel(logging.INFO)
+        logging.getLogger("requests").setLevel(logging.INFO)
+
+        # The fake SFTP server needs to know the public
         # key so it can authenticate the test client.
-        # So we need to ensure that the MyData keypair
-        # is generated before starting the fake SSH server.
-        self.keyPair = OpenSSH.FindOrCreateKeyPair("MyDataTest")
+        # So we need to ensure that the MyData key pair
+        # is generated before starting the fake SFTP server.
+        with tempfile.NamedTemporaryFile() as tempConfig:
+            keyPath = tempConfig.name
+        self.keyPair = OpenSSH.NewKeyPair("MyDataTest", keyPath=keyPath)
+        assert OpenSSH.FindKeyPair("MyDataTest", keyPath=keyPath)
+        pubKeyBytes = self.keyPair.privateKey.get_base64().encode("ascii")
+        if pubKeyBytes not in SshServerInterface.authorized_keys:
+            SshServerInterface.authorized_keys.append(pubKeyBytes)
         self.scpPort = GetEphemeralPort()
-        fake_mytardis_get.SCP_PORT = self.scpPort
-        self.StartFakeSshServer()
+        fake_mytardis_get.SFTP_PORT = self.scpPort
+        self.StartFakeSftpServer()
 
     def tearDown(self):
-        super(ScanUsernameDatasetScpTester, self).tearDown()
+        super(ScanUsernameDatasetSftpTester, self).tearDown()
         self.keyPair.Delete()
-        if not self.fakeSshServerStopped:
-            self.sshd.shutdown()
-            self.fakeSshServerThread.join()
+        if not self.fakeSftpServerStopped:
+            self.sftpd.shutdown()
+            self.fakeSftpServerThread.join()
 
     def test_scan_folders(self):
-        """
-        Test scanning the Username / Dataset structure and uploading with SCP.
+        """Test scanning the Username / Dataset structure and uploading with SFTP
         """
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
@@ -110,19 +118,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         # This helps with PostEvent's logging in mydata/events/__init__.py:
         self.app.foldersController = foldersController
 
-        username = "mydata"
-        privateKeyFilePath = self.keyPair.privateKeyFilePath
-        host = "127.0.0.1"
-        sys.stderr.write("Waiting for fake SSH server to start up...\n")
-        attempts = 0
-        while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
-                                           host, self.scpPort):
-            attempts += 1
-            if attempts > 10:
-                raise Exception(
-                    "Couldn't connect to SSH server at 127.0.0.1:%s"
-                    % self.scpPort)
-            time.sleep(0.25)
+        sys.stderr.write("Waiting for fake SFTP server to start up...\n")
+        time.sleep(0.25)
 
         foldersController.InitForUploads()
         for row in range(foldersModel.GetRowCount()):
@@ -203,14 +200,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         foldersController.InitializeStatusFlags()
         startUploadsThread.start()
         sys.stderr.write("Waiting for uploads to start...\n")
-        # We don't need to have an active SCP process during the Cancel for
-        # the test to pass, but if we do, that will improve test coverage,
-        # because UploadModel.Cancel() will need to terminate the SCP process.
-        # If we wait too long to request canceling, the cancel request might
-        # not be processed before the uploads are completed, hence the short
-        # sleep times below.  Ideally all races conditions should be removed
-        # from the "Cancel" test, but a slightly "racy" test is better then
-        # not having any test!
         while uploadsModel.GetCount() == 0:
             time.sleep(0.01)
         while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
@@ -240,48 +229,6 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         SETTINGS.miscellaneous.uuid = "1234567890"
 
         sys.stderr.write(
-            "\nTesting handling of invalid path to SCP binary...\n")
-        OpenSSH.OPENSSH.scp += "_INVALID"
-        loggerOutput = logger.GetValue()
-        foldersController.InitForUploads()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
-        OpenSSH.OPENSSH.scp = OpenSSH.OPENSSH.scp.rstrip("_INVALID")
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        if sys.platform.startswith("win"):
-            six.assertRegex(
-                self, newLogs, (".*The system cannot find the file specified.*"))
-        else:
-            six.assertRegex(
-                self, newLogs, (".*No such file or directory.*"))
-
-        sys.stderr.write(
-            "\nTesting handling of invalid path to SSH binary...\n")
-        # SSH would normally be called to run "mkdir -p" on the staging server,
-        # but it won't be if that has already been done in the current session
-        # for the given directory, due to the OpenSSH.REMOTE_DIRS_CREATED
-        # cache. We'll clear the cache here to force the remote mkdir (via ssh)
-        # command to run.
-        OpenSSH.REMOTE_DIRS_CREATED = dict()
-        OpenSSH.OPENSSH.ssh += "_INVALID"
-        loggerOutput = logger.GetValue()
-        foldersController.InitForUploads()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
-        OpenSSH.OPENSSH.ssh = OpenSSH.OPENSSH.ssh.rstrip("_INVALID")
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        if sys.platform.startswith("win"):
-            six.assertRegex(
-                self, newLogs, (".*The system cannot find the file specified.*"))
-        else:
-            six.assertRegex(
-                self, newLogs, (".*No such file or directory.*"))
-
-        sys.stderr.write(
             "\nTesting attempted uploads with invalid file paths...\n")
         foldersController.InitForUploads()
         loggerOutput = logger.GetValue()
@@ -297,64 +244,19 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
                             "moved, renamed or deleted.*"))
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
 
-        # Now let's try to upload without a functioning SCP server:
-        sys.stderr.write(
-            "\nTesting attempted uploads while SCP server is offline...\n")
-        self.sshd.shutdown()
-        self.fakeSshServerThread.join()
-        self.fakeSshServerStopped = True
-        defaultTimeout = SETTINGS.miscellaneous.connectionTimeout
-        SETTINGS.miscellaneous.connectionTimeout = 1
-        sys.stderr.write(
-            "\tSSH ConnectionTimeout: %s second(s)\n"
-            % SETTINGS.miscellaneous.connectionTimeout)
-        sys.stderr.write(
-            "\tMax upload retries: %s\n" % SETTINGS.advanced.maxUploadRetries)
-        sys.stderr.write("\tNumber of uploads: %s\n\n" % uploadsProcessed)
-        foldersController.InitForUploads()
-        loggerOutput = logger.GetValue()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
-            for dataFileIndex in range(folderModel.numFiles):
-                folderModel.dataFilePaths['files'][dataFileIndex] = \
-                    folderModel.dataFilePaths['files'][dataFileIndex] \
-                    .rstrip("_INVALID")
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-
-        for uploadModel in uploadsModel.rowsData:
-            self.assertEqual(uploadModel.status, UploadStatus.FAILED)
-            self.assertEqual(uploadModel.retries, 1)
-            sys.stderr.write(
-                "Upload failed for %s: %s\n"
-                % (uploadModel.filename, uploadModel.message.strip()))
-        sys.stderr.write("\n")
-
-        six.assertRegex(
-            self, newLogs,
-            ".*ssh: connect to host localhost port %s: Connection refused.*"
-            "|"
-            ".*ssh: connect to host localhost port %s: Operation timed out.*"
-            "|"
-            ".*Connection timed out during banner exchange.*"
-            % (self.scpPort, self.scpPort))
-        self.assertEqual(uploadsModel.GetCompletedCount(), 0)
-        SETTINGS.miscellaneous.connectionTimeout = defaultTimeout
-
-    def StartFakeSshServer(self):
+    def StartFakeSftpServer(self):
         """
-        Start fake SSH server.
+        Start fake SFTP server.
         """
-        self.sshd = ThreadedSshServer(("127.0.0.1", self.scpPort))
+        self.sftpd = ThreadedSftpServer(("127.0.0.1", self.scpPort))
 
-        def FakeSshServer():
-            """ Run fake SSH server """
+        def FakeSftpServer():
+            """ Run fake SFTP server """
             try:
-                self.sshd.serve_forever()
+                self.sftpd.serve_forever()
             except (IOError, OSError, socket.error, select.error):
                 pass
-        self.fakeSshServerThread = \
-            threading.Thread(target=FakeSshServer, name="FakeSshServerThread")
-        self.fakeSshServerThread.daemon = True
-        self.fakeSshServerThread.start()
+        self.fakeSftpServerThread = \
+            threading.Thread(target=FakeSftpServer, name="FakeSftpServerThread")
+        self.fakeSftpServerThread.daemon = True
+        self.fakeSftpServerThread.start()

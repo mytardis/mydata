@@ -82,7 +82,7 @@ def ShowConfirmationDialog(event):
     shuts down the upload threads (with failed=True) and asks the user if
     they would like to assume that the storage box location is accessible
     locally (i.e. we can copy data to a local directory or mount point
-    instead of using SCP).
+    instead of using SFTP).
     """
     if FLAGS.showingErrorDialog:
         logger.debug("Refusing to show confirmation dialog for question "

@@ -31,15 +31,11 @@ from ..logs.testrun import LogTestRunSummary
 from ..utils import EndBusyCursorIfRequired
 from ..utils import SafeStr
 from ..utils.exceptions import StorageBoxAttributeNotFound
-from ..utils.openssh import CleanUpScpAndSshProcesses
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from .uploads import UploadMethod
 from .uploads import UploadDatafileRunnable
 from .verifications import VerifyDatafileRunnable
-
-if sys.platform.startswith("linux"):
-    from ..linuxsubprocesses import StartErrandBoy
 
 
 class FoldersController(object):
@@ -240,9 +236,6 @@ class FoldersController(object):
         self.uploadsQueue = Queue()
         self.numUploadWorkerThreads = SETTINGS.advanced.maxUploadThreads
         self.uploadMethod = UploadMethod.HTTP_POST
-
-        if sys.platform.startswith("linux"):
-            StartErrandBoy()
 
         self.InitializeTimers()
 
@@ -749,15 +742,10 @@ class FoldersController(object):
         logger.debug("Shutting down FoldersController upload worker threads.")
         for _ in range(self.numUploadWorkerThreads):
             self.uploadsQueue.put(None)
-        if self.uploadMethod == UploadMethod.VIA_STAGING:
-            # SCP can leave orphaned SSH processes which need to be
-            # cleaned up.
-            # Give each UploadModel instance's Cancel() method a chance to
-            # terminate its SCP process first:
-            time.sleep(0.1)
-            CleanUpScpAndSshProcesses()
-        for thread in self.uploadWorkerThreads:
-            thread.join()
+        for uploadThread in self.uploadWorkerThreads:
+            if hasattr(uploadThread, "paramikoTransport"):
+                uploadThread.paramikoTransport.close()
+            uploadThread.join()
         logger.debug("Shutting down FoldersController verification "
                      "worker threads.")
         for _ in range(self.numVerificationWorkerThreads):

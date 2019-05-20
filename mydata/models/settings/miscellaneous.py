@@ -153,7 +153,7 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
     @property
     def cipher(self):
         """
-        SSH Cipher for SCP uploads.
+        SSH Cipher for SFTP uploads.
         """
         return self.mydataConfig['cipher']
 
@@ -174,7 +174,7 @@ class MiscellaneousSettingsModel(BaseSettingsModel):
     @property
     def cipherOptions(self):
         """
-        SSH Cipher Options for SCP uploads.
+        SSH Cipher Options for SFTP uploads.
         """
         if self.mydataConfig['use_none_cipher']:
             return ["-oNoneEnabled=yes", "-oNoneSwitch=yes"]
