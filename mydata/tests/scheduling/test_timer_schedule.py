@@ -32,8 +32,7 @@ class TimerScheduleTester(MyDataSettingsTester):
             datetime.time(datetime.strptime("11:59 PM", "%I:%M %p"))
 
     def test_timer_schedule(self):
-        """
-        Test Timer schedule type.
+        """Test Timer schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

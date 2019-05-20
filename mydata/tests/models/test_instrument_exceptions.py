@@ -14,8 +14,7 @@ class InstrumentExceptionsTester(MyDataTester):
     Test ability to handle instrument-related exceptions.
     """
     def test_instrument_exceptions(self):
-        """
-        Test ability to handle instrument-related exceptions.
+        """Test ability to handle instrument-related exceptions.
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()

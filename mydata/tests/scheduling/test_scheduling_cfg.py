@@ -13,8 +13,7 @@ class SchedulingConfigTester(MyDataTester):
     Test ability to read and validate scheduling config.
     """
     def test_read_timer_cfg(self):
-        """
-        Test ability to read Timer settings from MyData.cfg
+        """Test ability to read Timer settings from MyData.cfg
         """
         self.UpdateSettingsFromCfg(
             "testdataTimer",
@@ -30,8 +29,7 @@ class SchedulingConfigTester(MyDataTester):
         ValidateSettings()
 
     def test_read_weekly_cfg(self):
-        """
-        Test ability to read Weekly schedule settings from MyData.cfg
+        """Test ability to read Weekly schedule settings from MyData.cfg
         """
         self.UpdateSettingsFromCfg(
             "testdataWeekly",

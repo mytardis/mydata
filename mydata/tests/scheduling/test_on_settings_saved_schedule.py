@@ -33,8 +33,7 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
         self.mydataApp.frame.Destroy()
 
     def test_on_settings_saved_schedule(self):
-        """
-        Test On Settings Saved schedule type.
+        """Test On Settings Saved schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

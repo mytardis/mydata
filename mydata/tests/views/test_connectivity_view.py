@@ -19,8 +19,7 @@ class ConnectivityViewTester(unittest.TestCase):
         self.frame.Show()
 
     def test_connectivity_view(self):
-        """
-        Test ability to open connectivity view.
+        """Test ability to open connectivity view.
         """
         with self.assertRaises(NoActiveNetworkInterface):
             ReportNoActiveInterfaces()

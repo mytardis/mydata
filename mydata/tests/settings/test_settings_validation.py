@@ -30,8 +30,7 @@ class SettingsValidationTester(MyDataSettingsTester):
             dataFolderName="testdataUsernameDataset")
 
     def test_settings_validation(self):
-        """
-        Test ability to validate settings.
+        """Test ability to validate settings.
         """
         # pylint: disable=too-many-statements
 

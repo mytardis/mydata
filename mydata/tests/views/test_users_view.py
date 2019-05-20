@@ -24,8 +24,7 @@ class UsersViewTester(unittest.TestCase):
         self.frame.Show()
 
     def test_users_view(self):
-        """
-        Test ability to open users view.
+        """Test ability to open users view.
         """
         usersModel = DATAVIEW_MODELS['users']
 

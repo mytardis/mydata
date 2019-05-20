@@ -28,8 +28,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         SaveSettingsToDisk()
 
     def test_mydata_test_run(self):
-        """
-        Test ability to use MyData's Test Run.
+        """Test ability to use MyData's Test Run.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

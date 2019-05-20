@@ -42,8 +42,7 @@ class WeeklyScheduleTester(MyDataSettingsTester):
                           timedelta(minutes=1))
 
     def test_weekly_schedule(self):
-        """
-        Test Weekly schedule type.
+        """Test Weekly schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

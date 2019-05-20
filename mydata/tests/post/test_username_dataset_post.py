@@ -26,8 +26,7 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
     Test scanning the Username / Dataset structure and upload using POST.
     """
     def test_scan_folders(self):
-        """
-        Test scanning the Username / Dataset structure and upload using POST.
+        """Test scanning the Username / Dataset structure and upload using POST.
         """
         # pylint: disable=too-many-statements,too-many-locals
         self.UpdateSettingsFromCfg(

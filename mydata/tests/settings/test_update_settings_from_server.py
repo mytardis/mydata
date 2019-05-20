@@ -22,8 +22,7 @@ class UpdatedSettingsTester(MyDataSettingsTester):
         SaveSettingsToDisk()
 
     def test_update_settings_from_server(self):
-        """
-        Test ability to update settings from server.
+        """Test ability to update settings from server.
 
         For the purpose of testing, the updated values are hard-coded in
         mydata/tests/fake_mytardis_server.py

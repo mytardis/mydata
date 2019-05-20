@@ -12,8 +12,7 @@ class ScanUserGroupInstrumentTester(MyDataScanFoldersTester):
     Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
     """
     def test_scan_folders(self):
-        """
-        Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
+        """Test ability to scan the User Group / Instrument / Full Name / Dataset folder structure.
         """
         self.UpdateSettingsFromCfg("testdataGroupInstrument")
         datasetCount = CheckStructureAndCountDatasets()

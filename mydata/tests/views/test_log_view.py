@@ -21,8 +21,7 @@ class LogViewTester(unittest.TestCase):
         self.frame.Show()
 
     def test_log_view(self):
-        """
-        Test ability to open log view.
+        """Test ability to open log view.
         """
         logView = LogView(self.frame)
         pyCommandEvent = wx.PyCommandEvent(wx.wxEVT_COMMAND_CHECKBOX_CLICKED)

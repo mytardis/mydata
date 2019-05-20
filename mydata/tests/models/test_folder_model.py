@@ -29,8 +29,7 @@ class FolderModelTester(MyDataTester):
             self.excludesFilePath = tempFile.name
 
     def test_folder_model(self):
-        """
-        Test folder model
+        """Test folder model
         """
         testuser1 = UserModel(username="testuser1")
         dataViewId = 1

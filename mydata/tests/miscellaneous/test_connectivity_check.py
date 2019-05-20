@@ -25,8 +25,7 @@ class ConnectivityCheckTester(unittest.TestCase):
         self.frame.Destroy()
 
     def test_connectivity_check(self):
-        """
-        Test ability to perform connectivity check.
+        """Test ability to perform connectivity check.
         """
         event = mde.MYDATA_EVENTS.CheckConnectivityEvent()
         mde.CheckConnectivity(event)

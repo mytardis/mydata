@@ -20,8 +20,7 @@ class ObjectAclExceptionsTester(MyDataTester):
     Test ability to handle ObjectACL-related exceptions.
     """
     def test_objectacl_exceptions(self):
-        """
-        Test ability to handle ObjectACL-related exceptions.
+        """Test ability to handle ObjectACL-related exceptions.
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()

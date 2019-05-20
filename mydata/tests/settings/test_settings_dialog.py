@@ -46,8 +46,7 @@ class SettingsDialogTester(MyDataSettingsTester):
         super(SettingsDialogTester, self).tearDown()
 
     def test_settings_dialog(self):
-        """
-        Test ability to open settings dialog and save fields.
+        """Test ability to open settings dialog and save fields.
         """
         # pylint: disable=too-many-statements,too-many-locals
 
