@@ -262,23 +262,21 @@ def UploadFile(filePath, fileSize, username, privateKey,
 def MakeRemoteDirs(paramikoSftp, remoteDir):
     """Change to this directory, recursively making new folders if needed.
     Returns True if any folders were created."""
-    if remoteDir == '/':
-        # absolute path so change directory to root
-        paramikoSftp.chdir('/')
+    if os.path.dirname(remoteDir) == remoteDir:
+        # e.g. '/' or ''C:\'
         return False
     if remoteDir == '':
         # top-level relative directory must exist
         return False
     try:
-        paramikoSftp.chdir(remoteDir)
+        paramikoSftp.stat(remoteDir)
         # If subdirectory exists, no IOError is thrown:
         return False
     except IOError:
-        dirname, basename = os.path.split(remoteDir.rstrip('/'))
+        dirname = os.path.dirname(remoteDir.rstrip('/').rstrip('\\'))
         # Make parent directories:
         MakeRemoteDirs(paramikoSftp, dirname)
         # Subdirectory missing, so create it:
-        paramikoSftp.mkdir(basename, 0o770)
+        paramikoSftp.mkdir(remoteDir, 0o770)
         REMOTE_DIRS_CREATED[remoteDir] = True
-        paramikoSftp.chdir(basename)
         return True
