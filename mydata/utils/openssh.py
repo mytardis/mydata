@@ -59,15 +59,9 @@ class KeyPair(object):
 
         Only used by tests
         """
-        try:
-            os.unlink(self.privateKeyFilePath)
-            if self.publicKeyFilePath is not None:
-                os.unlink(self.publicKeyFilePath)
-        except:
-            logger.error(traceback.format_exc())
-            return False
-
-        return True
+        os.remove(self.privateKeyFilePath)
+        if self.publicKeyFilePath is not None:
+            os.remove(self.publicKeyFilePath)
 
     @property
     def publicKey(self):
