@@ -61,4 +61,3 @@ class GroupsViewTester(unittest.TestCase):
 
     def tearDown(self):
         self.frame.Hide()
-        self.frame.Destroy()

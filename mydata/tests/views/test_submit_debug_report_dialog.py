@@ -47,10 +47,9 @@ class SubmitDebugLogTester(MyDataTester):
 
     def tearDown(self):
         """
-        Destroy app's main frame, terminating app.
+        Close app's main frame, terminating app.
         """
         self.frame.Hide()
-        self.frame.Destroy()
         self.httpd.shutdown()
         self.fakeSubmitDebugLogServerThread.join()
 

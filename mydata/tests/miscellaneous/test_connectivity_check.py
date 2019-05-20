@@ -22,7 +22,7 @@ class ConnectivityCheckTester(unittest.TestCase):
         SETTINGS.Update(SettingsModel(configPath=None))
 
     def tearDown(self):
-        self.frame.Destroy()
+        self.frame.Hide()
 
     def test_connectivity_check(self):
         """Test ability to perform connectivity check.
