@@ -363,6 +363,7 @@ class ThreadedSftpServer(ThreadedTCPServer):
         socketserver.TCPServer.shutdown_request() to prevent
         TCPServer from closing the connection prematurely
         """
+        # pylint: disable=unused-argument
         return
 
     def close_request(self, request):
@@ -374,6 +375,7 @@ class ThreadedSftpServer(ThreadedTCPServer):
         We don't call socketserver.TCPServer.close_request() to prevent
         TCPServer from closing the connection prematurely
         """
+        # pylint: disable=unused-argument
         return
 
 
