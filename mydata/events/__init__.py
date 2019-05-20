@@ -5,7 +5,6 @@ import logging
 import wx
 
 from ..views.messages import ShowMessageDialog
-from ..views.messages import ShowConfirmationDialog
 from ..logs import logger
 
 from .handlers import ShutdownForRefresh
@@ -123,8 +122,6 @@ _EVENT_TUPLES = [
     ('StartUploadsForFolderEvent', 'EVT_START_UPLOADS_FOR_FOLDER',
      StartDataUploadsForFolder),
     ('ShowMessageDialogEvent', 'EVT_SHOW_MESSAGE_DIALOG', ShowMessageDialog),
-    ('ShowConfirmationDialogEvent', 'EVT_SHOW_CONFIRMATION_DIALOG',
-     ShowConfirmationDialog),
     ('DidntFindDatafileOnServerEvent', 'EVT_DIDNT_FIND_FILE_ON_SERVER',
      DidntFindDatafileOnServer),
     ('FoundIncompleteStagedEvent', 'EVT_FOUND_INCOMPLETE_STAGED',

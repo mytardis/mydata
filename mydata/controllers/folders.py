@@ -258,64 +258,22 @@ class FoldersController(object):
                       "staging have been approved.  " \
                       "Falling back to HTTP POST."
         elif uploadToStagingRequest.approved:
-            location = "UNKNOWN"
             try:
-                location = uploadToStagingRequest.location
                 _ = uploadToStagingRequest.scpHostname
                 _ = uploadToStagingRequest.scpUsername
                 logger.info("Uploads to staging have been approved.")
                 self.uploadMethod = UploadMethod.VIA_STAGING
             except StorageBoxAttributeNotFound as err:
                 message = SafeStr(err)
-
-                def StopUploadsAsFailed(showError=False):
-                    """
-                    Shutdown uploads with the reason: failed.
-                    """
-                    logger.error(message)
-                    self.failed = True
-                    FLAGS.shouldAbort = True
-                    PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
-                    if showError:
-                        PostEvent(
-                            MYDATA_EVENTS.ShowMessageDialogEvent(
-                                title="MyData", message=message,
-                                icon=wx.ICON_ERROR))
-
-                if "scp_" in err.key:
-                    logger.warning(message)
-                    question = (
-                        "The %s storage box attribute is missing from "
-                        "the assigned storage box.\n\n"
-                        "Do you want MyData to attempt to access the storage "
-                        "box location (%s) locally (e.g. via a mounted file "
-                        "share)?" % (err.key, location))
-                    logger.info(question)
-
-                    def OnYes():
-                        """
-                        User clicked Yes
-                        """
-                        self.uploadMethod = UploadMethod.LOCAL_COPY
-
-                    if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
-                        with LOCKS.displayModalDialog:
-                            PostEvent(
-                                MYDATA_EVENTS.ShowConfirmationDialogEvent(
-                                    title="MyData", question=question,
-                                    onYes=OnYes, onNo=StopUploadsAsFailed))
-                            # Wait for confirmation dialog to appear:
-                            while not FLAGS.showingConfirmationDialog:
-                                time.sleep(0.1)
-                            # Wait for confirmation dialog to close:
-                            while FLAGS.showingConfirmationDialog:
-                                time.sleep(0.1)
-                    else:
-                        StopUploadsAsFailed(showError=True)
-                        return
-                else:
-                    StopUploadsAsFailed(showError=True)
-                    return
+                logger.error(message)
+                self.failed = True
+                FLAGS.shouldAbort = True
+                PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(failed=True))
+                PostEvent(
+                    MYDATA_EVENTS.ShowMessageDialogEvent(
+                        title="MyData", message=message,
+                        icon=wx.ICON_ERROR))
+                return
         else:
             message = \
                 "Uploads to MyTardis's staging area require " \
