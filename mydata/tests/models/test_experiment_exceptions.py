@@ -19,8 +19,7 @@ class ExperimentExceptionsTester(MyDataTester):
     Test ability to handle experiment-related exceptions.
     """
     def test_experiment_exceptions(self):
-        """
-        Test ability to handle experiment-related exceptions.
+        """Test ability to handle experiment-related exceptions.
         """
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements

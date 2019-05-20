@@ -31,8 +31,7 @@ class DailyScheduleTester(MyDataSettingsTester):
                           timedelta(minutes=1))
 
     def test_daily_schedule(self):
-        """
-        Test Daily schedule type.
+        """Test Daily schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

@@ -15,8 +15,7 @@ class UserExceptionsTester(MyDataTester):
     Test ability to handle user-related exceptions.
     """
     def test_user_exceptions(self):
-        """
-        Test ability to handle user-related exceptions.
+        """Test ability to handle user-related exceptions.
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()

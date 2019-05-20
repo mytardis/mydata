@@ -19,8 +19,7 @@ class FoldersViewTester(MyDataSettingsTester):
             dataFolderName="testdataUsernameDataset")
 
     def test_folders_view(self):
-        """
-        Test ability to open folders view.
+        """Test ability to open folders view.
         """
         foldersModel = DATAVIEW_MODELS['folders']
         # Create folders view:

@@ -30,8 +30,7 @@ class OnStartupScheduleTester(MyDataSettingsTester):
         self.mydataApp.frame.Destroy()
 
     def test_on_startup_schedule(self):
-        """
-        Test On Startup schedule type.
+        """Test On Startup schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

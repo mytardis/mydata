@@ -33,8 +33,7 @@ class ManualScheduleTester(MyDataSettingsTester):
         self.mydataApp.frame.Destroy()
 
     def test_manual_schedule(self):
-        """
-        Test Manual schedule type.
+        """Test Manual schedule type.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

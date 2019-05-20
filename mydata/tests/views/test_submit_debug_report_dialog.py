@@ -55,8 +55,7 @@ class SubmitDebugLogTester(MyDataTester):
         self.fakeSubmitDebugLogServerThread.join()
 
     def test_submit_debug_report_dialog(self):
-        """
-        Test ability to open submit debug report dialog.
+        """Test ability to open submit debug report dialog.
         """
         sys.stderr.write("Waiting for fake Submit Debug Log server to start...\n")
         attempts = 0

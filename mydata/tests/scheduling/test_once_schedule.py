@@ -32,16 +32,14 @@ class OnceScheduleTester(MyDataSettingsTester):
                           timedelta(minutes=1))
 
     def test_once_schedule(self):
-        """
-        Test Once schedule type
+        """Test Once schedule type
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])
         self.assertEqual(DATAVIEW_MODELS['uploads'].GetCompletedCount(), 8)
 
     def test_once_schedule_invalid(self):
-        """
-        Test Once schedule type with invalid date/time
+        """Test Once schedule type with invalid date/time
         """
         SETTINGS.schedule.scheduledTime = \
             datetime.time(datetime.now().replace(microsecond=0) -

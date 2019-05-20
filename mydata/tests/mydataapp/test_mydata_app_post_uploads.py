@@ -25,8 +25,7 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         SaveSettingsToDisk()
 
     def test_mydata_app_post_uploads(self):
-        """
-        Test ability to create MyData App instance and upload files using POST.
+        """Test ability to create MyData App instance and upload files using POST.
         """
         ValidateSettings()
         self.mydataApp = MyData(argv=['MyData', '--loglevel', 'DEBUG'])

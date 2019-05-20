@@ -15,8 +15,7 @@ class GroupExceptionsTester(MyDataTester):
     Test ability to handle group-related exceptions.
     """
     def test_group_exceptions(self):
-        """
-        Test ability to handle group-related exceptions.
+        """Test ability to handle group-related exceptions.
         """
         self.UpdateSettingsFromCfg("testdataExpDataset")
         ValidateSettings()
