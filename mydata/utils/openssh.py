@@ -13,7 +13,6 @@ import os
 import re
 import sys
 import threading
-import traceback
 
 import paramiko
 
