@@ -52,6 +52,7 @@ class ScanUsernameDatasetSftpTester(MyDataScanFoldersTester):
         with tempfile.NamedTemporaryFile() as tempConfig:
             keyPath = tempConfig.name
         self.keyPair = OpenSSH.NewKeyPair("MyDataTest", keyPath=keyPath)
+        assert OpenSSH.FindKeyPair("MyDataTest", keyPath=keyPath)
         pubKeyBytes = self.keyPair.privateKey.get_base64().encode("ascii")
         if pubKeyBytes not in SshServerInterface.authorized_keys:
             SshServerInterface.authorized_keys.append(pubKeyBytes)
