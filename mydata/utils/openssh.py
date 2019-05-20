@@ -28,24 +28,6 @@ from .progress import MonitorProgress
 REMOTE_DIRS_CREATED = dict()
 
 
-def DoubleQuote(string):
-    """
-    Return double-quoted string
-    """
-    return '"' + string.replace('"', r'\"') + '"'
-
-
-def DoubleQuoteRemotePath(string):
-    """
-    Return double-quoted remote path, escaping double quotes,
-    backticks and dollar signs
-    """
-    path = string.replace('"', r'\"')
-    path = path.replace('`', r'\\`')
-    path = path.replace('$', r'\\$')
-    return '"%s"' % path
-
-
 class KeyPair(object):
     """
     Represents an SSH key-pair, e.g. (~/.ssh/MyData, ~/.ssh/MyData.pub)
