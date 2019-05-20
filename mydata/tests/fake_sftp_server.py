@@ -19,7 +19,7 @@ import sys
 import socketserver
 import time
 
-from six import BytesIO
+from six import StringIO
 
 import paramiko
 from paramiko.py3compat import u
@@ -50,35 +50,35 @@ handler.setFormatter(logging.Formatter(
 paramiko_logger.addHandler(handler)
 
 DEFAULT_HOST_KEY_STR = (
-    b"-----BEGIN RSA PRIVATE KEY-----\n"
-    b"MIIEowIBAAKCAQEAqxsgBz219xjj9Y1UTA0E8nlWD8tLsnpTKCnbhVriLXThY4Aj\n"
-    b"QAs+AUxlgWWWn1euVHyXdKoSy6fPQ0Bv+vwy7ynphCxBoCTKqhiDyx0vF0uwwG5p\n"
-    b"bDPKcZuYtPzOTpzX5sf9B/4Foq8PRMn8At1lAtCi4de+/IlQhMUbPJlEsgBJuxyC\n"
-    b"5pUGsIQwMRg92LJDrQIgj+v1kMlXt4+HsRMKGHAGh8uJizIhdNRCtrtcdAm9HPFh\n"
-    b"ek9aneqIhGHXP7WGf6FTzLS+FOWKoPZw5uv/aUICwuFEZ1IW5fLkYfHy95v7lmPq\n"
-    b"SYjAitOvYbicy6sFMRzArpD3USV48cxbrLFtlwIDAQABAoIBAFtK+rjCVU9EqYQ/\n"
-    b"ZuW44JXa5W9B4d6VY77/LlAloJ3uSb+EA8rM9MVOlK4InOfhqXMMkua9Q5ADthNE\n"
-    b"0zqPy0FOFHjgABfI6ZT9xXve01xTlzfk8Ty5GV+qTDzs0cqh5pQMylW0VB9r1fK2\n"
-    b"7k49AAMTfISRTyaAwURFwnV/tWZe33EiSCXxR059fiLtbrBFL68z7GO6F/JlGPrm\n"
-    b"ZxVv5OMEiP2bKqkjwiXNn6BSDCxg8gCfnZHreKDK8wCmx3RFEUq1Lm2nV+LPXseF\n"
-    b"vZt6o1yv6t46iWpJfKv/Tt9G3uPl53aPWUKoWdJ88+rG5RLOCU3y3M/CViEZXx0c\n"
-    b"wvvHeyECgYEA2hlFsiCh41hWfMB3MKTpNXTARcXv7vvcrMJf22E6T7R7FLeASS/C\n"
-    b"6ZIalvtIv2L5rBVbxLckVFNVMJ8n1ljMtk3oJCLUC/OD7raaCYSJyNvZ33pOopIp\n"
-    b"t1gRyB54zp3iEZQHy1L8+rGFghQLXwTxWJX0Jjujvq60o0RBWXvfkGcCgYEAyNc/\n"
-    b"zJ7YGz3YfgsfvX+pwB8tf1XUjWA56xHFzS9p9MUvufHS51vKRRMGW20vxHk2jvyL\n"
-    b"/4sSpBj+I+zbWruMredHL9zKerj28TzFkl9qsTOtHw7fHKWZmIJvvEVsKul28c2J\n"
-    b"8hHKfW3H3eZYyuE2aW8t0zhe5eyDTBKXSRXLO1ECgYEAr0TeAK8+yhAEuQ6G+n2c\n"
-    b"uIvRtIDEN98J0YAHPqrdDI6y1sw8+RO75K64VZstNDjbAlLLw8OWG3o4nPFaN2R3\n"
-    b"Zw4mv1uJ4uzYmq7+DSYJAHTFm1WT+gvSIHhTGep7FThGI/A9b0WK7gBZlVZ8aOj0\n"
-    b"90bSxSLqjWOi4Q4KIlptKIMCgYARUI1NhLw4zQInC6p22dS2nXl8qteiQJN9spCM\n"
-    b"+fN2iLFupGx8SauMfPFlXGpr089iUF95bnHy97yhOEBI+DZOn8vBUpWaMuwHLCgU\n"
-    b"UGmQUVYxgUS24Yf2X/hmEM4cfPgmLIQh/GqqmZZLiRpKk1PvjwgyV3/G7rb7DfdA\n"
-    b"88ILoQKBgGGrGEXxpruK3a7DKEkzsJzNcAgCioGBrmrax5rR+qvjJfhb0NCA4VBA\n"
-    b"uE3OKwr2yCnxvFeaV+zfw1tszUbAqQ/67eA/DENNIqEoIZdnP4g1IPCNqOLh52f1\n"
-    b"IHwV0fkKk9NyOwK64zenMD0fAEBpf5brhu+1jtt45giKCixOBfqu\n"
-    b"-----END RSA PRIVATE KEY-----")
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEowIBAAKCAQEAqxsgBz219xjj9Y1UTA0E8nlWD8tLsnpTKCnbhVriLXThY4Aj\n"
+    "QAs+AUxlgWWWn1euVHyXdKoSy6fPQ0Bv+vwy7ynphCxBoCTKqhiDyx0vF0uwwG5p\n"
+    "bDPKcZuYtPzOTpzX5sf9B/4Foq8PRMn8At1lAtCi4de+/IlQhMUbPJlEsgBJuxyC\n"
+    "5pUGsIQwMRg92LJDrQIgj+v1kMlXt4+HsRMKGHAGh8uJizIhdNRCtrtcdAm9HPFh\n"
+    "ek9aneqIhGHXP7WGf6FTzLS+FOWKoPZw5uv/aUICwuFEZ1IW5fLkYfHy95v7lmPq\n"
+    "SYjAitOvYbicy6sFMRzArpD3USV48cxbrLFtlwIDAQABAoIBAFtK+rjCVU9EqYQ/\n"
+    "ZuW44JXa5W9B4d6VY77/LlAloJ3uSb+EA8rM9MVOlK4InOfhqXMMkua9Q5ADthNE\n"
+    "0zqPy0FOFHjgABfI6ZT9xXve01xTlzfk8Ty5GV+qTDzs0cqh5pQMylW0VB9r1fK2\n"
+    "7k49AAMTfISRTyaAwURFwnV/tWZe33EiSCXxR059fiLtbrBFL68z7GO6F/JlGPrm\n"
+    "ZxVv5OMEiP2bKqkjwiXNn6BSDCxg8gCfnZHreKDK8wCmx3RFEUq1Lm2nV+LPXseF\n"
+    "vZt6o1yv6t46iWpJfKv/Tt9G3uPl53aPWUKoWdJ88+rG5RLOCU3y3M/CViEZXx0c\n"
+    "wvvHeyECgYEA2hlFsiCh41hWfMB3MKTpNXTARcXv7vvcrMJf22E6T7R7FLeASS/C\n"
+    "6ZIalvtIv2L5rBVbxLckVFNVMJ8n1ljMtk3oJCLUC/OD7raaCYSJyNvZ33pOopIp\n"
+    "t1gRyB54zp3iEZQHy1L8+rGFghQLXwTxWJX0Jjujvq60o0RBWXvfkGcCgYEAyNc/\n"
+    "zJ7YGz3YfgsfvX+pwB8tf1XUjWA56xHFzS9p9MUvufHS51vKRRMGW20vxHk2jvyL\n"
+    "/4sSpBj+I+zbWruMredHL9zKerj28TzFkl9qsTOtHw7fHKWZmIJvvEVsKul28c2J\n"
+    "8hHKfW3H3eZYyuE2aW8t0zhe5eyDTBKXSRXLO1ECgYEAr0TeAK8+yhAEuQ6G+n2c\n"
+    "uIvRtIDEN98J0YAHPqrdDI6y1sw8+RO75K64VZstNDjbAlLLw8OWG3o4nPFaN2R3\n"
+    "Zw4mv1uJ4uzYmq7+DSYJAHTFm1WT+gvSIHhTGep7FThGI/A9b0WK7gBZlVZ8aOj0\n"
+    "90bSxSLqjWOi4Q4KIlptKIMCgYARUI1NhLw4zQInC6p22dS2nXl8qteiQJN9spCM\n"
+    "+fN2iLFupGx8SauMfPFlXGpr089iUF95bnHy97yhOEBI+DZOn8vBUpWaMuwHLCgU\n"
+    "UGmQUVYxgUS24Yf2X/hmEM4cfPgmLIQh/GqqmZZLiRpKk1PvjwgyV3/G7rb7DfdA\n"
+    "88ILoQKBgGGrGEXxpruK3a7DKEkzsJzNcAgCioGBrmrax5rR+qvjJfhb0NCA4VBA\n"
+    "uE3OKwr2yCnxvFeaV+zfw1tszUbAqQ/67eA/DENNIqEoIZdnP4g1IPCNqOLh52f1\n"
+    "IHwV0fkKk9NyOwK64zenMD0fAEBpf5brhu+1jtt45giKCixOBfqu\n"
+    "-----END RSA PRIVATE KEY-----")
 DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(
-    BytesIO(DEFAULT_HOST_KEY_STR))
+    StringIO(DEFAULT_HOST_KEY_STR))
 
 print("Read key: " + u(hexlify(DEFAULT_HOST_KEY.get_fingerprint())))
 
