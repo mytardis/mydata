@@ -1,12 +1,12 @@
 """
 Test ability to open connectivity view.
 """
-from .. import MyDataTester
+from .. import MyDataGuiTester
 from ...utils.exceptions import NoActiveNetworkInterface
 from ...views.connectivity import ReportNoActiveInterfaces
 
 
-class ConnectivityViewTester(MyDataTester):
+class ConnectivityViewTester(MyDataGuiTester):
     """
     Test ability to open connectivity view.
     """
