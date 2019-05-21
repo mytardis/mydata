@@ -125,7 +125,6 @@ class MyDataTester(unittest.TestCase):
         del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
         if self.app.frame:
             self.app.frame.Hide()
-            self.app.frame.Destroy()
 
         if self.httpd:
             self.httpd.shutdown()

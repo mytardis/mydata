@@ -27,7 +27,6 @@ class OnStartupScheduleTester(MyDataSettingsTester):
     def tearDown(self):
         super(OnStartupScheduleTester, self).tearDown()
         self.mydataApp.frame.Hide()
-        self.mydataApp.frame.Destroy()
 
     def test_on_startup_schedule(self):
         """Test On Startup schedule type.

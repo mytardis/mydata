@@ -75,4 +75,3 @@ class MyDataAppInstanceTester(MyDataSettingsTester):
         super(MyDataAppInstanceTester, self).tearDown()
         self.mydataApp.testRunFrame.Hide()
         self.mydataApp.frame.Hide()
-        self.mydataApp.frame.Destroy()

@@ -129,4 +129,3 @@ class FolderModelTester(MyDataTester):
         if os.path.exists(self.excludesFilePath):
             os.remove(self.excludesFilePath)
         self.frame.Hide()
-        self.frame.Destroy()

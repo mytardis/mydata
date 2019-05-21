@@ -30,7 +30,6 @@ class OnSettingsSavedScheduleTester(MyDataSettingsTester):
     def tearDown(self):
         super(OnSettingsSavedScheduleTester, self).tearDown()
         self.mydataApp.frame.Hide()
-        self.mydataApp.frame.Destroy()
 
     def test_on_settings_saved_schedule(self):
         """Test On Settings Saved schedule type.

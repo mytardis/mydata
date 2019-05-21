@@ -78,7 +78,7 @@ def CheckConnectivity(event):
     """
     from . import MYDATA_THREADS
     nextEvent = getattr(event, "nextEvent", None)
-    if wx.PyApp.IsMainLoopRunning():
+    if 'MYDATA_TESTING' not in os.environ:
         checkConnectivityThread = threading.Thread(
             target=CONNECTIVITY.Check,
             name="CheckConnectivityThread", args=[nextEvent])
@@ -303,7 +303,7 @@ def ProvideSettingsValidationResults(event):
     """
     invalidSettings = getattr(event, "invalidSettings", None)
     if invalidSettings:
-        message = invalidSettings.message
+        message = str(invalidSettings)
         logger.error(message)
         app = wx.GetApp()
         if hasattr(app, "frame"):

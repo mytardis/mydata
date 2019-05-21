@@ -1,6 +1,8 @@
 """
 mydata/views/connectivity.py
 """
+import os
+
 import wx
 
 from ..utils.exceptions import NoActiveNetworkInterface
@@ -23,7 +25,7 @@ def ReportNoActiveInterfaces():
         dlg.ShowModal()
         wx.GetApp().frame.SetStatusMessage("")
 
-    if wx.PyApp.IsMainLoopRunning():
+    if 'MYDATA_TESTING' not in os.environ:
         wx.CallAfter(ShowDialog)
     else:
         raise NoActiveNetworkInterface(message)
