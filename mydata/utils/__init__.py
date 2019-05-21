@@ -11,7 +11,6 @@ import webbrowser
 
 import appdirs
 import psutil
-import requests
 import wx
 
 from ..constants import APPNAME, APPAUTHOR
@@ -211,11 +210,7 @@ def OpenUrl(url, new=0, autoraise=True):
     """
     Open URL in web browser or just check URL is accessible if running tests.
     """
-    if wx.PyApp.IsMainLoopRunning():
-        webbrowser.open(url, new, autoraise)
-    else:
-        response = requests.get(url)
-        assert response.status_code == 200
+    webbrowser.open(url, new, autoraise)
 
 
 def CreateConfigPathIfNecessary():
