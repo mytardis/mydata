@@ -43,6 +43,7 @@ class SettingsDialogTester(MyDataSettingsTester):
 
     def tearDown(self):
         self.settingsDialog.Hide()
+        self.settingsDialog.Destroy()
         super(SettingsDialogTester, self).tearDown()
 
     def test_settings_dialog(self):
