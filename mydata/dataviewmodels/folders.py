@@ -205,7 +205,7 @@ class FoldersModel(MyDataDataViewModel):
                 "Found folder assumed to be %s: %s" % (UserFolderType(),
                                                        userFolderName))
             try:
-                userRecord = UserModel.GetUserForFolder(userFolderName)
+                userRecord = UserModel.GetUserForFolder(userFolderName.strip())
             except DoesNotExist:
                 userRecord = None
             RaiseExceptionIfUserAborted()
