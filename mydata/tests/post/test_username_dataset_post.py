@@ -2,21 +2,13 @@
 Test scanning the Username / Dataset structure and upload using POST.
 """
 import sys
-import threading
-import time
 
-import wx
-
-from ...logs import logger
 from ...settings import SETTINGS
-from ...threads.flags import FLAGS
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
 from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
-from ...models.upload import UploadStatus
-from ..utils import Subtract
 from .. import MyDataScanFoldersTester
 from .. import InitializeModels
 
@@ -75,55 +67,3 @@ class ScanUsernameDatasetPostTester(MyDataScanFoldersTester):
         if uploadsFailed > 0:
             sys.stderr.write("%d/%d uploads failed.\n" % (uploadsFailed, uploadsProcessed))
         self.assertEqual(uploadsCompleted, 8)
-
-
-        # Now let's test canceling the uploads:
-
-        loggerOutput = logger.GetValue()
-        def StartUploads():
-            """
-            Start Uploads worker
-            """
-            self.app.foldersController.InitForUploads()
-            for row in range(foldersModel.GetRowCount()):
-                folderModel = foldersModel.GetFolderRecord(row)
-                self.app.foldersController.StartUploadsForFolder(folderModel)
-
-        startUploadsThread = threading.Thread(
-            target=StartUploads, name="StartUploads")
-        # Do this synchronously to ensure that the completed flag is reset:
-        self.app.foldersController.InitializeStatusFlags()
-        startUploadsThread.start()
-        sys.stderr.write("Waiting for uploads to start...\n")
-        while uploadsModel.GetCount() == 0:
-            time.sleep(0.05)
-        while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
-            time.sleep(0.05)
-        sys.stderr.write("\nCanceling uploads...\n")
-        FLAGS.shouldAbort = True
-        self.app.foldersController.ShutDownUploadThreads(event=wx.PyEvent())
-        startUploadsThread.join()
-        FLAGS.shouldAbort = False
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        self.assertIn("Data scans and uploads were canceled.", newLogs)
-
-        # Simulate ConnectionError while trying to access MyTardis URL:
-        sys.stderr.write(
-            "\nAsking fake MyTardis server to shut down abruptly...\n")
-        loggerOutput = logger.GetValue()
-        SETTINGS.general.myTardisUrl = \
-            "%s/request/connectionerror/" % self.fakeMyTardisUrl
-        event = wx.PyEvent()
-        event.folderModel = foldersModel.GetFolderRecord(0)
-        event.dataFileIndex = 0
-        self.app.foldersController.UploadDatafile(event)
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        # We should see some sort of connection error in the log, but we don't
-        # know which one it will be.
-        # Errno 10053 is a Winsock error: "Software caused connection abort"
-        self.assertTrue(
-            "ConnectionError" in newLogs or
-            "urlopen error [Errno 32] Broken pipe" in newLogs or
-            "[Errno 54] Connection reset by peer" in newLogs or
-            "BadStatusLine" in newLogs or
-            "urlopen error [Errno 10053]" in newLogs)

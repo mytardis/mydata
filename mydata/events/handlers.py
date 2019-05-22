@@ -3,7 +3,6 @@ Event handlers for MyData.
 """
 import os
 import threading
-import traceback
 import sys
 import wx
 
@@ -50,8 +49,7 @@ def ShutdownForRefresh(event):
             "the existing data-scan-and-upload process in order " \
             "to start another one.\n\n" \
             "See the Log tab for details of the error."
-        logger.error(message)
-        logger.error(traceback.format_exc())
+        logger.exception(message)
 
         def ShowDialog():
             """
@@ -227,12 +225,14 @@ def SettingsDialogValidation(event):
         """
         Performs settings validation in separate thread.
         """
+        # pylint: disable=too-many-branches
         logger.debug("Starting run() method for thread %s"
                      % threading.current_thread().name)
         try:
-            wx.CallAfter(BeginBusyCursorIfRequired, event)
-            wx.CallAfter(settingsDialog.okButton.Disable)
-            wx.CallAfter(settingsDialog.lockOrUnlockButton.Disable)
+            if wx.PyApp.IsMainLoopRunning():
+                wx.CallAfter(BeginBusyCursorIfRequired, event)
+                wx.CallAfter(settingsDialog.okButton.Disable)
+                wx.CallAfter(settingsDialog.lockOrUnlockButton.Disable)
 
             app = wx.GetApp()
             if hasattr(app, "connectivity"):
@@ -249,14 +249,14 @@ def SettingsDialogValidation(event):
                     return
             try:
                 SaveFieldsFromDialog(settingsDialog, saveToDisk=False)
-            except:
-                logger.error(traceback.format_exc())
+            except Exception:
+                logger.exception("Failed to save fields from dialog")
 
             def SetStatusMessage(message):
                 """
                 Updates status bar.
                 """
-                if hasattr(app, "frame"):
+                if hasattr(app, "frame") and wx.PyApp.IsMainLoopRunning():
                     wx.CallAfter(
                         wx.GetApp().frame.SetStatusMessage, message)
             try:
@@ -268,15 +268,19 @@ def SettingsDialogValidation(event):
                 SETTINGS.RollBack()
                 return
             except InvalidSettings as invalidSettings:
-                PostEvent(MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
-                    settingsDialog=settingsDialog,
-                    invalidSettings=invalidSettings))
+                if wx.PyApp.IsMainLoopRunning():
+                    PostEvent(
+                        MYDATA_EVENTS.ProvideSettingsValidationResultsEvent(
+                            settingsDialog=settingsDialog,
+                            invalidSettings=invalidSettings))
             finally:
-                wx.CallAfter(EndBusyCursorIfRequired, event)
+                if wx.PyApp.IsMainLoopRunning():
+                    wx.CallAfter(EndBusyCursorIfRequired, event)
         finally:
-            wx.CallAfter(settingsDialog.okButton.Enable)
-            wx.CallAfter(settingsDialog.lockOrUnlockButton.Enable)
-            wx.CallAfter(EndBusyCursorIfRequired, event)
+            if wx.PyApp.IsMainLoopRunning():
+                wx.CallAfter(settingsDialog.okButton.Enable)
+                wx.CallAfter(settingsDialog.lockOrUnlockButton.Enable)
+                wx.CallAfter(EndBusyCursorIfRequired, event)
 
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
@@ -449,8 +453,8 @@ def ProvideSettingsValidationResults(event):
                 dlg.ShowModal()
             else:
                 logger.warning(message)
-    except:
-        logger.error(traceback.format_exc())
+    except Exception:
+        logger.exception("Failed to save fields and close dialog")
 
 
 def ValidateSettingsForRefresh(event):

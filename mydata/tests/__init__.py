@@ -196,15 +196,21 @@ class MyDataGuiTester(MyDataTester):
         Initialize test environment including a fake MyTardis server,
         and a wxPython app and main frame
         """
+        from mydata.logs import logger
         super(MyDataGuiTester, self).setUp()
         self.app = wx.App()
         self.app.frame = TestFrame(None, self.shortDescription())
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.app.frame)
+        logger.loggerObject.removeHandler(logger.logWindowHandler)
 
     def tearDown(self):
+        super(MyDataGuiTester, self).tearDown()
         if self.app and self.app.frame:
             self.app.frame.Close(force=True)
-        super(MyDataGuiTester, self).tearDown()
+        if self.app:
+            self.app.MainLoop()
+            del self.app
+            self.assertIsNone(wx.GetApp())
 
 
 class MyDataSettingsTester(MyDataGuiTester):

@@ -47,7 +47,6 @@ def FakeMyTardisPut(mytardis):
     elif mytardis.path.startswith("/api/v1/instrument/17/"):
         mytardis.send_response(200)
         mytardis.send_header("Content-type", "application/json")
-        mytardis.end_headers()
         instrumentsJson = copy.deepcopy(EMPTY_API_LIST)
         instrumentsJson['meta']['total_count'] = 1
         instrumentsJson['objects'] = [
@@ -58,7 +57,10 @@ def FakeMyTardisPut(mytardis):
                 "resource_uri": "/api/v1/instrument/17/"
             }
         ]
-        mytardis.wfile.write(json.dumps(instrumentsJson).encode())
+        jsonResponse = json.dumps(instrumentsJson).encode()
+        mytardis.send_header("Content-Length", len(jsonResponse))
+        mytardis.end_headers()
+        mytardis.wfile.write(jsonResponse)
     else:
         raise Exception("FakeMyTardis Server doesn't know how to respond "
                         "to PUT: %s" % mytardis.path)

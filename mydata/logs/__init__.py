@@ -229,6 +229,28 @@ class Logger(object):
         else:
             wx.CallAfter(self.loggerObject.info, message, extra=extra)
 
+    def exception(self, message):
+        """
+        Log a message and traceback for an exception
+        """
+        frame = inspect.currentframe()
+        outerFrames = inspect.getouterframes(frame)[1]
+        if hasattr(sys, "frozen"):
+            try:
+                moduleName = os.path.basename(outerFrames[1])
+            except:
+                moduleName = outerFrames[1]
+        else:
+            moduleName = os.path.relpath(outerFrames[1], self.appRootDir)
+        extra = {'moduleName':  moduleName,
+                 'lineNumber': outerFrames[2],
+                 'functionName': outerFrames[3],
+                 'currentThreadName': threading.current_thread().name}
+        if threading.current_thread().name == "MainThread":
+            self.loggerObject.exception(message, extra=extra)
+        else:
+            wx.CallAfter(self.loggerObject.exception, message, extra=extra)
+
     def testrun(self, message):
         # pylint: disable=no-self-use
         """

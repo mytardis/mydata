@@ -4,7 +4,6 @@ Methods for validating settings.
 The global SETTINGS singleton is imported inline to avoid
 circular dependencies.
 """
-import traceback
 import os
 import sys
 from glob import glob
@@ -78,8 +77,8 @@ def ValidateSettings(setStatusMessage=None):
             raise
         if isinstance(err, UserAborted):
             raise
-        logger.error(traceback.format_exc())
         message = str(err)
+        logger.exception(message)
         LogIfTestRun("ERROR: %s" % message)
         raise InvalidSettings(message, "")
 
@@ -321,7 +320,7 @@ def CheckMyTardisUrl(setStatusMessage):
             "%s seconds." % (SETTINGS.general.myTardisApiUrl,
                              SETTINGS.miscellaneous.connectionTimeout)
         LogIfTestRun("ERROR: %s" % message)
-        logger.error(traceback.format_exc())
+        logger.exception(message)
         raise InvalidSettings(message, "mytardis_url")
     except requests.exceptions.InvalidSchema as err:
         message = (
@@ -335,7 +334,7 @@ def CheckMyTardisUrl(setStatusMessage):
             suggestion = None
         raise InvalidSettings(message, "mytardis_url", suggestion)
     except requests.exceptions.RequestException as err:
-        logger.error(traceback.format_exc())
+        logger.exception(str(err))
         message = (
             "Please enter a valid MyTardis URL.\n\n"
             "%s" % str(err))
@@ -382,8 +381,10 @@ def CheckFacility(setStatusMessage):
             if len(facilities) == 1:
                 suggestion = facilities[0].name
             raise InvalidSettings(message, "facility_name", suggestion)
-        except:
-            logger.error(traceback.format_exc())
+        except Exception as err:
+            if isinstance(err, InvalidSettings):
+                raise
+            logger.exception("Failed to look up accessible facilities")
             raise InvalidSettings(message, "facility_name")
     if SETTINGS.general.facility is None:
         facilities = FacilityModel.GetMyFacilities()
