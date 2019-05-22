@@ -95,7 +95,6 @@ class MyDataTester(unittest.TestCase):
     """
     def __init__(self, *args, **kwargs):
         super(MyDataTester, self).__init__(*args, **kwargs)
-        self.app = None
         self.httpd = None
         self.fakeMyTardisHost = "127.0.0.1"
         self.fakeMyTardisPort = None
@@ -104,15 +103,12 @@ class MyDataTester(unittest.TestCase):
 
     def setUp(self):
         """
-        Initialize generic wxPython app and main frame
+        Initialize test environment including a fake MyTardis server
         """
         os.environ['MYDATA_TESTING'] = 'True'
         os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS'] = 'True'
-        self.app = wx.App()
-        self.app.frame = TestFrame(parent=None, title=self.shortDescription())
         FLAGS.shouldAbort = False
         FLAGS.testRunRunning = False
-        MYDATA_EVENTS.InitializeWithNotifyWindow(self.app.frame)
         self.fakeMyTardisHost, self.fakeMyTardisPort, self.httpd, \
             self.fakeMyTardisServerThread = StartFakeMyTardisServer()
         self.fakeMyTardisUrl = \
@@ -123,8 +119,6 @@ class MyDataTester(unittest.TestCase):
     def tearDown(self):
         del os.environ['MYDATA_TESTING']
         del os.environ['MYDATA_DONT_SHOW_MODAL_DIALOGS']
-        if self.app.frame:
-            self.app.frame.Hide()
 
         if self.httpd:
             self.httpd.shutdown()
@@ -188,7 +182,38 @@ class MyDataTester(unittest.TestCase):
         self.assertEqual(totalFiles, numFiles)
 
 
-class MyDataSettingsTester(MyDataTester):
+class MyDataGuiTester(MyDataTester):
+    """
+    Base class for inheriting from for tests requiring a fake MyTardis server
+    and a wxPython GUI application
+    """
+    def __init__(self, *args, **kwargs):
+        super(MyDataGuiTester, self).__init__(*args, **kwargs)
+        self.app = None
+
+    def setUp(self):
+        """
+        Initialize test environment including a fake MyTardis server,
+        and a wxPython app and main frame
+        """
+        from mydata.logs import logger
+        super(MyDataGuiTester, self).setUp()
+        self.app = wx.App()
+        self.app.frame = TestFrame(None, self.shortDescription())
+        MYDATA_EVENTS.InitializeWithNotifyWindow(self.app.frame)
+        logger.loggerObject.removeHandler(logger.logWindowHandler)
+
+    def tearDown(self):
+        super(MyDataGuiTester, self).tearDown()
+        if self.app and self.app.frame:
+            self.app.frame.Close(force=True)
+        if self.app:
+            self.app.MainLoop()
+            del self.app
+            self.assertIsNone(wx.GetApp())
+
+
+class MyDataSettingsTester(MyDataGuiTester):
     """
     Base class for inheriting from for tests requiring a fake MyTardis server
     """
@@ -217,7 +242,7 @@ class MyDataSettingsTester(MyDataTester):
         SETTINGS.configPath = self.tempFilePath
 
 
-class MyDataScanFoldersTester(MyDataTester):
+class MyDataScanFoldersTester(MyDataGuiTester):
     """
     Base class for inheriting from for tests requiring a fake MyTardis server
 

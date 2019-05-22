@@ -4,19 +4,14 @@ Test ability to open settings dialog and save fields.
 from datetime import datetime
 from datetime import timedelta
 import os
-import sys
 
 import wx
 
-from ...settings import SETTINGS
 from ...models.settings.serialize import SaveSettingsToDisk
 from ...models.settings.serialize import SaveFieldsFromDialog
-from ...utils.autostart import UpdateAutostartFile
 from ...views.settings import SettingsDialog
 from ...events import MYDATA_EVENTS
 from ...events import PostEvent
-from ...events import RenameInstrument
-from ...utils.exceptions import DuplicateKey
 from .. import MyDataSettingsTester
 
 
@@ -39,10 +34,10 @@ class SettingsDialogTester(MyDataSettingsTester):
             "testdataUsernameDataset_POST",
             dataFolderName="testdataUsernameDataset")
         SaveSettingsToDisk()
-        self.settingsDialog = SettingsDialog(self.app.frame)
 
     def tearDown(self):
-        self.settingsDialog.Hide()
+        self.settingsDialog.Destroy()
+        wx.WakeUpIdle()
         super(SettingsDialogTester, self).tearDown()
 
     def test_settings_dialog(self):
@@ -50,6 +45,7 @@ class SettingsDialogTester(MyDataSettingsTester):
         """
         # pylint: disable=too-many-statements,too-many-locals
 
+        self.settingsDialog = SettingsDialog(self.app.frame)
         self.settingsDialog.Show()
 
         # Simulate browsing for data directory:
@@ -159,16 +155,6 @@ class SettingsDialogTester(MyDataSettingsTester):
         PostEvent(settingsDialogValidationEvent)
         self.settingsDialog.SetApiKey(apiKey)
 
-        self.settingsDialog.SetUseIncludesFile(True)
-        self.settingsDialog.SetIncludesFile("")
-        PostEvent(settingsDialogValidationEvent)
-        self.settingsDialog.SetUseIncludesFile(False)
-
-        self.settingsDialog.SetUseExcludesFile(True)
-        self.settingsDialog.SetExcludesFile("")
-        PostEvent(settingsDialogValidationEvent)
-        self.settingsDialog.SetUseExcludesFile(False)
-
         # Test validation with invalid scheduled time
         # (in the past).
         self.settingsDialog.SetScheduleType("Once")
@@ -196,51 +182,10 @@ class SettingsDialogTester(MyDataSettingsTester):
         PostEvent(settingsDialogValidationEvent)
         self.settingsDialog.SetMyTardisUrl(myTardisUrl)
 
-        # Test settings dialog validation with valid settings.
-        # Tick the ignore old datasets checkbox and the
-        # validate folder structure checkbox, so that we
-        # get a summary of how many datasets were found
-        # within that time period.
-        self.settingsDialog.SetIgnoreOldDatasets(True)
-        self.settingsDialog.SetIgnoreOldDatasetIntervalNumber(6)
-        self.settingsDialog.SetIgnoreOldDatasetIntervalUnit("months")
-        self.settingsDialog.SetValidateFolderStructure(True)
-        PostEvent(settingsDialogValidationEvent)
-
-        if not sys.platform.startswith("win"):
-            # Test updating autostart file:
-            sys.stderr.write(
-                "Testing updating autostart file with "
-                "startAutomaticallyOnLogin = True...\n")
-            SETTINGS.advanced.startAutomaticallyOnLogin = True
-            UpdateAutostartFile()
-            sys.stderr.write(
-                "Testing updating autostart file with "
-                "startAutomaticallyOnLogin = False...\n")
-            SETTINGS.advanced.startAutomaticallyOnLogin = False
-            UpdateAutostartFile()
-            sys.stderr.write("Finished testing updating autostart file\n")
-
-        # Test renaming instrument to an available instrument name:
-        renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
-            settingsDialog=self.settingsDialog,
-            facilityName=self.settingsDialog.GetFacilityName(),
-            oldInstrumentName=self.settingsDialog.GetInstrumentName(),
-            newInstrumentName="Renamed Instrument")
-        RenameInstrument(renameInstrumentEvent)
-
-        # Test renaming instrument to an already used instrument name:
-        renameInstrumentEvent = MYDATA_EVENTS.RenameInstrumentEvent(
-            settingsDialog=self.settingsDialog,
-            facilityName=self.settingsDialog.GetFacilityName(),
-            oldInstrumentName=self.settingsDialog.GetInstrumentName(),
-            newInstrumentName="Test Instrument2")
-        with self.assertRaises(DuplicateKey):
-            RenameInstrument(renameInstrumentEvent)
-
         # Test saving config to disk:
         SaveFieldsFromDialog(
             self.settingsDialog, configPath=self.tempFilePath, saveToDisk=True)
+
         # Test dragging and dropping a MyData.cfg onto settings dialog:
         configPath = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),

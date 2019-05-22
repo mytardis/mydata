@@ -5,8 +5,6 @@ import os
 import sys
 import tempfile
 
-import wx
-
 from ...settings import SETTINGS
 from ...models.folder import FolderModel
 from ...models.user import UserModel
@@ -18,11 +16,7 @@ class FolderModelTester(MyDataTester):
     Test folder model
     """
     def setUp(self):
-        self.app = wx.App()
-        self.frame = wx.Frame(None, title='FolderModelTester')
-        self.UpdateSettingsFromCfg(
-            "testdataUsernameDataset_POST",
-            dataFolderName="testdataUsernameDataset")
+        super(FolderModelTester, self).setUp()
         with tempfile.NamedTemporaryFile() as tempFile:
             self.includesFilePath = tempFile.name
         with tempfile.NamedTemporaryFile() as tempFile:
@@ -31,6 +25,9 @@ class FolderModelTester(MyDataTester):
     def test_folder_model(self):
         """Test folder model
         """
+        self.UpdateSettingsFromCfg(
+            "testdataUsernameDataset_POST",
+            dataFolderName="testdataUsernameDataset")
         testuser1 = UserModel(username="testuser1")
         dataViewId = 1
         folder = "Flowers"
@@ -128,4 +125,4 @@ class FolderModelTester(MyDataTester):
             os.remove(self.includesFilePath)
         if os.path.exists(self.excludesFilePath):
             os.remove(self.excludesFilePath)
-        self.frame.Hide()
+        super(FolderModelTester, self).tearDown()

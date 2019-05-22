@@ -9,12 +9,8 @@ import threading
 import socket
 import select
 
-import six
-import wx
-
 import mydata.utils.openssh as OpenSSH
 import mydata.tests.fake_mytardis_helpers.get as fake_mytardis_get
-from ...logs import logger
 from ...settings import SETTINGS
 from ...models.settings.validation import ValidateSettings
 from ...dataviewmodels.dataview import DATAVIEW_MODELS
@@ -22,12 +18,10 @@ from ...dataviewmodels.uploads import UploadsModel
 from ...dataviewmodels.verifications import VerificationsModel
 from ...controllers.folders import FoldersController
 from ...models.upload import UploadStatus
-from ...threads.flags import FLAGS
 from .. import MyDataScanFoldersTester
 from .. import InitializeModels
 from ..fake_sftp_server import SshServerInterface
 from ..fake_sftp_server import ThreadedSftpServer
-from ..utils import Subtract
 from ..utils import GetEphemeralPort
 
 
@@ -42,7 +36,6 @@ class ScanUsernameDatasetSftpTester(MyDataScanFoldersTester):
 
     def setUp(self):
         super(ScanUsernameDatasetSftpTester, self).setUp()
-        # logger.SetLevel(logging.INFO)
         logging.getLogger("requests").setLevel(logging.INFO)
 
         # The fake SFTP server needs to know the public
@@ -158,7 +151,6 @@ class ScanUsernameDatasetSftpTester(MyDataScanFoldersTester):
                 raise Exception("Processed %s/%s uploads!"
                                 % (uploadsProcessed, uploadsToBePerformed))
             time.sleep(0.1)
-        foldersController.ShutDownUploadThreads()
 
         sys.stderr.write("\n")
         sys.stderr.write("%d/%d uploads completed.\n" % (uploadsCompleted,
@@ -181,68 +173,6 @@ class ScanUsernameDatasetSftpTester(MyDataScanFoldersTester):
                          numFiles - numExistingVerifiedFiles -
                          numUnverifiedFullSizeFiles -
                          numTriggeringMissingApiEndpoint)
-
-        sys.stderr.write("Testing canceling uploads...\n")
-        loggerOutput = logger.GetValue()
-
-        def StartUploads():
-            """
-            Start Uploads worker
-            """
-            foldersController.InitForUploads()
-            for row in range(foldersModel.GetRowCount()):
-                folderModel = foldersModel.GetFolderRecord(row)
-                foldersController.StartUploadsForFolder(folderModel)
-
-        startUploadsThread = threading.Thread(
-            target=StartUploads, name="StartUploads")
-        # Do this synchronously to ensure that the completed flag is reset:
-        foldersController.InitializeStatusFlags()
-        startUploadsThread.start()
-        sys.stderr.write("Waiting for uploads to start...\n")
-        while uploadsModel.GetCount() == 0:
-            time.sleep(0.01)
-        while uploadsModel.rowsData[0].status == UploadStatus.NOT_STARTED:
-            time.sleep(0.01)
-        sys.stderr.write("Canceling uploads...\n")
-        FLAGS.shouldAbort = True
-        foldersController.ShutDownUploadThreads(event=wx.PyEvent())
-        startUploadsThread.join()
-        FLAGS.shouldAbort = False
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        self.assertIn("Data scans and uploads were canceled.", newLogs)
-
-        sys.stderr.write(
-            "\nTesting with missing 'scp_username' storage box attribute...\n")
-        # This UUID tells our fake MyTardis server to simulate a
-        # missing storage box attribute:
-        SETTINGS.miscellaneous.uuid = "1234567891"
-        loggerOutput = logger.GetValue()
-        foldersController.InitForUploads()
-        self.assertEqual(uploadsModel.GetCompletedCount(), 0)
-        self.assertTrue(foldersController.failed)
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        self.assertIn(
-            "Key 'scp_username' not found in attributes for storage box",
-            newLogs)
-        self.assertEqual(uploadsModel.GetCompletedCount(), 0)
-        SETTINGS.miscellaneous.uuid = "1234567890"
-
-        sys.stderr.write(
-            "\nTesting attempted uploads with invalid file paths...\n")
-        foldersController.InitForUploads()
-        loggerOutput = logger.GetValue()
-        for row in range(foldersModel.GetRowCount()):
-            folderModel = foldersModel.GetFolderRecord(row)
-            for dataFileIndex in range(folderModel.numFiles):
-                folderModel.dataFilePaths['files'][dataFileIndex] += "_INVALID"
-            foldersController.StartUploadsForFolder(folderModel)
-        foldersController.FinishedScanningForDatasetFolders()
-        newLogs = Subtract(logger.GetValue(), loggerOutput)
-        six.assertRegex(
-            self, newLogs, (".*Not uploading .+, because it has been "
-                            "moved, renamed or deleted.*"))
-        self.assertEqual(uploadsModel.GetCompletedCount(), 0)
 
     def StartFakeSftpServer(self):
         """

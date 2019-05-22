@@ -102,11 +102,13 @@ def RespondToFacilityRequest(mytardis):
     assert mytardis.path == "/api/v1/facility/?format=json"
     mytardis.send_response(200)
     mytardis.send_header("Content-type", "application/json")
-    mytardis.end_headers()
     facilitiesJson = copy.deepcopy(EMPTY_API_LIST)
     facilitiesJson['meta']['total_count'] = 1
     facilitiesJson['objects'] = [TEST_FACILITY]
-    mytardis.wfile.write(json.dumps(facilitiesJson).encode())
+    jsonResponse = json.dumps(facilitiesJson).encode()
+    mytardis.send_header("Content-Length", len(jsonResponse))
+    mytardis.end_headers()
+    mytardis.wfile.write(jsonResponse)
 
 
 def RespondToInstrumentRequest(mytardis):

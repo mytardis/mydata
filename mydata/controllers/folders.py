@@ -642,10 +642,12 @@ class FoldersController(object):
                     % (numVerificationsCompleted,
                        self.numVerificationsToBePerformed))
                 logger.warning(message)
-            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
+            if 'MYDATA_TESTING' not in os.environ:
+                PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
         elif not wx.PyApp.IsMainLoopRunning() and FLAGS.testRunRunning and \
                 finishedVerificationCounting:
-            PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
+            if 'MYDATA_TESTING' not in os.environ:
+                PostEvent(MYDATA_EVENTS.ShutdownUploadsEvent(completed=True))
 
     def ShutDownUploadThreads(self, event=None):
         """

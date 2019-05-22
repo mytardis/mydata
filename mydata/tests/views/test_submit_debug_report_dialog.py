@@ -13,10 +13,10 @@ from ...settings import SETTINGS
 from ...logs import logger
 from ..fake_submit_debug_log_server import FakeSubmitDebugLogHandler
 from ..utils import GetEphemeralPort
-from .. import MyDataTester
+from .. import MyDataGuiTester
 
 
-class SubmitDebugLogTester(MyDataTester):
+class SubmitDebugLogTester(MyDataGuiTester):
     """
     Test ability to open submit debug report dialog.
     """

@@ -1,12 +1,12 @@
 #
 # Adapted from https://github.com/codecov/support/blob/master/codecov.yml
 # 
-# Overall coverage target changed from auto to 80%
+# Overall coverage target changed from auto to 65%
 # We don't want GitHub to report that a commit broke the builds,
 # when the only problem was that coverage decreased slightly,
-# so we use target: 80%, instead of the default target:auto
+# so we use target: 65%, instead of the default target:auto
 #
-# The patch target is set to 60%, meaning that 60% of lines
+# The patch target is set to 0%, meaning that 0% of lines
 # changed in a commit or pull request should be covered by tests.
 # Commits which only modify files excluded from coverage in .coveragerc
 # are not subject to this check.
@@ -22,7 +22,7 @@ coverage:
     # Learn more at http://docs.codecov.io/docs/codecov-yaml
     project:
       default:
-        target: 80%
+        target: 65%
     patch:
       default:
         target: 0%
