@@ -85,6 +85,10 @@ class Logger(object):
             "%(message)s"
         self.logWindowHandler.setFormatter(MyDataFormatter(formatString))
         self.loggerObject.addHandler(self.logWindowHandler)
+        if sys.platform.startswith("linux"):
+            errandBoyLogger = logging.getLogger("errand_boy.transports.unixsocket")
+            errandBoyLogger.addHandler(self.logWindowHandler)
+
         self.logTextCtrl.Bind(EVT_WX_LOG_EVENT, self.OnWxLogEvent)
 
     def ConfigureLogger(self):

@@ -748,7 +748,7 @@ class SettingsDialog(wx.Dialog):
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
         # Upper limit of max upload threads is set to 10, based on the default
-        # value of MaxSessions (10) in a typical SFTP server's sshd_config.
+        # value of MaxSessions (10) in a typical SCP server's sshd_config.
         self.maxUploadThreadsSpinCtrl = \
             wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
                         "4", min=1, max=10)

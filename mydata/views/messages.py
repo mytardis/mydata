@@ -71,3 +71,53 @@ def ShowMessageDialog(event):
         BeginBusyCursorIfRequired()
     if event.icon == wx.ICON_ERROR:
         ResetDialogSemaphores()
+
+
+def ShowConfirmationDialog(event):
+    """
+    Display a confirmation (Yes/No) dialog.
+
+    The current use case is that MyData detects that the scp_username and/or
+    scp_hostname attributes are missing from the assigned storage box, so it
+    shuts down the upload threads (with failed=True) and asks the user if
+    they would like to assume that the storage box location is accessible
+    locally (i.e. we can copy data to a local directory or mount point
+    instead of using SCP).
+    """
+    if FLAGS.showingErrorDialog:
+        logger.debug("Refusing to show confirmation dialog for question "
+                     "\"%s\" because we are already showing a confirmation "
+                     "dialog." % event.question)
+        return
+    if FLAGS.showingConfirmationDialog:
+        logger.debug("Refusing to show confirmation dialog for question "
+                     "\"%s\" because we are already showing a confirmation "
+                     "dialog." % event.question)
+        return
+    if event.question == LAST_CONFIRMATION_QUESTION:
+        logger.debug("Refusing to show confirmation dialog for question "
+                     "\"%s\" because we already showed a confirmation "
+                     "dialog with the same question." % event.question)
+        return
+    with LOCKS.updateLastConfirmationQuestion:
+        globals()['LAST_CONFIRMATION_QUESTION'] = event.question
+    FLAGS.showingConfirmationDialog = True
+    dlg = wx.MessageDialog(
+        None, event.question, event.title, wx.YES | wx.NO | wx.ICON_QUESTION)
+    if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ:
+        result = dlg.ShowModal()
+    else:
+        sys.stderr.write("%s\n" % event.question)
+        result = wx.ID_LOWEST  # Anything except for wx.ID_YES and wx.ID_NO
+    ResetDialogSemaphores()
+
+    if result == wx.ID_YES:
+        if hasattr(event, "onYes"):
+            event.onYes()
+        else:
+            logger.warning("Confirmation dialog has no event handler for Yes")
+    elif result == wx.ID_NO and hasattr(event, "onNo"):
+        if hasattr(event, "onNo"):
+            event.onNo()
+        else:
+            logger.warning("Confirmation dialog has no event handler for No")

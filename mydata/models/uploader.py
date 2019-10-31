@@ -10,13 +10,13 @@ installation to its MyTardis server.  This basic information is called an
 UUID, so each MyData instance should only have one Uploader record in MyTardis.
 
 Initially only HTTP POST uploads are enabled in MyData, but MyData will
-request uploads via SFTP to a staging area, and wait for a MyTardis
+request uploads via SCP to a staging area, and wait for a MyTardis
 administrator to approve the request (which requires updating the
 UploaderRegistrationRequest record created by MyData in the Djano Admin
 interface).
 
 The IP address information provided in the Uploader record can be used
-on the SFTP server to grant access via /etc/hosts.allow or equivalent.
+on the SCP server to grant access via /etc/hosts.allow or equivalent.
 
 When the MyTardis administrator approves the UploaderRegistrationRequest,
 they will link the request to a MyTardis StorageBox, which must have
@@ -312,7 +312,7 @@ class UploaderModel(object):
 
     def RequestUploadToStagingApproval(self):
         """
-        Used to request the ability to upload via SFTP
+        Used to request the ability to upload via SCP
         to a staging area, and then register in MyTardis.
 
         :raises requests.exceptions.HTTPError:
@@ -461,8 +461,8 @@ class UploaderRegistrationRequest(object):
 
     The upload-to-staging request contains information indicating whether the
     request has been approved i.e. the MyData.pub public key has been installed
-    on the SFTP server, and the approved storage box (giving the remote file
-    path to upload to, and the SFTP username, hostname and port).
+    on the SCP server, and the approved storage box (giving the remote file
+    path to upload to, and the SCP username, hostname and port).
     """
     def __init__(self, uploaderRegRequestJson=None):
         self.uploaderRegRequestJson = uploaderRegRequestJson
