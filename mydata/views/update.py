@@ -9,8 +9,10 @@ from ..utils.versions import MYDATA_VERSIONS
 
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
+    from wx.adv import HyperlinkCtrl
 else:
     from wx import EmptyIcon
+    from wx import HyperlinkCtrl
 
 UPDATE_URL = "https://github.com/mytardis/mydata/releases/latest"
 CONTACT_EMAIL = "store.star.help@monash.edu"
@@ -97,7 +99,7 @@ class ContactPanel(wx.Panel):
         contactLabel.SetFont(font)
         sizer.Add(contactLabel, border=10, flag=wx.EXPAND)
 
-        contactEmailHyperlink = wx.HyperlinkCtrl(
+        contactEmailHyperlink = HyperlinkCtrl(
             self, id=wx.ID_ANY, label=CONTACT_EMAIL,
             url="mailto:%s" % CONTACT_EMAIL)
         font = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
@@ -143,7 +145,7 @@ class NewVersionAlertPanel(wx.Panel):
         newVersionAlertTextLabel1.SetFont(font)
         sizer.Add(newVersionAlertTextLabel1, flag=wx.EXPAND)
 
-        newVersionAlertHyperlink = wx.HyperlinkCtrl(
+        newVersionAlertHyperlink = HyperlinkCtrl(
             self, id=wx.ID_ANY, label=UPDATE_URL,
             url=UPDATE_URL)
         font = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
