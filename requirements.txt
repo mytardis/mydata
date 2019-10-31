@@ -15,6 +15,7 @@ coverage==4.5.3
 paramiko==2.4.2
 pytz==2019.1
 lxml==4.3.3
+six==1.12.0
 python-dateutil==2.8.0
 PyInstaller==3.4
 PyUpdater==2.5.3
