@@ -83,7 +83,7 @@ def VersionCheck():
                         sys.stderr.write(
                             "Not displaying new version alert, because "
                             "another modal dialog is already being shown.\n")
-                    wx.CallAfter(ShowUpdateDialog)
+                wx.CallAfter(ShowUpdateDialog)
             else:
                 logger.info(
                     "The version you are running (%s) is newer than the "
