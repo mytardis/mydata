@@ -4,7 +4,7 @@ sudo: required
 language: python
 
 python:
-  - "2.7"
+  - "3.7"
 
 before_install:
  - sudo apt-add-repository -y ppa:fixnix/indicator-systemtray-unity
