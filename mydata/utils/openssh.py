@@ -6,7 +6,6 @@ import sys
 from datetime import datetime
 import os
 import subprocess
-import traceback
 import re
 import getpass
 import threading

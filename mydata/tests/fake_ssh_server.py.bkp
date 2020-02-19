@@ -1,11 +1,6 @@
 """
 fake_ssh_server.py
 
-This was used by the SCP upload test in Python 2.
-But that test isn't yet working in Python 3
-and neither is this module.  It is not clear if
-it is worth fixing or whether SCP will soon be replace by SFTP.
-
 Local SSH/SCP server for testing.
 
 A test SSH/SCP server can be created with:
@@ -39,7 +34,7 @@ using a Cygwin build of scp from a Windows command prompt:
 # pylint: disable=invalid-name
 # pylint: disable=unused-argument
 
-import socketserver
+import SocketServer
 import sys
 import traceback
 import subprocess
@@ -48,20 +43,15 @@ import re
 import logging
 import socket
 import select
+# For Python 3, this will change to "from io import StringIO":
+from StringIO import StringIO
 
 import paramiko
 from paramiko.py3compat import decodebytes
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
-import six
 
 import mydata.utils.openssh as OpenSSH
-
-if six.PY3:
-    from io import StringIO
-else:
-    from StringIO import StringIO  # pylint: disable=import-error
-
 
 # setup logging
 logger = logging.getLogger(__name__)
@@ -92,7 +82,7 @@ class SshServerInterface(paramiko.ServerInterface):
         keyPair = OpenSSH.FindKeyPair("MyDataTest")
         # Remove "ssh-rsa " and "MyDataTest key":
         data = bytes(keyPair.publicKey.split(" ")[1])
-        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))  # pylint: disable=deprecated-method
+        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def check_channel_request(self, kind, chanid):
         """
@@ -179,7 +169,7 @@ DEFAULT_HOST_KEY = paramiko.RSAKey.from_private_key(StringIO(
 ))
 
 
-class SshRequestHandler(socketserver.BaseRequestHandler):
+class SshRequestHandler(SocketServer.BaseRequestHandler):
     """
     Handles a client address and creates a paramiko
     Transport object.
@@ -190,7 +180,7 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
 
     def __init__(self, request, client_address, server):
         try:
-            socketserver.BaseRequestHandler.__init__(
+            SocketServer.BaseRequestHandler.__init__(
                 self, request, client_address, server)
         except (socket.error, select.error, EOFError) as err:
             logger.error(
@@ -531,7 +521,7 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                 self.close_transport(success=True)
         except Exception as e:
             logger.error(
-                '*** Caught exception: %s: %s', str(e.__class__), str(e))
+                '*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
             if not isinstance(e, socket.error) and \
                     not isinstance(e, select.error):
                 logger.error(traceback.format_exc())
@@ -558,10 +548,11 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
             self.server.handle_timeout()
 
 
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
     ThreadedTCPServer
     """
+    pass
 
 
 class ThreadedSshServer(ThreadedTCPServer):
@@ -579,14 +570,16 @@ class ThreadedSshServer(ThreadedTCPServer):
 
     def __init__(self, address):
         self.host_key = DEFAULT_HOST_KEY
-        socketserver.TCPServer.__init__(self, address, SshRequestHandler)
+        SocketServer.TCPServer.__init__(self, address, SshRequestHandler)
 
     def shutdown_request(self, request):
         """
         Called to shutdown and close an individual request.
 
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l466
+
         We don't call automatically call
-        socketserver.TCPServer.shutdown_request() to prevent
+        SocketServer.TCPServer.shutdown_request() to prevent
         TCPServer from closing the connection prematurely
         """
         return
@@ -595,7 +588,9 @@ class ThreadedSshServer(ThreadedTCPServer):
         """
         Called to clean up an individual request.
 
-        We don't call socketserver.TCPServer.close_request() to prevent
+        See https://hg.python.org/cpython/file/2.7/Lib/SocketServer.py#l476
+
+        We don't call SocketServer.TCPServer.close_request() to prevent
         TCPServer from closing the connection prematurely
         """
         return
