@@ -110,7 +110,7 @@ Wscript.Echo(msg)
 Wscript.Quit(1)
 End If
         """
-        vbScript.write(script)
+        vbScript.write(script.encode())
     cmdList = ['cscript', '//Nologo', vbScript.name]
     logger.debug("Checking for MyData shortcut in common startup items.")
     proc = subprocess.Popen(cmdList, stdin=subprocess.PIPE,
