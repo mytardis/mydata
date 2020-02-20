@@ -20,9 +20,8 @@ environment:
       secure: kVLJfBgsiibjMtizt055TdGzT/sSnxgZHwfLp2Znyb5ie2SU4WGAPfcxI19nA8o1
 
   matrix:
-
-    - PYTHON: "C:\\Python27.14"
-      PYTHON_VERSION: "2.7.14"
+    - PYTHON: "C:\\Python37"
+      PYTHON_VERSION: "3.7.5"
       PYTHON_ARCH: "32"
 
 install:
