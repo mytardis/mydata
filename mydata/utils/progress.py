@@ -62,7 +62,8 @@ def MonitorProgress(progressPollInterval, uploadModel,
             # If this file already has a partial upload in staging,
             # progress and speed estimates can be misleading.
             uploadModel.SetLatestTime(latestUpdateTime)
-            if bytesUploaded > uploadModel.bytesUploaded:
+            if bytesUploaded and uploadModel.bytesUploaded and \
+                    bytesUploaded > uploadModel.bytesUploaded:
                 uploadModel.SetBytesUploaded(bytesUploaded)
             progressCallback(bytesUploaded, fileSize)
         except requests.exceptions.RequestException:
