@@ -21,7 +21,7 @@ install:
 - pip install codecov
 
 # Command to run tests
-script: python setup.py nosetests
+script: pytest --cov=mydata
 
 after_success:
   - codecov -X gcov

@@ -36,7 +36,7 @@ class SettingsDialogTester(MyDataSettingsTester):
         SaveSettingsToDisk()
 
     def tearDown(self):
-        self.settingsDialog.Destroy()
+        self.settingsDialog.Hide()
         wx.WakeUpIdle()
         super(SettingsDialogTester, self).tearDown()
 

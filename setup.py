@@ -54,25 +54,19 @@ as described here:
 """
 from __future__ import print_function
 
-from argparse import Namespace
 import os
 import sys
-import tarfile
 import tempfile
 import subprocess
 import shutil
-import zipfile
 
 from distutils.command.build import build
 from distutils.command.bdist import bdist
 from distutils.command.install import install
 import distutils.dir_util
 
+import PyInstaller.__main__
 from six.moves import getoutput
-
-from pyupdater.builder import Builder
-from pyupdater import settings as pyu_settings
-from pyupdater.hooks import get_hook_dir
 
 import requests
 from setuptools import setup
@@ -109,12 +103,10 @@ class CustomBuildCommand(build):
         """
         if sys.platform.startswith("win"):
             sys.stdout.write(
-                "Creating dist/MyData.exe using PyUpdater / PyInstaller...\n")
+                "Creating dist/MyData.exe using PyInstaller...\n")
             if os.path.exists("build"):
                 shutil.rmtree("build")
                 os.mkdir("build")
-            if not os.path.exists("build/pyu-data"):
-                os.makedirs("build/pyu-data")
             if os.path.exists("dist"):
                 shutil.rmtree("dist")
                 os.mkdir("dist")
@@ -122,40 +114,20 @@ class CustomBuildCommand(build):
                 os.makedirs("dist/MyData")
             if not os.path.exists("dist/MyData-console"):
                 os.makedirs("dist/MyData-console")
-            pyu_settings.CONFIG_DATA_FOLDER = \
-                os.path.abspath("build/.pyupdater")
-            if not os.path.exists(pyu_settings.CONFIG_DATA_FOLDER):
-                os.makedirs(pyu_settings.CONFIG_DATA_FOLDER)
-            pyu_settings.USER_DATA_FOLDER = os.path.abspath("build/pyu-data")
-            # The way we set the App name below avoids having to
-            # create .pyupdater/config.pyu:
-            pyu_settings.GENERIC_APP_NAME = APP_NAME
-            pyu_settings.GENERIC_COMPANY_NAME = COMPANY_NAME
             pyinstallerArgs = [
-                '--windowed', 'run.py', '--icon', 'mydata/media/MyData.ico']
-            args = Namespace(app_version=APP_VERSION, clean=False,
-                             command='build', distpath=None, keep=False,
-                             name=None, onedir=False, onefile=False,
-                             specpath=None, workpath=None)
-            builder = Builder(args, pyinstallerArgs)
-            builder.build()
-
-            pyuNewDir = os.path.join(pyu_settings.USER_DATA_FOLDER, 'new')
-            buildFileName = '%s-win-%s.zip' % (APP_NAME, APP_VERSION)
-            buildFilePath = os.path.join(pyuNewDir, buildFileName)
-            with zipfile.ZipFile(buildFilePath, 'r') as zipFile:
-                zipFile.extractall("dist/MyData")
-
-            pyu_settings.GENERIC_APP_NAME = "%s-console" % APP_NAME
-            pyinstallerArgs = ['--console', 'run.py']
-            builder = Builder(args, pyinstallerArgs)
-            builder.build()
-
-            pyuNewDir = os.path.join(pyu_settings.USER_DATA_FOLDER, 'new')
-            buildFileName = '%s-console-win-%s.zip' % (APP_NAME, APP_VERSION)
-            buildFilePath = os.path.join(pyuNewDir, buildFileName)
-            with zipfile.ZipFile(buildFilePath, 'r') as zipFile:
-                zipFile.extractall("dist/MyData-console")
+                '--name=MyData',
+                '--icon=mydata/media/MyData.ico'
+                '--windowed',
+                'run.py',
+                ]
+            PyInstaller.__main__.run(pyinstallerArgs)
+            pyinstallerArgs = [
+                '--name=MyData-console',
+                '--icon=mydata/media/MyData.ico'
+                '--console',
+                'run.py',
+                ]
+            PyInstaller.__main__.run(pyinstallerArgs)
 
             os.system(r"COPY /Y dist\MyData-console\MyData-console.exe "
                       r"dist\MyData\MyData.com")
@@ -198,45 +170,20 @@ class CustomBuildCommand(build):
             os.system(r"COPY /Y %s dist\MyData" % cacert)
         elif sys.platform.startswith("darwin"):
             sys.stdout.write(
-                "Creating dist/MyData.app using PyUpdater / PyInstaller...\n")
+                "Creating dist/MyData.app using PyInstaller...\n")
             os.system("rm -fr build/*")
             os.system("rm -fr dist/*")
-            if not os.path.exists("build/pyu-data"):
-                os.makedirs("build/pyu-data")
-            pyu_settings.CONFIG_DATA_FOLDER = \
-                os.path.abspath("build/.pyupdater")
-            if not os.path.exists(pyu_settings.CONFIG_DATA_FOLDER):
-                os.makedirs(pyu_settings.CONFIG_DATA_FOLDER)
-            pyu_settings.USER_DATA_FOLDER = os.path.abspath("build/pyu-data")
-            # The way we set the App name below avoids having to
-            # create .pyupdater/config.pyu:
-            pyu_settings.GENERIC_APP_NAME = APP_NAME
-            pyu_settings.GENERIC_COMPANY_NAME = COMPANY_NAME
             with open("setup_templates/macOS/mac.spec.template",
                       'r') as macSpecTemplateFile:
                 macSpecTemplate = macSpecTemplateFile.read()
             macSpec = macSpecTemplate \
                 .replace("<MYDATA_REPO_PATH>", os.path.abspath(".")) \
                 .replace("<MYDATA_RUNNER>", os.path.abspath("run.py")) \
-                .replace("<APP_VERSION>", APP_VERSION) \
-                .replace("<PYUPDATER_HOOKS_PATH>",
-                         os.path.dirname(get_hook_dir()))
+                .replace("<APP_VERSION>", APP_VERSION)
             with open("MyData.spec", 'w') as macSpecFile:
                 macSpecFile.write(macSpec)
             pyinstallerArgs = ['--windowed', 'MyData.spec']
-            args = Namespace(app_version=APP_VERSION, clean=False,
-                             command='build', distpath=None, keep=False,
-                             name=None, onedir=False, onefile=False,
-                             specpath=None, workpath=None)
-            builder = Builder(args, pyinstallerArgs)
-            builder.build()
-
-            pyuNewDir = os.path.join(pyu_settings.USER_DATA_FOLDER, 'new')
-            buildFileName = '%s-mac-%s.tar.gz' % (APP_NAME, APP_VERSION)
-            buildFilePath = os.path.join(pyuNewDir, buildFileName)
-            tar = tarfile.open(buildFilePath, "r:gz")
-            tar.extractall("dist")
-            tar.close()
+            PyInstaller.__main__.run(pyinstallerArgs)
 
             resourceFiles = [
                 (requests.certs.where(), ""),
