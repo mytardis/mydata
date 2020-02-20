@@ -77,24 +77,24 @@ def BytesToHuman(numBytes):
     return "%sB" % numBytes
 
 
-def BeginBusyCursorIfRequired(event=None):
+def BeginBusyCursorIfRequired(settingsDialog=None):
     """
     Begin busy cursor if it's not already being displayed.
     """
     try:
         if not wx.IsBusy():
             wx.BeginBusyCursor()
-        if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
+        if settingsDialog:
             if 'phoenix' in wx.PlatformInfo:
                 busyCursor = wx.Cursor(wx.CURSOR_WAIT)
             else:
                 busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
-            event.settingsDialog.dialogPanel.SetCursor(busyCursor)
+            settingsDialog.dialogPanel.SetCursor(busyCursor)
     except wx.PyAssertionError as err:
         logger.warning(err)
 
 
-def EndBusyCursorIfRequired(event=None):
+def EndBusyCursorIfRequired(settingsDialog=None):
     """
     The built in wx.EndBusyCursor raises an ugly exception if the
     busy cursor has already been stopped.
@@ -102,12 +102,12 @@ def EndBusyCursorIfRequired(event=None):
     try:
         if wx.IsBusy():
             wx.EndBusyCursor()
-        if event and hasattr(event, 'settingsDialog') and event.settingsDialog:
+        if settingsDialog:
             if 'phoenix' in wx.PlatformInfo:
                 arrowCursor = wx.Cursor(wx.CURSOR_ARROW)
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
-            event.settingsDialog.dialogPanel.SetCursor(arrowCursor)
+            settingsDialog.dialogPanel.SetCursor(arrowCursor)
     except wx.PyAssertionError as err:
         if "no matching wxBeginBusyCursor()" \
                 not in str(err):

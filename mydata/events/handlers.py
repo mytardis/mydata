@@ -42,7 +42,7 @@ def ShutdownForRefresh(event):
             MYDATA_EVENTS.ShutdownForRefreshCompleteEvent(
                 shutdownSuccessful=True)
         PostEvent(shutdownForRefreshCompleteEvent)
-        wx.CallAfter(EndBusyCursorIfRequired, event)
+        wx.CallAfter(EndBusyCursorIfRequired)
         app.scheduleController.ApplySchedule(event)
     except:
         message = "An error occurred while trying to shut down " \
@@ -163,11 +163,11 @@ def RenameInstrument(event):
             InstrumentModel.RenameInstrument(
                 facilityName, oldInstrumentName, newInstrumentName)
 
-            wx.CallAfter(EndBusyCursorIfRequired, event)
+            wx.CallAfter(EndBusyCursorIfRequired, settingsDialog)
             if nextEvent:
                 PostEvent(nextEvent)
         except DuplicateKey:
-            wx.CallAfter(EndBusyCursorIfRequired, event)
+            wx.CallAfter(EndBusyCursorIfRequired, settingsDialog)
 
             def NotifyUserOfDuplicateInstrumentName():
                 """
@@ -230,7 +230,7 @@ def SettingsDialogValidation(event):
                      % threading.current_thread().name)
         try:
             if wx.PyApp.IsMainLoopRunning():
-                wx.CallAfter(BeginBusyCursorIfRequired, event)
+                wx.CallAfter(BeginBusyCursorIfRequired, settingsDialog)
                 wx.CallAfter(settingsDialog.okButton.Disable)
                 wx.CallAfter(settingsDialog.lockOrUnlockButton.Disable)
 
@@ -275,12 +275,12 @@ def SettingsDialogValidation(event):
                             invalidSettings=invalidSettings))
             finally:
                 if wx.PyApp.IsMainLoopRunning():
-                    wx.CallAfter(EndBusyCursorIfRequired, event)
+                    wx.CallAfter(EndBusyCursorIfRequired, settingsDialog)
         finally:
             if wx.PyApp.IsMainLoopRunning():
                 wx.CallAfter(settingsDialog.okButton.Enable)
                 wx.CallAfter(settingsDialog.lockOrUnlockButton.Enable)
-                wx.CallAfter(EndBusyCursorIfRequired, event)
+                wx.CallAfter(EndBusyCursorIfRequired, settingsDialog)
 
         logger.debug("Finishing run() method for thread %s"
                      % threading.current_thread().name)
@@ -384,7 +384,7 @@ def ProvideSettingsValidationResults(event):
             event.settingsDialog.excludesFileField.SelectAll()
         logger.debug("Settings were not valid, so Settings dialog "
                      "should remain visible.")
-        EndBusyCursorIfRequired(event)
+        EndBusyCursorIfRequired(event.settingsDialog)
         SETTINGS.RollBack()
         return
 
@@ -503,7 +503,7 @@ def StartDataUploadsForFolder(event):
         if type(app).__name__ == "MyData":
             wx.CallAfter(app.frame.toolbar.DisableTestAndUploadToolbarButtons)
             app.foldersController.StartUploadsForFolder(folderModel)
-            wx.CallAfter(EndBusyCursorIfRequired, event)
+            wx.CallAfter(EndBusyCursorIfRequired)
 
     if wx.PyApp.IsMainLoopRunning():
         startDataUploadsForFolderThread = \
