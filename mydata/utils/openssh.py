@@ -401,10 +401,10 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         "-P", port,
         "-i", privateKeyFilePath,
         filePath,
-        "%s@%s:%s" % (username, host,
-                      remoteDir
-                      .replace('`', r'\\`')
-                      .replace('$', r'\\$'))]
+        "%s@%s:%s/" % (username, host,
+                       remoteDir
+                       .replace('`', r'\\`')
+                       .replace('$', r'\\$'))]
     scpCommandList[2:2] = SETTINGS.miscellaneous.cipherOptions
     scpCommandList[2:2] = OpenSSH.DefaultSshOptions(
         SETTINGS.miscellaneous.connectionTimeout)
