@@ -7,9 +7,7 @@ import copy
 import datetime
 import re
 import json
-
-import six
-from six.moves import urllib
+import urllib
 
 from . import EMPTY_API_LIST, STAGING_PATH, TEST_FACILITY, TEST_INSTRUMENT
 from . import RespondToRequestForStatusCode, RespondWithStatusCode
@@ -71,7 +69,7 @@ def FakeMyTardisGet(mytardis):
         "/api/v1/mydata_replica/": RespondToReplicaRequest
     }
 
-    for prefix, responder in six.iteritems(responderForPrefix):
+    for prefix, responder in responderForPrefix.items():
         if mytardis.path.startswith(prefix):
             responder(mytardis)
             return

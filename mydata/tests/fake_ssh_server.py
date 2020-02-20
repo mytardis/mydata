@@ -49,19 +49,14 @@ import logging
 import socket
 import select
 
+from io import StringIO
+
 import paramiko
 from paramiko.py3compat import decodebytes
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
-import six
 
 import mydata.utils.openssh as OpenSSH
-
-if six.PY3:
-    from io import StringIO
-else:
-    from StringIO import StringIO  # pylint: disable=import-error
-
 
 # setup logging
 logger = logging.getLogger(__name__)

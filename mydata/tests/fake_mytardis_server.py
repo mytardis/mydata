@@ -10,8 +10,8 @@ fields have been removed from the JSON responses.
 """
 # Method names like do_GET clash with our .pylintrc's naming rules:
 # pylint: disable=invalid-name
-# For Python3, change this to "from http.server import BaseHTTPRequestHandler":
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler  # pylint: disable=relative-import
+
+from http.server import BaseHTTPRequestHandler
 
 from .fake_mytardis_helpers.get import FakeMyTardisGet
 from .fake_mytardis_helpers.post import FakeMyTardisPost

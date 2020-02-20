@@ -5,9 +5,10 @@ import sys
 import time
 import threading
 
+from http.server import HTTPServer
+
 import requests
 import wx
-from six.moves.BaseHTTPServer import HTTPServer  # pylint: disable=relative-import,wrong-import-order
 
 from ...settings import SETTINGS
 from ...logs import logger

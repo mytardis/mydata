@@ -16,11 +16,8 @@ Before signing builds, you must:
             access an active Apple Developer Program account, you will
             be able to create a "Developer ID Application" certificate.
 """
-from __future__ import print_function
-
 import os
-
-from six.moves import getoutput
+import subprocess
 
 
 MYDATA_IDENTIFIER = 'org.mytardis.MyData'
@@ -56,7 +53,7 @@ class MacSigning(object):
         new certificate with a private key attached.
         """
         cmd = 'certtool y | grep "%s"' % self.certificateNamePattern
-        certificateLine = getoutput(cmd)
+        certificateLine = subprocess.getoutput(cmd)
         try:
             return certificateLine.split(": ", 1)[1]
         except IndexError:

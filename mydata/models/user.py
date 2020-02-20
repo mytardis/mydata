@@ -1,9 +1,9 @@
 """
 Model class for MyTardis API v1's UserResource.
 """
-import requests
+import urllib
 
-from six.moves import urllib
+import requests
 
 from ..settings import SETTINGS
 from ..utils.exceptions import DoesNotExist

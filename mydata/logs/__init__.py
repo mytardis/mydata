@@ -13,19 +13,15 @@ import os
 import sys
 import inspect
 
+from io import StringIO
+
 import requests
 from requests.exceptions import RequestException
-import six
 import wx
 
 from .SubmitDebugReportDialog import SubmitDebugReportDialog
 from .wxloghandler import WxLogHandler
 from .wxloghandler import EVT_WX_LOG_EVENT
-
-if six.PY3:
-    from io import StringIO
-else:
-    from StringIO import StringIO  # pylint: disable=import-error
 
 
 class MyDataFormatter(logging.Formatter):

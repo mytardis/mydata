@@ -13,7 +13,6 @@ import time
 import struct
 
 import psutil
-import six
 
 from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
@@ -213,9 +212,7 @@ class KeyPair(object):
                 keyType = sshKeyGenOutComponents[-1]\
                     .strip().strip(b'(').strip(b')')
 
-        if six.PY3:
-            return fingerprint.decode(), keyType.decode()
-        return fingerprint, keyType
+        return fingerprint.decode(), keyType.decode()
 
     @property
     def fingerprint(self):

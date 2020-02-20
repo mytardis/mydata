@@ -5,8 +5,7 @@ and saved to disk in MyData.cfg
 import os
 import pickle
 import traceback
-
-from six.moves import urllib
+import urllib
 
 from ...constants import APPNAME
 from ...logs import logger

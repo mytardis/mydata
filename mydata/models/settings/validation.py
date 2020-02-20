@@ -11,7 +11,6 @@ from datetime import datetime
 
 import requests
 from requests.exceptions import HTTPError
-import six
 from validate_email import validate_email
 
 from ...events.stop import RaiseExceptionIfUserAborted
@@ -512,10 +511,7 @@ def PerformGlobsFileValidation(filePath, upper, lower, field):
                 # Lines starting with '#' or ';' will be ignored.
                 # Other non-blank lines are expected to be globs,
                 # e.g. *.txt
-                if six.PY3:
-                    _ = line.strip()
-                else:
-                    _ = line.strip().decode()
+                _ = line.strip()
             except UnicodeDecodeError:
                 message = "%s file is not a valid plain text " \
                     "(UTF-8) file." % upper

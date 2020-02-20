@@ -1,9 +1,9 @@
 """
 Model class for MyTardis API v1's GroupResource.
 """
-import requests
+import urllib
 
-from six.moves import urllib
+import requests
 
 from ..settings import SETTINGS
 from ..logs import logger

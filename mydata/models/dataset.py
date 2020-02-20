@@ -2,8 +2,9 @@
 Model class for MyTardis API v1's DatasetResource.
 """
 import json
+import urllib
+
 import requests
-from six.moves import urllib
 
 from ..settings import SETTINGS
 from ..threads.flags import FLAGS

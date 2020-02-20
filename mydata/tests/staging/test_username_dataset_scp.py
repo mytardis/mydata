@@ -9,7 +9,6 @@ import socket
 import select
 import unittest
 
-import six
 import wx
 
 import mydata.utils.openssh as OpenSSH
@@ -254,11 +253,11 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         OpenSSH.OPENSSH.scp = OpenSSH.OPENSSH.scp.rstrip("_INVALID")
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         if sys.platform.startswith("win"):
-            six.assertRegex(
-                self, newLogs, (".*The system cannot find the file specified.*"))
+            self.assertRegex(
+                newLogs, (".*The system cannot find the file specified.*"))
         else:
-            six.assertRegex(
-                self, newLogs, (".*No such file or directory.*"))
+            self.assertRegex(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting handling of invalid path to SSH binary...\n")
@@ -278,11 +277,11 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         OpenSSH.OPENSSH.ssh = OpenSSH.OPENSSH.ssh.rstrip("_INVALID")
         newLogs = Subtract(logger.GetValue(), loggerOutput)
         if sys.platform.startswith("win"):
-            six.assertRegex(
-                self, newLogs, (".*The system cannot find the file specified.*"))
+            self.assertRegex(
+                newLogs, (".*The system cannot find the file specified.*"))
         else:
-            six.assertRegex(
-                self, newLogs, (".*No such file or directory.*"))
+            self.assertRegex(
+                newLogs, (".*No such file or directory.*"))
 
         sys.stderr.write(
             "\nTesting attempted uploads with invalid file paths...\n")
@@ -295,9 +294,9 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             foldersController.StartUploadsForFolder(folderModel)
         foldersController.FinishedScanningForDatasetFolders()
         newLogs = Subtract(logger.GetValue(), loggerOutput)
-        six.assertRegex(
-            self, newLogs, (".*Not uploading .+, because it has been "
-                            "moved, renamed or deleted.*"))
+        self.assertRegex(
+            newLogs, (".*Not uploading .+, because it has been "
+                      "moved, renamed or deleted.*"))
         self.assertEqual(uploadsModel.GetCompletedCount(), 0)
 
         # Now let's try to upload without a functioning SCP server:
@@ -334,8 +333,8 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
                 % (uploadModel.filename, uploadModel.message.strip()))
         sys.stderr.write("\n")
 
-        six.assertRegex(
-            self, newLogs,
+        self.assertRegex(
+            newLogs,
             ".*ssh: connect to host localhost port %s: Connection refused.*"
             "|"
             ".*ssh: connect to host localhost port %s: Operation timed out.*"

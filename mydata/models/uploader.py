@@ -75,9 +75,9 @@ import platform
 import getpass
 import re
 import traceback
+import urllib
 import uuid
 
-from six.moves import urllib
 
 import dateutil.parser
 import psutil

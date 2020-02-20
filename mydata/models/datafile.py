@@ -4,10 +4,10 @@ Model class for MyTardis API v1's DataFileResource.
 
 import io
 import json
+import urllib
 
 import requests
 from requests_toolbelt.multipart import encoder
-from six.moves import urllib
 
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..settings import SETTINGS

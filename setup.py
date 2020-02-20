@@ -66,7 +66,6 @@ from distutils.command.install import install
 import distutils.dir_util
 
 import PyInstaller.__main__
-from six.moves import getoutput
 
 import requests
 from setuptools import setup
@@ -310,7 +309,7 @@ class CustomBdistCommand(bdist):
             for cmd in cmds:
                 print(cmd)
                 if "hdiutil attach" in cmd:
-                    device = getoutput(cmd)
+                    device = subprocess.getoutput(cmd)
                 else:
                     os.system(cmd)
 

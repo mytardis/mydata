@@ -5,7 +5,7 @@ A simple HTTP server to use for unit testing in MyData.
 """
 import logging
 
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler  # pylint: disable=relative-import
+from http.server import BaseHTTPRequestHandler
 
 DEBUG = False
 

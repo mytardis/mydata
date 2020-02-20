@@ -8,7 +8,7 @@ import time
 import threading
 from socketserver import ThreadingMixIn
 
-from six.moves.BaseHTTPServer import HTTPServer  # pylint: disable=relative-import
+from http.Server import HTTPServer
 
 import requests
 
