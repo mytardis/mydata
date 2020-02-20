@@ -11,8 +11,7 @@ coverage:
   range: 70...100
 
   status:
-    project: yes
-      default: false
+    project: no
     patch: no
     changes: no
 
