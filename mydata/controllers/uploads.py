@@ -400,11 +400,10 @@ class UploadDatafileRunnable(object):
                     logger.debug("Restarting upload for " + dataFilePath)
                     self.uploadModel.SetProgress(0)
                     continue
-                else:
-                    logger.error(traceback.format_exc())
-                    message = SafeStr(err)
-                    self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
-                    return
+                logger.error(traceback.format_exc())
+                message = SafeStr(err)
+                self.FinalizeUpload(uploadSuccess=False, message=SafeStr(err))
+                return
         if self.uploadModel.canceled:
             logger.debug("FoldersController: "
                          "Aborting upload for \"%s\"."

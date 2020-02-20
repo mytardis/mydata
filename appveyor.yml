@@ -67,7 +67,7 @@ install:
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - "%CMD_IN_ENV% pip install pylint==1.9.2"
+  - "%CMD_IN_ENV% pip install pylint==2.4.4"
   - "pylint --rcfile=.pylintrc mydata"
 
   - "SET MYDATA_DEBUG_LOG_PATH=."

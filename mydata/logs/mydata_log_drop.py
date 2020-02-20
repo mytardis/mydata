@@ -77,8 +77,7 @@ if 'logfile' in form:
                 out.write("Exceeded limit of %d bytes in upload, exiting.\n"
                           % MAX_NR_BYTES_LOG)
                 break
-            else:
-                out.write(blob)
+            out.write(blob)
         out.close()
 
 sys.stdout.write("Content-Type: text/html\r\n\r\n")
