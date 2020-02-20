@@ -583,7 +583,7 @@ class FoldersController(object):
         Check if we have finished uploads and verifications,
         and if so, call ShutDownUploadThreads
         """
-        # pylint: disable=unused-argument,too-many-branches
+        # pylint: disable=unused-argument
         if self.completed or self.canceled:
             return
 
@@ -603,10 +603,8 @@ class FoldersController(object):
             DATAVIEW_MODELS['verifications'].GetCompletedCount()
 
 
-        uploadsToBePerformed = DATAVIEW_MODELS['verifications'].GetNotFoundCount()
-        if self.uploadMethod == UploadMethod.VIA_STAGING:
-            uploadsToBePerformed += \
-                DATAVIEW_MODELS['verifications'].GetFoundUnverifiedNotFullSizeCount()
+        uploadsToBePerformed = DATAVIEW_MODELS['verifications'].GetNotFoundCount() + \
+            DATAVIEW_MODELS['verifications'].GetFoundUnverifiedNotFullSizeCount()
 
         uploadsCompleted = DATAVIEW_MODELS['uploads'].GetCompletedCount()
         uploadsFailed = DATAVIEW_MODELS['uploads'].GetFailedCount()
