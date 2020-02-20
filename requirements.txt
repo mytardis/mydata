@@ -19,4 +19,4 @@ pytz==2019.1
 lxml==4.5.0
 python-dateutil==2.8.0
 PyInstaller==3.6
-six==1.12.0
+six==1.14.0
