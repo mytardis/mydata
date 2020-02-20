@@ -8,7 +8,7 @@ import time
 import threading
 from socketserver import ThreadingMixIn
 
-from http.Server import HTTPServer
+from http.server import HTTPServer
 
 import requests
 
