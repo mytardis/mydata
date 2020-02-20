@@ -182,11 +182,11 @@ class MyDataFrame(wx.Frame):
 
         helpMenu = wx.Menu()
 
-        helpMenuItemID = wx.NewId()
+        helpMenuItemID = wx.Window.NewControlId()
         helpMenu.Append(helpMenuItemID, "&MyData Help")
         self.Bind(wx.EVT_MENU, OnHelp, id=helpMenuItemID)
 
-        walkthroughMenuItemID = wx.NewId()
+        walkthroughMenuItemID = wx.Window.NewControlId()
         helpMenu.Append(walkthroughMenuItemID, "Mac OS X &Walkthrough")
         self.Bind(
             wx.EVT_MENU, OnWalkthrough, id=walkthroughMenuItemID)

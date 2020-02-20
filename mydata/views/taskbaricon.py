@@ -57,7 +57,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu = wx.Menu()
 
         self.aboutMyDataMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "About MyData")
+            self.menu, wx.ID_ANY, "About MyData")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.aboutMyDataMenuItem)
         else:
@@ -68,7 +68,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu.AppendSeparator()
 
         self.syncNowMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "Sync Now")
+            self.menu, wx.ID_ANY, "Sync Now")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.syncNowMenuItem)
         else:
@@ -79,7 +79,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu.AppendSeparator()
 
         self.myTardisMainWindowMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "MyData Main Window")
+            self.menu, wx.ID_ANY, "MyData Main Window")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisMainWindowMenuItem)
         else:
@@ -88,7 +88,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
                   self.myTardisMainWindowMenuItem)
 
         self.myTardisSettingsMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "MyData Settings")
+            self.menu, wx.ID_ANY, "MyData Settings")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisSettingsMenuItem)
         else:
@@ -99,7 +99,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu.AppendSeparator()
 
         self.myTardisHelpMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "MyData Help")
+            self.menu, wx.ID_ANY, "MyData Help")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.myTardisHelpMenuItem)
         else:
@@ -110,7 +110,7 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.menu.AppendSeparator()
 
         self.exitMyDataMenuItem = wx.MenuItem(
-            self.menu, wx.NewId(), "Exit MyData")
+            self.menu, wx.ID_ANY, "Exit MyData")
         if 'phoenix' in wx.PlatformInfo:
             self.menu.Append(self.exitMyDataMenuItem)
         else:

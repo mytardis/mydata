@@ -213,11 +213,11 @@ class SubmitDebugReportDialog(wx.Dialog):
         self.buttonsPanelSizer = wx.FlexGridSizer(1, 5, hgap=10, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
 
-        self.cancelButton = wx.Button(self.buttonsPanel, wx.NewId(), "Cancel")
+        self.cancelButton = wx.Button(self.buttonsPanel, wx.ID_ANY, "Cancel")
         self.buttonsPanelSizer.Add(self.cancelButton, flag=wx.BOTTOM, border=5)
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=self.cancelButton.GetId())
 
-        self.submitButton = wx.Button(self.buttonsPanel, wx.NewId(), "Submit")
+        self.submitButton = wx.Button(self.buttonsPanel, wx.ID_ANY, "Submit")
         self.submitButton.SetDefault()
         self.Bind(wx.EVT_BUTTON, self.OnSubmit, id=self.submitButton.GetId())
         self.buttonsPanelSizer.Add(self.submitButton, flag=wx.BOTTOM, border=5)

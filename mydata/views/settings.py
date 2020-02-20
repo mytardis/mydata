@@ -846,16 +846,16 @@ class SettingsDialog(wx.Dialog):
         # but we want to use command-c for copying to the clipboard.
         # We set the ID to wx.ID_CANCEL earlier to help
         # wx.StdDialogButtonSizer to lay out the buttons correctly.
-        self.cancelButton.SetId(wx.NewId())
+        self.cancelButton.SetId(wx.Window.NewControlId())
         self.Bind(wx.EVT_BUTTON, self.OnCancel, self.cancelButton)
         # As with the Cancel button, we set the OK button's ID to
         # wx.ID_OK initially to help wx.StdDialogButtonSizer to
         # lay out the buttons.  But at least on Mac OS X, I don't
         # trust the event handling to work correctly, so I'm
         # changing the button's ID here:
-        self.okButton.SetId(wx.NewId())
+        self.okButton.SetId(wx.Window.NewControlId())
         self.Bind(wx.EVT_BUTTON, self.OnOK, self.okButton)
-        self.helpButton.SetId(wx.NewId())
+        self.helpButton.SetId(wx.Window.NewControlId())
         self.Bind(wx.EVT_BUTTON, SettingsDialog.OnHelp, self.helpButton)
 
         sizer.Add(buttonSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
@@ -1446,9 +1446,9 @@ class SettingsDialog(wx.Dialog):
         rather than using self.apiKeyField.GetId(), so that the OS
         doesn't try to impose its security rules on our "password" field.
         """
-        pasteId = wx.NewId()
-        selectAllId = wx.NewId()
-        saveId = wx.NewId()
+        pasteId = wx.Window.NewControlId()
+        selectAllId = wx.Window.NewControlId()
+        saveId = wx.Window.NewControlId()
         acceleratorList = \
             [(wx.ACCEL_CTRL, ord('V'), pasteId),
              (wx.ACCEL_CTRL, ord('A'), selectAllId),
