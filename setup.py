@@ -115,15 +115,17 @@ class CustomBuildCommand(build):
                 os.makedirs("dist/MyData-console")
             pyinstallerArgs = [
                 '--name=MyData',
-                '--icon=mydata/media/MyData.ico'
+                '--icon=mydata/media/MyData.ico',
                 '--windowed',
+                '--noconfirm',
                 'run.py',
                 ]
             PyInstaller.__main__.run(pyinstallerArgs)
             pyinstallerArgs = [
                 '--name=MyData-console',
-                '--icon=mydata/media/MyData.ico'
+                '--icon=mydata/media/MyData.ico',
                 '--console',
+                '--noconfirm',
                 'run.py',
                 ]
             PyInstaller.__main__.run(pyinstallerArgs)
@@ -135,38 +137,40 @@ class CustomBuildCommand(build):
             # is the original from the MyTardis repository, and MyData.ico is
             # the result of converting it to PNG and then back to ICO, which
             # fixed a problem with the Windows build.
-            if not os.path.exists("dist/MyData/media"):
-                os.makedirs("dist/MyData/media")
-            os.system(r"COPY /Y mydata\media\favicon.ico "
-                      r"dist\MyData\media")
-            os.system(r"COPY /Y mydata\media\MyData.ico "
-                      r"dist\MyData\media")
-            distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
-                                         "dist/MyData/media/Aha-Soft")
 
-            distutils.dir_util\
-                .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
-                           "dist/MyData/win64/openssh-7.3p1-cygwin-2.6.0")
-            cygwin64HomeDir = \
-                "dist/MyData/win64/openssh-7.3p1-cygwin-2.6.0/home"
-            for subdir in os.listdir(cygwin64HomeDir):
-                subdirpath = os.path.join(cygwin64HomeDir, subdir)
-                if os.path.isdir(subdirpath):
-                    shutil.rmtree(subdirpath)
-            distutils.dir_util.copy_tree(
-                "resources/win32/openssh-7.3p1-cygwin-2.8.0",
-                "dist/MyData/win32/openssh-7.3p1-cygwin-2.8.0")
-            cygwin32HomeDir = \
-                "dist/MyData/win32/openssh-7.3p1-cygwin-2.8.0/home"
-            for subdir in os.listdir(cygwin32HomeDir):
-                subdirpath = os.path.join(cygwin32HomeDir, subdir)
-                if os.path.isdir(subdirpath):
-                    shutil.rmtree(subdirpath)
+            for build_name in ("MyData", "MyData-console"):
+                if not os.path.exists("dist/%s/media" % build_name):
+                    os.makedirs("dist/%s/media" % build_name)
+                os.system(r"COPY /Y mydata\media\favicon.ico "
+                          r"dist\%s\media" % build_name)
+                os.system(r"COPY /Y mydata\media\MyData.ico "
+                          r"dist\%s\media" % build_name)
+                distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
+                                             "dist/%s/media/Aha-Soft" % build_name)
 
-            os.system(r"COPY /Y GPL.txt dist\MyData")
+                distutils.dir_util\
+                    .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
+                           "dist/%s/win64/openssh-7.3p1-cygwin-2.6.0" % build_name)
+                cygwin64HomeDir = \
+                    "dist/%s/win64/openssh-7.3p1-cygwin-2.6.0/home" % build_name
+                for subdir in os.listdir(cygwin64HomeDir):
+                    subdirpath = os.path.join(cygwin64HomeDir, subdir)
+                    if os.path.isdir(subdirpath):
+                        shutil.rmtree(subdirpath)
+                distutils.dir_util.copy_tree(
+                    "resources/win32/openssh-7.3p1-cygwin-2.8.0",
+                    "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0" % build_name)
+                cygwin32HomeDir = \
+                    "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0/home" % build_name
+                for subdir in os.listdir(cygwin32HomeDir):
+                    subdirpath = os.path.join(cygwin32HomeDir, subdir)
+                    if os.path.isdir(subdirpath):
+                        shutil.rmtree(subdirpath)
 
-            cacert = requests.certs.where()
-            os.system(r"COPY /Y %s dist\MyData" % cacert)
+                os.system(r"COPY /Y GPL.txt dist\%s" % build_name)
+
+                cacert = requests.certs.where()
+                os.system(r"COPY /Y %s dist\%s" % (cacert, build_name))
         elif sys.platform.startswith("darwin"):
             sys.stdout.write(
                 "Creating dist/MyData.app using PyInstaller...\n")
@@ -254,13 +258,13 @@ class CustomBdistCommand(bdist):
                 "<version>", APP_VERSION)
             with open("dist/MyData.iss", 'w') as innosetupScriptFile:
                 innosetupScriptFile.write(innosetupScript)
-            if os.path.exists(r"C:\Program Files (x86)\Inno Setup 5"
+            if os.path.exists(r"C:\Program Files (x86)\Inno Setup 6"
                               r"\ISCC.exe"):
-                cmd = r'CALL "C:\Program Files (x86)\Inno Setup 5\ISCC.exe" ' \
+                cmd = r'CALL "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ' \
                     r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
                     % APP_VERSION
             else:
-                cmd = r'CALL "C:\Program Files\Inno Setup 5\ISCC.exe" ' \
+                cmd = r'CALL "C:\Program Files\Inno Setup 6\ISCC.exe" ' \
                     r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
                     % APP_VERSION
             os.system(cmd)
