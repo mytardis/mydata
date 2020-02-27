@@ -25,7 +25,7 @@ cp MyData.sh 		dist/MyData/
 mkdir dist/MyData/media
 cp -r ../mydata/media/* dist/MyData/media/
 
-cp $(python -c 'import requests; print requests.certs.where()') dist/MyData/
+cp $(python -c 'import requests; print(requests.certs.where())') dist/MyData/
 
 mkdir dist/MyData-${VERSION}_${ARCHITECTURE}
 cp MyData.sh    dist/MyData-${VERSION}_${ARCHITECTURE}
