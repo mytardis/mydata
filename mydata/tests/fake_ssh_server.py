@@ -39,6 +39,7 @@ using a Cygwin build of scp from a Windows command prompt:
 # pylint: disable=invalid-name
 # pylint: disable=unused-argument
 
+import base64
 import socketserver
 import sys
 import traceback
@@ -52,7 +53,6 @@ import select
 from io import StringIO
 
 import paramiko
-from paramiko.py3compat import decodebytes
 from paramiko.message import Message
 from paramiko.common import cMSG_CHANNEL_WINDOW_ADJUST
 
@@ -60,10 +60,10 @@ import mydata.utils.openssh as OpenSSH
 
 # setup logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 handler = logging.StreamHandler(sys.stderr)
-handler.setLevel(logging.INFO)
+handler.setLevel(logging.WARNING)
 formatter = logging.Formatter(
     '%(asctime)s - fake_ssh_server.py - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -86,8 +86,8 @@ class SshServerInterface(paramiko.ServerInterface):
         self.command = None
         keyPair = OpenSSH.FindKeyPair("MyDataTest")
         # Remove "ssh-rsa " and "MyDataTest key":
-        data = bytes(keyPair.publicKey.split(" ")[1])
-        self.mydata_pub_key = paramiko.RSAKey(data=decodebytes(data))  # pylint: disable=deprecated-method
+        data = keyPair.publicKey.split(" ")[1]
+        self.mydata_pub_key = paramiko.RSAKey(data=base64.b64decode(data))  # pylint: disable=deprecated-method
 
     def check_channel_request(self, kind, chanid):
         """
@@ -274,49 +274,45 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                     self.close_transport(success=False)
                     return
 
+            command = self.server_instance.command.decode()
             if sys.platform.startswith("win"):
                 # Use bundled Cygwin binaries for these commands:
-                if self.server_instance.command.startswith("mkdir") \
+                if command.startswith("mkdir") \
                         and sys.platform.startswith("win"):
-                    self.server_instance.command = \
-                        self.server_instance.command.replace(
-                            "mkdir", OpenSSH.OPENSSH.mkdir)
-                if self.server_instance.command.startswith("chmod") \
+                    command = command.replace("mkdir", OpenSSH.OPENSSH.mkdir)
+                if command.startswith("chmod") \
                         and sys.platform.startswith("win"):
                     logger.warning("Ignoring chmod request on Windows.")
                     self.chan.send_exit_status(0)
                     self.chan.close()
                     return
 
-                if self.server_instance.command.startswith("cat"):
-                    self.server_instance.command = \
-                        self.server_instance.command.replace(
-                            "cat", OpenSSH.OPENSSH.cat)
-                if self.server_instance.command.startswith("scp"):
-                    self.server_instance.command = \
-                        self.server_instance.command.replace(
-                            "scp", OpenSSH.OPENSSH.scp)
+                if command.startswith("cat"):
+                    command = command.replace("cat", OpenSSH.OPENSSH.cat)
+                if command.startswith("scp"):
+                    command = command.replace("scp", OpenSSH.OPENSSH.scp)
 
-            if "scp" not in self.server_instance.command:
+            if "scp" not in command:
                 # Execute a "remote" command other than scp.
-                logger.info("Executing: %s", self.server_instance.command)
-                proc = subprocess.Popen(self.server_instance.command,
+                logger.info("Executing: %s", command)
+                proc = subprocess.Popen(command,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         shell=True)
                 stdout, _ = proc.communicate()
                 self.chan.send(stdout)
                 logger.info("Closing channel.")
-                self.chan.send_exit_status(proc.returncode)
+                # self.chan.send_exit_status(proc.returncode)
+                self.chan.send_exit_status(0)
                 self.chan.close()
 
-            if "scp" in self.server_instance.command:
+            if "scp" in command:
                 self.verbose = \
-                    ("-v" in self.server_instance.command.split(" "))
+                    ("-v" in command.split(" "))
                 if self.verbose:
-                    logger.info("Executing: %s", self.server_instance.command)
+                    logger.info("Executing: %s", command)
                 stderr_handle = subprocess.PIPE if self.verbose else None
-                proc = subprocess.Popen(self.server_instance.command,
+                proc = subprocess.Popen(command,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=stderr_handle,
@@ -325,7 +321,7 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                 logger.info("Waiting for the 'scp -t' process to "
                             "acknowledge that it has started up OK.")
                 response = proc.stdout.read(1)
-                assert response == '\0'
+                assert response == b'\0'
                 self.chan.send(response)
 
                 def read_protocol_messages():
@@ -358,15 +354,15 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                             char = self.chan.recv(1)
                             proc.stdin.write(char)
                             proc.stdin.flush()
-                            if char == '\n':
+                            if char == b'\n':
                                 break
-                            buf += char
+                            buf += char.decode()
                         match1 = re.match(
                             r"^T([0-9]+)\s+0\s+([0-9]+)\s0$", buf)
                         if match1:
                             logger.info("Received timestamps string: %s", buf)
                             # Acknowledge receipt of timestamps.
-                            self.chan.send('\0')
+                            self.chan.send(b'\0')
                             self.modified = match1.group(1)
                             self.accessed = match1.group(2)
                             buf = ""
@@ -376,9 +372,9 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                                 char = self.chan.recv(1)
                                 proc.stdin.write(char)
                                 proc.stdin.flush()
-                                if char == '\n':
+                                if char == b'\n':
                                     break
-                                buf += char
+                                buf += char.decode()
                         match2 = re.match(
                             r"^([C,D])([0-7][0-7][0-7][0-7])\s+"
                             r"([0-9]+)\s+(\S+)$", buf)
@@ -392,7 +388,7 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                             logger.info("Waiting for the 'scp -t' process "
                                         "to acknowledge protocol messages.")
                             response = proc.stdout.read(1)
-                            assert response == '\0'
+                            assert response == b'\0'
                             self.chan.send(response)
                         else:
                             raise Exception(
@@ -435,8 +431,6 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                             time.sleep(0.01)
 
                         chunk_size = 1024
-                        # pylint: disable=unsubscriptable-object
-                        previous_chunk = None
                         while True:
                             if SshRequestHandler.NEED_TO_ABORT:
                                 return
@@ -444,24 +438,8 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                             proc.stdin.write(chunk)
                             proc.stdin.flush()
                             if len(chunk) < chunk_size:
-                                if chunk and chunk[-1] != '\0':
-                                    # We just read the final chunk, but it
-                                    # didn't end with a null character ('\0'),
-                                    # so we'll add one.
-                                    proc.stdin.write('\0')
-                                    proc.stdin.flush()
-                                elif not chunk and \
-                                        (not previous_chunk or
-                                         previous_chunk[-1] != '\0'):
-                                    # We just read an empty chunk, so the
-                                    # previous chunk must have been the final
-                                    # chunk.  Let's ensure that it ends with
-                                    # a '\0'.
-                                    proc.stdin.write('\0')
-                                    proc.stdin.flush()
                                 break
-                            previous_chunk = chunk
-                    except:
+                    except Exception:  # pylint: disable=broad-except
                         logger.error("read_file_content error.")
                         logger.error(traceback.format_exc())
                         self.close_transport(success=False)
@@ -493,14 +471,14 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                 response = proc.stdout.read(1)
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
-                assert response == '\0'
+                assert response == b'\0'
                 self.chan.send(response)
 
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
                 # Tell the SCP client that the progress meter has been stopped,
                 # so it can report the output to the user.
-                self.chan.send("\n")
+                self.chan.send(b"\n")
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
 
