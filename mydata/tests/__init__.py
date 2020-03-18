@@ -25,6 +25,7 @@ subsequent "codecov" runs to ensure an accurate coverage report.
 import os
 import sys
 import tempfile
+import threading
 import unittest
 
 import wx
@@ -213,6 +214,10 @@ class MyDataGuiTester(MyDataTester):
             self.app.frame.Close(force=True)
         if self.app:
             self.app.MainLoop()
+            for thread in threading.enumerate():
+                if thread.name != "MainThread":
+                    sys.stderr.write(
+                        "MyDataGuiTester.tearDown: Thread still running: %s\n" % thread.name)
             del self.app
             self.assertIsNone(wx.GetApp())
 
