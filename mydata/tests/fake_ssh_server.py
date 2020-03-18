@@ -490,7 +490,7 @@ class SshRequestHandler(socketserver.BaseRequestHandler):
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
                 # 'E' means 'end' in the SCP protocol:
-                self.chan.send('E\n\0')
+                self.chan.send(b'E\n\0')
                 if SshRequestHandler.NEED_TO_ABORT:
                     return
                 self.chan.send_exit_status(proc.returncode)
