@@ -1,6 +1,6 @@
 appdirs==1.4.3
 configparser==4.0.2
-distro==1.4.0
+distro==1.5.0
 netifaces==0.10.9
 psutil==5.7.0
 requests==2.23.0
