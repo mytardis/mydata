@@ -3,7 +3,7 @@ configparser==4.0.2
 distro==1.4.0
 netifaces==0.10.9
 psutil==5.7.0
-requests==2.23.0
+requests==2.24.0
 requests-toolbelt==0.9.1
 requests-mock==1.7.0
 validate_email==1.3
