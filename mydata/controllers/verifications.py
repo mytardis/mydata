@@ -19,6 +19,8 @@ class VerifyDatafileRunnable(object):
 """
 import os
 import traceback
+import hashlib
+from datetime import datetime
 
 import wx
 
@@ -74,8 +76,7 @@ class VerifyDatafileRunnable(object):
 
         try:
             if dataset:  # test runs don't create required datasets
-                cacheKey = \
-                    "%s,%s" % (dataset.datasetId, dataFilePath.encode('utf8'))
+                cacheKey = hashlib.md5(dataFilePath.encode("utf-8")).hexdigest()
             else:
                 cacheKey = None
             if SETTINGS.miscellaneous.cacheDataFileLookups and \
@@ -151,7 +152,7 @@ class VerifyDatafileRunnable(object):
                 not existingDatafile.replicas[0].verified:
             self.HandleExistingUnverifiedDatafile(existingDatafile)
         else:
-            self.HandleExistingVerifiedDatafile()
+            self.HandleExistingVerifiedDatafile(existingDatafile)
 
     def HandleExistingUnverifiedDatafile(self, existingDatafile):
         """
@@ -319,7 +320,7 @@ class VerifyDatafileRunnable(object):
                 % self.folderModel.GetDataFileRelPath(self.dataFileIndex)
             logger.testrun(message)
 
-    def HandleExistingVerifiedDatafile(self):
+    def HandleExistingVerifiedDatafile(self, existingDatafile):
         """
         Found existing verified file on server.
         """
@@ -327,11 +328,15 @@ class VerifyDatafileRunnable(object):
             return
         verificationsModel = DATAVIEW_MODELS['verifications']
         dataFilePath = self.folderModel.GetDataFilePath(self.dataFileIndex)
-        cacheKey = "%s,%s" % (self.folderModel.datasetModel.datasetId,
-                              dataFilePath.encode('utf8'))
         if SETTINGS.miscellaneous.cacheDataFileLookups:
             with LOCKS.updateCache:
-                SETTINGS.verifiedDatafilesCache[cacheKey] = True
+                cacheKey = hashlib.md5(dataFilePath.encode("utf-8")).hexdigest()
+                SETTINGS.verifiedDatafilesCache[cacheKey] = {
+                    "datasetId": self.folderModel.datasetModel.datasetId,
+                    "datafileId": existingDatafile.datafileId,
+                    "verifiedAt": datetime.now(),
+                    "fileName": dataFilePath
+                }
         self.folderModel.SetDataFileUploaded(self.dataFileIndex, True)
         DATAVIEW_MODELS['folders'].FolderStatusUpdated(self.folderModel)
         verificationsModel.SetComplete(self.verificationModel)

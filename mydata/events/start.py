@@ -11,14 +11,16 @@ to various other events.
 """
 import traceback
 import threading
-
+import hashlib
 import wx
+import os
 
 from ..settings import SETTINGS
 from ..dataviewmodels.users import UsersModel
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from ..models.settings import LastSettingsUpdateTrigger
 from ..models.settings.validation import ValidateSettings
+from ..models.cleanup import CleanupFile
 from ..utils.exceptions import InvalidFolderStructure
 from ..utils.exceptions import InvalidSettings
 from ..utils.exceptions import UserAborted
@@ -33,6 +35,7 @@ from ..utils.connectivity import GetActiveNetworkInterfaces
 from ..threads.flags import FLAGS
 from ..threads.locks import LOCKS
 from ..views.connectivity import ReportNoActiveInterfaces
+from ..views.tabs import NotebookTabs
 from . import MYDATA_THREADS
 
 
@@ -54,6 +57,48 @@ def ManuallyTriggerScanFoldersAndUpload(event):
     SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
     ResetShouldAbortStatus()
     app.scheduleController.ApplySchedule(event, runManually=True)
+
+
+def OnCleanup(event):
+    logger.debug("OnCleanup")
+    app = wx.GetApp()
+    app.frame.tabbedView.SetSelection(NotebookTabs.CLEANUP)
+    CleanupTab = DATAVIEW_MODELS["cleanup"]
+    if len(app.filesToCleanup) == 0:
+        SETTINGS.InitializeVerifiedDatafilesCache()
+        for cacheKey in SETTINGS.verifiedDatafilesCache:
+            newCleanupFile = CleanupFile(
+                CleanupTab.GetMaxDataViewId() + 1,
+                SETTINGS.verifiedDatafilesCache[cacheKey])
+            CleanupTab.AddRow(newCleanupFile)
+            app.filesToCleanup.append(newCleanupFile)
+    else:
+        filesToDelete = []
+        for f in app.filesToCleanup:
+            if getattr(f, "setDelete", False):
+                filesToDelete.append(f)
+        if len(filesToDelete) != 0:
+            message = "Are you sure you want to delete {} files?".format(len(filesToDelete))
+            confirmDelete = wx.MessageDialog(
+                app.frame,
+                message,
+                "MyData",
+                wx.YES | wx.NO | wx.ICON_QUESTION
+            ).ShowModal() == wx.ID_YES
+            if confirmDelete:
+                for f in filesToDelete:
+                    fileName = getattr(f, "fileName")
+                    cacheKey = hashlib.md5(fileName.encode("utf-8")).hexdigest()
+                    if os.path.exists(fileName):
+                        try:
+                            os.unlink(fileName)
+                            del SETTINGS.verifiedDatafilesCache[cacheKey]
+                        except:
+                            pass
+                SETTINGS.SaveVerifiedDatafilesCache()
+                app.filesToCleanup = []
+                CleanupTab.DeleteAllRows()
+                OnCleanup(event)
 
 
 def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
@@ -232,7 +277,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
                     WriteProgressUpdateToStatusBar)
                 app.foldersController.FinishedScanningForDatasetFolders()
                 FLAGS.scanningFolders = False
-            logger.debug("Just set scanningFolders to False")
+                logger.debug("Just set scanningFolders to False")
         except UserAborted:
             RestoreUserInterfaceForAbort()
             if FLAGS.testRunRunning:
@@ -342,9 +387,9 @@ def OnTestRunFromToolbar(event):
     app.frame.toolbar.DisableTestAndUploadToolbarButtons()
     app.testRunFrame.saveButton.Disable()
     ResetShouldAbortStatus()
-    logger.testrun("Starting Test Run...")
-    app.scheduleController.ApplySchedule(event, runManually=True,
-                                         needToValidateSettings=True)
     app.testRunFrame.Show()
     app.testRunFrame.Clear()
     app.testRunFrame.SetTitle("%s - Test Run" % app.frame.GetTitle())
+    logger.testrun("Starting Test Run...")
+    app.scheduleController.ApplySchedule(event, runManually=True,
+                                         needToValidateSettings=True)

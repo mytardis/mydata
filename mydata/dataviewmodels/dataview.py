@@ -21,6 +21,7 @@ class ColumnRenderer(object):
     TEXT = 0
     BITMAP = 1
     PROGRESS = 2
+    CHECKBOX = 3
 
 
 class MyDataDataViewModel(DataViewIndexListModel):

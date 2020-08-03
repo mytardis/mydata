@@ -53,6 +53,8 @@ class MyData(wx.App):
         self.foldersController = None
         self.scheduleController = None
 
+        self.filesToCleanup = []
+
         MyData.ParseArgs(argv)
 
         wx.App.__init__(self, redirect=False)
@@ -106,7 +108,7 @@ class MyData(wx.App):
         logger.info("appdirPath: " + appdirPath)
         logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
 
-        VersionCheck()
+        # VersionCheck()
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)
@@ -239,12 +241,15 @@ def InitializeDataViewModels():
     from .dataviewmodels.uploads import UploadsModel
     from .dataviewmodels.tasks import TasksModel
     from .dataviewmodels.folders import FoldersModel
+    from .dataviewmodels.cleanup import CleanupTab
+
     DATAVIEW_MODELS['users'] = UsersModel()
     DATAVIEW_MODELS['groups'] = GroupsModel()
     DATAVIEW_MODELS['verifications'] = VerificationsModel()
     DATAVIEW_MODELS['uploads'] = UploadsModel()
     DATAVIEW_MODELS['tasks'] = TasksModel()
     DATAVIEW_MODELS['folders'] = FoldersModel()
+    DATAVIEW_MODELS['cleanup'] = CleanupTab()
 
 
 def Run(argv):
