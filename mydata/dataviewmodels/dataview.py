@@ -288,7 +288,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
                                "row=%d, self.GetRowCount()=%d" %
                                (row, self.GetRowCount()))
                 self.RowValueChanged(row, col)
-        except wx.PyAssertionError:
+        except wx.wxAssertionError:
             logger.warning(traceback.format_exc())
 
     def GetColumnRenderer(self, col):
