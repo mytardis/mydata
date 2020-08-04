@@ -91,6 +91,8 @@ def OnCleanup(event):
                 SETTINGS.verifiedDatafilesCache[cacheKey])
             cleanupTab.AddRow(newCleanupFile)
             app.filesToCleanup.append(newCleanupFile)
+        message = "Found {} local files verified on server.".format(len(app.filesToCleanup))
+        wx.GetApp().frame.SetStatusMessage(message)
     else:
         filesToDelete = []
         for file in app.filesToCleanup:

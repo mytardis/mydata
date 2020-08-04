@@ -11,13 +11,13 @@ class CleanupFile(object):
 
     def __init__(self, dataViewId, data):
         self.dataViewId = dataViewId
-        self.setDelete = False
-        for key in data:
-            setattr(self, key, data[key])
         datetimeVerified = datetime.fromisoformat(data["verifiedAt"])
         timeString = datetimeVerified.strftime("%I:%M %p")
         dateString = "{d:%A} {d.day}/{d.month}/{d.year}".format(d=datetimeVerified)
-        setattr(self, "verifiedAt", "{} at {}".format(dateString, timeString))
+        self.datafileId = data["datafileId"]
+        self.verifiedAt = "{} at {}".format(dateString, timeString)
+        self.setDelete = False
+        self.fileName = data["fileName"]
 
     def GetValueForKey(self, key):
         """

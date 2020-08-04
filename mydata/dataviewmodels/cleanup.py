@@ -15,8 +15,8 @@ class CleanupTab(MyDataDataViewModel):
         super(CleanupTab, self).__init__()
 
         self.folderModel = None
-        self.columnNames = ["Id", "Verified", "Select", "File"]
-        self.columnKeys = ["dataViewId", "verifiedAt", "setDelete", "fileName"]
+        self.columnNames = ["datafileId", "Verified", "Select", "File"]
+        self.columnKeys = ["datafileId", "verifiedAt", "setDelete", "fileName"]
         self.defaultColumnWidths = [100, 200, 50, 700]
         self.filterFields = ["fileName"]
 

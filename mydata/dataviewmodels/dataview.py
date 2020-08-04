@@ -77,12 +77,15 @@ class MyDataDataViewModel(DataViewIndexListModel):
         for a particular row, col
         """
         # Workaround for thread synchronization issue:
-        try:
-            assert self.rowsData[row]
-        except IndexError:
-            return ""
-        columnKey = self.GetColumnKeyName(col)
-        return str(self.rowsData[row].GetValueForKey(columnKey))
+        if row < self.GetCount():
+            rowData = self.rowsData[row]
+            columnKey = self.GetColumnKeyName(col)
+            data = rowData.GetValueForKey(columnKey)
+            if isinstance(data, bool):
+                return data
+            else:
+                return str(data)
+        return ""
 
     def GetValueForRowColumnKeyName(self, row, columnKeyName):
         """
