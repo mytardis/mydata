@@ -1,3 +1,7 @@
+"""
+Let's keep variables separately from classes
+"""
+
 class NotebookTabs(object):
     """
     Enumerated data type for referencing the different tab views in

@@ -108,7 +108,7 @@ class MyData(wx.App):
         logger.info("appdirPath: " + appdirPath)
         logger.info("SETTINGS.configPath: " + SETTINGS.configPath)
 
-        # VersionCheck()
+        VersionCheck()
 
         self.frame.Bind(wx.EVT_ACTIVATE_APP, self.OnActivateApp)
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.frame)

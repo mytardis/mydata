@@ -12,8 +12,8 @@ to various other events.
 import traceback
 import threading
 import hashlib
-import wx
 import os
+import wx
 
 from ..settings import SETTINGS
 from ..dataviewmodels.users import UsersModel
@@ -60,23 +60,42 @@ def ManuallyTriggerScanFoldersAndUpload(event):
 
 
 def OnCleanup(event):
+    """
+    Cleanup button click handler
+    """
+
+    def DeleteFiles(files):
+        """
+        Remove local files
+        """
+        for file in files:
+            fileName = getattr(file, "fileName")
+            cacheKey = hashlib.md5(fileName.encode("utf-8")).hexdigest()
+            if os.path.exists(fileName):
+                try:
+                    os.unlink(fileName)
+                    del SETTINGS.verifiedDatafilesCache[cacheKey]
+                except:
+                    pass
+        SETTINGS.SaveVerifiedDatafilesCache()
+
     logger.debug("OnCleanup")
     app = wx.GetApp()
     app.frame.tabbedView.SetSelection(NotebookTabs.CLEANUP)
-    CleanupTab = DATAVIEW_MODELS["cleanup"]
+    cleanupTab = DATAVIEW_MODELS["cleanup"]
     if len(app.filesToCleanup) == 0:
         SETTINGS.InitializeVerifiedDatafilesCache()
         for cacheKey in SETTINGS.verifiedDatafilesCache:
             newCleanupFile = CleanupFile(
-                CleanupTab.GetMaxDataViewId() + 1,
+                cleanupTab.GetMaxDataViewId() + 1,
                 SETTINGS.verifiedDatafilesCache[cacheKey])
-            CleanupTab.AddRow(newCleanupFile)
+            cleanupTab.AddRow(newCleanupFile)
             app.filesToCleanup.append(newCleanupFile)
     else:
         filesToDelete = []
-        for f in app.filesToCleanup:
-            if getattr(f, "setDelete", False):
-                filesToDelete.append(f)
+        for file in app.filesToCleanup:
+            if getattr(file, "setDelete", False):
+                filesToDelete.append(file)
         if len(filesToDelete) != 0:
             message = "Are you sure you want to delete {} files?".format(len(filesToDelete))
             confirmDelete = wx.MessageDialog(
@@ -86,18 +105,9 @@ def OnCleanup(event):
                 wx.YES | wx.NO | wx.ICON_QUESTION
             ).ShowModal() == wx.ID_YES
             if confirmDelete:
-                for f in filesToDelete:
-                    fileName = getattr(f, "fileName")
-                    cacheKey = hashlib.md5(fileName.encode("utf-8")).hexdigest()
-                    if os.path.exists(fileName):
-                        try:
-                            os.unlink(fileName)
-                            del SETTINGS.verifiedDatafilesCache[cacheKey]
-                        except:
-                            pass
-                SETTINGS.SaveVerifiedDatafilesCache()
+                DeleteFiles(filesToDelete)
                 app.filesToCleanup = []
-                CleanupTab.DeleteAllRows()
+                cleanupTab.DeleteAllRows()
                 OnCleanup(event)
 
 

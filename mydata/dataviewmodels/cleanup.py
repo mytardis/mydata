@@ -1,11 +1,15 @@
-import wx
-
+"""
+Cleanup tab
+"""
 from .dataview import MyDataDataViewModel
 from .dataview import ColumnRenderer
 from ..utils import Compare
 
 
 class CleanupTab(MyDataDataViewModel):
+    """
+    Cleanup tab class
+    """
 
     def __init__(self):
         super(CleanupTab, self).__init__()
@@ -17,6 +21,13 @@ class CleanupTab(MyDataDataViewModel):
         self.filterFields = ["fileName"]
 
     def Compare(self, groupRecord1, groupRecord2, col, ascending):
+        """
+        :param groupRecord1:
+        :param groupRecord2:
+        :param col:
+        :param ascending:
+        :return:
+        """
         try:
             groupRecord1 = self.rowsData[self.GetRow(groupRecord1)]
             groupRecord2 = self.rowsData[self.GetRow(groupRecord2)]
@@ -33,6 +44,10 @@ class CleanupTab(MyDataDataViewModel):
         return Compare(obj1, obj2)
 
     def GetColumnRenderer(self, col):
+        """
+        :param col:
+        :return:
+        """
         if col == 2:
             renderer = ColumnRenderer.CHECKBOX
         else:
@@ -40,5 +55,11 @@ class CleanupTab(MyDataDataViewModel):
         return renderer
 
     def SetValueByRow(self, val, row, col):
+        """
+        :param val:
+        :param row:
+        :param col:
+        :return:
+        """
         setattr(self.rowsData[row], self.columnKeys[col], val)
         return True

@@ -22,6 +22,12 @@ from .serialize import LoadSettings
 
 
 class DateTimeEncoder(json.JSONEncoder):
+    """
+    Allows to save datetime variable in JSON format
+    """
+
+    # pylint: disable=arguments-differ
+    # pylint: disable=method-hidden
     def default(self, obj):
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()

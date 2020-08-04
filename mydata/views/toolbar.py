@@ -81,8 +81,16 @@ class MyDataToolbar(object):
         """
         from ..events.start import OnScanAndUploadFromToolbar
         uploadIcon = MYDATA_ICONS.GetNewIcon("start")
-        self.uploadTool = self.addToolMethod(wx.ID_ANY, "Scan and Upload", uploadIcon, shortHelp="Scan and Upload")
-        self.parent.Bind(wx.EVT_TOOL, OnScanAndUploadFromToolbar, self.uploadTool, self.uploadTool.GetId())
+        self.uploadTool = self.addToolMethod(
+            wx.ID_ANY,
+            "Scan and Upload",
+            uploadIcon,
+            shortHelp="Scan and Upload")
+        self.parent.Bind(
+            wx.EVT_TOOL,
+            OnScanAndUploadFromToolbar,
+            self.uploadTool,
+            self.uploadTool.GetId())
 
     def AddStopTool(self):
         """
@@ -90,14 +98,25 @@ class MyDataToolbar(object):
         """
         from ..events.stop import OnStop
         stopIcon = MYDATA_ICONS.GetNewIcon("stop")
-        self.stopTool = self.addToolMethod(wx.ID_STOP, "Stop", stopIcon, shortHelp="Stop")
+        self.stopTool = self.addToolMethod(
+            wx.ID_STOP,
+            "Stop",
+            stopIcon,
+            shortHelp="Stop")
         self.toolbar.EnableTool(self.stopTool.GetId(), False)
         self.parent.Bind(wx.EVT_TOOL, OnStop, self.stopTool, self.stopTool.GetId())
 
     def AddCleanupTool(self):
+        """
+        Add Cleanup button to the toolbar
+        """
         from ..events.start import OnCleanup
         cleanupIcon = MYDATA_ICONS.GetNewIcon("nuke")
-        self.cleanupTool = self.addToolMethod(wx.ID_ANY, "Cleanup", cleanupIcon, shortHelp="Cleanup")
+        self.cleanupTool = self.addToolMethod(
+            wx.ID_ANY,
+            "Cleanup",
+            cleanupIcon,
+            shortHelp="Cleanup")
         self.toolbar.EnableTool(self.cleanupTool.GetId(), False)
         self.parent.Bind(wx.EVT_TOOL, OnCleanup, self.cleanupTool, self.cleanupTool.GetId())
 
@@ -107,7 +126,11 @@ class MyDataToolbar(object):
         """
         from ..events.settings import OnSettings
         settingsIcon = MYDATA_ICONS.GetNewIcon("settings")
-        self.settingsTool = self.addToolMethod(wx.ID_ANY, "Settings", settingsIcon, shortHelp="Settings")
+        self.settingsTool = self.addToolMethod(
+            wx.ID_ANY,
+            "Settings",
+            settingsIcon,
+            shortHelp="Settings")
         self.parent.Bind(wx.EVT_TOOL, OnSettings, self.settingsTool)
 
     def AddMyTardisTool(self):
@@ -115,7 +138,11 @@ class MyDataToolbar(object):
         Add MyTardis tool for opening MyTardis in a web browser.
         """
         internetIcon = MYDATA_ICONS.GetNewIcon("globe")
-        myTardisTool = self.addToolMethod(wx.ID_ANY, "MyTardis", internetIcon, shortHelp="MyTardis")
+        myTardisTool = self.addToolMethod(
+            wx.ID_ANY,
+            "MyTardis",
+            internetIcon,
+            shortHelp="MyTardis")
         if hasattr(self.parent, "OnMyTardis"):
             self.parent.Bind(wx.EVT_TOOL, self.parent.OnMyTardis, myTardisTool)
 
@@ -124,7 +151,11 @@ class MyDataToolbar(object):
         Add About tool for opening MyData's About dialog.
         """
         aboutIcon = MYDATA_ICONS.GetNewIcon("information")
-        aboutTool = self.addToolMethod(wx.ID_ANY, "About MyData", aboutIcon, shortHelp="About MyData")
+        aboutTool = self.addToolMethod(
+            wx.ID_ANY,
+            "About MyData",
+            aboutIcon,
+            shortHelp="About MyData")
         self.parent.Bind(wx.EVT_TOOL, self.parent.OnAbout, aboutTool)
 
     def AddHelpTool(self):

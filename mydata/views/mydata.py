@@ -141,6 +141,9 @@ class MyDataFrame(wx.Frame):
         self.tabbedView.AddPage(self.dataViews['cleanup'], "Cleanup")
 
     def OnHeaderClick(self, event):
+        """
+        Handles click on data gird column header
+        """
         if DATAVIEW_MODELS["cleanup"].GetColumnName(event.GetColumn()) == "Select":
             for row in range(0, DATAVIEW_MODELS["cleanup"].GetRowCount()):
                 setattr(DATAVIEW_MODELS["cleanup"].rowsData[row], "setDelete", self.select)
