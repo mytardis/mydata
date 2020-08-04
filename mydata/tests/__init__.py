@@ -44,6 +44,12 @@ if sys.platform.startswith("linux"):
     from ..linuxsubprocesses import StopErrandBoy
 
 
+# https://discuss.wxpython.org/t/what-is-wxpython-doing-to-the-locale-to-makes-pandas-crash/34606/22
+class MyApp(wx.App):
+    def InitLocale(self):
+        self.ResetLocale()
+
+
 class MyDataMinimalTester(unittest.TestCase):
     """
     Lightweight class to derive from for tests requiring the
@@ -202,7 +208,7 @@ class MyDataGuiTester(MyDataTester):
         """
         from mydata.logs import logger
         super(MyDataGuiTester, self).setUp()
-        self.app = wx.App()
+        self.app = MyApp()
         self.app.frame = TestFrame(None, self.shortDescription())
         MYDATA_EVENTS.InitializeWithNotifyWindow(self.app.frame)
         logger.loggerObject.removeHandler(logger.logWindowHandler)

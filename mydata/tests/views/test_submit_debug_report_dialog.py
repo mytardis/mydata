@@ -14,7 +14,7 @@ from ...settings import SETTINGS
 from ...logs import logger
 from ..fake_submit_debug_log_server import FakeSubmitDebugLogHandler
 from ..utils import GetEphemeralPort
-from .. import MyDataGuiTester
+from .. import MyApp, MyDataGuiTester
 
 
 class SubmitDebugLogTester(MyDataGuiTester):
@@ -37,7 +37,7 @@ class SubmitDebugLogTester(MyDataGuiTester):
         safest to do it in setUp, because we know that setUp
         will only be called once, so only one app will be created.
         """
-        self.app = wx.App()
+        self.app = MyApp()
         self.frame = wx.Frame(parent=None, id=wx.ID_ANY,
                               title="Submit Debug Log Dialog test")
         self.frame.Show()

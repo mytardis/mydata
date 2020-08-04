@@ -90,7 +90,7 @@ def BeginBusyCursorIfRequired(settingsDialog=None):
             else:
                 busyCursor = wx.StockCursor(wx.CURSOR_WAIT)
             settingsDialog.dialogPanel.SetCursor(busyCursor)
-    except wx.PyAssertionError as err:
+    except wx.wxAssertionError as err:
         logger.warning(err)
 
 
@@ -108,7 +108,7 @@ def EndBusyCursorIfRequired(settingsDialog=None):
             else:
                 arrowCursor = wx.StockCursor(wx.CURSOR_ARROW)
             settingsDialog.dialogPanel.SetCursor(arrowCursor)
-    except wx.PyAssertionError as err:
+    except wx.wxAssertionError as err:
         if "no matching wxBeginBusyCursor()" \
                 not in str(err):
             logger.warning(str(err))
