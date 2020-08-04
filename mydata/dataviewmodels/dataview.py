@@ -83,8 +83,7 @@ class MyDataDataViewModel(DataViewIndexListModel):
             data = rowData.GetValueForKey(columnKey)
             if isinstance(data, bool):
                 return data
-            else:
-                return str(data)
+            return str(data)
         return ""
 
     def GetValueForRowColumnKeyName(self, row, columnKeyName):
