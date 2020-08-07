@@ -147,6 +147,8 @@ class CustomBuildCommand(build):
                           r"dist\%s\media" % build_name)
                 distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
                                              "dist/%s/media/Aha-Soft" % build_name)
+                distutils.dir_util.copy_tree("mydata/media/DRF",
+                                             "dist/%s/media/DRF" % build_name)
 
                 distutils.dir_util\
                     .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
