@@ -199,7 +199,8 @@ class CustomBuildCommand(build):
                                   "media/Aha-Soft/png-normal/icons24x24",
                                   "media/Aha-Soft/png-disabled/icons16x16",
                                   "media/Aha-Soft/png-disabled/icons24x24",
-                                  "media/Aha-Soft/png-hot/icons24x24"):
+                                  "media/Aha-Soft/png-hot/icons24x24",
+                                  "media/DRF"):
                 for iconFile in os.listdir(os.path.join(PACKAGE_NAME,
                                                         iconFilesPath)):
                     iconFilePath = \
