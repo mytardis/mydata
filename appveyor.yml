@@ -20,8 +20,8 @@ environment:
       secure: kVLJfBgsiibjMtizt055TdGzT/sSnxgZHwfLp2Znyb5ie2SU4WGAPfcxI19nA8o1
 
   matrix:
-    - PYTHON: "C:\\Python38"
-      PYTHON_VERSION: "3.8.2"
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.4"
       PYTHON_ARCH: "32"
 
 install:
