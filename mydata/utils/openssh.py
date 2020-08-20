@@ -438,7 +438,7 @@ def ScpUpload(uploadModel, scpCommandList):
         stdout, _ = scpUploadProcess.communicate()
         if scpUploadProcess.returncode != 0:
             raise ScpException(
-                stdout, scpCommandString, scpUploadProcess.returncode)
+                stdout.decode(), scpCommandString, scpUploadProcess.returncode)
     except (IOError, OSError) as err:
         raise ScpException(err, scpCommandString, returncode=255)
 
@@ -518,7 +518,7 @@ def SetRemoteFilePermissions(remoteFilePath, username, privateKeyFilePath,
                 if chmodProcess.returncode != 0:
                     if stdout and not stderr:
                         stderr = stdout
-                    raise SshException(stderr, chmodProcess.returncode)
+                    raise SshException(stderr.decode(), chmodProcess.returncode)
             except (IOError, OSError) as err:
                 raise SshException(err, returncode=255)
 
@@ -563,7 +563,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                                  creationflags=DEFAULT_CREATION_FLAGS)
             stdout, _ = mkdirProcess.communicate()
             if mkdirProcess.returncode != 0:
-                raise SshException(stdout, mkdirProcess.returncode)
+                raise SshException(stdout.decode(), mkdirProcess.returncode)
         else:
             with linuxsubprocesses.ERRAND_BOY_TRANSPORT.get_session() as session:
                 try:
@@ -575,7 +575,7 @@ def CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port):
                     if mkdirProcess.returncode != 0:
                         if stdout and not stderr:
                             stderr = stdout
-                        raise SshException(stderr, mkdirProcess.returncode)
+                        raise SshException(stderr.decode(), mkdirProcess.returncode)
                 except (IOError, OSError) as err:
                     raise SshException(err, returncode=255)
         REMOTE_DIRS_CREATED[remoteDir] = True
