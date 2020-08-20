@@ -2,7 +2,7 @@
 The MyDataDataView class is used to render tabular views for the
 various tabs in MyData's main window:
 
-  Folders, Users, Groups, Tasks, Verifications, Uploads
+  Folders, Users, Groups, Tasks, Verifications, Uploads, Cleanup
 """
 import wx
 import wx.dataview as dv
@@ -16,7 +16,7 @@ class MyDataDataView(wx.Panel):
     Used to render tabular views for the various tabs in MyData's
     main window:
 
-      Folders, Users, Groups, Tasks, Verifications, Uploads
+      Folders, Users, Groups, Tasks, Verifications, Uploads, Cleanup
     """
     def __init__(self, parent, dataViewModelName):
         wx.Panel.__init__(self, parent, wx.ID_ANY)
@@ -54,6 +54,11 @@ class MyDataDataView(wx.Panel):
                     width=dataViewModel.GetDefaultColumnWidth(col),
                     mode=dv.DATAVIEW_CELL_INERT,
                     flags=dv.DATAVIEW_COL_RESIZABLE)
+            elif renderer == ColumnRenderer.CHECKBOX:
+                self.dataViewControl.AppendToggleColumn(
+                    dataViewModel.GetColumnName(col), col,
+                    width=dataViewModel.GetDefaultColumnWidth(col),
+                    mode=dv.DATAVIEW_CELL_ACTIVATABLE)
 
         firstColumn = self.dataViewControl.Columns[0]
         firstColumn.Alignment = wx.ALIGN_RIGHT

@@ -174,15 +174,17 @@ class MyDataTaskBarIcon(TaskBarIcon):
         self.frame.Show(True)
         self.frame.Iconize(False)
         self.frame.Raise()
-        message = "Are you sure you want to quit MyData?"
+        okToExit = True
         if wx.GetApp().Processing():
-            message += "\n\n" \
+            message = "Are you sure you want to quit MyData?\n\n" \
                 "MyData will attempt to shut down any uploads currently " \
                 "in progress before exiting."
-        confirmationDialog = \
-            wx.MessageDialog(self.frame, message, "MyData",
-                             wx.YES | wx.NO | wx.ICON_QUESTION)
-        okToExit = confirmationDialog.ShowModal()
-        if okToExit == wx.ID_YES:
+            okToExit = wx.MessageDialog(
+                self.frame,
+                message,
+                "MyData",
+                wx.YES | wx.NO | wx.ICON_QUESTION
+            ).ShowModal() == wx.ID_YES
+        if okToExit:
             wx.GetApp().ShutDownCleanlyAndExit(event, confirm=False)
         event.StopPropagation()

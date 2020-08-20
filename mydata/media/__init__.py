@@ -68,7 +68,7 @@ class Icons(object):
             raise Exception("Unsupported icon style was requested: %s"
                             % IconStyle.STRINGS[style])
         iconSubdir = "icons" + size
-        if vendor == "Aha-Soft":
+        if vendor in ["Aha-Soft", "new"]:
             return os.path.join(self.mediaPath, vendor, iconStyleFolderName,
                                 iconSubdir, "%s.png" % name)
         if not extension:
@@ -86,12 +86,22 @@ class Icons(object):
         iconPath = self.GetIconPath(name, vendor, style, size, extension)
 
         if cacheKey not in self.iconsCache:
-            if vendor == "Aha-Soft":
+            if vendor in ["Aha-Soft", "new"]:
                 self.iconsCache[cacheKey] = \
                     wx.Image(iconPath, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
             else:
                 self.iconsCache[cacheKey] = \
                     wx.Image(iconPath, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        return self.iconsCache[cacheKey]
+
+    def GetNewIcon(self, name):
+        """
+        http://icongal.com/gallery/iconset/508/drf
+        """
+        cacheKey = "new-icon-{}".format(name)
+        if cacheKey not in self.iconsCache:
+            iconPath = os.path.join(self.mediaPath, "DRF", "{}.png".format(name))
+            self.iconsCache[cacheKey] = wx.Image(iconPath, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         return self.iconsCache[cacheKey]
 
 

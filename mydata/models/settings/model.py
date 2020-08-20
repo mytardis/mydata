@@ -3,9 +3,10 @@ Model class for the settings displayed in the settings dialog
 and saved to disk in MyData.cfg
 """
 import os
-import pickle
 import traceback
 import urllib
+import json
+import datetime
 
 from ...constants import APPNAME
 from ...logs import logger
@@ -18,6 +19,19 @@ from .advanced import AdvancedSettingsModel
 from .miscellaneous import MiscellaneousSettingsModel
 from .miscellaneous import LastSettingsUpdateTrigger
 from .serialize import LoadSettings
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """
+    Allows to save datetime variable in JSON format
+    """
+
+    # pylint: disable=arguments-differ
+    # pylint: disable=method-hidden
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+            return obj.isoformat()
+        return super(DateTimeEncoder, self).default(obj)
 
 
 class SettingsModel(object):
@@ -263,7 +277,7 @@ class SettingsModel(object):
         parsed = urllib.parse.urlparse(self.general.myTardisUrl)
         return os.path.join(
             os.path.dirname(self.configPath),
-            "verified-files-%s-%s.pkl" %
+            "verified-files-cache-%s-%s.json" %
             (parsed.scheme, parsed.netloc))
 
     def InitializeVerifiedDatafilesCache(self):
@@ -273,8 +287,8 @@ class SettingsModel(object):
         """
         try:
             if os.path.exists(self.verifiedDatafilesCachePath):
-                with open(self.verifiedDatafilesCachePath, 'rb') as cacheFile:
-                    self.verifiedDatafilesCache = pickle.load(cacheFile)
+                with open(self.verifiedDatafilesCachePath, "r") as cacheFile:
+                    self.verifiedDatafilesCache = json.load(cacheFile)
             else:
                 self.verifiedDatafilesCache = dict()
         except:
@@ -288,9 +302,8 @@ class SettingsModel(object):
         """
         with LOCKS.closeCache:
             try:
-                with open(self.verifiedDatafilesCachePath,
-                          'wb') as cacheFile:
-                    pickle.dump(self.verifiedDatafilesCache, cacheFile)
+                with open(self.verifiedDatafilesCachePath, "w") as cacheFile:
+                    json.dump(self.verifiedDatafilesCache, cacheFile, cls=DateTimeEncoder)
             except:
                 logger.warning("Couldn't save verified datafiles cache.")
                 logger.warning(traceback.format_exc())

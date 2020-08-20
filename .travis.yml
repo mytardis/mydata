@@ -12,6 +12,7 @@ before_install:
  - sudo apt-add-repository -y ppa:fixnix/indicator-systemtray-unity
  - sudo apt-get update
  - sudo apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" indicator-systemtray-unity python3-sdl2
+ - sudo apt-get install build-essential libgtk-3-dev
  - pip install -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04/ --only-binary wxPython wxPython==4.1.0
 
 # Commands to install dependencies:

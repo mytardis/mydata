@@ -22,6 +22,7 @@ from ..dataviewmodels.dataview import DATAVIEW_MODELS
 from .log import LogView
 from .taskbaricon import MyDataTaskBarIcon
 from .toolbar import MyDataToolbar
+from .tabs import NotebookTabs
 
 if 'phoenix' in wx.PlatformInfo:
     from wx import Icon as EmptyIcon
@@ -37,19 +38,6 @@ else:
     from wx.aui import AuiNotebook
     from wx.aui import AUI_NB_TOP
     from wx.aui import EVT_AUINOTEBOOK_PAGE_CHANGING
-
-
-class NotebookTabs(object):
-    """
-    Enumerated data type for referencing the different tab views in
-    MyData's main window.
-    """
-    FOLDERS = 0
-    USERS = 1
-    GROUPS = 2
-    VERIFICATIONS = 3
-    UPLOADS = 4
-    LOG = 5
 
 
 class MyDataFrame(wx.Frame):
@@ -122,6 +110,8 @@ class MyDataFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_ICONIZE, self.OnMinimize)
 
+        self.select = True
+
     def AddDataViews(self):
         """
         Create data views and add them to tabbed view.
@@ -145,6 +135,20 @@ class MyDataFrame(wx.Frame):
 
         self.dataViews['tasks'] = MyDataDataView(self.tabbedView, "tasks")
         self.tabbedView.AddPage(self.dataViews['tasks'], "Tasks")
+
+        self.dataViews["cleanup"] = MyDataDataView(self.tabbedView, "cleanup")
+        self.dataViews["cleanup"].Bind(wx.EVT_HEADER_CLICK, self.OnHeaderClick)
+        self.tabbedView.AddPage(self.dataViews['cleanup'], "Cleanup")
+
+    def OnHeaderClick(self, event):
+        """
+        Handles click on data gird column header
+        """
+        if DATAVIEW_MODELS["cleanup"].GetColumnName(event.GetColumn()) == "Select":
+            for row in range(0, DATAVIEW_MODELS["cleanup"].GetRowCount()):
+                setattr(DATAVIEW_MODELS["cleanup"].rowsData[row], "setDelete", self.select)
+            self.dataViews["cleanup"].Refresh()
+            self.select = not self.select
 
     def SetStatusMessage(self, msg, force=False):
         """
@@ -216,6 +220,8 @@ class MyDataFrame(wx.Frame):
             DATAVIEW_MODELS['users'].Filter(event.GetString())
         elif self.tabbedView.GetSelection() == NotebookTabs.GROUPS:
             DATAVIEW_MODELS['groups'].Filter(event.GetString())
+        elif self.tabbedView.GetSelection() == NotebookTabs.CLEANUP:
+            DATAVIEW_MODELS["cleanup"].Filter(event.GetString())
 
     def OnTaskBarLeftClick(self, event):
         """

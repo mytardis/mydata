@@ -432,6 +432,7 @@ def ScpUpload(uploadModel, scpCommandList):
             stderr=subprocess.STDOUT,
             startupinfo=DEFAULT_STARTUP_INFO,
             creationflags=DEFAULT_CREATION_FLAGS)
+        uploadModel.status = UploadStatus.IN_PROGRESS
         uploadModel.scpUploadProcessPid = scpUploadProcess.pid
         WaitForProcessToComplete(scpUploadProcess)
         stdout, _ = scpUploadProcess.communicate()

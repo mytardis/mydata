@@ -147,6 +147,8 @@ class CustomBuildCommand(build):
                           r"dist\%s\media" % build_name)
                 distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
                                              "dist/%s/media/Aha-Soft" % build_name)
+                distutils.dir_util.copy_tree("mydata/media/DRF",
+                                             "dist/%s/media/DRF" % build_name)
 
                 distutils.dir_util\
                     .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
@@ -199,7 +201,8 @@ class CustomBuildCommand(build):
                                   "media/Aha-Soft/png-normal/icons24x24",
                                   "media/Aha-Soft/png-disabled/icons16x16",
                                   "media/Aha-Soft/png-disabled/icons24x24",
-                                  "media/Aha-Soft/png-hot/icons24x24"):
+                                  "media/Aha-Soft/png-hot/icons24x24",
+                                  "media/DRF"):
                 for iconFile in os.listdir(os.path.join(PACKAGE_NAME,
                                                         iconFilesPath)):
                     iconFilePath = \

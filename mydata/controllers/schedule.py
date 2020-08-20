@@ -72,7 +72,6 @@ class ScheduleController(object):
                 LastSettingsUpdateTrigger.UI_RESPONSE:
             ScheduleController.CreateOnSettingsSavedTask(event)
         elif scheduleType == "Manually":
-            logger.debug("Schedule type is Manually.")
             if not runManually:
                 # Wait for user to manually click Refresh on MyData's toolbar.
                 logger.debug("Finished processing schedule type.")
