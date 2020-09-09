@@ -33,7 +33,16 @@ from .utils.notification import Notification
 from .logs import logger
 
 
-class MyData(wx.App):
+class MyApp(wx.App):
+    """
+    App class to fix following issue with wxPython 4.1.0:
+    https://discuss.wxpython.org/t/what-is-wxpython-doing-to-the-locale-to-makes-pandas-crash/34606/22
+    """
+    def InitLocale(self):
+        self.ResetLocale()
+
+
+class MyData(MyApp):
     """
     Encapsulates the MyData application.
     """
