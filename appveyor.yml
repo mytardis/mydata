@@ -30,11 +30,8 @@ install:
   # Upgrade to the latest version of pip
   - python -m pip install -U pip
   
-  # Install zlib
-  - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
-  - ps: install.bat
-  - cmd: mkdir C:\zlib
-  - cmd: xcopy "%ProgramFiles%\zlib" C:\zlib /l /e
+  # Install wheel
+  - pip install wheel
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
