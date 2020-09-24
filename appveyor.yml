@@ -33,7 +33,8 @@ install:
   # Install zlib
   - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
   - ps: install.bat
-  - cmd: set ZLIB_LIBRARY=%ProgramFiles%\zlib\bin
+  - cmd: set ZLIB_ROOT=%ProgramFiles%\zlib
+  - cmd: set ZLIB_LIBRARY=%ProgramFiles%\zlib\lib  
   - cmd: set ZLIB_INCLUDE_DIR=%ProgramFiles%\zlib\include
 
   # Install the build dependencies of the project. If some dependencies contain
