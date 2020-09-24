@@ -32,6 +32,8 @@ install:
   
   # Install zlib
   - vcpkg install zlib:x86-windows
+  - cmd: SET CMAKE_TOOLCHAIN_FILE=C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake
+  - cmake --version
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
