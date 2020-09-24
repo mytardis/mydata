@@ -17,11 +17,11 @@ environment:
 
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      PYTHON: "C:/Python37"
+      PYTHON: C:\Python37
 
 install:
   # Switch to selected Python
-  - set PATH=%PATH%;%PYTHON%;%PYTHON%\Scripts;
+  - cmd: SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
   # Check that we have the expected version and architecture for Python
   - python --version
@@ -43,11 +43,11 @@ install:
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - "%CMD_IN_ENV% pip install pylint==2.4.4"
-  - "pylint --rcfile=.pylintrc mydata"
+  - pip install pylint==2.4.4
+  - pylint --rcfile=.pylintrc mydata
 
   - "SET MYDATA_DEBUG_LOG_PATH=."
-  - "pytest --cov=mydata"
+  - pytest --cov=mydata
 
 after_test:
   # If tests are successful, upload coverage data:
@@ -56,8 +56,8 @@ after_test:
   - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml & exit 0"
 
   # If tests are successful, create a binary installer for the project.
-  - "choco install -y InnoSetup"
-  - "python setup.py bdist"
+  - choco install -y InnoSetup
+  - python setup.py bdist
   - ps: "ls dist"
 
 artifacts:
