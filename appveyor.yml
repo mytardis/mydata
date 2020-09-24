@@ -10,10 +10,6 @@
 
 environment:
   global:
-    # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
-    # /E:ON and /V:ON options are not enabled in the batch script intepreter
-    # See: http://stackoverflow.com/a/13751649/163740
-    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
     CODECOV_TOKEN:
       secure: Rg0Q0ecqAFle4YG3gjSDhBpV4JUTwwelG+ZGLClMkWBRZQINh5a20pvj3FkaIoGm
     CODACY_PROJECT_TOKEN:
@@ -21,17 +17,18 @@ environment:
 
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      PYTHON: "C:\\Python37"
-      PYTHON_VERSION: "3.7.9"
-      PYTHON_ARCH: "32"
+      PYTHON: "C:/Python37"
 
 install:
+  # Switch to selected Python
+  - set PATH=%PATH%;%PYTHON%;%PYTHON%\Scripts;
+
   # Check that we have the expected version and architecture for Python
-  - "python --version"
-  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
+  - python --version
+  - python -c "import struct; print(struct.calcsize('P') * 8)"
 
   # Upgrade to the latest version of pip
-  - "python -m pip install --disable-pip-version-check --user --upgrade pip"
+  - python -m pip install --disable-pip-version-check --user --upgrade pip
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
