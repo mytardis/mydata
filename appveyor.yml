@@ -34,8 +34,9 @@ install:
   # Windows one-line installer for ZLIB library.
   - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
   - ps: install.bat
+  # https://cmake.org/cmake/help/v3.0/module/FindZLIB.html
   - set ZLIB_ROOT=%PROGRAMFILES%\zlib
-  - echo %ZLIB_ROOT%
+  - ps: ls -R %ZLIB_ROOT%
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
