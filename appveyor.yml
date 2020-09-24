@@ -39,9 +39,7 @@ install:
   # not already installed.
   - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
 
-  # https://cmake.org/cmake/help/v3.0/module/FindZLIB.html
-  # - set ZLIB_ROOT=%PROGRAMFILES%\zlib
-  - cp %PROGRAMFILES%\zlib\lib\zlibstatic.lib %PYTHON%\libs\
+  - cp C:\projects\mydata\zlib-1.2.11\build\Release\zlibstatic.lib %PYTHON%\libs\
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
