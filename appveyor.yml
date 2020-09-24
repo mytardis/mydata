@@ -36,6 +36,7 @@ install:
   - ps: install.bat
   - set ZLIB_LIBRARY=%PROGRAMFILES%\\zlib
   - set ZLIB_INCLUDE_DIR=%PROGRAMFILES%\\zlib\\include
+  - echo %ZLIB_LIBRARY%
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
