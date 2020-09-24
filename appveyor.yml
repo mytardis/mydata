@@ -31,15 +31,9 @@ install:
   - ECHO "Installed SDKs:"
   - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
 
-  # Windows one-line installer for ZLIB library.
-  - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
-  - ps: install.bat
-
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
   - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
-
-  - set ZLIB_LIBRARY="%ProgramFiles%\zlib\lib\"
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
@@ -57,9 +51,11 @@ install:
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
+  - "%CMD_IN_ENV% pip install Pillow"
+  
   - "%CMD_IN_ENV% pip install -r requirements.txt"
 
-  - "%CMD_IN_ENV% pip install pypiwin32"
+  - "%CMD_IN_ENV% pip install -r requirements-windows.txt"
 
   - "%CMD_IN_ENV% pip install codecov"
 
