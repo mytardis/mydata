@@ -32,7 +32,8 @@ install:
   - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
 
   # Windows one-line installer for ZLIB library.
-  - "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')\"; ./install.bat"
+  - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
+  - ps: install.bat
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
