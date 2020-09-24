@@ -31,9 +31,9 @@ install:
   - python -m pip install -U pip
   
   # Install zlib
-  - vcpkg install zlib:x86-windows
-  - cmd: SET ZLIB_LIBRARY=C:\tools\vcpkg\installed\x86-windows\lib\zlib.lib
-  - cmd: SET ZLIB_INCLUDE_DIR=C:\tools\vcpkg\installed\x86-windows\include\
+  - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
+  - ps: install.bat
+  - cmd: xcopy %ProgramFiles%\zlib C:\zlib /l /e
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
