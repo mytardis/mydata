@@ -39,7 +39,7 @@ install:
   # not already installed.
   - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
 
-  - cp "%ProgramFiles%\zlib\lib\zlibstatic.lib" %PYTHON%\libs\
+  - set ZLIB_LIBRARY="%ProgramFiles%\zlib\lib\"
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
