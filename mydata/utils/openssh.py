@@ -18,9 +18,8 @@ from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.upload import UploadStatus
-from ..utils.exceptions import SshException
-from ..utils.exceptions import ScpException
-from ..utils.exceptions import PrivateKeyDoesNotExist
+from ..utils.upload import uploadFile
+from ..utils.exceptions import PrivateKeyDoesNotExist, SshException, ScpException, UploadFailed
 from ..threads.locks import LOCKS
 
 from ..subprocesses import DEFAULT_STARTUP_INFO
@@ -373,17 +372,6 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     chunking files, so with SCP, we will always upload the whole
     file.
     """
-    if sys.platform.startswith("win"):
-        filePath = GetCygwinPath(filePath)
-        privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
-
-    progressCallback(current=0, total=fileSize, message="Uploading...")
-
-    monitoringProgress = threading.Event()
-    uploadModel.startTime = datetime.now()
-    MonitorProgress(SETTINGS.miscellaneous.progressPollInterval, uploadModel,
-                    fileSize, monitoringProgress, progressCallback)
-
     remoteDir = os.path.dirname(remoteFilePath)
     with LOCKS.createRemoteDir:
         CreateRemoteDir(remoteDir, username, privateKeyFilePath, host, port)
@@ -392,24 +380,42 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         logger.debug("UploadFile: Aborting upload for %s" % filePath)
         return
 
-    scpCommandList = [
-        OPENSSH.scp,
-        "-v",
-        "-P", port,
-        "-i", privateKeyFilePath,
-        filePath,
-        "%s@%s:%s/" % (username, host,
-                       remoteDir
-                       .replace('`', r'\\`')
-                       .replace('$', r'\\$'))]
-    scpCommandList[2:2] = SETTINGS.miscellaneous.cipherOptions
-    scpCommandList[2:2] = OpenSSH.DefaultSshOptions(
-        SETTINGS.miscellaneous.connectionTimeout)
+    progressCallback(current=0, total=fileSize, message="Uploading...")
 
-    if not sys.platform.startswith("linux"):
-        ScpUpload(uploadModel, scpCommandList)
+    if SETTINGS.advanced.uploadMethod == "ParallelSSH":
+
+        try:
+            uploadFile(
+                host, port, username, privateKeyFilePath, filePath, remoteFilePath,
+                uploadModel, progressCallback)
+        except Exception as e:
+            raise UploadFailed(e)
+
     else:
-        ScpUploadWithErrandBoy(uploadModel, scpCommandList)
+
+        monitoringProgress = threading.Event()
+        uploadModel.startTime = datetime.now()
+        MonitorProgress(SETTINGS.miscellaneous.progressPollInterval, uploadModel,
+                        fileSize, monitoringProgress, progressCallback)
+
+        if sys.platform.startswith("win"):
+            filePath = GetCygwinPath(filePath)
+            privateKeyFilePath = GetCygwinPath(privateKeyFilePath)
+
+        scpCommandList = [
+            OPENSSH.scp,
+            "-v",
+            "-P", port,
+            "-i", privateKeyFilePath,
+            filePath,
+            "%s@%s:%s/" % (username, host, remoteDir.replace('`', r'\\`').replace('$', r'\\$'))]
+        scpCommandList[2:2] = SETTINGS.miscellaneous.cipherOptions
+        scpCommandList[2:2] = OpenSSH.DefaultSshOptions(SETTINGS.miscellaneous.connectionTimeout)
+
+        if not sys.platform.startswith("linux"):
+            ScpUpload(uploadModel, scpCommandList)
+        else:
+            ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
     SetRemoteFilePermissions(
         remoteFilePath, username, privateKeyFilePath, host, port)

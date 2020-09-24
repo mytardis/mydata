@@ -188,7 +188,7 @@ def LoadAdvancedSettings(settings, configParser):
     """
     configFileSection = "MyData"
     fields = ["folder_structure", "dataset_grouping", "group_prefix",
-              "max_upload_threads", "max_upload_retries",
+              "upload_method", "max_upload_threads", "max_upload_retries",
               "validate_folder_structure", "start_automatically_on_login",
               "upload_invalid_user_folders"]
     for field in fields:
@@ -349,7 +349,7 @@ def SaveSettingsToDisk(configPath=None):
                   "ignore_new_files", "ignore_new_files_minutes",
                   "use_includes_file", "use_excludes_file",
                   "max_verification_threads",
-                  "max_upload_threads", "max_upload_retries",
+                  "upload_method", "max_upload_threads", "max_upload_retries",
                   "validate_folder_structure", "fake_md5_sum",
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
@@ -437,6 +437,9 @@ def SaveFieldsFromDialog(settingsDialog, configPath=None, saveToDisk=True):
         settingsDialog.StartAutomaticallyOnLogin()
     SETTINGS.advanced.uploadInvalidUserOrGroupFolders = \
         settingsDialog.UploadInvalidUserOrGroupFolders()
+
+    # Upload tab
+    SETTINGS.advanced.uploadMethod = settingsDialog.GetUploadMethod()
     SETTINGS.advanced.maxUploadThreads = settingsDialog.GetMaxUploadThreads()
     SETTINGS.advanced.maxUploadRetries = settingsDialog.GetMaxUploadRetries()
 

@@ -21,8 +21,23 @@ class AdvancedSettingsModel(object):
             'max_upload_threads',
             'max_upload_retries',
             'start_automatically_on_login',
-            'upload_invalid_user_folders'
+            'upload_invalid_user_folders',
+            'upload_method'
         ]
+
+    @property
+    def uploadMethod(self):
+        """
+        Get upload method
+        """
+        return self.mydataConfig['upload_method']
+
+    @uploadMethod.setter
+    def uploadMethod(self, uploadMethod):
+        """
+        Set upload method
+        """
+        self.mydataConfig['upload_method'] = uploadMethod
 
     @property
     def folderStructure(self):
@@ -169,3 +184,4 @@ class AdvancedSettingsModel(object):
         self.mydataConfig['max_upload_retries'] = 1
         self.mydataConfig['start_automatically_on_login'] = True
         self.mydataConfig['upload_invalid_user_folders'] = True
+        self.mydataConfig['upload_method'] = "SCP"
