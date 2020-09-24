@@ -14,7 +14,7 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-    CODECOV_TOKEN:
+    CODECOV_TOKEN:Visual
       secure: Rg0Q0ecqAFle4YG3gjSDhBpV4JUTwwelG+ZGLClMkWBRZQINh5a20pvj3FkaIoGm
     CODACY_PROJECT_TOKEN:
       secure: kVLJfBgsiibjMtizt055TdGzT/sSnxgZHwfLp2Znyb5ie2SU4WGAPfcxI19nA8o1
@@ -30,6 +30,9 @@ install:
 
   - ECHO "Installed SDKs:"
   - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+
+  # Windows one-line installer for ZLIB library.
+  - "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')\"; ./install.bat"
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
