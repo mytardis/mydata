@@ -32,7 +32,7 @@ install:
   
   # Install zlib
   - vcpkg install zlib:x86-windows
-  - ps: ls C:\tools\vcpkg\installed\
+  - ps: ls C:\tools\vcpkg\installed\x86-windows\
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
