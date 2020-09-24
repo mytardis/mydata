@@ -34,6 +34,8 @@ install:
   # Windows one-line installer for ZLIB library.
   - ps: (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/horta/zlib.install/master/install.bat', 'install.bat')
   - ps: install.bat
+  - "SET ZLIB_LIBRARY=%PROGRAMFILES%\\zlib"
+  - "SET ZLIB_INCLUDE_DIR=%PROGRAMFILES%\\zlib\\include"
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
