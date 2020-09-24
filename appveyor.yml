@@ -28,7 +28,7 @@ install:
   - python -c "import struct; print(struct.calcsize('P') * 8)"
 
   # Upgrade to the latest version of pip
-  - python -m pip install --disable-pip-version-check --user --upgrade pip
+  - python -m pip install -U pip
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
