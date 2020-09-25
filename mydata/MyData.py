@@ -39,6 +39,9 @@ class MyApp(wx.App):
     https://discuss.wxpython.org/t/what-is-wxpython-doing-to-the-locale-to-makes-pandas-crash/34606/22
     """
     def InitLocale(self):
+        """
+        Reset locale on app init
+        """
         self.ResetLocale()
 
 

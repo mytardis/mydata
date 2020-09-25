@@ -100,6 +100,7 @@ class SettingsDialog(wx.Dialog):
         self.schedulePanel = wx.Panel(self.settingsTabsNotebook)
         self.filtersPanel = wx.Panel(self.settingsTabsNotebook)
         self.advancedPanel = wx.Panel(self.settingsTabsNotebook)
+        self.uploadPanel = wx.Panel(self.settingsTabsNotebook)
 
         self.dialogPanelSizer = wx.BoxSizer()
         self.dialogPanelSizer.Add(self.settingsTabsNotebook, 0,
@@ -675,10 +676,8 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
         self.advancedPanelSizer.Add(wx.Size(-1, 5))
 
-        folderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                             "Folder Structure:")
-        self.advancedPanelSizer.Add(folderStructureLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        folderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY, "Folder Structure:")
+        self.advancedPanelSizer.Add(folderStructureLabel, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.folderStructures = [
             'Username / Dataset',
             'Email / Dataset',
@@ -690,126 +689,116 @@ class SettingsDialog(wx.Dialog):
             'User Group / Experiment / Dataset',
             'Experiment / Dataset',
             'Dataset']
-        self.folderStructureComboBox = \
-            wx.ComboBox(self.advancedPanel, wx.ID_ANY,
-                        choices=self.folderStructures, style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.OnSelectFolderStructure,
-                  self.folderStructureComboBox)
+        self.folderStructureComboBox = wx.ComboBox(self.advancedPanel, wx.ID_ANY,
+                                                   choices=self.folderStructures,
+                                                   style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectFolderStructure, self.folderStructureComboBox)
         self.folderStructureComboBox.SetValue("Username / Dataset")
-        self.advancedPanelSizer.Add(self.folderStructureComboBox,
-                                    flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+        self.advancedPanelSizer.Add(self.folderStructureComboBox, flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
-        validateFolderStructureLabel = \
-            wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                          "Validate folder structure:")
-        self.advancedPanelSizer.Add(validateFolderStructureLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.validateFolderStructureCheckBox = \
-            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
-        self.advancedPanelSizer\
-            .Add(self.validateFolderStructureCheckBox,
-                 flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+        validateFolderStructureLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                                     "Validate folder structure:")
+        self.advancedPanelSizer.Add(validateFolderStructureLabel, flag=wx.ALIGN_RIGHT | wx.ALL,
+                                    border=5)
+        self.validateFolderStructureCheckBox = wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer.Add(self.validateFolderStructureCheckBox, flag=wx.EXPAND | wx.ALL,
+                                    border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
         datasetGroupingLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                              "Experiment (Dataset Grouping):")
-        self.advancedPanelSizer.Add(datasetGroupingLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.datasetGroupingField = wx.TextCtrl(self.advancedPanel,
-                                                wx.ID_ANY, "")
-        self.datasetGroupingField\
-            .SetValue("Instrument Name - Data Owner's Full Name")
+        self.advancedPanelSizer.Add(datasetGroupingLabel, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.datasetGroupingField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
+        self.datasetGroupingField.SetValue("Instrument Name - Data Owner's Full Name")
         self.datasetGroupingField.SetEditable(False)
-        self.advancedPanelSizer.Add(self.datasetGroupingField,
-                                    flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, "        "))
+        self.advancedPanelSizer.Add(self.datasetGroupingField, flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
-        self.groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                              "User Group Prefix:")
-        self.advancedPanelSizer.Add(self.groupPrefixLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.groupPrefixLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY, "User Group Prefix:")
+        self.advancedPanelSizer.Add(self.groupPrefixLabel, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
         self.groupPrefixField = wx.TextCtrl(self.advancedPanel, wx.ID_ANY, "")
-        self.advancedPanelSizer.Add(self.groupPrefixField,
-                                    flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+        self.advancedPanelSizer.Add(self.groupPrefixField, flag=wx.EXPAND | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
-        maxUploadThreadsLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                              "Maximum # of upload threads:")
-        self.advancedPanelSizer.Add(maxUploadThreadsLabel,
+        startAutomaticallyOnLoginLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                                       "Start automatically on login:")
+        self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel, flag=wx.ALIGN_RIGHT | wx.ALL,
+                                    border=5)
+        self.startAutomaticallyCheckBox = wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        if sys.platform.startswith("win"):
+            # On Windows, we use the common startup folder, configured by the
+            # setup wizard, not the user-specific startup folder.
+            self.startAutomaticallyCheckBox.Enable(False)
+        self.advancedPanelSizer.Add(self.startAutomaticallyCheckBox, flag=wx.EXPAND | wx.ALL,
+                                    border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
+
+        self.uploadInvalidUserFoldersLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
+                                                           "Upload invalid user folders:")
+        self.advancedPanelSizer.Add(self.uploadInvalidUserFoldersLabel,
                                     flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.uploadInvalidUserFoldersCheckBox = wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
+        self.advancedPanelSizer.Add(self.uploadInvalidUserFoldersCheckBox, flag=wx.EXPAND | wx.ALL,
+                                    border=5)
+        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
-        self.maxUploadThreadsPanel = wx.Panel(self.advancedPanel)
+        self.advancedPanel.Fit()
+        self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
+
+        # Upload tab
+        self.uploadPanelSizer = wx.FlexGridSizer(rows=10, cols=3, vgap=defaultVgap, hgap=5)
+        self.uploadPanel.SetSizer(self.uploadPanelSizer)
+
+        # Add blank space above the settings fields:
+        self.uploadPanelSizer.Add(wx.Size(-1, 5))
+        self.uploadPanelSizer.Add(wx.Size(-1, 5))
+        self.uploadPanelSizer.Add(wx.Size(-1, 5))
+
+        self.uploadMethods = ["SCP", "ParallelSSH"]
+        self.uploadMethodComboBox = wx.ComboBox(self.uploadPanel, wx.ID_ANY,
+                                                choices=self.uploadMethods, style=wx.CB_READONLY)
+        self.uploadMethodComboBox.SetValue("SCP")
+        self.uploadPanelSizer.Add(
+            wx.StaticText(self.uploadPanel, wx.ID_ANY, "Upload Method:"),
+            flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.uploadPanelSizer.Add(self.uploadMethodComboBox, flag=wx.EXPAND | wx.ALL, border=5)
+        self.uploadPanelSizer.Add(wx.StaticText(self.uploadPanel, wx.ID_ANY, ""))
+
+        self.uploadPanelSizer.Add(
+            wx.StaticText(self.uploadPanel, wx.ID_ANY, "Maximum # of upload threads:"),
+            flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.maxUploadThreadsPanel = wx.Panel(self.uploadPanel)
         self.maxUploadThreadsPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadThreadsPanel.SetSizer(self.maxUploadThreadsPanelSizer)
 
         # Upper limit of max upload threads is set to 10, based on the default
         # value of MaxSessions (10) in a typical SCP server's sshd_config.
-        self.maxUploadThreadsSpinCtrl = \
-            wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY,
-                        "4", min=1, max=10)
-        self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl,
-                                            flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(self.maxUploadThreadsPanel,
-                                    flag=wx.EXPAND, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+        self.maxUploadThreadsSpinCtrl = wx.SpinCtrl(self.maxUploadThreadsPanel, wx.ID_ANY, "4",
+                                                    min=1, max=10)
+        self.maxUploadThreadsPanelSizer.Add(self.maxUploadThreadsSpinCtrl, flag=wx.EXPAND | wx.ALL,
+                                            border=5)
+        self.uploadPanelSizer.Add(self.maxUploadThreadsPanel, flag=wx.EXPAND, border=5)
+        self.uploadPanelSizer.Add(wx.StaticText(self.uploadPanel, wx.ID_ANY, ""))
 
-        maxUploadRetriesLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                              "Maximum # of upload retries:")
-        self.advancedPanelSizer.Add(maxUploadRetriesLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.uploadPanelSizer.Add(
+            wx.StaticText(self.uploadPanel, wx.ID_ANY, "Maximum # of upload retries:"),
+            flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-        self.maxUploadRetriesPanel = wx.Panel(self.advancedPanel)
+        self.maxUploadRetriesPanel = wx.Panel(self.uploadPanel)
         self.maxUploadRetriesPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.maxUploadRetriesPanel.SetSizer(self.maxUploadRetriesPanelSizer)
 
-        self.maxUploadRetriesSpinCtrl = \
-            wx.SpinCtrl(self.maxUploadRetriesPanel, wx.ID_ANY,
-                        "1", min=0, max=99)
-        self.maxUploadRetriesPanelSizer.Add(self.maxUploadRetriesSpinCtrl,
-                                            flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(self.maxUploadRetriesPanel,
-                                    flag=wx.EXPAND, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
+        self.maxUploadRetriesSpinCtrl = wx.SpinCtrl(self.maxUploadRetriesPanel, wx.ID_ANY, "1",
+                                                    min=0, max=99)
+        self.maxUploadRetriesPanelSizer.Add(self.maxUploadRetriesSpinCtrl, flag=wx.EXPAND | wx.ALL,
+                                            border=5)
+        self.uploadPanelSizer.Add(self.maxUploadRetriesPanel, flag=wx.EXPAND, border=5)
+        self.uploadPanelSizer.Add(wx.StaticText(self.uploadPanel, wx.ID_ANY, ""))
 
-        startAutomaticallyOnLoginLabel = \
-            wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                          "Start automatically on login:")
-        self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.startAutomaticallyCheckBox = \
-            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
-        if sys.platform.startswith("win"):
-            # On Windows, we use the common startup folder, configured by the
-            # setup wizard, not the user-specific startup folder.
-            self.startAutomaticallyCheckBox.Enable(False)
-        self.advancedPanelSizer\
-            .Add(self.startAutomaticallyCheckBox,
-                 flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
-
-        self.uploadInvalidUserFoldersLabel = \
-            wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                          "Upload invalid user folders:")
-        self.advancedPanelSizer.Add(self.uploadInvalidUserFoldersLabel,
-                                    flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
-        self.uploadInvalidUserFoldersCheckBox = \
-            wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
-        self.advancedPanelSizer\
-            .Add(self.uploadInvalidUserFoldersCheckBox,
-                 flag=wx.EXPAND | wx.ALL, border=5)
-        self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel,
-                                                  wx.ID_ANY, ""))
-
-        self.advancedPanel.Fit()
-        self.settingsTabsNotebook.AddPage(self.advancedPanel, "Advanced")
+        self.uploadPanel.Fit()
+        self.settingsTabsNotebook.AddPage(self.uploadPanel, "Upload")
 
         self.settingsTabsNotebook.Fit()
         self.settingsTabsNotebook\
@@ -1197,6 +1186,12 @@ class SettingsDialog(wx.Dialog):
     def SetMaxUploadRetries(self, numberOfRetries):
         self.maxUploadRetriesSpinCtrl.SetValue(numberOfRetries)
 
+    def GetUploadMethod(self):
+        return self.uploadMethodComboBox.GetValue()
+
+    def SetUploadMethod(self, uploadMethod):
+        self.uploadMethodComboBox.SetValue(uploadMethod)
+
     def StartAutomaticallyOnLogin(self):
         return self.startAutomaticallyCheckBox.GetValue()
 
@@ -1421,8 +1416,6 @@ class SettingsDialog(wx.Dialog):
         self.SetFolderStructure(SETTINGS.advanced.folderStructure)
         self.SetDatasetGrouping(SETTINGS.advanced.datasetGrouping)
         self.SetGroupPrefix(SETTINGS.advanced.groupPrefix)
-        self.SetMaxUploadThreads(SETTINGS.advanced.maxUploadThreads)
-        self.SetMaxUploadRetries(SETTINGS.advanced.maxUploadRetries)
         self.SetValidateFolderStructure(
             SETTINGS.advanced.validateFolderStructure)
         if sys.platform.startswith("win"):
@@ -1432,6 +1425,11 @@ class SettingsDialog(wx.Dialog):
         self.SetStartAutomaticallyOnLogin(startAutomatically)
         self.SetUploadInvalidUserOrGroupFolders(
             SETTINGS.advanced.uploadInvalidUserOrGroupFolders)
+
+        # Upload tab
+        self.SetUploadMethod(SETTINGS.advanced.uploadMethod)
+        self.SetMaxUploadThreads(SETTINGS.advanced.maxUploadThreads)
+        self.SetMaxUploadRetries(SETTINGS.advanced.maxUploadRetries)
 
         # This needs to go last, because it sets the enabled / disabled
         # state of many fields which depend on the values obtained from

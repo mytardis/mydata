@@ -123,3 +123,9 @@ class InvalidSettings(Exception):
         self.field = field
         self.suggestion = suggestion
         super(InvalidSettings, self).__init__(message)
+
+
+class UploadFailed(Exception):
+    """
+    Failed upload exception handler
+    """
