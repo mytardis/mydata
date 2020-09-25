@@ -1,25 +1,32 @@
+"""
+Upload data using ParallelSSH library
+"""
 import os
 import socket
 from datetime import datetime
 from time import sleep
 
 from ssh2.session import Session
-from ssh2.sftp import LIBSSH2_SFTP_S_IRUSR, LIBSSH2_SFTP_S_IRGRP, LIBSSH2_SFTP_S_IWUSR, LIBSSH2_SFTP_S_IROTH
+from ssh2.sftp import LIBSSH2_SFTP_S_IRUSR, LIBSSH2_SFTP_S_IRGRP, LIBSSH2_SFTP_S_IWUSR, \
+    LIBSSH2_SFTP_S_IROTH
 
 
-def read_in_chunks(file_object, chunk_size):
+def ReadFileChunks(fileObject, chunkSize):
+    """
+    Read data file chunk
+    """
     while True:
-        data = file_object.read(chunk_size)
+        data = fileObject.read(chunkSize)
         if not data:
             break
         yield data
 
 
-def uploadFile(host, port, username, privateKeyFilePath, filePath, remoteFilePath,
+def UploadFileSSH(host, port, username, privateKeyFilePath, filePath, remoteFilePath,
                uploadModel, progressCallback):
-    one_megabyte = 1 * 1024 * 1024
-    packet = 32 * one_megabyte
-
+    """
+    Upload file using SSH, update progress status, cancel upload if requested
+    """
     fileInfo = os.stat(filePath)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,21 +37,22 @@ def uploadFile(host, port, username, privateKeyFilePath, filePath, remoteFilePat
     sess.userauth_publickey_fromfile(username, privateKeyFilePath)
 
     mode = LIBSSH2_SFTP_S_IRUSR | LIBSSH2_SFTP_S_IWUSR | LIBSSH2_SFTP_S_IRGRP | LIBSSH2_SFTP_S_IROTH
-    remote_fh = sess.scp_send64(remoteFilePath, mode, fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
+    remoteFile = sess.scp_send64(remoteFilePath, mode, fileInfo.st_size, fileInfo.st_mtime,
+                                 fileInfo.st_atime)
 
-    total_uploaded = 0
-    with open(filePath, "rb") as local_fh:
-        for data in read_in_chunks(local_fh, packet):
-            return_code, written_bytes = remote_fh.write(data)
-            total_uploaded += written_bytes
+    totalUploaded = 0
+    with open(filePath, "rb") as localFile:
+        for data in ReadFileChunks(localFile, 32*1024*1024):
+            _, bytesWritten = remoteFile.write(data)
+            totalUploaded += bytesWritten
             uploadModel.SetLatestTime(datetime.now())
-            progressCallback(current=total_uploaded, total=fileInfo.st_size)
+            progressCallback(current=totalUploaded, total=fileInfo.st_size)
             if uploadModel.canceled:
                 break
 
     # Without this file upload is incomplete
     sleep(0.25)
 
-    remote_fh.flush()
-    remote_fh.close()
+    remoteFile.flush()
+    remoteFile.close()
     sess.disconnect()
