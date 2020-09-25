@@ -223,7 +223,6 @@ class MyDataGuiTester(MyDataTester):
         if self.app:
             self.app.MainLoop()
             del self.app
-            self.assertIsNone(wx.GetApp())
 
 
 class MyDataSettingsTester(MyDataGuiTester):
