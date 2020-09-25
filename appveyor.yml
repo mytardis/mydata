@@ -3,11 +3,6 @@
 # http://www.appveyor.com/about
 # http://www.appveyor.com/docs/appveyor-yml
 
-# Remote Desktop access to the build worker seems
-# to require a paid AppVeyor account, rather than
-# a free open-source account.
-# http://www.appveyor.com/docs/how-to/rdp-to-build-worker
-
 environment:
   global:
     CODECOV_TOKEN:
@@ -21,7 +16,7 @@ environment:
 
 install:
   # Switch to selected Python
-  - cmd: SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+  - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
   # Check that we have the expected version and architecture for Python
   - python --version
@@ -46,24 +41,23 @@ install:
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - pip install pylint==2.4.4
+  - pip install -r requirements-test.txt
   - pylint --rcfile=.pylintrc mydata
 
-  - "SET MYDATA_DEBUG_LOG_PATH=."
+  - cmd: set MYDATA_DEBUG_LOG_PATH=.
   - pytest --cov=mydata
 
 after_test:
-  # If tests are successful, upload coverage data:
-  - "codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION% & exit 0"
-  - "coverage xml"
-  - "python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml & exit 0"
+  # Upload coverage data
+  - codecov -X gcov --branch %APPVEYOR_REPO_BRANCH% --build %APPVEYOR_BUILD_VERSION% & exit 0
+  - coverage xml
+  - python-codacy-coverage -c %APPVEYOR_REPO_COMMIT% -d %APPVEYOR_BUILD_FOLDER% -r coverage.xml & exit 0
 
-  # If tests are successful, create a binary installer for the project.
+  # Create a binary installer
   - choco install -y InnoSetup
   - python setup.py bdist
-  - ps: "ls dist"
 
 artifacts:
-  # These can be downloaded after the build is complete:
+  # These can be downloaded after the build is complete
   - path: .MyData_debug_log.txt
   - path: dist\*.exe
