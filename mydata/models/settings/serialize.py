@@ -385,63 +385,11 @@ def SaveFieldsFromDialog(settingsDialog, configPath=None, saveToDisk=True):
     if configPath is None:
         configPath = SETTINGS.configPath
 
-    # General tab
-    SETTINGS.general.instrumentName = settingsDialog.GetInstrumentName()
-    SETTINGS.general.facilityName = settingsDialog.GetFacilityName()
-    SETTINGS.general.myTardisUrl = settingsDialog.GetMyTardisUrl()
-    SETTINGS.general.contactName = settingsDialog.GetContactName()
-    SETTINGS.general.contactEmail = settingsDialog.GetContactEmail()
-    SETTINGS.general.dataDirectory = settingsDialog.GetDataDirectory()
-    SETTINGS.general.username = settingsDialog.GetUsername()
-    SETTINGS.general.apiKey = settingsDialog.GetApiKey()
-
-    # Schedule tab
-    SETTINGS.schedule.scheduleType = settingsDialog.GetScheduleType()
-    SETTINGS.schedule.mondayChecked = settingsDialog.IsMondayChecked()
-    SETTINGS.schedule.tuesdayChecked = settingsDialog.IsTuesdayChecked()
-    SETTINGS.schedule.wednesdayChecked = settingsDialog.IsWednesdayChecked()
-    SETTINGS.schedule.thursdayChecked = settingsDialog.IsThursdayChecked()
-    SETTINGS.schedule.fridayChecked = settingsDialog.IsFridayChecked()
-    SETTINGS.schedule.saturdayChecked = settingsDialog.IsSaturdayChecked()
-    SETTINGS.schedule.sundayChecked = settingsDialog.IsSundayChecked()
-    SETTINGS.schedule.scheduledDate = settingsDialog.GetScheduledDate()
-    SETTINGS.schedule.scheduledTime = settingsDialog.GetScheduledTime()
-    SETTINGS.schedule.timerMinutes = settingsDialog.GetTimerMinutes()
-    SETTINGS.schedule.timerFromTime = settingsDialog.GetTimerFromTime()
-    SETTINGS.schedule.timerToTime = settingsDialog.GetTimerToTime()
-
-    # Filters tab
-    SETTINGS.filters.userFilter = settingsDialog.GetUserFilter()
-    SETTINGS.filters.datasetFilter = settingsDialog.GetDatasetFilter()
-    SETTINGS.filters.experimentFilter = settingsDialog.GetExperimentFilter()
-    SETTINGS.filters.ignoreOldDatasets = settingsDialog.IgnoreOldDatasets()
-    SETTINGS.filters.ignoreOldDatasetIntervalNumber = \
-        settingsDialog.GetIgnoreOldDatasetIntervalNumber()
-    SETTINGS.filters.ignoreOldDatasetIntervalUnit = \
-        settingsDialog.GetIgnoreOldDatasetIntervalUnit()
-    SETTINGS.filters.ignoreNewFiles = settingsDialog.IgnoreNewFiles()
-    SETTINGS.filters.ignoreNewFilesMinutes = \
-        settingsDialog.GetIgnoreNewFilesMinutes()
-    SETTINGS.filters.useIncludesFile = settingsDialog.UseIncludesFile()
-    SETTINGS.filters.includesFile = settingsDialog.GetIncludesFile()
-    SETTINGS.filters.useExcludesFile = settingsDialog.UseExcludesFile()
-    SETTINGS.filters.excludesFile = settingsDialog.GetExcludesFile()
-
-    # Advanced tab
-    SETTINGS.advanced.folderStructure = settingsDialog.GetFolderStructure()
-    SETTINGS.advanced.datasetGrouping = settingsDialog.GetDatasetGrouping()
-    SETTINGS.advanced.groupPrefix = settingsDialog.GetGroupPrefix()
-    SETTINGS.advanced.validateFolderStructure = \
-        settingsDialog.ValidateFolderStructure()
-    SETTINGS.advanced.startAutomaticallyOnLogin = \
-        settingsDialog.StartAutomaticallyOnLogin()
-    SETTINGS.advanced.uploadInvalidUserOrGroupFolders = \
-        settingsDialog.UploadInvalidUserOrGroupFolders()
-
-    # Upload tab
-    SETTINGS.advanced.uploadMethod = settingsDialog.GetUploadMethod()
-    SETTINGS.advanced.maxUploadThreads = settingsDialog.GetMaxUploadThreads()
-    SETTINGS.advanced.maxUploadRetries = settingsDialog.GetMaxUploadRetries()
+    GetGeneralTabSettings(settingsDialog, SETTINGS)
+    GetScheduleTabSettings(settingsDialog, SETTINGS)
+    GetFiltersTabSettings(settingsDialog, SETTINGS)
+    GetAdvancedTabSettings(settingsDialog, SETTINGS)
+    GetUploadTabSettings(settingsDialog, SETTINGS)
 
     SETTINGS.miscellaneous.locked = settingsDialog.Locked()
 
@@ -449,3 +397,78 @@ def SaveFieldsFromDialog(settingsDialog, configPath=None, saveToDisk=True):
         SaveSettingsToDisk(configPath)
 
     SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
+
+
+def GetGeneralTabSettings(settingsDialog, settingsModel):
+    """
+    Read General tab settings into the model
+    """
+    settingsModel.instrumentName = settingsDialog.GetInstrumentName()
+    settingsModel.general.facilityName = settingsDialog.GetFacilityName()
+    settingsModel.general.myTardisUrl = settingsDialog.GetMyTardisUrl()
+    settingsModel.general.contactName = settingsDialog.GetContactName()
+    settingsModel.general.contactEmail = settingsDialog.GetContactEmail()
+    settingsModel.general.dataDirectory = settingsDialog.GetDataDirectory()
+    settingsModel.general.username = settingsDialog.GetUsername()
+    settingsModel.general.apiKey = settingsDialog.GetApiKey()
+
+
+def GetScheduleTabSettings(settingsDialog, settingsModel):
+    """
+    Read Schedule tab settings into the model
+    """
+    settingsModel.schedule.scheduleType = settingsDialog.GetScheduleType()
+    settingsModel.schedule.mondayChecked = settingsDialog.IsMondayChecked()
+    settingsModel.schedule.tuesdayChecked = settingsDialog.IsTuesdayChecked()
+    settingsModel.schedule.wednesdayChecked = settingsDialog.IsWednesdayChecked()
+    settingsModel.schedule.thursdayChecked = settingsDialog.IsThursdayChecked()
+    settingsModel.schedule.fridayChecked = settingsDialog.IsFridayChecked()
+    settingsModel.schedule.saturdayChecked = settingsDialog.IsSaturdayChecked()
+    settingsModel.schedule.sundayChecked = settingsDialog.IsSundayChecked()
+    settingsModel.schedule.scheduledDate = settingsDialog.GetScheduledDate()
+    settingsModel.schedule.scheduledTime = settingsDialog.GetScheduledTime()
+    settingsModel.schedule.timerMinutes = settingsDialog.GetTimerMinutes()
+    settingsModel.schedule.timerFromTime = settingsDialog.GetTimerFromTime()
+    settingsModel.schedule.timerToTime = settingsDialog.GetTimerToTime()
+
+
+def GetFiltersTabSettings(settingsDialog, settingsModel):
+    """
+    Read Filters tab settings into the model
+    """
+    settingsModel.filters.userFilter = settingsDialog.GetUserFilter()
+    settingsModel.filters.datasetFilter = settingsDialog.GetDatasetFilter()
+    settingsModel.filters.experimentFilter = settingsDialog.GetExperimentFilter()
+    settingsModel.filters.ignoreOldDatasets = settingsDialog.IgnoreOldDatasets()
+    settingsModel.filters.ignoreOldDatasetIntervalNumber = \
+        settingsDialog.GetIgnoreOldDatasetIntervalNumber()
+    settingsModel.filters.ignoreOldDatasetIntervalUnit = \
+        settingsDialog.GetIgnoreOldDatasetIntervalUnit()
+    settingsModel.filters.ignoreNewFiles = settingsDialog.IgnoreNewFiles()
+    settingsModel.filters.ignoreNewFilesMinutes = settingsDialog.GetIgnoreNewFilesMinutes()
+    settingsModel.filters.useIncludesFile = settingsDialog.UseIncludesFile()
+    settingsModel.filters.includesFile = settingsDialog.GetIncludesFile()
+    settingsModel.filters.useExcludesFile = settingsDialog.UseExcludesFile()
+    settingsModel.filters.excludesFile = settingsDialog.GetExcludesFile()
+
+
+def GetAdvancedTabSettings(settingsDialog, settingsModel):
+    """
+    Read Advanced tab settings into the model
+    """
+    settingsModel.advanced.folderStructure = settingsDialog.GetFolderStructure()
+    settingsModel.advanced.datasetGrouping = settingsDialog.GetDatasetGrouping()
+    settingsModel.advanced.groupPrefix = settingsDialog.GetGroupPrefix()
+    settingsModel.advanced.validateFolderStructure = settingsDialog.ValidateFolderStructure()
+    settingsModel.advanced.startAutomaticallyOnLogin = settingsDialog.StartAutomaticallyOnLogin()
+    settingsModel.advanced.uploadInvalidUserOrGroupFolders = \
+        settingsDialog.UploadInvalidUserOrGroupFolders()
+
+
+def GetUploadTabSettings(settingsDialog, settingsModel):
+    """
+    Read Upload tab settings into the model
+    """
+    settingsModel.advanced.uploadMethod = settingsDialog.GetUploadMethod()
+    settingsModel.advanced.maxUploadThreads = settingsDialog.GetMaxUploadThreads()
+    settingsModel.advanced.maxUploadRetries = settingsDialog.GetMaxUploadRetries()

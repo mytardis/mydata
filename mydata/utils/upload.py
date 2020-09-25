@@ -6,9 +6,7 @@ import socket
 from datetime import datetime
 from time import sleep
 
-from ssh2.session import Session
-from ssh2.sftp import LIBSSH2_SFTP_S_IRUSR, LIBSSH2_SFTP_S_IRGRP, LIBSSH2_SFTP_S_IWUSR, \
-    LIBSSH2_SFTP_S_IROTH
+from ssh2 import session, sftp
 
 
 def ReadFileChunks(fileObject, chunkSize):
@@ -22,23 +20,32 @@ def ReadFileChunks(fileObject, chunkSize):
         yield data
 
 
-def UploadFileSSH(host, port, username, privateKeyFilePath, filePath, remoteFilePath,
-               uploadModel, progressCallback):
+def GetFileMode():
+    """
+    Remote file attributes
+    """
+    return sftp.LIBSSH2_SFTP_S_IRUSR | \
+           sftp.LIBSSH2_SFTP_S_IWUSR | \
+           sftp.LIBSSH2_SFTP_S_IRGRP | \
+           sftp.LIBSSH2_SFTP_S_IROTH
+
+
+def UploadFileSsh(server, auth, filePath, remoteFilePath,
+                  uploadModel, progressCallback):
     """
     Upload file using SSH, update progress status, cancel upload if requested
     """
     fileInfo = os.stat(filePath)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, int(port)))
+    sock.connect(server)
 
-    sess = Session()
+    sess = session.Session()
     sess.handshake(sock)
-    sess.userauth_publickey_fromfile(username, privateKeyFilePath)
+    sess.userauth_publickey_fromfile(auth[0], auth[1])
 
-    mode = LIBSSH2_SFTP_S_IRUSR | LIBSSH2_SFTP_S_IWUSR | LIBSSH2_SFTP_S_IRGRP | LIBSSH2_SFTP_S_IROTH
-    remoteFile = sess.scp_send64(remoteFilePath, mode, fileInfo.st_size, fileInfo.st_mtime,
-                                 fileInfo.st_atime)
+    remoteFile = sess.scp_send64(remoteFilePath, GetFileMode(),
+                                 fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
 
     totalUploaded = 0
     with open(filePath, "rb") as localFile:
@@ -55,4 +62,5 @@ def UploadFileSSH(host, port, username, privateKeyFilePath, filePath, remoteFile
 
     remoteFile.flush()
     remoteFile.close()
+
     sess.disconnect()

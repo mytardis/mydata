@@ -18,7 +18,7 @@ from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.upload import UploadStatus
-from ..utils.upload import UploadFileSSH
+from ..utils.upload import UploadFileSsh
 from ..utils.exceptions import PrivateKeyDoesNotExist, SshException, ScpException, UploadFailed
 from ..threads.locks import LOCKS
 
@@ -385,7 +385,9 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     if SETTINGS.advanced.uploadMethod == "ParallelSSH":
 
         try:
-            UploadFileSSH(host, port, username, privateKeyFilePath, filePath, remoteFilePath,
+            server = (host, int(port))
+            auth = (username, privateKeyFilePath)
+            UploadFileSsh(server, auth, filePath, remoteFilePath,
                           uploadModel, progressCallback)
         except Exception as err:
             raise UploadFailed(err)
