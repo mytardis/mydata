@@ -80,7 +80,7 @@ def FakeMyTardisPost(mytardis):
                     "to POST: %s" % mytardis.path)
 
 
-def RespondToDataFileRequest(mytardis, postData, contentType):
+def RespondToDataFileRequest(mytardis, postData, contentType=None):
     """
     Respond to an datafile-related request.
 
