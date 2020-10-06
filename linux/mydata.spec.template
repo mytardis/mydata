@@ -17,7 +17,7 @@ Vendor: James Wettenhall (Monash University) <james.wettenhall@gmail.com>
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-provides: libc.so.6(GLIBC_PRIVATE)
+Provides: libcrypto-ab1baf6c.so.1.1(OPENSSL_1_1_0f)(64bit),libcrypto-ab1baf6c.so.1.1(OPENSSL_1_1_0)(64bit),libcrypto-ab1baf6c.so.1.1(OPENSSL_1_1_1)(64bit),libcrypto-ab1baf6c.so.1.1(OPENSSL_1_1_0i)(64bit),libcrypto-ab1baf6c.so.1.1(OPENSSL_1_1_0d)(64bit)
 
 # http://www.mail-archive.com/fedora-devel-list@redhat.com/msg13200.html
 %global __prelink_undo_cmd %{nil}
