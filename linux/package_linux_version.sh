@@ -17,7 +17,7 @@ rm -fr dist
 
 # PyInstaller 2.1
 PATHS=$(python -c 'import appdirs; import os; import sys; sys.stdout.write(os.path.dirname(appdirs.__file__))')
-pyinstaller --paths=$PATHS --name=MyData --icon=../mydata/media/MyData.ico --windowed ../run.py
+pyinstaller --paths=$PATHS --additional-hooks-dir=. --name=MyData --icon=../mydata/media/MyData.ico --windowed ../run.py
 
 cp "MyData.desktop" 	dist/MyData/
 cp MyData.sh 		dist/MyData/
