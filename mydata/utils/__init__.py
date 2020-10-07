@@ -302,7 +302,7 @@ def CheckIfSystemTrayFunctionalityMissing():
             ['gsettings', 'get', 'org.gnome.shell', 'enabled-extensions'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         stdout, _ = proc.communicate()
-        if 'top-icons' not in stdout:
+        if b'top-icons' not in stdout:
             sys.stderr.write("Enabling the TopIcons GNOME shell extension\n")
             proc = subprocess.Popen(
                 ['gnome-shell-extension-tool', '-e',
