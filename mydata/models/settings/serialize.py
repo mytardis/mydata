@@ -403,7 +403,7 @@ def GetGeneralTabSettings(settingsDialog, settingsModel):
     """
     Read General tab settings into the model
     """
-    settingsModel.instrumentName = settingsDialog.GetInstrumentName()
+    settingsModel.general.instrumentName = settingsDialog.GetInstrumentName()
     settingsModel.general.facilityName = settingsDialog.GetFacilityName()
     settingsModel.general.myTardisUrl = settingsDialog.GetMyTardisUrl()
     settingsModel.general.contactName = settingsDialog.GetContactName()
