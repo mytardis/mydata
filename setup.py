@@ -115,6 +115,7 @@ class CustomBuildCommand(build):
                 os.makedirs("dist/MyData-console")
             pyinstallerArgs = [
                 '--name=MyData',
+                '--additional-hooks-dir=linux/',
                 '--icon=mydata/media/MyData.ico',
                 '--windowed',
                 '--noconfirm',
@@ -123,6 +124,7 @@ class CustomBuildCommand(build):
             PyInstaller.__main__.run(pyinstallerArgs)
             pyinstallerArgs = [
                 '--name=MyData-console',
+                '--additional-hooks-dir=linux/',
                 '--icon=mydata/media/MyData.ico',
                 '--console',
                 '--noconfirm',
