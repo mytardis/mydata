@@ -8,7 +8,7 @@
 [Setup]
 AppName={#MyDataAppName}
 AppVersion=<version>
-DefaultDirName={pf}\{#MyDataAppName}
+DefaultDirName={commonpf}\{#MyDataAppName}
 DefaultGroupName={#MyDataAppName}
 UninstallDisplayIcon={app}\{#MyDataAppExeName}
 Compression=lzma2

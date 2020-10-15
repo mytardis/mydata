@@ -59,6 +59,7 @@ import sys
 import tempfile
 import subprocess
 import shutil
+import platform
 
 from distutils.command.build import build
 from distutils.command.bdist import bdist
@@ -101,8 +102,7 @@ class CustomBuildCommand(build):
         On macOS, create dist/MyData.app/*
         """
         if sys.platform.startswith("win"):
-            sys.stdout.write(
-                "Creating dist/MyData.exe using PyInstaller...\n")
+            sys.stdout.write("Creating dist/MyData.exe using PyInstaller...\n")
             if os.path.exists("build"):
                 shutil.rmtree("build")
                 os.mkdir("build")
@@ -132,8 +132,7 @@ class CustomBuildCommand(build):
                 ]
             PyInstaller.__main__.run(pyinstallerArgs)
 
-            os.system(r"COPY /Y dist\MyData-console\MyData-console.exe "
-                      r"dist\MyData\MyData.com")
+            os.system(r"COPY /Y dist\MyData-console\MyData-console.exe dist\MyData\MyData.com")
 
             # favicon.ico and MyData.ico are really the same thing. favicon.ico
             # is the original from the MyTardis repository, and MyData.ico is
@@ -143,10 +142,8 @@ class CustomBuildCommand(build):
             for build_name in ("MyData", "MyData-console"):
                 if not os.path.exists("dist/%s/media" % build_name):
                     os.makedirs("dist/%s/media" % build_name)
-                os.system(r"COPY /Y mydata\media\favicon.ico "
-                          r"dist\%s\media" % build_name)
-                os.system(r"COPY /Y mydata\media\MyData.ico "
-                          r"dist\%s\media" % build_name)
+                os.system(r"COPY /Y mydata\media\favicon.ico dist\%s\media" % build_name)
+                os.system(r"COPY /Y mydata\media\MyData.ico dist\%s\media" % build_name)
                 distutils.dir_util.copy_tree("mydata/media/Aha-Soft",
                                              "dist/%s/media/Aha-Soft" % build_name)
                 distutils.dir_util.copy_tree("mydata/media/DRF",
@@ -164,8 +161,7 @@ class CustomBuildCommand(build):
                 distutils.dir_util.copy_tree(
                     "resources/win32/openssh-7.3p1-cygwin-2.8.0",
                     "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0" % build_name)
-                cygwin32HomeDir = \
-                    "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0/home" % build_name
+                cygwin32HomeDir = "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0/home" % build_name
                 for subdir in os.listdir(cygwin32HomeDir):
                     subdirpath = os.path.join(cygwin32HomeDir, subdir)
                     if os.path.isdir(subdirpath):
@@ -256,23 +252,17 @@ class CustomBdistCommand(bdist):
         if sys.platform.startswith("win"):
             self.run_command("build")
             print("Building binary distributable for Windows...")
-            with open('setup_templates/windows/MyData.iss.template',
-                      'r') as issFile:
+            with open('setup_templates/windows/MyData.iss.template', 'r') as issFile:
                 innosetupTemplate = issFile.read()
-            innosetupScript = innosetupTemplate.replace(
-                "<version>", APP_VERSION)
+            innosetupScript = innosetupTemplate.replace("<version>", APP_VERSION)
+            if "64" in platform.architecture()[0]:
+                innosetupScript = innosetupScript.replace("[Setup]", "[Setup]" +
+                     "\nArchitecturesInstallIn64BitMode=x64")
             with open("dist/MyData.iss", 'w') as innosetupScriptFile:
                 innosetupScriptFile.write(innosetupScript)
-            if os.path.exists(r"C:\Program Files (x86)\Inno Setup 6"
-                              r"\ISCC.exe"):
-                cmd = r'CALL "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ' \
+            os.system(r'CALL "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ' \
                     r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
-                    % APP_VERSION
-            else:
-                cmd = r'CALL "C:\Program Files\Inno Setup 6\ISCC.exe" ' \
-                    r'/O"dist" /F"MyData_v%s" dist\MyData.iss' \
-                    % APP_VERSION
-            os.system(cmd)
+                    % APP_VERSION)
         elif sys.platform.startswith("darwin"):
             os.system("rm -fr dist/*")
             self.run_command("build")
