@@ -44,23 +44,23 @@ def UploadFileSsh(server, auth, filePath, remoteFilePath,
     sess.handshake(sock)
     sess.userauth_publickey_fromfile(auth[0], auth[1])
 
-    remoteFile = sess.scp_send64(remoteFilePath, GetFileMode(),
-                                 fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
+    channel = sess.scp_send64(remoteFilePath, GetFileMode(),
+                              fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
 
     totalUploaded = 0
     with open(filePath, "rb") as localFile:
         for data in ReadFileChunks(localFile, 32*1024*1024):
-            _, bytesWritten = remoteFile.write(data)
+            _, bytesWritten = channel.write(data)
             totalUploaded += bytesWritten
             uploadModel.SetLatestTime(datetime.now())
             progressCallback(current=totalUploaded, total=fileInfo.st_size)
             if uploadModel.canceled:
                 break
 
-    # Without this file upload is incomplete
-    sleep(0.25)
+    channel.send_eof()
+    channel.wait_eof()
 
-    remoteFile.flush()
-    remoteFile.close()
+    channel.close()
+    channel.wait_closed()
 
     sess.disconnect()
