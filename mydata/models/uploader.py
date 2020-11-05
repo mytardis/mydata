@@ -350,25 +350,21 @@ class UploaderModel(object):
                     logger.error(traceback.format_exc())
                     raise
                 try:
-                    self.uploadToStagingRequest = \
-                        self.ExistingUploadToStagingRequest()
+                    self.uploadToStagingRequest = self.ExistingUploadToStagingRequest()
                 except DoesNotExist:
-                    self.uploadToStagingRequest = \
-                        self.RequestUploadToStagingApproval()
+                    self.uploadToStagingRequest = self.RequestUploadToStagingApproval()
                     logger.debug("Uploader registration request created.")
                 except PrivateKeyDoesNotExist:
                     logger.debug(
                         "Generating new uploader registration request, "
                         "because private key was moved or deleted.")
-                    self.uploadToStagingRequest = \
-                        self.RequestUploadToStagingApproval()
+                    self.uploadToStagingRequest = self.RequestUploadToStagingApproval()
                     logger.debug("Generated new uploader registration request,"
                                  " because private key was moved or deleted.")
                 if self.uploadToStagingRequest.approved:
                     logger.debug("Uploads to staging have been approved!")
                 else:
-                    logger.debug(
-                        "Uploads to staging haven't been approved yet.")
+                    logger.debug("Uploads to staging haven't been approved yet.")
             except:
                 logger.error(traceback.format_exc())
                 raise

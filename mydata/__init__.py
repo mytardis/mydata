@@ -8,7 +8,7 @@ import distutils.spawn
 import subprocess
 import sys
 
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 
 
 if hasattr(sys, "frozen"):
@@ -22,12 +22,10 @@ else:
             pass
     LATEST_COMMIT = LINE.split(" ")[1]
     GIT = distutils.spawn.find_executable("git")
-    LATEST_COMMIT_DATETIME = subprocess.check_output(
-        [GIT, "log", "-1", "--pretty=format:%ci"])
+    LATEST_COMMIT_DATETIME = subprocess.check_output([GIT, "log", "-1", "--pretty=format:%ci"])
     with open("mydata/commitdef.py", 'w') as commitdef:
         commitdef.write('"""\n')
         commitdef.write('commitdef.py\n')
         commitdef.write('"""\n')
         commitdef.write('LATEST_COMMIT = "%s"\n' % LATEST_COMMIT)
-        commitdef.write(
-            'LATEST_COMMIT_DATETIME = "%s"\n' % LATEST_COMMIT_DATETIME)
+        commitdef.write('LATEST_COMMIT_DATETIME = "%s"\n' % LATEST_COMMIT_DATETIME.decode())

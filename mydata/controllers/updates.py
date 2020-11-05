@@ -45,10 +45,8 @@ def VersionCheck():
                     "The version you are running (%s) is the latest "
                     "release." % VERSION)
                 return
-            currentCommitDateTime = \
-                dateutil.parser.parse(LATEST_COMMIT_DATETIME)
-            if currentCommitDateTime < \
-                    MYDATA_VERSIONS.latestOfficialReleaseDateTime:
+            currentCommitDateTime = dateutil.parser.parse(LATEST_COMMIT_DATETIME)
+            if currentCommitDateTime < MYDATA_VERSIONS.latestOfficialReleaseDateTime:
                 # Latest official release is newer or equal to current version:
                 latest = MYDATA_VERSIONS.latestOfficialReleaseTagName
                 changes = MYDATA_VERSIONS.latestOfficialReleaseBody

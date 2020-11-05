@@ -149,23 +149,11 @@ class CustomBuildCommand(build):
                 distutils.dir_util.copy_tree("mydata/media/DRF",
                                              "dist/%s/media/DRF" % build_name)
 
-                distutils.dir_util\
-                    .copy_tree("resources/win64/openssh-7.3p1-cygwin-2.6.0",
-                           "dist/%s/win64/openssh-7.3p1-cygwin-2.6.0" % build_name)
-                cygwin64HomeDir = \
-                    "dist/%s/win64/openssh-7.3p1-cygwin-2.6.0/home" % build_name
-                for subdir in os.listdir(cygwin64HomeDir):
-                    subdirpath = os.path.join(cygwin64HomeDir, subdir)
-                    if os.path.isdir(subdirpath):
-                        shutil.rmtree(subdirpath)
-                distutils.dir_util.copy_tree(
-                    "resources/win32/openssh-7.3p1-cygwin-2.8.0",
-                    "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0" % build_name)
-                cygwin32HomeDir = "dist/%s/win32/openssh-7.3p1-cygwin-2.8.0/home" % build_name
-                for subdir in os.listdir(cygwin32HomeDir):
-                    subdirpath = os.path.join(cygwin32HomeDir, subdir)
-                    if os.path.isdir(subdirpath):
-                        shutil.rmtree(subdirpath)
+                for arch in ["32", "64"]:
+                    for ver in ["openssh-8.1.0.0p1-beta", "openssh-7.9.0.0p1-beta"]:
+                        src = "resources/win%s/%s" % (arch, ver)
+                        dst = "dist/%s/win%s/%s" % (build_name, arch, ver)
+                        distutils.dir_util.copy_tree(src, dst)
 
                 os.system(r"COPY /Y GPL.txt dist\%s" % build_name)
 

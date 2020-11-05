@@ -118,13 +118,11 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
         host = "127.0.0.1"
         sys.stderr.write("Waiting for fake SSH server to start up...\n")
         attempts = 0
-        while not OpenSSH.SshServerIsReady(username, privateKeyFilePath,
-                                           host, self.scpPort):
+        ssh = [host, self.scpPort, username, OpenSSH.NormalizeLocalPath(privateKeyFilePath)]
+        while not OpenSSH.SshServerIsReady(ssh):
             attempts += 1
             if attempts > 10:
-                raise Exception(
-                    "Couldn't connect to SSH server at 127.0.0.1:%s"
-                    % self.scpPort)
+                raise Exception("Couldn't connect to SSH server at 127.0.0.1:%s" % self.scpPort)
             time.sleep(0.25)
 
         foldersController.InitForUploads()

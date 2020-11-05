@@ -755,10 +755,13 @@ class SettingsDialog(wx.Dialog):
         self.uploadPanelSizer.Add(wx.Size(-1, 5))
         self.uploadPanelSizer.Add(wx.Size(-1, 5))
 
-        self.uploadMethods = ["SCP", "ParallelSSH"]
+        if sys.platform.startswith("win"):
+            self.uploadMethods = ["ParallelSSH", "OpenSSH 8.1", "OpenSSH 7.9"]
+        else:
+            self.uploadMethods = ["ParallelSSH", "OpenSSH"]
         self.uploadMethodComboBox = wx.ComboBox(self.uploadPanel, wx.ID_ANY,
                                                 choices=self.uploadMethods, style=wx.CB_READONLY)
-        self.uploadMethodComboBox.SetValue("SCP")
+        self.uploadMethodComboBox.SetValue("ParallelSSH")
         self.uploadPanelSizer.Add(
             wx.StaticText(self.uploadPanel, wx.ID_ANY, "Upload Method:"),
             flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
