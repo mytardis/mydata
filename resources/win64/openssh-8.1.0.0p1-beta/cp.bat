@@ -1,0 +1,1 @@
+scp.exe -c aes128-gcm@openssh.com -v -oPasswordAuthentication=no -oNoHostAuthenticationForLocalhost=yes -oStrictHostKeyChecking=no -P 9022 -i "C:\ProgramData\Monash University\MyData\.ssh\MyData" "C:\Incoming\data\Windows 7\ISO\Windows 7 Ultimate copy.iso" mydata@localhost:/var/store/ISO-1/
