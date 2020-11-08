@@ -11,8 +11,8 @@ environment:
       secure: kVLJfBgsiibjMtizt055TdGzT/sSnxgZHwfLp2Znyb5ie2SU4WGAPfcxI19nA8o1
 
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      PYTHON: C:\Python37
+#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+#      PYTHON: C:\Python37
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       PYTHON: C:\Python37-x64
 
