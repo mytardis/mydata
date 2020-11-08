@@ -60,31 +60,26 @@ class ScheduleController(object):
         Create and schedule task(s) according to the settings configured in
         the Schedule tab of the Settings dialog.
         """
-        logger.debug("runManually: %s" % str(runManually))
         scheduleType = SETTINGS.schedule.scheduleType
-        logger.debug("Schedule Type: %s" % scheduleType)
-        if scheduleType == "On Startup" and \
-                SETTINGS.lastSettingsUpdateTrigger == \
-                LastSettingsUpdateTrigger.READ_FROM_DISK:
-            ScheduleController.CreateOnStartupTask(event, needToValidateSettings)
-        elif scheduleType == "On Settings Saved" and \
-                SETTINGS.lastSettingsUpdateTrigger == \
-                LastSettingsUpdateTrigger.UI_RESPONSE:
-            ScheduleController.CreateOnSettingsSavedTask(event)
-        elif scheduleType == "Manually":
-            if not runManually:
-                # Wait for user to manually click Refresh on MyData's toolbar.
-                logger.debug("Finished processing schedule type.")
-                return
+        if runManually:
+            logger.debug("runManually: %s" % str(runManually))
             ScheduleController.CreateManualTask(event, needToValidateSettings)
-        elif scheduleType == "Once":
-            ScheduleController.CreateOnceTask(event, needToValidateSettings)
-        elif scheduleType == "Daily":
-            ScheduleController.CreateDailyTask(event, needToValidateSettings)
-        elif scheduleType == "Weekly":
-            ScheduleController.CreateWeeklyTask(event, needToValidateSettings)
-        elif scheduleType == "Timer":
-            ScheduleController.CreateTimerTask(event, needToValidateSettings)
+        elif scheduleType != "Manually":
+            logger.debug("Schedule Type: %s" % scheduleType)
+            if scheduleType == "On Startup" and \
+                    SETTINGS.lastSettingsUpdateTrigger == LastSettingsUpdateTrigger.READ_FROM_DISK:
+                ScheduleController.CreateOnStartupTask(event, needToValidateSettings)
+            elif scheduleType == "On Settings Saved" and \
+                    SETTINGS.lastSettingsUpdateTrigger == LastSettingsUpdateTrigger.UI_RESPONSE:
+                ScheduleController.CreateOnSettingsSavedTask(event)
+            elif scheduleType == "Once":
+                ScheduleController.CreateOnceTask(event, needToValidateSettings)
+            elif scheduleType == "Daily":
+                ScheduleController.CreateDailyTask(event, needToValidateSettings)
+            elif scheduleType == "Weekly":
+                ScheduleController.CreateWeeklyTask(event, needToValidateSettings)
+            elif scheduleType == "Timer":
+                ScheduleController.CreateTimerTask(event, needToValidateSettings)
         logger.debug("Finished processing schedule type.")
 
     @staticmethod

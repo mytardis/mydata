@@ -53,8 +53,8 @@ def ManuallyTriggerScanFoldersAndUpload(event):
     """
     from .stop import ResetShouldAbortStatus
     app = wx.GetApp()
-    SETTINGS.schedule.scheduleType = "Manually"
-    SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
+    # SETTINGS.schedule.scheduleType = "Manually"
+    # SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
     ResetShouldAbortStatus()
     app.scheduleController.ApplySchedule(event, runManually=True)
 
