@@ -4,7 +4,6 @@ Upload data using ParallelSSH library
 import os
 import socket
 from datetime import datetime
-from time import sleep
 
 from ssh2 import session, sftp
 

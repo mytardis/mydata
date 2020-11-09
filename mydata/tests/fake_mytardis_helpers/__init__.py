@@ -5,10 +5,7 @@ import json
 import logging
 import os
 import re
-import sys
 import tempfile
-
-from ...utils.openssh import GetCygwinPath
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +28,7 @@ EMPTY_API_LIST = {
 with tempfile.NamedTemporaryFile() as tempFile:
     STAGING_PATH = tempFile.name
 os.makedirs(STAGING_PATH)
-logger.info("Created temporary staging directory: %s",
-            STAGING_PATH)
-if sys.platform.startswith("win"):
-    STAGING_PATH = GetCygwinPath(STAGING_PATH)
+logger.info("Created temporary staging directory: %s", STAGING_PATH)
 
 TEST_FACILITY = {
     "id": 2,

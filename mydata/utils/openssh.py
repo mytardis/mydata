@@ -47,7 +47,7 @@ class OpenSSH(object):
     running remote commands over SSH via subprocesses.
     """
     def __init__(self):
-        self.REMOTE_DIRS_CREATED = {}
+        self.cache = {}
         if "HOME" not in os.environ:
             os.environ["HOME"] = os.path.expanduser('~')
 
@@ -71,19 +71,22 @@ class OpenSSH(object):
 
 
 def NormalizeLocalPath(filePath):
+    """
+    Use Unix-style paths for Windows
+    """
     if sys.platform.startswith("win"):
         return filePath.replace("\\", "/")
     return OpenSSH.DoubleQuote(filePath)
 
 
-def WithDefaultSSHOptions(opts, args):
+def WithDefaultOptions(opts, args):
     """
     Returns command with default SSH options
     """
-    is_ssh = isinstance(opts, list)
+    isSSH = isinstance(opts, list)
 
-    cmd_with_args = [
-        GetOpenSSHBinary("ssh") if is_ssh else GetOpenSSHBinary(opts),
+    cmdWithArgs = [
+        GetOpenSshBinary("ssh") if isSSH else GetOpenSshBinary(opts),
         "-oPasswordAuthentication=no",
         "-oNoHostAuthenticationForLocalhost=yes",
         "-oStrictHostKeyChecking=no",
@@ -91,22 +94,22 @@ def WithDefaultSSHOptions(opts, args):
         "-c", SETTINGS.miscellaneous.cipher
     ]
 
-    if is_ssh:
-        cmd_with_args += [
+    if isSSH:
+        cmdWithArgs += [
             "-p", opts[1],  # port
             "-l", opts[2],  # username
             "-i", opts[3],  # keyfile
             opts[0]         # host
         ]
 
-    cmd_with_args += args
+    cmdWithArgs += args
 
-    logger.debug(" ".join(cmd_with_args))
+    logger.debug(" ".join(cmdWithArgs))
 
-    return cmd_with_args
+    return cmdWithArgs
 
 
-def GetOpenSSHBinary(cmd, method=None):
+def GetOpenSshBinary(cmd, method=None):
     """
     Locate the SSH binaries on various systems.
     """
@@ -129,14 +132,14 @@ def GetOpenSSHBinary(cmd, method=None):
             elif "7.9" in method:
                 winDir = "openssh-7.9.0.0p1-beta"
             else:
-                return GetOpenSSHBinary(cmd, "OpenSSH 8.1")
+                return GetOpenSshBinary(cmd, "OpenSSH 8.1")
             baseDir = os.path.join(
                 baseDir,
                 "win{}".format("64" if x64 else "32"),
                 winDir)
             binarySuffix = ".exe"
         else:
-            return GetOpenSSHBinary(cmd, "OpenSSH 8.1")
+            return GetOpenSshBinary(cmd, "OpenSSH 8.1")
     else:
         baseDir = "/usr/bin/"
         binarySuffix = ""
@@ -144,7 +147,7 @@ def GetOpenSSHBinary(cmd, method=None):
     return os.path.join(baseDir, cmd + binarySuffix)
 
 
-def RunOpenSSHCommand(cmd, raise_on_error=True, return_success=False):
+def RunOpenSshCommand(cmd, raiseOnError=True, returnSuccess=False):
     """
     Run OpenSSH command
     """
@@ -175,13 +178,13 @@ def RunOpenSSHCommand(cmd, raise_on_error=True, return_success=False):
 
     if proc.returncode != 0:
         logger.error(details)
-        if raise_on_error:
+        if raiseOnError:
             raise SshException(details, proc.returncode)
 
-    if return_success:
+    if returnSuccess:
         return proc.returncode == 0
 
-    return (proc.returncode, details)
+    return proc.returncode, details
 
 
 class KeyPair(object):
@@ -253,14 +256,14 @@ class KeyPair(object):
 
         if sys.platform.startswith('win'):
             cmdList = [
-                GetOpenSSHBinary("ssh-keygen"),
+                GetOpenSshBinary("ssh-keygen"),
                 "-E", "md5",
                 "-yl",
                 "-f", self.privateKeyFilePath
             ]
         else:
             cmdList = [
-                GetOpenSSHBinary("ssh-keygen"),
+                GetOpenSshBinary("ssh-keygen"),
                 "-yl",
                 "-f", self.privateKeyFilePath
         ]
@@ -341,8 +344,8 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     privateKeyFilePath = os.path.join(keyPath, keyName)
     publicKeyFilePath = privateKeyFilePath + ".pub"
 
-    code, message = RunOpenSSHCommand([
-        GetOpenSSHBinary("ssh-keygen"),
+    code, message = RunOpenSshCommand([
+        GetOpenSshBinary("ssh-keygen"),
         "-f", NormalizeLocalPath(privateKeyFilePath),
         "-N", '""',
         "-C", OpenSSH.DoubleQuote(keyComment)
@@ -397,8 +400,8 @@ def SshServerIsReady(ssh):
     """
     Check if SSH server is ready
     """
-    return RunOpenSSHCommand(
-        WithDefaultSSHOptions(
+    return RunOpenSshCommand(
+        WithDefaultOptions(
             ssh, [
                 "echo Ready"
             ]),
@@ -422,10 +425,10 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     remoteDir = remoteDir.replace('`', r'\\`').replace('$', r'\\$')
 
     cacheKey = hashlib.md5(remoteDir.encode("utf-8")).hexdigest()
-    if cacheKey not in OPENSSH.REMOTE_DIRS_CREATED:
+    if cacheKey not in OPENSSH.cache:
         with LOCKS.createRemoteDir:
             CreateRemoteDir(ssh, remoteDir)
-            OPENSSH.REMOTE_DIRS_CREATED[cacheKey] = True
+            OPENSSH.cache[cacheKey] = True
 
     if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFile: Aborting upload for %s" % filePath)
@@ -436,10 +439,13 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     if SETTINGS.advanced.uploadMethod == "ParallelSSH":
 
         try:
-            server = (host, int(port))
-            auth = (username, privateKeyFilePath)
-            UploadFileSsh(server, auth, filePath, remoteFilePath,
-                          uploadModel, progressCallback)
+            UploadFileSsh(
+                (host, int(port)),
+                (username, privateKeyFilePath),
+                filePath,
+                remoteFilePath,
+                uploadModel,
+                progressCallback)
         except Exception as err:
             raise UploadFailed(err)
 
@@ -450,7 +456,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         MonitorProgress(SETTINGS.miscellaneous.progressPollInterval, uploadModel,
                         fileSize, monitoringProgress, progressCallback)
 
-        scpCommandList = WithDefaultSSHOptions(
+        scpCommandList = WithDefaultOptions(
             "scp", [
                 "-P", port,
                 "-i", NormalizeLocalPath(privateKeyFilePath),
@@ -544,8 +550,8 @@ def CreateRemoteDir(ssh, remoteDir):
     """
     Create a remote directory via SSH
     """
-    RunOpenSSHCommand(
-        WithDefaultSSHOptions(
+    RunOpenSshCommand(
+        WithDefaultOptions(
             ssh, [
                 "mkdir -m 2770 -p %s" % OPENSSH.DoubleQuoteRemotePath(remoteDir)
             ]))
@@ -555,8 +561,8 @@ def SetRemoteFilePermissions(ssh, remoteFilePath):
     """
     Set file permissions via SSH
     """
-    RunOpenSSHCommand(
-        WithDefaultSSHOptions(
+    RunOpenSshCommand(
+        WithDefaultOptions(
             ssh, [
                 "chmod 660 %s" % OpenSSH.DoubleQuoteRemotePath(remoteFilePath)
             ]))
@@ -580,7 +586,7 @@ def CleanUpScpAndSshProcesses():
         return
     for proc in psutil.process_iter():
         try:
-            if proc.exe() == GetOpenSSHBinary("ssh") or proc.exe() == GetOpenSSHBinary("scp"):
+            if proc.exe() == GetOpenSshBinary("ssh") or proc.exe() == GetOpenSshBinary("scp"):
                 try:
                     if privateKeyPath in proc.cmdline() or sys.platform.startswith("win"):
                         proc.kill()

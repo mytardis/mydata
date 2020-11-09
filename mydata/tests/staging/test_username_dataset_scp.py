@@ -261,10 +261,10 @@ class ScanUsernameDatasetScpTester(MyDataScanFoldersTester):
             "\nTesting handling of invalid path to SSH binary...\n")
         # SSH would normally be called to run "mkdir -p" on the staging server,
         # but it won't be if that has already been done in the current session
-        # for the given directory, due to the OpenSSH.REMOTE_DIRS_CREATED
+        # for the given directory, due to the OpenSSH.cache
         # cache. We'll clear the cache here to force the remote mkdir (via ssh)
         # command to run.
-        OpenSSH.REMOTE_DIRS_CREATED = dict()
+        OpenSSH.cache = dict()
         OpenSSH.OPENSSH.ssh += "_INVALID"
         loggerOutput = logger.GetValue()
         foldersController.InitForUploads()
