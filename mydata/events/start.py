@@ -394,8 +394,8 @@ def OnTestRunFromToolbar(event):
     app = wx.GetApp()
     logger.debug("OnTestRunFromToolbar")
     FLAGS.testRunRunning = True
-    SETTINGS.schedule.scheduleType = "Manually"
-    SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
+    # SETTINGS.schedule.scheduleType = "Manually"
+    # SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
     app.frame.toolbar.DisableTestAndUploadToolbarButtons()
     app.testRunFrame.saveButton.Disable()
     ResetShouldAbortStatus()
@@ -403,5 +403,4 @@ def OnTestRunFromToolbar(event):
     app.testRunFrame.Clear()
     app.testRunFrame.SetTitle("%s - Test Run" % app.frame.GetTitle())
     logger.testrun("Starting Test Run...")
-    app.scheduleController.ApplySchedule(event, runManually=True,
-                                         needToValidateSettings=True)
+    app.scheduleController.ApplySchedule(event, runManually=True, needToValidateSettings=True)
