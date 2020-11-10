@@ -313,7 +313,7 @@ class FolderModel(object):
         md5 = hashlib.md5()
 
         defaultChunkSize = 128 * 1024
-        maxChunkSize = 16 * 1024 * 1024
+        maxChunkSize = 32 * 1024 * 1024
         chunkSize = defaultChunkSize
         while (fileSize / chunkSize) > 50 and chunkSize < maxChunkSize:
             chunkSize *= 2
@@ -324,8 +324,7 @@ class FolderModel(object):
             # returns b'' (not just '').
             for chunk in iter(lambda: fileHandle.read(chunkSize), b''):
                 if canceledCallback():
-                    logger.debug("Aborting MD5 calculation for "
-                                 "%s" % absoluteFilePath)
+                    logger.debug("Aborting MD5 calculation for %s" % absoluteFilePath)
                     return None
                 md5.update(chunk)
                 bytesProcessed += len(chunk)

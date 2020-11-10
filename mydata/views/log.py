@@ -27,17 +27,17 @@ class LogView(wx.Panel):
         logPanelSizer.AddGrowableCol(0)
         logPanelSizer.Add(self.logTextCtrl, flag=wx.EXPAND)
         footerPanel = wx.Panel(self)
-        footerPanelSizer = wx.FlexGridSizer(rows=1, cols=2, vgap=0, hgap=20)
-        self.submitDebugLogButton = wx.Button(footerPanel, wx.ID_ANY,
-                                              "Submit debug log")
-        self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog,
-                  id=self.submitDebugLogButton.GetId())
+        footerPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=0, hgap=20)
+        self.clearLogButton = wx.Button(footerPanel, wx.ID_ANY, "Clear log")
+        self.Bind(wx.EVT_BUTTON, self.OnClearLog, id=self.clearLogButton.GetId())
+        self.submitDebugLogButton = wx.Button(footerPanel, wx.ID_ANY, "Submit debug log")
+        self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog, id=self.submitDebugLogButton.GetId())
         self.debugCheckBox = wx.CheckBox(footerPanel, wx.ID_ANY, "Debug logging")
         if logger.GetLevel() == logging.DEBUG:
             self.debugCheckBox.SetValue(True)
-        self.Bind(wx.EVT_CHECKBOX, self.OnDebugLogging,
-                  id=self.debugCheckBox.GetId())
-        footerPanelSizer.Add(self.debugCheckBox)
+        self.Bind(wx.EVT_CHECKBOX, self.OnDebugLogging, id=self.debugCheckBox.GetId())
+        footerPanelSizer.Add(self.clearLogButton, flag=wx.LEFT)
+        footerPanelSizer.Add(self.debugCheckBox, flag=wx.ALIGN_CENTER_VERTICAL)
         footerPanelSizer.Add(self.submitDebugLogButton)
         footerPanel.SetSizerAndFit(footerPanelSizer)
         logPanelSizer.Add(footerPanel,
@@ -45,14 +45,18 @@ class LogView(wx.Panel):
                           border=2)
         self.SetSizer(logPanelSizer)
         if sys.platform.startswith("darwin"):
-            font = wx.Font(13, wx.MODERN, wx.NORMAL, wx.NORMAL, False,
-                           u'Courier New')
+            font = wx.Font(13, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
         else:
-            font = wx.Font(10, wx.MODERN, wx.NORMAL, wx.NORMAL, False,
-                           u'Courier New')
+            font = wx.Font(10, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
         self.logTextCtrl.SetFont(font)
 
         logger.SendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
+
+    def OnClearLog(self):
+        """
+        Clear debug log output window
+        """
+        self.logTextCtrl.SetValue("")
 
     def OnSubmitDebugLog(self, event):
         """

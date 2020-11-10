@@ -228,7 +228,7 @@ class FoldersController(object):
         self.numVerificationsToBePerformed = 0
         self.uploadsAcknowledged = 0
         self.finishedCountingVerifications = dict()
-        SETTINGS.InitializeVerifiedDatafilesCache()
+        SETTINGS.InitializeVerifiedDatafilesCache(True)
 
         if wx.PyApp.IsMainLoopRunning():
             for i in range(self.numVerificationWorkerThreads):

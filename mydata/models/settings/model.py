@@ -280,20 +280,19 @@ class SettingsModel(object):
             "verified-files-cache-%s-%s.json" %
             (parsed.scheme, parsed.netloc))
 
-    def InitializeVerifiedDatafilesCache(self):
+    def InitializeVerifiedDatafilesCache(self, resetFile=False):
         """
         We use a serialized dictionary to cache DataFile lookup results.
         We'll use a separate cache file for each MyTardis server we connect to.
         """
-        try:
+        self.verifiedDatafilesCache = dict()
+        if not resetFile:
             if os.path.exists(self.verifiedDatafilesCachePath):
-                with open(self.verifiedDatafilesCachePath, "r") as cacheFile:
-                    self.verifiedDatafilesCache = json.load(cacheFile)
-            else:
-                self.verifiedDatafilesCache = dict()
-        except:
-            self.verifiedDatafilesCache = dict()
-            logger.warning(traceback.format_exc())
+                try:
+                    with open(self.verifiedDatafilesCachePath, "r") as cacheFile:
+                        self.verifiedDatafilesCache = json.load(cacheFile)
+                except:
+                    logger.warning(traceback.format_exc())
 
     def SaveVerifiedDatafilesCache(self):
         """

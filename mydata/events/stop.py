@@ -23,8 +23,7 @@ def CheckIfShouldAbort():
     """
     if 'MYDATA_TESTING' in os.environ:
         return FLAGS.shouldAbort
-    app = wx.GetApp()
-    if FLAGS.shouldAbort or app.foldersController.canceled:
+    if FLAGS.shouldAbort:
         RestoreUserInterfaceForAbort()
         return True
     return False
@@ -41,6 +40,10 @@ def RestoreUserInterfaceForAbort():
         wx.CallAfter(app.testRunFrame.Hide)
     FLAGS.scanningFolders = False
     FLAGS.testRunRunning = False
+    # FLAGS.shouldAbort = False
+    # if hasattr(app, "foldersController"):
+    #     app.foldersController.canceled = False
+
 
 
 def ResetShouldAbortStatus():

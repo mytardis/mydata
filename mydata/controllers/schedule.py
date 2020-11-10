@@ -30,11 +30,10 @@ def ScanAndUploadTask(event, needToValidateSettings, jobId):
     if wx.PyApp.IsMainLoopRunning():
         wx.CallAfter(app.frame.toolbar.DisableTestAndUploadToolbarButtons)
         while not app.Processing():
-            time.sleep(0.01)
-        wx.CallAfter(StartScansAndUploads, event, needToValidateSettings,
-                     jobId)
+            time.sleep(0.1)
+        wx.CallAfter(StartScansAndUploads, event, needToValidateSettings, jobId)
         while app.Processing():
-            time.sleep(0.01)
+            time.sleep(0.1)
     else:
         StartScansAndUploads(event, needToValidateSettings, jobId)
 

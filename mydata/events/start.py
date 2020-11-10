@@ -18,7 +18,6 @@ import wx
 from ..settings import SETTINGS
 from ..dataviewmodels.users import UsersModel
 from ..dataviewmodels.dataview import DATAVIEW_MODELS
-from ..models.settings import LastSettingsUpdateTrigger
 from ..models.settings.validation import ValidateSettings
 from ..models.cleanup import CleanupFile
 from ..utils.exceptions import InvalidFolderStructure
@@ -53,8 +52,6 @@ def ManuallyTriggerScanFoldersAndUpload(event):
     """
     from .stop import ResetShouldAbortStatus
     app = wx.GetApp()
-    # SETTINGS.schedule.scheduleType = "Manually"
-    # SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
     ResetShouldAbortStatus()
     app.scheduleController.ApplySchedule(event, runManually=True)
 
@@ -74,9 +71,9 @@ def OnCleanup(event):
             if os.path.exists(fileName):
                 try:
                     os.unlink(fileName)
-                    del SETTINGS.verifiedDatafilesCache[cacheKey]
                 except:
                     pass
+            del SETTINGS.verifiedDatafilesCache[cacheKey]
         SETTINGS.SaveVerifiedDatafilesCache()
 
     logger.debug("OnCleanup")
@@ -84,14 +81,22 @@ def OnCleanup(event):
     app.frame.tabbedView.SetSelection(NotebookTabs.CLEANUP)
     cleanupTab = DATAVIEW_MODELS["cleanup"]
     if len(app.filesToCleanup) == 0:
+        displayMax = 1000
         SETTINGS.InitializeVerifiedDatafilesCache()
+        logger.info("Total files in verifiedDatafilesCache: %s" % \
+                    len(SETTINGS.verifiedDatafilesCache))
         for cacheKey in SETTINGS.verifiedDatafilesCache:
             newCleanupFile = CleanupFile(
                 cleanupTab.GetMaxDataViewId() + 1,
                 SETTINGS.verifiedDatafilesCache[cacheKey])
             cleanupTab.AddRow(newCleanupFile)
             app.filesToCleanup.append(newCleanupFile)
-        message = "Found {} local files verified on server.".format(len(app.filesToCleanup))
+            if len(app.filesToCleanup) >= displayMax:
+                break
+        message = "Found {} local files verified on server.".format(
+            len(SETTINGS.verifiedDatafilesCache))
+        if len(app.filesToCleanup) != len(SETTINGS.verifiedDatafilesCache):
+            message += " Displaying first {} only.".format(len(app.filesToCleanup))
         wx.GetApp().frame.SetStatusMessage(message)
     else:
         filesToDelete = []
@@ -126,6 +131,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     app = wx.GetApp()
     LogStartScansAndUploadsCaller(event, jobId)
     if CheckIfShouldAbort():
+        print("StartScansAndUploads->CheckIfShouldAbort")
         return
     shutdownForRefreshComplete = event and \
         event.GetEventType() in (
@@ -346,11 +352,12 @@ def LogStartScansAndUploadsCaller(event, jobId):
     icon menu item, or a scheduled task).
     """
     app = wx.GetApp()
+
     try:
-        syncNowMenuItemId = \
-            app.frame.taskBarIcon.GetSyncNowMenuItem().GetId()
+        syncNowMenuItemId = app.frame.taskBarIcon.GetSyncNowMenuItem().GetId()
     except (AttributeError, RuntimeError):
         syncNowMenuItemId = None
+
     if jobId:
         logger.debug("StartScansAndUploads called from job ID %d" % jobId)
     elif event is None:
