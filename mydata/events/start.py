@@ -131,7 +131,6 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     app = wx.GetApp()
     LogStartScansAndUploadsCaller(event, jobId)
     if CheckIfShouldAbort():
-        print("StartScansAndUploads->CheckIfShouldAbort")
         return
     shutdownForRefreshComplete = event and \
         event.GetEventType() in (
@@ -401,8 +400,6 @@ def OnTestRunFromToolbar(event):
     app = wx.GetApp()
     logger.debug("OnTestRunFromToolbar")
     FLAGS.testRunRunning = True
-    # SETTINGS.schedule.scheduleType = "Manually"
-    # SETTINGS.lastSettingsUpdateTrigger = LastSettingsUpdateTrigger.UI_RESPONSE
     app.frame.toolbar.DisableTestAndUploadToolbarButtons()
     app.testRunFrame.saveButton.Disable()
     ResetShouldAbortStatus()
