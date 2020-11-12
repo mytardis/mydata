@@ -190,7 +190,7 @@ def LoadAdvancedSettings(settings, configParser):
     fields = ["folder_structure", "dataset_grouping", "group_prefix",
               "upload_method", "max_upload_threads", "max_upload_retries",
               "validate_folder_structure", "start_automatically_on_login",
-              "upload_invalid_user_folders"]
+              "on_start_run", "upload_invalid_user_folders"]
     for field in fields:
         if configParser.has_option(configFileSection, field):
             settings[field] = configParser.get(configFileSection, field)
@@ -274,6 +274,7 @@ def CheckForUpdatedSettingsOnServer(settings):
                         "ignore_new_files",
                         "validate_folder_structure",
                         "start_automatically_on_login",
+                        "on_start_run",
                         "upload_invalid_user_folders",
                         "fake_md5_sum", "use_none_cipher", "locked",
                         "monday_checked", "tuesday_checked",
@@ -353,7 +354,7 @@ def SaveSettingsToDisk(configPath=None):
                   "validate_folder_structure", "fake_md5_sum",
                   "cipher", "locked", "uuid", "use_none_cipher",
                   "progress_poll_interval", "verification_delay",
-                  "start_automatically_on_login", "immutable_datasets",
+                  "start_automatically_on_login", "on_start_run", "immutable_datasets",
                   "cache_datafile_lookups", "upload_invalid_user_folders",
                   "connection_timeout"]
         settingsList = []
@@ -461,6 +462,7 @@ def GetAdvancedTabSettings(settingsDialog, settingsModel):
     settingsModel.advanced.groupPrefix = settingsDialog.GetGroupPrefix()
     settingsModel.advanced.validateFolderStructure = settingsDialog.ValidateFolderStructure()
     settingsModel.advanced.startAutomaticallyOnLogin = settingsDialog.StartAutomaticallyOnLogin()
+    settingsModel.advanced.onStartRun = settingsDialog.GetOnStartRun()
     settingsModel.advanced.uploadInvalidUserOrGroupFolders = \
         settingsDialog.UploadInvalidUserOrGroupFolders()
 

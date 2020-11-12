@@ -138,29 +138,24 @@ class MyData(MyApp):
             CheckIfSystemTrayFunctionalityMissing()
 
         event = None
-        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ and \
-                SETTINGS.RequiredFieldIsBlank():
+        if 'MYDATA_DONT_SHOW_MODAL_DIALOGS' not in os.environ and SETTINGS.RequiredFieldIsBlank():
             self.frame.Show(True)
             OnSettings(event)
         else:
-            self.frame.SetTitle(
-                "%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
-            if SETTINGS.schedule.scheduleType in [
-                    "Manually", "On Startup", "On Settings Saved"]:
-                # Don't minimize to system tray in this case
-                self.frame.Show(True)
-            else:
+            self.frame.SetTitle("%s - %s" % (APPNAME, SETTINGS.general.instrumentName))
+            if SETTINGS.advanced.onStartRun == "Minimized":
                 self.frame.Hide()
                 if sys.platform.startswith("darwin"):
-                    message = \
-                        "Click the MyData menubar icon to access its menu."
+                    message = "Click the MyData menubar icon to access its menu."
                 else:
-                    message = \
-                        "Click the MyData system tray icon to access its menu."
-
+                    message = "Click the MyData system tray icon to access its menu."
                 # Use CallAfter here to ensure this is called after
                 # the main loop has started:
                 wx.CallAfter(Notification.Notify, message, title=APPNAME)
+            else:
+                self.frame.Show(True)
+                if SETTINGS.advanced.onStartRun == "Maximized":
+                    self.frame.Maximize(True)
             if 'MYDATA_TESTING' in os.environ:
                 if 'MYDATA_DONT_RUN_SCHEDULE' not in os.environ:
                     self.scheduleController.ApplySchedule(event)

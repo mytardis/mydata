@@ -736,7 +736,6 @@ class FoldersController(object):
         if self.failed:
             message = "Data scans and uploads failed."
         elif self.canceled:
-            self.canceled = False
             message = "Data scans and uploads were canceled."
         elif DATAVIEW_MODELS['uploads'].GetFailedCount() > 0:
             message = \
@@ -787,8 +786,7 @@ class FoldersController(object):
         FLAGS.testRunRunning = False
 
         EndBusyCursorIfRequired()
-
-        logger.debug("")
+        self.ClearStatusFlags()
 
         if SETTINGS.miscellaneous.autoexit:
             sys.stdout.write("%s\n" % message)

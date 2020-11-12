@@ -29,7 +29,7 @@ class LogView(wx.Panel):
         footerPanel = wx.Panel(self)
         footerPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=0, hgap=20)
         self.clearLogButton = wx.Button(footerPanel, wx.ID_ANY, "Clear log")
-        self.Bind(wx.EVT_BUTTON, self.OnClearLog, id=self.clearLogButton.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnClearLog)
         self.submitDebugLogButton = wx.Button(footerPanel, wx.ID_ANY, "Submit debug log")
         self.Bind(wx.EVT_BUTTON, self.OnSubmitDebugLog, id=self.submitDebugLogButton.GetId())
         self.debugCheckBox = wx.CheckBox(footerPanel, wx.ID_ANY, "Debug logging")
@@ -52,7 +52,7 @@ class LogView(wx.Panel):
 
         logger.SendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
 
-    def OnClearLog(self):
+    def OnClearLog(self, event):
         """
         Clear debug log output window
         """

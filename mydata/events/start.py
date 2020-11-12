@@ -76,15 +76,16 @@ def OnCleanup(event):
             del SETTINGS.verifiedDatafilesCache[cacheKey]
         SETTINGS.SaveVerifiedDatafilesCache()
 
-    logger.debug("OnCleanup")
-    app = wx.GetApp()
-    app.frame.tabbedView.SetSelection(NotebookTabs.CLEANUP)
-    cleanupTab = DATAVIEW_MODELS["cleanup"]
-    if len(app.filesToCleanup) == 0:
+    def PopulateFiles():
+        cleanupTab = DATAVIEW_MODELS["cleanup"]
+        app.filesToCleanup = []
         displayMax = 1000
         SETTINGS.InitializeVerifiedDatafilesCache()
         logger.info("Total files in verifiedDatafilesCache: %s" % \
                     len(SETTINGS.verifiedDatafilesCache))
+        message = "Found {} local files verified on server.".format(
+            len(SETTINGS.verifiedDatafilesCache))
+        cleanupTab.DeleteAllRows()
         for cacheKey in SETTINGS.verifiedDatafilesCache:
             newCleanupFile = CleanupFile(
                 cleanupTab.GetMaxDataViewId() + 1,
@@ -92,13 +93,14 @@ def OnCleanup(event):
             cleanupTab.AddRow(newCleanupFile)
             app.filesToCleanup.append(newCleanupFile)
             if len(app.filesToCleanup) >= displayMax:
+                message += " Displaying first {} only.".format(len(app.filesToCleanup))
                 break
-        message = "Found {} local files verified on server.".format(
-            len(SETTINGS.verifiedDatafilesCache))
-        if len(app.filesToCleanup) != len(SETTINGS.verifiedDatafilesCache):
-            message += " Displaying first {} only.".format(len(app.filesToCleanup))
         wx.GetApp().frame.SetStatusMessage(message)
-    else:
+
+    logger.debug("OnCleanup")
+    app = wx.GetApp()
+    app.frame.tabbedView.SetSelection(NotebookTabs.CLEANUP)
+    if len(app.filesToCleanup) != 0:
         filesToDelete = []
         for file in app.filesToCleanup:
             if getattr(file, "setDelete", False):
@@ -113,9 +115,7 @@ def OnCleanup(event):
             ).ShowModal() == wx.ID_YES
             if confirmDelete:
                 DeleteFiles(filesToDelete)
-                app.filesToCleanup = []
-                cleanupTab.DeleteAllRows()
-                OnCleanup(event)
+    PopulateFiles()
 
 
 def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):

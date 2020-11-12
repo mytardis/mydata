@@ -721,18 +721,30 @@ class SettingsDialog(wx.Dialog):
         self.advancedPanelSizer.Add(self.groupPrefixField, flag=wx.EXPAND | wx.ALL, border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
 
-        startAutomaticallyOnLoginLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
-                                                       "Start automatically on login:")
-        self.advancedPanelSizer.Add(startAutomaticallyOnLoginLabel, flag=wx.ALIGN_RIGHT | wx.ALL,
-                                    border=5)
+        self.advancedPanelSizer.Add(
+            wx.StaticText(self.advancedPanel, wx.ID_ANY, "Start automatically on login:"),
+            flag=wx.ALIGN_RIGHT | wx.ALL,
+            border=5)
         self.startAutomaticallyCheckBox = wx.CheckBox(self.advancedPanel, wx.ID_ANY, "")
         if sys.platform.startswith("win"):
             # On Windows, we use the common startup folder, configured by the
             # setup wizard, not the user-specific startup folder.
             self.startAutomaticallyCheckBox.Enable(False)
-        self.advancedPanelSizer.Add(self.startAutomaticallyCheckBox, flag=wx.EXPAND | wx.ALL,
-                                    border=5)
+        self.advancedPanelSizer.Add(
+            self.startAutomaticallyCheckBox,
+            flag=wx.EXPAND | wx.ALL,
+            border=5)
         self.advancedPanelSizer.Add(wx.StaticText(self.advancedPanel, wx.ID_ANY, ""))
+
+        self.runComboBox = wx.ComboBox(
+            self.advancedPanel, wx.ID_ANY,
+            choices=["Normal window", "Minimized", "Maximized"],
+            style=wx.CB_READONLY)
+        self.runComboBox.SetValue("Normal window")
+        self.advancedPanelSizer.Add(
+            wx.StaticText(self.advancedPanel, wx.ID_ANY, "On start run:"),
+            flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        self.advancedPanelSizer.Add(self.runComboBox, flag=wx.EXPAND | wx.ALL, border=5)
 
         self.uploadInvalidUserFoldersLabel = wx.StaticText(self.advancedPanel, wx.ID_ANY,
                                                            "Upload invalid user folders:")
@@ -1201,6 +1213,12 @@ class SettingsDialog(wx.Dialog):
     def SetStartAutomaticallyOnLogin(self, startAutomaticallyOnLogin):
         self.startAutomaticallyCheckBox.SetValue(
             startAutomaticallyOnLogin)
+
+    def GetOnStartRun(self):
+        return self.runComboBox.GetValue()
+
+    def SetOnStartRun(self, value):
+        self.runComboBox.SetValue(value)
 
     def UploadInvalidUserOrGroupFolders(self):
         return self.uploadInvalidUserFoldersCheckBox.GetValue()

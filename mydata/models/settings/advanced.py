@@ -21,6 +21,7 @@ class AdvancedSettingsModel(object):
             'max_upload_threads',
             'max_upload_retries',
             'start_automatically_on_login',
+            'on_start_run',
             'upload_invalid_user_folders',
             'upload_method'
         ]
@@ -91,8 +92,21 @@ class AdvancedSettingsModel(object):
         """
         Set this to True if MyData should start automatically on login
         """
-        self.mydataConfig['start_automatically_on_login'] = \
-            startAutomaticallyOnLogin
+        self.mydataConfig['start_automatically_on_login'] = startAutomaticallyOnLogin
+
+    @property
+    def onStartRun(self):
+        """
+        Returns what window should MyData start (normal, max, min)
+        """
+        return self.mydataConfig['on_start_run']
+
+    @onStartRun.setter
+    def onStartRun(self, value):
+        """
+        Set what window should MyData start (normal, max, min)
+        """
+        self.mydataConfig['on_start_run'] = value
 
     @property
     def uploadInvalidUserOrGroupFolders(self):
@@ -183,5 +197,6 @@ class AdvancedSettingsModel(object):
         self.mydataConfig['max_upload_threads'] = 5
         self.mydataConfig['max_upload_retries'] = 1
         self.mydataConfig['start_automatically_on_login'] = True
+        self.mydataConfig['on_start_run'] = "Normal window"
         self.mydataConfig['upload_invalid_user_folders'] = True
-        self.mydataConfig['upload_method'] = "SCP"
+        self.mydataConfig['upload_method'] = "ParallelSSH"
