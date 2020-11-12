@@ -60,6 +60,7 @@ def OnCleanup(event):
     """
     Cleanup button click handler
     """
+    # pylint: disable=unused-argument
 
     def DeleteFiles(files):
         """
@@ -126,6 +127,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
     not yet available on MyTardis.
     """
     # pylint: disable=too-many-statements
+    # pylint: disable=too-many-branches
     from .stop import CheckIfShouldAbort
     from .stop import RestoreUserInterfaceForAbort
     app = wx.GetApp()
@@ -184,6 +186,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
             """
             Validate settings.
             """
+            # pylint: disable=too-many-branches
             from .settings import OnSettings
             logger.debug("Starting run() method for thread %s"
                          % threading.current_thread().name)
@@ -271,6 +274,7 @@ def StartScansAndUploads(event, needToValidateSettings=True, jobId=None):
         Scan data folders, looking for datafiles to look up on MyTardis
         and upload if necessary.
         """
+        # pylint: disable=too-many-branches
         from .stop import CheckIfShouldAbort
         if CheckIfShouldAbort():
             return
@@ -350,6 +354,7 @@ def LogStartScansAndUploadsCaller(event, jobId):
     call to StartScansAndUploads (e.g. the toolbar button, the task bar
     icon menu item, or a scheduled task).
     """
+    # pylint: disable=too-many-branches
     app = wx.GetApp()
 
     try:

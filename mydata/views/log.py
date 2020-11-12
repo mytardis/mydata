@@ -56,6 +56,7 @@ class LogView(wx.Panel):
         """
         Clear debug log output window
         """
+        # pylint: disable=unused-argument
         self.logTextCtrl.SetValue("")
 
     def OnSubmitDebugLog(self, event):

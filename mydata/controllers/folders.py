@@ -522,6 +522,7 @@ class FoldersController(object):
         for uploading local data files to
         the MyTardis server.
         """
+        # pylint: disable=too-many-branches
         while True:
             if self.IsShuttingDown():
                 return
@@ -554,6 +555,7 @@ class FoldersController(object):
         for verifying whether local data files exist on
         the MyTardis server.
         """
+        # pylint: disable=too-many-branches
         while True:
             if self.IsShuttingDown():
                 return
@@ -584,6 +586,7 @@ class FoldersController(object):
         and if so, call ShutDownUploadThreads
         """
         # pylint: disable=unused-argument
+        # pylint: disable=too-many-branches
         if self.completed or self.canceled:
             return
 

@@ -104,6 +104,7 @@ class MyData(MyApp):
         """
         Called automatically when application instance is created.
         """
+        # pylint: disable=too-many-branches
         from .utils import CreateConfigPathIfNecessary
         from .utils import InitializeTrustedCertsPath
         from .utils import CheckIfSystemTrayFunctionalityMissing
