@@ -19,7 +19,7 @@ from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
 from ..models.upload import UploadStatus
-from ..utils.upload import UploadFileSsh
+from ..utils.upload import UploadFileChunked, UploadFileSsh
 from ..utils.exceptions import PrivateKeyDoesNotExist, SshException, ScpException, UploadFailed
 from ..threads.locks import LOCKS
 
@@ -424,11 +424,12 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     remoteDir = os.path.dirname(remoteFilePath)
     remoteDir = remoteDir.replace('`', r'\\`').replace('$', r'\\$')
 
-    cacheKey = hashlib.md5(remoteDir.encode("utf-8")).hexdigest()
-    if cacheKey not in OPENSSH.cache:
-        with LOCKS.createRemoteDir:
-            CreateRemoteDir(ssh, remoteDir)
-            OPENSSH.cache[cacheKey] = True
+    if SETTINGS.advanced.uploadMethod != "Chunked":
+        cacheKey = hashlib.md5(remoteDir.encode("utf-8")).hexdigest()
+        if cacheKey not in OPENSSH.cache:
+            with LOCKS.createRemoteDir:
+                CreateRemoteDir(ssh, remoteDir)
+                OPENSSH.cache[cacheKey] = True
 
     if ShouldCancelUpload(uploadModel):
         logger.debug("UploadFile: Aborting upload for %s" % filePath)
@@ -436,7 +437,20 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
 
     progressCallback(current=0, total=fileSize, message="Uploading...")
 
-    if SETTINGS.advanced.uploadMethod == "ParallelSSH":
+    if SETTINGS.advanced.uploadMethod == "Chunked":
+
+        try:
+            UploadFileChunked(
+                SETTINGS.general.myTardisUrl,
+                SETTINGS.general.username,
+                SETTINGS.general.apiKey,
+                filePath,
+                uploadModel,
+                progressCallback)
+        except Exception as err:
+            raise UploadFailed(err)
+
+    elif SETTINGS.advanced.uploadMethod == "ParallelSSH":
 
         try:
             UploadFileSsh(
@@ -469,7 +483,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         else:
             ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
-    SetRemoteFilePermissions(ssh, remoteFilePath)
+    if SETTINGS.advanced.uploadMethod != "Chunked":
+        SetRemoteFilePermissions(ssh, remoteFilePath)
 
     uploadModel.SetLatestTime(datetime.now())
     progressCallback(current=fileSize, total=fileSize)

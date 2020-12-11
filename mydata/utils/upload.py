@@ -1,11 +1,133 @@
 """
 Upload data using ParallelSSH library
 """
+import math
 import os
 import socket
+import requests
 from datetime import datetime
+import json
+import hashlib
+import xxhash
+from time import sleep
 
 from ssh2 import session, sftp
+
+from ..models.datafile import DataFileModel
+
+
+def GetDataChecksum(algorithm, data):
+    """
+    Calculate checksum for a binary data
+    """
+    if algorithm == "xxh3_64":
+        checksum = xxhash.xxh3_64(data).hexdigest()
+    elif algorithm == "md5":
+        checksum = hashlib.md5(data).hexdigest()
+    else:
+        checksum = None
+    return checksum
+
+
+def handle_response(rsp):
+    data = json.loads(rsp.content)
+    if "success" not in data:
+        if "error_message" in data:
+            raise Exception(data["error_message"])
+        raise Exception("Unable to parse API call response.")
+    if not data["success"]:
+        raise Exception(data["error"])
+    return data
+
+
+def CompleteUpload(server, username, api_key, dfo_id):
+    headers = {
+        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Content-Type": "application/json"
+    }
+    return handle_response(requests.get(
+        "%s/api/v1/mydata_upload/%s/complete/" % (server, dfo_id),
+        headers=headers))
+
+
+def UploadChunk(server, username, api_key, dfo_id,
+                algorithm, content_range, data):
+    headers = {
+        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Checksum": GetDataChecksum(algorithm, data),
+        "Content-Range": content_range,
+        "Content-Type": "application/octet-stream"
+    }
+    return handle_response(requests.post(
+        "%s/api/v1/mydata_upload/%s/upload/" % (server, dfo_id),
+        data=data,
+        headers=headers))
+
+
+def GetChunks(server, username, api_key, dfo_id):
+    headers = {
+        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Content-Type": "application/json"
+    }
+    return handle_response(requests.get(
+        "%s/api/v1/mydata_upload/%s/" % (server, dfo_id),
+        headers=headers))
+
+
+def UploadFileChunked(server, username, api_key,
+                      filePath, uploadModel, progressCallback):
+    """
+    Upload file using chunks API
+    """
+    if uploadModel.dfoId is None:
+        if uploadModel.dataFileId is not None:
+            try:
+                dataFile = DataFileModel.GetDataFileFromId(uploadModel.dataFileId)
+                uploadModel.dfoId = dataFile.replicas[0].dfoId
+            except:
+                pass
+    dfo_id = uploadModel.dfoId
+    if dfo_id is None:
+        return False
+
+    status = GetChunks(server, username, api_key, dfo_id)
+
+    if not status["completed"]:
+        backoffIdle = 5
+        backoffSleep = backoffIdle
+        fileInfo = os.stat(filePath)
+        totalUploaded = status["offset"]
+        file = open(filePath, "rb")
+        for thisChunk in range(math.ceil(fileInfo.st_size/status["size"])):
+            thisOffset = thisChunk*status["size"]
+            if thisOffset >= totalUploaded:
+                file.seek(thisOffset)
+                binaryData = file.read(status["size"])
+                bytesRead = len(binaryData)
+                content_range = "%s-%s/%s" % (thisOffset, thisOffset+bytesRead, fileInfo.st_size)
+                keep_uploading = True
+                while keep_uploading and not uploadModel.canceled:
+                    upload = UploadChunk(
+                        server, username, api_key, dfo_id,
+                        status["checksum"], content_range,
+                        binaryData)
+                    if not upload["success"]:
+                        sleep(backoffSleep)
+                        backoffSleep *= 2
+                    else:
+                        keep_uploading = False
+                        backoffSleep = backoffIdle
+                        totalUploaded += bytesRead
+                    uploadModel.SetLatestTime(datetime.now())
+                    progressCallback(current=totalUploaded, total=fileInfo.st_size)
+                if uploadModel.canceled:
+                    break
+        file.close()
+
+    if not uploadModel.canceled:
+        CompleteUpload(server, username, api_key, dfo_id)
+
+    return True
 
 
 def ReadFileChunks(fileObject, chunkSize):
