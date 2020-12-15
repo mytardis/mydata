@@ -86,58 +86,69 @@ def GetChunks(server, username, apiKey, dfoId):
         headers=headers))
 
 
+def DefaultSleepIdle():
+    """
+    Time to sleep after API call failed
+    """
+    return 5
+
+
+def GetDataFileObjectId(uploadModel):
+    """
+    Call API to receive dfoId if required
+    """
+    if uploadModel.dataFileId is not None:
+        try:
+            dataFile = DataFileModel.GetDataFileFromId(uploadModel.dataFileId)
+            return dataFile.replicas[0].dfoId
+        except:
+            pass
+
+    return None
+
 def UploadFileChunked(server, username, apiKey,
                       filePath, uploadModel, progressCallback):
     """
     Upload file using chunks API
     """
-    if uploadModel.dfoId is None:
-        if uploadModel.dataFileId is not None:
-            try:
-                dataFile = DataFileModel.GetDataFileFromId(uploadModel.dataFileId)
-                uploadModel.dfoId = dataFile.replicas[0].dfoId
-            except:
-                pass
-    dfoId = uploadModel.dfoId
-    if dfoId is None:
-        return False
 
-    status = GetChunks(server, username, apiKey, dfoId)
+    if uploadModel.dfoId is None:
+        uploadModel.dfoId = GetDataFileObjectId(uploadModel)
+        if uploadModel.dfoId is None:
+            return False
+
+    status = GetChunks(server, username, apiKey, uploadModel.dfoId)
 
     if not status["completed"]:
-        backoffIdle = 5
-        backoffSleep = backoffIdle
-        fileInfo = os.stat(filePath)
+        fileSize = os.stat(filePath).st_size
         totalUploaded = status["offset"]
         file = open(filePath, "rb")
-        for thisChunk in range(math.ceil(fileInfo.st_size/status["size"])):
+        for thisChunk in range(math.ceil(fileSize/status["size"])):
             thisOffset = thisChunk*status["size"]
             if thisOffset >= totalUploaded:
                 file.seek(thisOffset)
                 binaryData = file.read(status["size"])
-                bytesRead = len(binaryData)
-                contentRange = "%s-%s/%s" % (thisOffset, thisOffset+bytesRead, fileInfo.st_size)
-                keepUploading = True
-                while keepUploading and not uploadModel.canceled:
+                backoffSleep = DefaultSleepIdle()
+                while backoffSleep > 0 and not uploadModel.canceled:
                     upload = UploadChunk(
-                        server, username, apiKey, dfoId,
-                        status["checksum"], contentRange,
+                        server, username, apiKey, uploadModel.dfoId,
+                        status["checksum"],
+                        "%s-%s/%s" % (thisOffset, thisOffset+len(binaryData), fileSize),
                         binaryData)
                     if not upload["success"]:
                         sleep(backoffSleep)
                         backoffSleep *= 2
                     else:
-                        keepUploading = False
-                        backoffSleep = backoffIdle
-                        totalUploaded += bytesRead
+                        backoffSleep = 0
+                        totalUploaded += len(binaryData)
                     uploadModel.SetLatestTime(datetime.now())
-                    progressCallback(current=totalUploaded, total=fileInfo.st_size)
+                    progressCallback(current=totalUploaded, total=fileSize)
                 if uploadModel.canceled:
                     break
         file.close()
 
     if not uploadModel.canceled:
-        CompleteUpload(server, username, apiKey, dfoId)
+        CompleteUpload(server, username, apiKey, uploadModel.dfoId)
 
     return True
 
