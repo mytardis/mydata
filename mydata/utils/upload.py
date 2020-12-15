@@ -4,12 +4,12 @@ Upload data using ParallelSSH library
 import math
 import os
 import socket
-import requests
 from datetime import datetime
-import json
-import hashlib
-import xxhash
 from time import sleep
+import hashlib
+import json
+import requests
+import xxhash
 
 from ssh2 import session, sftp
 
@@ -29,7 +29,10 @@ def GetDataChecksum(algorithm, data):
     return checksum
 
 
-def handle_response(rsp):
+def HandleResponse(rsp):
+    """
+    Handle API call response
+    """
     data = json.loads(rsp.content)
     if "success" not in data:
         if "error_message" in data:
@@ -40,41 +43,50 @@ def handle_response(rsp):
     return data
 
 
-def CompleteUpload(server, username, api_key, dfo_id):
+def CompleteUpload(server, username, apiKey, dfoId):
+    """
+    Start data file assembly from chunks
+    """
     headers = {
-        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Authorization": "ApiKey %s:%s" % (username, apiKey),
         "Content-Type": "application/json"
     }
-    return handle_response(requests.get(
-        "%s/api/v1/mydata_upload/%s/complete/" % (server, dfo_id),
+    return HandleResponse(requests.get(
+        "%s/api/v1/mydata_upload/%s/complete/" % (server, dfoId),
         headers=headers))
 
 
-def UploadChunk(server, username, api_key, dfo_id,
-                algorithm, content_range, data):
+def UploadChunk(server, username, apiKey, dfoId,
+                algorithm, contentRange, data):
+    """
+    Upload single data file chunk
+    """
     headers = {
-        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Authorization": "ApiKey %s:%s" % (username, apiKey),
         "Checksum": GetDataChecksum(algorithm, data),
-        "Content-Range": content_range,
+        "Content-Range": contentRange,
         "Content-Type": "application/octet-stream"
     }
-    return handle_response(requests.post(
-        "%s/api/v1/mydata_upload/%s/upload/" % (server, dfo_id),
+    return HandleResponse(requests.post(
+        "%s/api/v1/mydata_upload/%s/upload/" % (server, dfoId),
         data=data,
         headers=headers))
 
 
-def GetChunks(server, username, api_key, dfo_id):
+def GetChunks(server, username, apiKey, dfoId):
+    """
+    Get status of chunk upload, start or continue
+    """
     headers = {
-        "Authorization": "ApiKey %s:%s" % (username, api_key),
+        "Authorization": "ApiKey %s:%s" % (username, apiKey),
         "Content-Type": "application/json"
     }
-    return handle_response(requests.get(
-        "%s/api/v1/mydata_upload/%s/" % (server, dfo_id),
+    return HandleResponse(requests.get(
+        "%s/api/v1/mydata_upload/%s/" % (server, dfoId),
         headers=headers))
 
 
-def UploadFileChunked(server, username, api_key,
+def UploadFileChunked(server, username, apiKey,
                       filePath, uploadModel, progressCallback):
     """
     Upload file using chunks API
@@ -86,11 +98,11 @@ def UploadFileChunked(server, username, api_key,
                 uploadModel.dfoId = dataFile.replicas[0].dfoId
             except:
                 pass
-    dfo_id = uploadModel.dfoId
-    if dfo_id is None:
+    dfoId = uploadModel.dfoId
+    if dfoId is None:
         return False
 
-    status = GetChunks(server, username, api_key, dfo_id)
+    status = GetChunks(server, username, apiKey, dfoId)
 
     if not status["completed"]:
         backoffIdle = 5
@@ -104,18 +116,18 @@ def UploadFileChunked(server, username, api_key,
                 file.seek(thisOffset)
                 binaryData = file.read(status["size"])
                 bytesRead = len(binaryData)
-                content_range = "%s-%s/%s" % (thisOffset, thisOffset+bytesRead, fileInfo.st_size)
-                keep_uploading = True
-                while keep_uploading and not uploadModel.canceled:
+                contentRange = "%s-%s/%s" % (thisOffset, thisOffset+bytesRead, fileInfo.st_size)
+                keepUploading = True
+                while keepUploading and not uploadModel.canceled:
                     upload = UploadChunk(
-                        server, username, api_key, dfo_id,
-                        status["checksum"], content_range,
+                        server, username, apiKey, dfoId,
+                        status["checksum"], contentRange,
                         binaryData)
                     if not upload["success"]:
                         sleep(backoffSleep)
                         backoffSleep *= 2
                     else:
-                        keep_uploading = False
+                        keepUploading = False
                         backoffSleep = backoffIdle
                         totalUploaded += bytesRead
                     uploadModel.SetLatestTime(datetime.now())
@@ -125,7 +137,7 @@ def UploadFileChunked(server, username, api_key,
         file.close()
 
     if not uploadModel.canceled:
-        CompleteUpload(server, username, api_key, dfo_id)
+        CompleteUpload(server, username, apiKey, dfoId)
 
     return True
 
@@ -151,8 +163,11 @@ def GetFileMode():
            sftp.LIBSSH2_SFTP_S_IROTH
 
 
-def ExecuteCommandOverSsh(ssh_session, command):
-    channel = ssh_session.open_session()
+def ExecuteCommandOverSsh(sshSession, command):
+    """
+    Execute command over existing SSH session
+    """
+    channel = sshSession.open_session()
     channel.execute(command)
     message = []
     while True:
@@ -167,29 +182,37 @@ def ExecuteCommandOverSsh(ssh_session, command):
         raise Exception(" ".join(message))
 
 
+def GetSshSession(server, auth):
+    """
+    Open connection and return SSH session
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(server)
+
+    sshSession = session.Session()
+    sshSession.handshake(sock)
+
+    try:
+        sshSession.userauth_publickey_fromfile(auth[0], auth[1])
+    except:
+        raise Exception("Can't open SSH key file.")
+
+    return sshSession
+
+
 def UploadFileSsh(server, auth, filePath, remoteFilePath,
                   uploadModel, progressCallback):
     """
     Upload file using SSH, update progress status, cancel upload if requested
     """
-    fileInfo = os.stat(filePath)
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(server)
-
-    sess = session.Session()
-    sess.handshake(sock)
-
-    try:
-        sess.userauth_publickey_fromfile(auth[0], auth[1])
-    except:
-        raise Exception("Can't open SSH key file.")
+    sess = GetSshSession(server, auth)
 
     try:
         ExecuteCommandOverSsh(sess, "mkdir -m 2770 -p %s" % os.path.dirname(remoteFilePath))
-    except Exception as e:
-        raise Exception("Can't create remote folder. %s" % str(e))
+    except Exception as err:
+        raise Exception("Can't create remote folder. %s" % str(err))
 
+    fileInfo = os.stat(filePath)
     channel = sess.scp_send64(remoteFilePath, GetFileMode(),
                               fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
 
@@ -211,7 +234,7 @@ def UploadFileSsh(server, auth, filePath, remoteFilePath,
 
     try:
         ExecuteCommandOverSsh(sess, "chmod 660 %s" % remoteFilePath)
-    except Exception as e:
-        raise Exception("Can't set remote file permissions. %s" % str(e))
+    except Exception as err:
+        raise Exception("Can't set remote file permissions. %s" % str(err))
 
     sess.disconnect()

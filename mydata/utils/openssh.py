@@ -326,28 +326,39 @@ def FindKeyPair(keyName="MyData", keyPath=None):
 
 
 def SetKeyFilePermissions(privateKeyFilePath):
-    sd = win32security.GetFileSecurity(privateKeyFilePath, win32security.DACL_SECURITY_INFORMATION)
-    dacl = sd.GetSecurityDescriptorDacl()
+    """
+    Set Windows ACL (SSH private key file permissions)
+    """
+    secdesc = win32security.GetFileSecurity(
+        privateKeyFilePath,
+        win32security.DACL_SECURITY_INFORMATION)
+    dacl = secdesc.GetSecurityDescriptorDacl()
 
     while dacl.GetAceCount() != 0:
         dacl.DeleteAce(0)
 
-    user, domain, type = win32security.LookupAccountName("", os.getlogin())
+    user, _, _ = win32security.LookupAccountName("", os.getlogin())
     dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, user)
 
-    sd.SetSecurityDescriptorDacl(1, dacl, 0)
+    secdesc.SetSecurityDescriptorDacl(1, dacl, 0)
 
-    win32security.SetFileSecurity(privateKeyFilePath, win32security.DACL_SECURITY_INFORMATION, sd)
+    win32security.SetFileSecurity(
+        privateKeyFilePath,
+        win32security.DACL_SECURITY_INFORMATION,
+        secdesc)
 
 
 def CreateKeyPair(privateKeyFilePath, publicKeyFilePath):
+    """
+    Create SSH key pair (private and public) using Python
+    """
     key = RSA.generate(2048)
 
-    with open(privateKeyFilePath, "wb") as f:
-        f.write(key.exportKey("PEM"))
+    with open(privateKeyFilePath, "wb") as file:
+        file.write(key.exportKey("PEM"))
 
-    with open(publicKeyFilePath, "wb") as f:
-        f.write(key.publickey().exportKey("OpenSSH"))
+    with open(publicKeyFilePath, "wb") as file:
+        file.write(key.publickey().exportKey("OpenSSH"))
 
     SetKeyFilePermissions(privateKeyFilePath)
 
@@ -502,10 +513,9 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
 
     else:
 
-        monitoringProgress = threading.Event()
         uploadModel.startTime = datetime.now()
         MonitorProgress(SETTINGS.miscellaneous.progressPollInterval, uploadModel,
-                        fileSize, monitoringProgress, progressCallback)
+                        fileSize, threading.Event(), progressCallback)
 
         scpCommandList = WithDefaultOptions(
             "scp", [
@@ -520,7 +530,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         else:
             ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
-    if uploadMethod != "Chunked" and uploadMethod != "ParallelSSH":
+    if uploadMethod not in ["Chunked", "ParallelSSH"]:
         SetRemoteFilePermissions(ssh, remoteFilePath)
 
     uploadModel.SetLatestTime(datetime.now())
