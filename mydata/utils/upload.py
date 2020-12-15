@@ -151,6 +151,22 @@ def GetFileMode():
            sftp.LIBSSH2_SFTP_S_IROTH
 
 
+def ExecuteCommandOverSsh(ssh_session, command):
+    channel = ssh_session.open_session()
+    channel.execute(command)
+    message = []
+    while True:
+        size, data = channel.read()
+        if len(data) != 0:
+            message.append(data)
+        if size == 0:
+            break
+    channel.close()
+    channel.wait_closed()
+    if len(message) != 0:
+        raise Exception(" ".join(message))
+
+
 def UploadFileSsh(server, auth, filePath, remoteFilePath,
                   uploadModel, progressCallback):
     """
@@ -163,7 +179,16 @@ def UploadFileSsh(server, auth, filePath, remoteFilePath,
 
     sess = session.Session()
     sess.handshake(sock)
-    sess.userauth_publickey_fromfile(auth[0], auth[1])
+
+    try:
+        sess.userauth_publickey_fromfile(auth[0], auth[1])
+    except:
+        raise Exception("Can't open SSH key file.")
+
+    try:
+        ExecuteCommandOverSsh(sess, "mkdir -m 2770 -p %s" % os.path.dirname(remoteFilePath))
+    except Exception as e:
+        raise Exception("Can't create remote folder. %s" % str(e))
 
     channel = sess.scp_send64(remoteFilePath, GetFileMode(),
                               fileInfo.st_size, fileInfo.st_mtime, fileInfo.st_atime)
@@ -183,5 +208,10 @@ def UploadFileSsh(server, auth, filePath, remoteFilePath,
 
     channel.close()
     channel.wait_closed()
+
+    try:
+        ExecuteCommandOverSsh(sess, "chmod 660 %s" % remoteFilePath)
+    except Exception as e:
+        raise Exception("Can't set remote file permissions. %s" % str(e))
 
     sess.disconnect()

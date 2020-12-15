@@ -15,6 +15,10 @@ import struct
 import hashlib
 import psutil
 
+from Crypto.PublicKey import RSA
+import win32security
+import ntsecuritycon as con
+
 from ..events.stop import ShouldCancelUpload
 from ..settings import SETTINGS
 from ..logs import logger
@@ -321,6 +325,35 @@ def FindKeyPair(keyName="MyData", keyPath=None):
     return None
 
 
+def SetKeyFilePermissions(privateKeyFilePath):
+    sd = win32security.GetFileSecurity(privateKeyFilePath, win32security.DACL_SECURITY_INFORMATION)
+    dacl = sd.GetSecurityDescriptorDacl()
+
+    while dacl.GetAceCount() != 0:
+        dacl.DeleteAce(0)
+
+    user, domain, type = win32security.LookupAccountName("", os.getlogin())
+    dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, user)
+
+    sd.SetSecurityDescriptorDacl(1, dacl, 0)
+
+    win32security.SetFileSecurity(privateKeyFilePath, win32security.DACL_SECURITY_INFORMATION, sd)
+
+
+def CreateKeyPair(privateKeyFilePath, publicKeyFilePath):
+    key = RSA.generate(2048)
+
+    with open(privateKeyFilePath, "wb") as f:
+        f.write(key.exportKey("PEM"))
+
+    with open(publicKeyFilePath, "wb") as f:
+        f.write(key.publickey().exportKey("OpenSSH"))
+
+    SetKeyFilePermissions(privateKeyFilePath)
+
+    return KeyPair(privateKeyFilePath, publicKeyFilePath)
+
+
 def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
     """
     Create an RSA key-pair in ~/.ssh/ (or in keyPath if specified)
@@ -343,6 +376,9 @@ def NewKeyPair(keyName=None, keyPath=None, keyComment=None):
 
     privateKeyFilePath = os.path.join(keyPath, keyName)
     publicKeyFilePath = privateKeyFilePath + ".pub"
+
+    if sys.platform.startswith("win"):
+        return CreateKeyPair(privateKeyFilePath, publicKeyFilePath)
 
     code, message = RunOpenSshCommand([
         GetOpenSshBinary("ssh-keygen"),
@@ -373,8 +409,7 @@ def GetKeyPairLocation():
     individual user of the instrument PC.
     """
     if sys.platform.startswith("win"):
-        return os.path.join(
-            os.path.dirname(SETTINGS.configPath), ".ssh")
+        return os.path.join(os.path.dirname(SETTINGS.configPath), ".ssh")
     return os.path.join(os.path.expanduser('~'), ".ssh")
 
 
@@ -420,15 +455,17 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
     file.
     """
     ssh = [host, port, username, NormalizeLocalPath(privateKeyFilePath)]
+    uploadMethod = SETTINGS.advanced.uploadMethod
 
     remoteDir = os.path.dirname(remoteFilePath)
     remoteDir = remoteDir.replace('`', r'\\`').replace('$', r'\\$')
 
-    if SETTINGS.advanced.uploadMethod != "Chunked":
+    if uploadMethod != "Chunked":
         cacheKey = hashlib.md5(remoteDir.encode("utf-8")).hexdigest()
         if cacheKey not in OPENSSH.cache:
             with LOCKS.createRemoteDir:
-                CreateRemoteDir(ssh, remoteDir)
+                if uploadMethod != "ParallelSSH":
+                    CreateRemoteDir(ssh, remoteDir)
                 OPENSSH.cache[cacheKey] = True
 
     if ShouldCancelUpload(uploadModel):
@@ -437,7 +474,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
 
     progressCallback(current=0, total=fileSize, message="Uploading...")
 
-    if SETTINGS.advanced.uploadMethod == "Chunked":
+    if uploadMethod == "Chunked":
 
         try:
             UploadFileChunked(
@@ -450,7 +487,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         except Exception as err:
             raise UploadFailed(err)
 
-    elif SETTINGS.advanced.uploadMethod == "ParallelSSH":
+    elif uploadMethod == "ParallelSSH":
 
         try:
             UploadFileSsh(
@@ -475,7 +512,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                 "-P", port,
                 "-i", NormalizeLocalPath(privateKeyFilePath),
                 NormalizeLocalPath(filePath),
-                "%s@%s:%s/" % (username, host, remoteDir)
+                "%s@%s:%s" % (username, host, remoteDir)
             ])
 
         if not sys.platform.startswith("linux"):
@@ -483,7 +520,7 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
         else:
             ScpUploadWithErrandBoy(uploadModel, scpCommandList)
 
-    if SETTINGS.advanced.uploadMethod != "Chunked":
+    if uploadMethod != "Chunked" and uploadMethod != "ParallelSSH":
         SetRemoteFilePermissions(ssh, remoteFilePath)
 
     uploadModel.SetLatestTime(datetime.now())
