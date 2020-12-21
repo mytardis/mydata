@@ -768,9 +768,9 @@ class SettingsDialog(wx.Dialog):
         self.uploadPanelSizer.Add(wx.Size(-1, 5))
 
         if sys.platform.startswith("win"):
-            self.uploadMethods = ["ParallelSSH", "OpenSSH 8.1", "OpenSSH 7.9"]
+            self.uploadMethods = ["ParallelSSH", "Chunked", "OpenSSH 8.1", "OpenSSH 7.9"]
         else:
-            self.uploadMethods = ["ParallelSSH", "OpenSSH"]
+            self.uploadMethods = ["ParallelSSH", "Chunked", "OpenSSH"]
         self.uploadMethodComboBox = wx.ComboBox(self.uploadPanel, wx.ID_ANY,
                                                 choices=self.uploadMethods, style=wx.CB_READONLY)
         self.uploadMethodComboBox.SetValue("ParallelSSH")
