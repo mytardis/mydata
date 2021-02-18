@@ -33,7 +33,10 @@ def HandleResponse(rsp):
     """
     Handle API call response
     """
-    data = json.loads(rsp.content)
+    try:
+        data = json.loads(rsp.content)
+    except:
+        raise Exception("Unexpected data received from the server.")
     if "success" not in data:
         if "error_message" in data:
             raise Exception(data["error_message"])
