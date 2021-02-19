@@ -494,7 +494,8 @@ def UploadFile(filePath, fileSize, username, privateKeyFilePath,
                 SETTINGS.general.apiKey,
                 filePath,
                 uploadModel,
-                progressCallback)
+                progressCallback,
+                SETTINGS.advanced.maxUploadRetries)
         except Exception as err:
             raise UploadFailed(err)
 

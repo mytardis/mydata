@@ -13,6 +13,7 @@ import xxhash
 
 from ssh2 import session, sftp
 
+from ..logs import logger
 from ..models.datafile import DataFileModel
 
 
@@ -36,6 +37,7 @@ def HandleResponse(rsp):
     try:
         data = json.loads(rsp.content)
     except:
+        logger.error("Server response:\n{}".format(rsp.content))
         raise Exception("Unexpected data received from the server.")
     if "success" not in data:
         if "error_message" in data:
@@ -110,7 +112,8 @@ def GetDataFileObjectId(uploadModel):
     return None
 
 def UploadFileChunked(server, username, apiKey,
-                      filePath, uploadModel, progressCallback):
+                      filePath, uploadModel, progressCallback,
+                      maxUploadRetries):
     """
     Upload file using chunks API
     """
@@ -128,16 +131,27 @@ def UploadFileChunked(server, username, apiKey,
         file = open(filePath, "rb")
         for thisChunk in range(math.ceil(fileSize/status["size"])):
             thisOffset = thisChunk*status["size"]
+            currentRetry = 0
             if thisOffset >= totalUploaded:
                 file.seek(thisOffset)
                 binaryData = file.read(status["size"])
                 backoffSleep = DefaultSleepIdle()
                 while backoffSleep > 0 and not uploadModel.canceled:
-                    upload = UploadChunk(
-                        server, username, apiKey, uploadModel.dfoId,
-                        status["checksum"],
-                        "%s-%s/%s" % (thisOffset, thisOffset+len(binaryData), fileSize),
-                        binaryData)
+                    try:
+                        currentRetry += 1
+                        upload = UploadChunk(
+                            server, username, apiKey, uploadModel.dfoId,
+                            status["checksum"],
+                            "%s-%s/%s" % (thisOffset, thisOffset+len(binaryData), fileSize),
+                            binaryData)
+                    except Exception as e:
+                        if currentRetry <= maxUploadRetries:
+                            logger.error("Can't upload chunk: {}".format(str(e)))
+                            upload = {
+                                "success": False
+                            }
+                        else:
+                            raise Exception(str(e))
                     if not upload["success"]:
                         sleep(backoffSleep)
                         backoffSleep *= 2
