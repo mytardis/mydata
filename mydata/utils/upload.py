@@ -111,6 +111,25 @@ def GetDataFileObjectId(uploadModel):
 
     return None
 
+
+def UploadAttempt(server, username, apiKey, dfoId,
+                  checksumAlgorithm, contentRange, binaryData,
+                  currentRetry, maxUploadRetries):
+    """
+    Attempt to upload chunk with re-try handling
+    """
+    try:
+        upload = UploadChunk(
+            server, username, apiKey, dfoId,
+            checksumAlgorithm, contentRange, binaryData)
+    except Exception as err:
+        if currentRetry <= maxUploadRetries:
+            logger.error("Can't upload chunk: {}".format(str(err)))
+            return False
+        raise Exception(str(err))
+    return upload["success"]
+
+
 def UploadFileChunked(server, username, apiKey,
                       filePath, uploadModel, progressCallback,
                       maxUploadRetries):
@@ -131,33 +150,25 @@ def UploadFileChunked(server, username, apiKey,
         file = open(filePath, "rb")
         for thisChunk in range(math.ceil(fileSize/status["size"])):
             thisOffset = thisChunk*status["size"]
-            currentRetry = 0
             if thisOffset >= totalUploaded:
                 file.seek(thisOffset)
                 binaryData = file.read(status["size"])
                 backoffSleep = DefaultSleepIdle()
+                currentRetry = 0
                 while backoffSleep > 0 and not uploadModel.canceled:
-                    try:
-                        currentRetry += 1
-                        upload = UploadChunk(
-                            server, username, apiKey, uploadModel.dfoId,
-                            status["checksum"],
-                            "%s-%s/%s" % (thisOffset, thisOffset+len(binaryData), fileSize),
-                            binaryData)
-                    except Exception as e:
-                        if currentRetry <= maxUploadRetries:
-                            logger.error("Can't upload chunk: {}".format(str(e)))
-                            upload = {
-                                "success": False
-                            }
-                        else:
-                            raise Exception(str(e))
-                    if not upload["success"]:
-                        sleep(backoffSleep)
-                        backoffSleep *= 2
-                    else:
+                    currentRetry += 1
+                    success = UploadAttempt(
+                        server, username, apiKey, uploadModel.dfoId,
+                        status["checksum"],
+                        "%s-%s/%s" % (thisOffset, thisOffset + len(binaryData), fileSize),
+                        binaryData,
+                        currentRetry, maxUploadRetries)
+                    if success:
                         backoffSleep = 0
                         totalUploaded += len(binaryData)
+                    else:
+                        sleep(backoffSleep)
+                        backoffSleep *= 2
                     uploadModel.SetLatestTime(datetime.now())
                     progressCallback(current=totalUploaded, total=fileSize)
                 if uploadModel.canceled:
