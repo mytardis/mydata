@@ -153,22 +153,24 @@ def UploadFileChunked(server, username, apiKey,
             if thisOffset >= totalUploaded:
                 file.seek(thisOffset)
                 binaryData = file.read(status["size"])
-                backoffSleep = DefaultSleepIdle()
-                currentRetry = 0
-                while backoffSleep > 0 and not uploadModel.canceled:
-                    currentRetry += 1
-                    success = UploadAttempt(
+                progress = {
+                    "backoffSleep": DefaultSleepIdle(),
+                    "currentRetry": 0
+                }
+                while progress["backoffSleep"] > 0 and not uploadModel.canceled:
+                    progress["currentRetry"] += 1
+                    progress["success"] = UploadAttempt(
                         server, username, apiKey, uploadModel.dfoId,
                         status["checksum"],
                         "%s-%s/%s" % (thisOffset, thisOffset + len(binaryData), fileSize),
                         binaryData,
-                        currentRetry, maxUploadRetries)
-                    if success:
-                        backoffSleep = 0
+                        progress["currentRetry"], maxUploadRetries)
+                    if progress["success"]:
+                        progress["backoffSleep"] = 0
                         totalUploaded += len(binaryData)
                     else:
-                        sleep(backoffSleep)
-                        backoffSleep *= 2
+                        sleep(progress["backoffSleep"])
+                        progress["backoffSleep"] *= 2
                     uploadModel.SetLatestTime(datetime.now())
                     progressCallback(current=totalUploaded, total=fileSize)
                 if uploadModel.canceled:
