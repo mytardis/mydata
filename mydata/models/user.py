@@ -123,15 +123,28 @@ class UserModel(object):
         response = requests.get(url=url, headers=SETTINGS.defaultHeaders)
         response.raise_for_status()
         userRecordsJson = response.json()
-        numUserRecordsFound = userRecordsJson['meta']['total_count']
 
-        if numUserRecordsFound == 0:
-            raise DoesNotExist(
-                message="User \"%s\" was not found in MyTardis" % username,
-                response=response)
+        if userRecordsJson["meta"]["total_count"] == 0:
+            """
+            Let's check if user has been migrated from LDAP to AAF
+            """
+            url = "%s/api/v1/mydata_user/?username=%s" \
+                  % (SETTINGS.general.myTardisUrl, username)
+            try:
+                rsp = requests.get(url=url, headers=SETTINGS.defaultHeaders)
+                data = rsp.json()
+                userFound = data["success"]
+            except:
+                userFound = False
+            if userFound:
+                return UserModel.GetUserByUsername(data["username"])
+            else:
+                raise DoesNotExist(
+                    message="User \"%s\" was not found in MyTardis" % username,
+                    response=response)
         logger.debug("Found user record for username '" + username + "'.")
         return UserModel(username=username,
-                         userRecordJson=userRecordsJson['objects'][0])
+                         userRecordJson=userRecordsJson["objects"][0])
 
     @staticmethod
     def GetUserByEmail(email):

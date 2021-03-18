@@ -8,7 +8,7 @@ import distutils.spawn
 import subprocess
 import sys
 
-__version__ = "0.9.5"
+__version__ = "0.9.6"
 
 
 if hasattr(sys, "frozen"):
