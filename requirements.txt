@@ -5,7 +5,7 @@ netifaces==0.10.9
 requests==2.25.1
 psutil==5.8.0
 requests-toolbelt==0.9.1
-requests-mock==1.8.0
+requests-mock==1.9.0
 validate_email==1.3
 wxPython==4.1.1
 mock==4.0.3
