@@ -1,7 +1,7 @@
 configparser==5.0.2
 appdirs==1.4.4
 distro==1.5.0
-netifaces==0.10.9
+netifaces==0.11.0
 requests==2.25.1
 psutil==5.8.0
 requests-toolbelt==0.9.1
