@@ -14,7 +14,7 @@ pytest-cov==2.10.1
 pytest==6.2.1
 coverage==5.3.1
 paramiko==2.7.2
-pytz==2020.4
+pytz==2021.3
 lxml==4.6.3
 python-dateutil==2.8.1
 PyInstaller==4.1
