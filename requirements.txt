@@ -20,4 +20,4 @@ python-dateutil==2.8.1
 PyInstaller==4.1
 ssh2-python==0.25.0
 xxhash==2.0.0
-pycryptodome==3.9.9
+pycryptodome==3.14.1
